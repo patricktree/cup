@@ -1,0 +1,36 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2K7FA5T5SAR522GNNYYNVEX",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 9,
+  "files_touched": [
+    "apps/web-app/snapshots/app/design-system/design-system.test.ts/design-system-desktop-chromium-docker.png",
+    "apps/web-app/snapshots/app/design-system/design-system.test.ts/design-system-mobile-chromium-docker.png",
+    "apps/web-app/src/app/components/start-conversion-form.tsx",
+    "apps/web-app/src/app/design-system/button.story.tsx",
+    "apps/web-app/src/app/design-system/button.test.ts",
+    "apps/web-app/src/app/design-system/design-system.story.tsx",
+    "apps/web-app/src/app/design-system/design-system.test.ts",
+    "apps/web-app/src/app/design-system/input.tsx",
+    "apps/web-app/src/app/form.tsx",
+    "apps/web-app/src/routes/trials.$grantId.test.ts",
+    "qa/e2e/test-e2e/visual-states.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 145479,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 8975744,
+    "output_tokens": 13570,
+    "api_call_count": 102
+  }
+}

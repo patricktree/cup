@@ -1,0 +1,45 @@
+[form.tsx](apps/web-app/src/app/form.tsx) extract the component into @apps/web-app/src/app/design-system/input.tsx
+
+i.e. in form.tsx there is still the `TextField` with `useFieldContext` etc.
+
+in input.tsx is the \<label>, \<span>, \<input>
+
+---
+
+export `DSInputProps` and reuse them for `TextFieldProps`
+
+---
+
+do `Pick` instead of `Omit`
+
+---
+
+make [button.story.tsx](apps/web-app/src/app/design-system/button.story.tsx) to `design-system.story.tsx` (and also [button.test.ts](apps/web-app/src/app/design-system/button.test.ts) ; render there in 1 Story all the variants of all DS components
+
+---
+
+then run Playwright tests and update snapshots etc
+
+---
+
+the story should render the components in a grid
+
+---
+
+name the story `Components`
+
+---
+
+can you read [https://base-ui.com/react/handbook/forms#tanstack-form](https://base-ui.com/react/handbook/forms#tanstack-form) ?
+
+---
+
+fully apply that, except do not create more components (like checkbox group)
+
+---
+
+E2E tests?
+
+---
+
+update that snapshot also
