@@ -130,8 +130,13 @@ test("validates a source URL before starting", async ({ page, workerEnvironment 
 
   await page.getByLabel("URL").fill("not a URL");
   await page.getByLabel("URL").blur();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await page.getByRole("button", { name: "Load & listen" }).click();
   await expect(page.getByLabel("URL")).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByRole("button", { name: "Load & listen" })).toBeDisabled();
+  await page.getByLabel("URL").fill("https://example.com");
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Load & listen" })).toBeEnabled();
 });
 
 test("disables duplicate submission while a conversion start is pending", async ({

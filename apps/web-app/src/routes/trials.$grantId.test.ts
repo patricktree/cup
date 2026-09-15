@@ -46,12 +46,17 @@ test("renders an invalid source URL", async ({ mount }) => {
   const component = await mount("routes/trials.$grantId/OpenGrant");
   await component.getByRole("textbox", { name: /^URL/ }).fill("not a URL");
   await component.getByRole("textbox", { name: /^URL/ }).blur();
+  await expect(component.getByRole("alert")).toHaveCount(0);
+  await component.getByRole("button", { name: "Load & listen" }).click();
   await expect(component.getByRole("textbox", { name: /^URL/ })).toHaveAttribute(
     "aria-invalid",
     "true",
   );
   await expect(component.getByRole("button", { name: "Load & listen" })).toBeDisabled();
   await expect(component).toHaveScreenshot("invalid-article-url.png");
+  await component.getByRole("textbox", { name: "URL", exact: true }).fill("https://example.com");
+  await expect(component.getByRole("alert")).toHaveCount(0);
+  await expect(component.getByRole("button", { name: "Load & listen" })).toBeEnabled();
 });
 
 test("renders a pending conversion start", async ({ mount }) => {

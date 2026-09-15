@@ -1,23 +1,23 @@
-import { css } from "@linaria/core";
 import { createFormHook, createFormHookContexts } from "@tanstack/react-form";
 import React from "react";
 
 import { DSButton } from "#src/app/design-system/button.js";
-import { composeClassnames, visuallyHidden } from "#src/app/utils.js";
+import { DSInput, type DSInputProps } from "#src/app/design-system/input.js";
 
 const { fieldContext, formContext, useFieldContext, useFormContext } = createFormHookContexts();
 
-type TextFieldProps = {
-  sx?: { label?: string; input?: string };
-  autoComplete?: React.ComponentProps<"input">["autoComplete"];
-  disabled?: boolean;
-  label: string;
-  maxLength?: number;
-  placeholder?: string;
-  required?: boolean;
-  type?: "email" | "password" | "text" | "url";
-  hideLabel?: boolean;
-};
+type TextFieldProps = Pick<
+  DSInputProps,
+  | "sx"
+  | "autoComplete"
+  | "disabled"
+  | "label"
+  | "maxLength"
+  | "placeholder"
+  | "required"
+  | "type"
+  | "hideLabel"
+>;
 
 function TextField({
   sx,
@@ -31,72 +31,32 @@ function TextField({
   hideLabel = false,
 }: TextFieldProps): React.JSX.Element {
   const field = useFieldContext<string>();
-  const inputId = React.useId();
-  const errorId = `${inputId}-error`;
-  const errorMessage = field.state.meta.isBlurred
-    ? getErrorMessage(field.state.meta.errors[0])
-    : undefined;
+  const errorMessage =
+    field.state.meta.errors
+      .map(getErrorMessage)
+      .filter((message) => message !== undefined)
+      .join(", ") || undefined;
 
   return (
-    <label
-      className={composeClassnames(
-        css`
-          display: flex;
-          flex-direction: column;
-          gap: calc(0.5 * var(--spacing-base));
-        `,
-        sx?.label,
-      )}
-    >
-      <span className={hideLabel ? visuallyHidden : undefined}>{label}</span>
-      <input
-        className={composeClassnames(
-          css`
-            padding-block: calc(1.5 * var(--spacing-base));
-            padding-inline: calc(2.5 * var(--spacing-base));
-
-            font-size: 18px;
-            color: var(--color-fg);
-            border: 2px solid transparent;
-            border-radius: 999px;
-            box-shadow: 4px 4px 20px rgb(0 0 0 / 12%);
-
-            &:focus-visible {
-              border-radius: 999px;
-            }
-
-            &::placeholder {
-              color: var(--color-fg-emphasized-xs);
-            }
-          `,
-          sx?.input,
-        )}
-        aria-describedby={errorMessage === undefined ? undefined : errorId}
-        aria-invalid={errorMessage === undefined ? undefined : true}
-        autoComplete={autoComplete}
-        disabled={disabled}
-        id={inputId}
-        maxLength={maxLength}
-        name={field.name}
-        placeholder={placeholder}
-        required={required}
-        type={type}
-        value={field.state.value}
-        onBlur={field.handleBlur}
-        onChange={(event) => field.handleChange(event.target.value)}
-      />
-      {errorMessage === undefined ? null : (
-        <small
-          className={css`
-            color: var(--color-error);
-          `}
-          id={errorId}
-          role="alert"
-        >
-          {errorMessage}
-        </small>
-      )}
-    </label>
+    <DSInput
+      sx={sx}
+      autoComplete={autoComplete}
+      disabled={disabled}
+      label={label}
+      maxLength={maxLength}
+      placeholder={placeholder}
+      required={required}
+      type={type}
+      hideLabel={hideLabel}
+      errorMessage={errorMessage}
+      invalid={!field.state.meta.isValid}
+      dirty={field.state.meta.isDirty}
+      touched={field.state.meta.isTouched}
+      name={field.name}
+      value={field.state.value}
+      onBlur={field.handleBlur}
+      onValueChange={field.handleChange}
+    />
   );
 }
 

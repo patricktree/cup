@@ -1,4 +1,5 @@
 import { css } from "@linaria/core";
+import { revalidateLogic } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
 import React from "react";
 
@@ -14,10 +15,9 @@ export function StartConversionForm({ grant }: { grant: GrantSnapshot }): React.
   const startConversionMutation = useStartConversionMutation(grant.grantId);
   const form = useAppForm({
     defaultValues: { sourceUrl: "" },
+    validationLogic: revalidateLogic({ mode: "submit", modeAfterSubmission: "change" }),
     validators: {
-      onBlur: startConversionRequestSchema,
-      onChange: startConversionRequestSchema,
-      onSubmit: startConversionRequestSchema,
+      onDynamic: startConversionRequestSchema,
     },
     onSubmit: async ({ value }) => {
       const result = await startConversionMutation.mutateAsync({
@@ -38,6 +38,7 @@ export function StartConversionForm({ grant }: { grant: GrantSnapshot }): React.
 
   return (
     <form
+      noValidate
       className={css`
         position: relative;
         display: grid;
