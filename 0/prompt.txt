@@ -43,3 +43,7 @@ E2E tests?
 ---
 
 update that snapshot also
+
+---
+
+[$commit-and-push-staged-changes](/Users/pkerschbaum/.codex/skills/commit-and-push-staged-changes/SKILL.md)
