@@ -1,7 +1,9 @@
 import { AUDIOBOOK_CONTENT_TYPE } from "#src/audio-format.ts";
 import {
   assertStoredAudioSegment,
+  getStoredSpeechConfig,
   type AudioSegmentReference,
+  type StoredAudioSegment,
 } from "#src/audio-segment-storage.ts";
 
 /** Identifies the final MP3 object assembled from a conversion's audio segments. */
@@ -15,7 +17,14 @@ export type AudioReference = {
 
 /** Supplies the storage target and ordered segment sequence for audiobook assembly. */
 export type AssembleOptions = {
-  bucket: R2Bucket;
+  bucket: {
+    get(key: string): Promise<(StoredAudioSegment & { body: ReadableStream<Uint8Array> }) | null>;
+    put(
+      key: string,
+      body: ReadableStream<Uint8Array>,
+      options: { httpMetadata: { contentType: string } },
+    ): Promise<{ key: string; size: number; etag: string } | null>;
+  };
   conversionId: string;
   audioSegments: readonly AudioSegmentReference[];
 };
@@ -43,6 +52,7 @@ export async function assembleAudiobook({
     httpMetadata: { contentType: AUDIOBOOK_CONTENT_TYPE },
   });
 
+  let synthesisIdentity: string | undefined;
   try {
     for (const audioSegment of audioSegments) {
       const audioObject = await bucket.get(audioSegment.key);
@@ -54,6 +64,11 @@ export async function assembleAudiobook({
       }
 
       assertStoredAudioSegment(audioObject, audioSegment);
+      const identity = JSON.stringify(getStoredSpeechConfig(audioObject));
+      if (synthesisIdentity !== undefined && synthesisIdentity !== identity) {
+        throw new Error("Cannot assemble audio segments with different synthesis identities");
+      }
+      synthesisIdentity = identity;
       await writeAudioObject(audioObject, writer);
     }
 
@@ -132,7 +147,7 @@ function assertValidAudioSegmentReferences(
 }
 
 async function writeAudioObject(
-  audioObject: R2ObjectBody,
+  audioObject: { key: string; body: ReadableStream<Uint8Array> },
   writer: WritableStreamDefaultWriter<Uint8Array>,
 ): Promise<void> {
   const reader = audioObject.body.getReader();

@@ -14,7 +14,7 @@ export type FakeSpeechSynthesisAiOptions = {
 export function createFakeSpeechSynthesisAi(
   options: FakeSpeechSynthesisAiOptions = {},
 ): SpeechSynthesisAi {
-  const run: AiGateway["run"] = async () => {
+  const run: AiGateway["run"] = async (request) => {
     if (options.failureStatus !== undefined) {
       return Response.json(
         { error: { message: "Configured deterministic speech failure" } },
@@ -23,6 +23,10 @@ export function createFakeSpeechSynthesisAi(
     }
 
     const pcm = createTonePcm(options.durationMilliseconds ?? DEFAULT_DURATION_MILLISECONDS);
+
+    if (!Array.isArray(request) && request.provider === "elevenlabs") {
+      return new Response(pcm, { headers: { "Content-Type": "audio/pcm" } });
+    }
 
     return Response.json({
       steps: [{ content: [createAudioContent(pcm)] }],
@@ -34,7 +38,7 @@ export function createFakeSpeechSynthesisAi(
   };
 }
 
-function createTonePcm(durationMilliseconds: number): Uint8Array {
+function createTonePcm(durationMilliseconds: number): Uint8Array<ArrayBuffer> {
   if (!Number.isFinite(durationMilliseconds) || durationMilliseconds <= 0) {
     throw new Error("Fake speech duration must be a positive finite number");
   }
