@@ -21,4 +21,4 @@ export const ELEVENLABS_SPEECH_CONFIG = {
 } as const satisfies SpeechConfig;
 
 /** Change this assignment and redeploy to switch the backend provider. */
-export const SPEECH_CONFIG: SpeechConfig = ELEVENLABS_SPEECH_CONFIG;
+export const SPEECH_CONFIG: SpeechConfig = { ...ELEVENLABS_SPEECH_CONFIG };
