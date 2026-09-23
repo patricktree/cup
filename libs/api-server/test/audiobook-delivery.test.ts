@@ -121,6 +121,10 @@ test("builds a missing EPUB from the canonical audio and segment metadata", asyn
             customMetadata: {
               "audio-duration-milliseconds": "1000",
               "audio-crc32": "1234abcd",
+              "synthesis-provider": "google-ai-studio",
+              "synthesis-model": "gemini-3.1-flash-tts-preview",
+              "synthesis-voice": "Charon",
+              "synthesis-policy-version": "3",
             },
           },
     exportEpub: async (input) => {
@@ -141,6 +145,12 @@ test("builds a missing EPUB from the canonical audio and segment metadata", asyn
           byteLength: 48_000,
           durationMilliseconds: 1_000,
           crc32: 0x1234_abcd,
+          speechConfig: {
+            provider: "google-ai-studio",
+            model: "gemini-3.1-flash-tts-preview",
+            voice: "Charon",
+            policyVersion: "3",
+          },
         },
       ],
       modifiedAt: "2026-08-29T09:00:00.000Z",

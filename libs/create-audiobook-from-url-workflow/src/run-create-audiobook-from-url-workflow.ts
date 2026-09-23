@@ -5,6 +5,9 @@ import { Temporal } from "temporal-polyfill";
 
 import {
   assembleAudiobook,
+  SPEECH_CONFIG,
+  getStoredSpeechConfig,
+  createAudioSegmentKey,
   PermanentNarrationSynthesisError,
   produceAudioSegment,
   storeAudiobook,
@@ -162,6 +165,15 @@ export async function runCreateAudiobookFromUrlWorkflow({
       }
 
       stage = "narration-synthesis";
+      const speechConfig = await step.do(
+        "choose narration synthesis configuration",
+        PROCESSING_STEP_CONFIG,
+        async () => {
+          // Retain the original provider when resuming a conversion started before this step existed.
+          const firstSegment = await env.AUDIO_BUCKET.head(createAudioSegmentKey(conversionId, 0));
+          return firstSegment ? getStoredSpeechConfig(firstSegment) : SPEECH_CONFIG;
+        },
+      );
       const audioSegments: AudioSegmentReference[] = await pMap(
         synchronizationUnits,
         ({ narrationText }, chunkIndex) =>
@@ -179,6 +191,7 @@ export async function runCreateAudiobookFromUrlWorkflow({
               try {
                 return await produceAudioSegment({
                   ai: services.speechSynthesisAi,
+                  speechConfig,
                   bucket: env.AUDIO_BUCKET,
                   conversionId,
                   sequence: chunkIndex,

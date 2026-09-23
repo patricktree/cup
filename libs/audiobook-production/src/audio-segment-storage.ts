@@ -1,5 +1,10 @@
 import { AUDIO_FORMAT, AUDIOBOOK_CONTENT_TYPE } from "#src/audio-format.ts";
-import { SPEECH_CONFIG } from "#src/speech-synthesis-config.ts";
+import {
+  SPEECH_CONFIG,
+  GEMINI_SPEECH_CONFIG,
+  ELEVENLABS_SPEECH_CONFIG,
+  type SpeechConfig,
+} from "#src/speech-synthesis-config.ts";
 
 // https://developers.cloudflare.com/r2/platform/limits/
 const R2_OBJECT_METADATA_MAX_BYTE_LENGTH = 8_192;
@@ -25,6 +30,7 @@ export type AudioSegmentReference = {
   byteLength: number;
   durationMilliseconds: number;
   crc32: number;
+  speechConfig?: SpeechConfig;
 };
 
 /** R2 object metadata required to validate and reuse an audio segment. */
@@ -45,6 +51,7 @@ export function createAudioSegmentMetadata(
   narrationText: string,
   durationMilliseconds?: number,
   crc32?: number,
+  speechConfig: SpeechConfig = SPEECH_CONFIG,
 ): Record<string, string> {
   if ((durationMilliseconds === undefined) !== (crc32 === undefined)) {
     throw new Error("Audio segment duration and CRC-32 metadata must be provided together");
@@ -64,13 +71,13 @@ export function createAudioSegmentMetadata(
   const metadata = {
     [SEGMENT_METADATA_KEYS.channelCount]: AUDIO_FORMAT.channelCount.toString(),
     [SEGMENT_METADATA_KEYS.encoding]: AUDIO_FORMAT.encoding,
-    [SEGMENT_METADATA_KEYS.model]: SPEECH_CONFIG.model,
+    [SEGMENT_METADATA_KEYS.model]: speechConfig.model,
     // JSON preserves the exact input while keeping line breaks safe for metadata header transport.
     [SEGMENT_METADATA_KEYS.narrationText]: JSON.stringify(narrationText),
-    [SEGMENT_METADATA_KEYS.policyVersion]: SPEECH_CONFIG.policyVersion,
-    [SEGMENT_METADATA_KEYS.provider]: SPEECH_CONFIG.provider,
+    [SEGMENT_METADATA_KEYS.policyVersion]: speechConfig.policyVersion,
+    [SEGMENT_METADATA_KEYS.provider]: speechConfig.provider,
     [SEGMENT_METADATA_KEYS.sampleRate]: AUDIO_FORMAT.sampleRate.toString(),
-    [SEGMENT_METADATA_KEYS.voice]: SPEECH_CONFIG.voice,
+    [SEGMENT_METADATA_KEYS.voice]: speechConfig.voice,
     ...(durationMilliseconds === undefined
       ? {}
       : {
@@ -105,7 +112,7 @@ export function assertStoredAudioSegment(
     );
   }
 
-  if (!hasExpectedFixedSynthesisMetadata(customMetadata)) {
+  if (!hasExpectedFixedSynthesisMetadata(customMetadata, audioSegment.speechConfig)) {
     throw new Error(`Audio segment has unexpected synthesis metadata: ${audioObject.key}`);
   }
 
@@ -163,6 +170,7 @@ export function createAudioSegmentReference(
     byteLength: audioObject.size,
     durationMilliseconds: getStoredAudioSegmentDuration(audioObject.customMetadata ?? {}),
     crc32: getStoredAudioSegmentCrc32(audioObject.customMetadata ?? {}),
+    speechConfig: getStoredSpeechConfig(audioObject),
   };
 }
 
@@ -186,16 +194,24 @@ function getStoredAudioSegmentCrc32(metadata: Readonly<Record<string, string>>):
   return Number.parseInt(value, 16);
 }
 
-function hasExpectedFixedSynthesisMetadata(metadata: Readonly<Record<string, string>>): boolean {
+function hasExpectedFixedSynthesisMetadata(
+  metadata: Readonly<Record<string, string>>,
+  speechConfig?: SpeechConfig,
+): boolean {
+  if (!speechConfig) {
+    return [GEMINI_SPEECH_CONFIG, ELEVENLABS_SPEECH_CONFIG].some((config) =>
+      hasExpectedFixedSynthesisMetadata(metadata, config),
+    );
+  }
   return (
     metadata[SEGMENT_METADATA_KEYS.channelCount] === AUDIO_FORMAT.channelCount.toString() &&
     metadata[SEGMENT_METADATA_KEYS.encoding] === AUDIO_FORMAT.encoding &&
-    metadata[SEGMENT_METADATA_KEYS.model] === SPEECH_CONFIG.model &&
+    metadata[SEGMENT_METADATA_KEYS.model] === speechConfig.model &&
     typeof metadata[SEGMENT_METADATA_KEYS.narrationText] === "string" &&
-    metadata[SEGMENT_METADATA_KEYS.policyVersion] === SPEECH_CONFIG.policyVersion &&
-    metadata[SEGMENT_METADATA_KEYS.provider] === SPEECH_CONFIG.provider &&
+    metadata[SEGMENT_METADATA_KEYS.policyVersion] === speechConfig.policyVersion &&
+    metadata[SEGMENT_METADATA_KEYS.provider] === speechConfig.provider &&
     metadata[SEGMENT_METADATA_KEYS.sampleRate] === AUDIO_FORMAT.sampleRate.toString() &&
-    metadata[SEGMENT_METADATA_KEYS.voice] === SPEECH_CONFIG.voice
+    metadata[SEGMENT_METADATA_KEYS.voice] === speechConfig.voice
   );
 }
 
@@ -242,4 +258,30 @@ function assertR2MetadataFits(metadata: Readonly<Record<string, string>>): void 
       `Audio segment synthesis metadata exceeds the R2 object metadata limit: ${byteLength} bytes`,
     );
   }
+}
+
+/** Reads the original synthesis identity independently of the current production default. */
+export function getStoredSpeechConfig(audioObject: StoredAudioSegment): SpeechConfig {
+  const metadata = audioObject.customMetadata ?? {};
+  const speechConfig = {
+    provider: metadata[SEGMENT_METADATA_KEYS.provider],
+    model: metadata[SEGMENT_METADATA_KEYS.model],
+    voice: metadata[SEGMENT_METADATA_KEYS.voice],
+    policyVersion: metadata[SEGMENT_METADATA_KEYS.policyVersion],
+  };
+  if (
+    (speechConfig.provider !== "elevenlabs" && speechConfig.provider !== "google-ai-studio") ||
+    !speechConfig.model ||
+    !speechConfig.voice ||
+    !speechConfig.policyVersion
+  ) {
+    throw new Error(`Audio segment has invalid synthesis identity: ${audioObject.key}`);
+  }
+  return {
+    ...speechConfig,
+    provider: speechConfig.provider,
+    model: speechConfig.model,
+    voice: speechConfig.voice,
+    policyVersion: speechConfig.policyVersion,
+  };
 }

@@ -6,6 +6,7 @@ import {
   type ProduceOptions,
   type SpeechSynthesisAi,
 } from "#src/produce-audio-segment.ts";
+import { GEMINI_SPEECH_CONFIG } from "#src/speech-synthesis-config.ts";
 
 const CONVERSION_ID = "018f4d80-5b9e-7a43-9cf4-8e192b37cbd8";
 type SpeechSynthesisRun = ReturnType<SpeechSynthesisAi["gateway"]>["run"];
@@ -25,6 +26,7 @@ test("configures a bounded observable non-streaming synthesis attempt", async ()
   };
 
   await produceAudioSegment({
+    speechConfig: GEMINI_SPEECH_CONFIG,
     ai: createSpeechSynthesisAi(run),
     bucket: createAudioSegmentBucket(),
     conversionId: CONVERSION_ID,
@@ -74,6 +76,7 @@ test.each(["streaming", "non-streaming"] as const)(
     };
 
     await produceAudioSegment({
+      speechConfig: GEMINI_SPEECH_CONFIG,
       ai: createSpeechSynthesisAi(run),
       bucket: createAudioSegmentBucket(),
       conversionId: CONVERSION_ID,
@@ -108,6 +111,7 @@ test("reports sanitized interaction diagnostics when a stream contains no audio"
 
   await expect(
     produceAudioSegment({
+      speechConfig: GEMINI_SPEECH_CONFIG,
       ai: createSpeechSynthesisAi(run),
       bucket: createAudioSegmentBucket(),
       conversionId: CONVERSION_ID,
@@ -133,6 +137,7 @@ test("marks a confirmed provider safety refusal as permanent", async () => {
     ]);
 
   const error = await produceAudioSegment({
+    speechConfig: GEMINI_SPEECH_CONFIG,
     ai: createSpeechSynthesisAi(run),
     bucket: createAudioSegmentBucket(),
     conversionId: CONVERSION_ID,
@@ -152,6 +157,7 @@ test("keeps timeouts, rate limits, and server failures retryable", async () => {
     const run: SpeechSynthesisRun = async () =>
       Response.json({ error: { message: "Try again later." } }, { status });
     const error = await produceAudioSegment({
+      speechConfig: GEMINI_SPEECH_CONFIG,
       ai: createSpeechSynthesisAi(run),
       bucket: createAudioSegmentBucket(),
       conversionId: CONVERSION_ID,
@@ -169,6 +175,7 @@ test("keeps timeouts, rate limits, and server failures retryable", async () => {
 
 test("keeps transient input policy blocks retryable", async () => {
   const error = await produceAudioSegment({
+    speechConfig: GEMINI_SPEECH_CONFIG,
     ai: createSpeechSynthesisAi(createTransientInputPolicyBlockResponse),
     bucket: createAudioSegmentBucket(),
     conversionId: CONVERSION_ID,
@@ -185,6 +192,7 @@ test("keeps transient input policy blocks retryable", async () => {
 
 test("marks invalid requests and unsupported audio formats as permanent", async () => {
   const invalidRequestError = await produceAudioSegment({
+    speechConfig: GEMINI_SPEECH_CONFIG,
     ai: createSpeechSynthesisAi(createInvalidRequestResponse),
     bucket: createAudioSegmentBucket(),
     conversionId: CONVERSION_ID,
@@ -195,6 +203,7 @@ test("marks invalid requests and unsupported audio formats as permanent", async 
   expect(invalidRequestError).toBeInstanceOf(PermanentNarrationSynthesisError);
 
   const unsupportedFormatError = await produceAudioSegment({
+    speechConfig: GEMINI_SPEECH_CONFIG,
     ai: createSpeechSynthesisAi(createUnsupportedFormatResponse),
     bucket: createAudioSegmentBucket(),
     conversionId: CONVERSION_ID,
