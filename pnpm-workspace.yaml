@@ -40,7 +40,7 @@ catalog:
   stylelint-config-standard: ^38.0.0
   typescript: "npm:@typescript/typescript6@^6.0.2"
   vitest: ^4.1.11
-  wrangler: ^4.127.1
+  wrangler: ^4.136.1
 
 catalogs:
   hono:
@@ -80,6 +80,7 @@ updateNotifier: false
 workspaceConcurrency: 0
 
 minimumReleaseAgeExclude:
-  - miniflare@5.20260815.0-alpha
-  - wrangler@4.124.0
+  - miniflare@5.20260815.0-alpha || 5.20260921.0-alpha
+  - wrangler@4.124.0 || 4.136.1
   - openai@7.7.0
+  - '@cloudflare/unenv-preset@2.16.2'

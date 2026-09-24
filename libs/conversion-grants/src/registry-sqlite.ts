@@ -1,4 +1,4 @@
-import { asc, desc } from "drizzle-orm";
+import { asc, desc, getTableColumns } from "drizzle-orm";
 import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
 import type { RegistryEntry, RegistryRecord } from "#src/registry-model.ts";
@@ -10,6 +10,15 @@ import {
   schemaMigrations,
 } from "#src/sqlite-schema.ts";
 import { nowMilliseconds } from "#src/time.ts";
+
+// https://developers.cloudflare.com/durable-objects/platform/limits/
+const MAX_SQL_PARAMETERS = 100;
+const GRANTS_PER_BATCH = Math.floor(
+  MAX_SQL_PARAMETERS / Object.keys(getTableColumns(registryGrantTable)).length,
+);
+const CONVERSIONS_PER_BATCH = Math.floor(
+  MAX_SQL_PARAMETERS / Object.keys(getTableColumns(conversionGrantTable)).length,
+);
 
 export class ConversionGrantRegistrySqlite {
   private readonly database: DrizzleSqliteDODatabase<typeof registrySqliteSchema>;
@@ -158,13 +167,14 @@ export class ConversionGrantRegistrySqlite {
   }
 
   async save(record: RegistryRecord): Promise<void> {
+    // Callers hold a storage transaction across these deletes and every insert batch.
     this.database.delete(conversionGrantTable).run();
     this.database.delete(registryGrantTable).run();
-    if (record.grants.length > 0)
+    for (let offset = 0; offset < record.grants.length; offset += GRANTS_PER_BATCH)
       this.database
         .insert(registryGrantTable)
         .values(
-          record.grants.map((entry) => ({
+          record.grants.slice(offset, offset + GRANTS_PER_BATCH).map((entry) => ({
             grantId: entry.grantId,
             requestId: entry.requestId,
             label: entry.label,
@@ -182,11 +192,13 @@ export class ConversionGrantRegistrySqlite {
         )
         .run();
     const conversionGrantEntries = Object.entries(record.conversionGrants);
-    if (conversionGrantEntries.length > 0)
+    for (let offset = 0; offset < conversionGrantEntries.length; offset += CONVERSIONS_PER_BATCH)
       this.database
         .insert(conversionGrantTable)
         .values(
-          conversionGrantEntries.map(([conversionId, grantId]) => ({ conversionId, grantId })),
+          conversionGrantEntries
+            .slice(offset, offset + CONVERSIONS_PER_BATCH)
+            .map(([conversionId, grantId]) => ({ conversionId, grantId })),
         )
         .run();
   }

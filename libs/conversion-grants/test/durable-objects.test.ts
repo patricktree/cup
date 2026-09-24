@@ -304,6 +304,48 @@ describe("SQLite conversion grant Durable Object", () => {
 });
 
 describe("SQLite conversion grant Registry Durable Object", () => {
+  test("persists grants and conversion bindings beyond one SQL parameter batch", async () => {
+    const registry = registryStub("registry-batches");
+    const entries = [];
+    for (let index = 0; index < 8; index++) {
+      const { entry } = await registry.reserveProvisioning(
+        grantId(`batch-request-${index}`),
+        `Batch ${index}`,
+        CREATED_AT_MS + index,
+      );
+      entries.push(entry);
+    }
+    const first = entries[0];
+    if (first === undefined) throw new Error("Expected a provisioned grant.");
+    for (let index = 0; index < 51; index++)
+      await registry.bindConversion(grantId(`batch-conversion-${index}`), first.grantId);
+
+    expect((await registry.listGrants({ limit: 100 }, CREATED_AT_MS)).grants).toHaveLength(8);
+    for (let index = 0; index < 51; index++)
+      expect(await registry.findGrantIdForConversion(grantId(`batch-conversion-${index}`))).toBe(
+        first.grantId,
+      );
+
+    const storage = await worker.getDurableObjectStorage("CONVERSION_GRANT_REGISTRY", {
+      name: "registry-batches",
+    });
+    await storage.exec(`CREATE TRIGGER reject_failed_batch BEFORE INSERT ON registry_grants
+      WHEN NEW.label = 'Reject this grant'
+      BEGIN SELECT RAISE(ABORT, 'Injected later-batch failure'); END`);
+    await expectWorkerRpcRejection(
+      registry.reserveProvisioning(
+        grantId("rejected-batch-request"),
+        "Reject this grant",
+        CREATED_AT_MS + 8,
+      ),
+    );
+    expect((await registry.listGrants({ limit: 100 }, CREATED_AT_MS)).grants).toHaveLength(8);
+    expect(await registry.findGrantIdForConversion(grantId("batch-conversion-50"))).toBe(
+      first.grantId,
+    );
+    expect((await registry.reserveProvisioning(first.requestId, first.label)).created).toBe(false);
+  });
+
   test("binds request IDs, pages snapshots, and rejects same-revision conflicts", async () => {
     const registry = registryStub("registry");
     expect(await registry.migrate()).toBe(2);

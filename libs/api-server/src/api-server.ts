@@ -493,6 +493,16 @@ const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
           "The request ID is already bound to another label.",
           409,
         );
+      // Drizzle's wrapper includes SQL parameters; log only the underlying error.
+      let cause = error;
+      while (cause instanceof Error && cause.cause instanceof Error) cause = cause.cause;
+      console.error(
+        JSON.stringify({
+          event: "grant-creation-failed",
+          requestId: context.get("requestId"),
+          error: cause instanceof Error ? cause.message : "Unknown error",
+        }),
+      );
       return jsonError(
         context.get("requestId"),
         "operational-error",
