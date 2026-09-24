@@ -1,0 +1,17 @@
+explain "Captions" in the context of this project
+
+---
+
+how could we display it?
+
+---
+
+idea: let's remove captions completely
+
+we will in the future change to displaying the narration text within the web app, play the audio in the background, highlight in the web app what is currently spoken, etc.
+
+no need for WebVTT. WDYT?
+
+---
+
+hmm, can external players as of today use the captions? are they included in the MP3 or something?

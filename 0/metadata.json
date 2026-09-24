@@ -1,0 +1,80 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M39668MTKHQMV9GRHT341CR8",
+  "session_id": "01a0c874-1d1f-7540-a283-78ce109d5243",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-24T07:48:27.928091Z",
+  "branch": "main",
+  "checkpoints_count": 4,
+  "save_step_count": 4,
+  "files_touched": [
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-astra",
+  "turn_id": "69c0a7f904ea",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 3043,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 68992,
+    "output_tokens": 291,
+    "api_call_count": 7
+  },
+  "session_metrics": {
+    "turn_count": 4
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-24T07:48:27.913207Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 1502,
+    "human_modified": 19,
+    "human_removed": 0,
+    "total_committed": 1502,
+    "total_lines_changed": 1568,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 416,
+      "user_lines_removed": 20,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "libs/prepare-source-material/test-e2e/cloudflare.html": 1,
+        "pnpm-lock.yaml": 411,
+        "pnpm-workspace.yaml": 4
+      },
+      "user_removed_per_file": {
+        "libs/prepare-source-material/test-e2e/cloudflare.html": 1,
+        "pnpm-lock.yaml": 16,
+        "pnpm-workspace.yaml": 3
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 416,
+      "agent_lines_removed": 20
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 416,
+      "agent_lines_removed": 20
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 416,
+      "agent_lines_removed": 20
+    }
+  ]
+}
