@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 
 import type { ConversionGrantRegistryDurableObject } from "#src/conversion-grant-registry-durable-object.ts";
+import { estimateAudioDuration } from "#src/duration-accounting.ts";
 import { canonicalJson, encodeBase64Url } from "#src/encoding.ts";
 import { ConversionPhase } from "#src/grant-contracts.ts";
 import type {
@@ -27,9 +28,9 @@ import {
   createGrantSnapshot,
   createOperatorGrantSnapshot,
   deriveGrantState,
-  deriveSlotCounts,
+  deriveDurationBalance,
   GRANT_SCHEMA_VERSION,
-  DEFAULT_MAX_SLOTS,
+  DEFAULT_ALLOWANCE_MILLISECONDS,
   RECONCILIATION_CUTOFF_MS,
 } from "#src/grant-model.ts";
 import { signSession, verifyRootCredential, verifySession } from "#src/grant-session.ts";
@@ -75,7 +76,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
         return createGrantRegistrySnapshot(existing);
       }
       const record: GrantRecord = {
-        maxSlots: DEFAULT_MAX_SLOTS,
+        allowanceMilliseconds: DEFAULT_ALLOWANCE_MILLISECONDS,
         grantId,
         createdAtMs,
         expiresAtMs,
@@ -85,6 +86,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
         registryConfirmedSnapshotRevision: 0,
         startAttempts: [],
         conversions: [],
+        segmentUsage: [],
       };
       await this.sqlite.save(record);
       return createGrantRegistrySnapshot(record);
@@ -166,7 +168,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
         return {
           result: "replayed",
           conversion: existing,
-          slots: deriveSlotCounts(record),
+          duration: deriveDurationBalance(record),
           registrySnapshot: createGrantRegistrySnapshot(record),
         };
       }
@@ -203,10 +205,118 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
       return {
         result: "created",
         conversion,
-        slots: deriveSlotCounts(record),
+        duration: deriveDurationBalance(record),
         registrySnapshot: createGrantRegistrySnapshot(record),
       };
     });
+  }
+
+  async reserveAudioSegment(
+    conversionId: string,
+    sequence: number,
+    narrationTextCharacters: number,
+  ) {
+    if (!Number.isSafeInteger(sequence) || sequence < 0)
+      throw new Error("Invalid segment sequence");
+    return this.ctx.storage.transaction(async () => {
+      const record = await this.sqlite.requireRecord();
+      if (!record.conversions.some((conversion) => conversion.conversionId === conversionId))
+        throw new Error("Conversion does not exist");
+      const existing = record.segmentUsage.find(
+        (segment) => segment.conversionId === conversionId && segment.sequence === sequence,
+      );
+      if (existing && existing.narrationTextCharacters !== narrationTextCharacters)
+        throw new Error("Segment reservation conflicts with synthesis identity");
+      if (existing?.state === "settled") return { result: "settled" as const };
+      if (existing?.state === "reserved") return { result: "reserved" as const };
+      const state = deriveGrantState(record, nowMilliseconds());
+      if (state !== "open") return { result: state };
+      const estimatedMilliseconds = estimateAudioDuration(narrationTextCharacters);
+      if (estimatedMilliseconds > deriveDurationBalance(record).availableMilliseconds)
+        return { result: "insufficient-duration" as const };
+      const reservation = {
+        conversionId,
+        sequence,
+        narrationTextCharacters,
+        estimatedMilliseconds,
+        state: "reserved" as const,
+        actualMilliseconds: 0,
+        chargedMilliseconds: 0,
+      };
+      if (existing) Object.assign(existing, reservation);
+      else record.segmentUsage.push(reservation);
+      record.registrySnapshotRevision += 1;
+      await this.sqlite.save(record);
+      await this.ctx.storage.setAlarm(nowMilliseconds() + RECONCILIATION_RETRY_MS);
+      return { result: "reserved" as const };
+    });
+  }
+
+  async completeAudioSegment(conversionId: string, sequence: number, durationMilliseconds: number) {
+    if (!Number.isFinite(durationMilliseconds) || durationMilliseconds <= 0)
+      throw new Error("Generated duration must be positive and finite");
+    const actualMilliseconds = Math.ceil(durationMilliseconds);
+    if (!Number.isSafeInteger(actualMilliseconds))
+      throw new Error("Generated duration exceeds supported precision");
+    return this.ctx.storage.transaction(async () => {
+      const record = await this.sqlite.requireRecord();
+      const segment = record.segmentUsage.find(
+        (item) => item.conversionId === conversionId && item.sequence === sequence,
+      );
+      if (segment === undefined) throw new Error("Audio segment has no duration reservation");
+      if (segment.state === "settled") {
+        if (segment.actualMilliseconds !== actualMilliseconds)
+          throw new Error("Conflicting audio duration settlement");
+        return { result: "replayed" as const };
+      }
+      if (segment.state !== "reserved") throw new Error("Audio segment reservation was released");
+      const balance = deriveDurationBalance(record);
+      segment.state = "settled";
+      segment.actualMilliseconds = actualMilliseconds;
+      segment.chargedMilliseconds = Math.min(
+        actualMilliseconds,
+        Math.max(0, record.allowanceMilliseconds - balance.spentMilliseconds),
+      );
+      record.registrySnapshotRevision += 1;
+      await this.sqlite.save(record);
+      await this.ctx.storage.setAlarm(nowMilliseconds() + RECONCILIATION_RETRY_MS);
+      return { result: "recorded" as const };
+    });
+  }
+
+  async retainHistoricalAudioSegment(
+    conversionId: string,
+    sequence: number,
+    characters: number,
+    durationMilliseconds: number,
+  ): Promise<void> {
+    await this.ctx.storage.transaction(async () => {
+      const record = await this.sqlite.requireRecord();
+      if (!record.conversions.some((conversion) => conversion.conversionId === conversionId))
+        throw new Error("Conversion does not exist");
+      if (
+        record.segmentUsage.some(
+          (segment) => segment.conversionId === conversionId && segment.sequence === sequence,
+        )
+      )
+        return;
+      record.segmentUsage.push({
+        conversionId,
+        sequence,
+        narrationTextCharacters: characters,
+        estimatedMilliseconds: estimateAudioDuration(characters),
+        state: "settled",
+        actualMilliseconds: Math.ceil(durationMilliseconds),
+        chargedMilliseconds: 0,
+      });
+      await this.sqlite.save(record);
+    });
+  }
+
+  async listAudioSegments(conversionId: string) {
+    return (await this.sqlite.requireRecord()).segmentUsage
+      .filter((segment) => segment.conversionId === conversionId && segment.state === "settled")
+      .toSorted((left, right) => left.sequence - right.sequence);
   }
 
   async markWorkflowStarted(conversionId: string, nowMs = nowMilliseconds()): Promise<void> {
@@ -275,16 +385,20 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
     });
   }
 
-  async setMaxSlots(maxSlots: number, nowMs = nowMilliseconds()) {
-    if (!Number.isSafeInteger(maxSlots) || maxSlots < 1)
-      throw new Error("Conversion allowance must be a positive safe integer");
+  async setDurationAllowance(allowanceMilliseconds: number, nowMs = nowMilliseconds()) {
+    if (!Number.isSafeInteger(allowanceMilliseconds) || allowanceMilliseconds < 1)
+      throw new Error("Duration allowance must be a positive safe integer");
     return this.ctx.storage.transaction(async () => {
       const record = await this.sqlite.requireRecord();
-      const slots = deriveSlotCounts(record);
-      if (maxSlots < slots.reserved + slots.spent) return { result: "below-used-slots" as const };
-      const changed = record.maxSlots !== maxSlots;
+      const duration = deriveDurationBalance(record);
+      const changed = record.allowanceMilliseconds !== allowanceMilliseconds;
+      if (
+        changed &&
+        allowanceMilliseconds < duration.reservedMilliseconds + duration.spentMilliseconds
+      )
+        return { result: "below-used-duration" as const };
       if (changed) {
-        record.maxSlots = maxSlots;
+        record.allowanceMilliseconds = allowanceMilliseconds;
         record.registrySnapshotRevision += 1;
         await this.sqlite.save(record);
         await this.ctx.storage.setAlarm(nowMs + RECONCILIATION_RETRY_MS);
@@ -370,8 +484,6 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
         const isRecoveredWorkflow = existing.status === "failed" && terminal.status === "ready";
         if (!isRecoveredWorkflow)
           throw new Error("A terminal conversion outcome cannot be changed");
-        if (deriveSlotCounts(record).remaining === 0)
-          throw new Error("A recovered conversion requires an available slot");
       }
       const identity = {
         conversionId: existing.conversionId,
@@ -385,6 +497,10 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
       };
       record.conversions[index] =
         terminal.status === "ready" ? { ...identity, ...terminal } : { ...identity, ...terminal };
+      for (const segment of record.segmentUsage) {
+        if (segment.conversionId === conversionId && segment.state === "reserved")
+          segment.state = "released";
+      }
       record.registrySnapshotRevision += 1;
       await this.sqlite.save(record);
       await this.ctx.storage.setAlarm(nowMilliseconds() + RECONCILIATION_RETRY_MS);
@@ -435,8 +551,59 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
       }
     }
 
+    await this.reconcileGeneration(record);
+    record = await this.sqlite.requireRecord();
+    await this.cleanupFailedArtifacts(record);
+
+    record = await this.sqlite.requireRecord();
+    const hasDueMaintenance =
+      record.registryConfirmedSnapshotRevision < record.registrySnapshotRevision ||
+      record.segmentUsage.some((segment) => segment.state === "reserved") ||
+      record.conversions.some(
+        (conversion) =>
+          (conversion.status === "pending" &&
+            conversion.workflowStartedAtMs === undefined &&
+            nowMilliseconds() - conversion.acceptedAtMs < RECONCILIATION_CUTOFF_MS) ||
+          (conversion.status === "failed" && conversion.cleanupState === "pending"),
+      );
+    if (hasDueMaintenance) {
+      await this.ctx.storage.setAlarm(nowMilliseconds() + MAINTENANCE_RETRY_MS);
+    }
+  }
+
+  private async reconcileGeneration(record: GrantRecord): Promise<void> {
+    for (const conversion of record.conversions) {
+      if (conversion.status !== "pending") continue;
+      try {
+        const instance = await this.env.CREATE_AUDIOBOOK_FROM_URL_WORKFLOW.get(
+          conversion.conversionId,
+        );
+        const status = await instance.status();
+        if (status.status === "errored" || status.status === "terminated") {
+          await this.recordFailed(conversion.conversionId, {
+            failureCategory: "workflow-platform",
+            explanation: "Generation stopped. Unfinished segments did not consume allowance.",
+            cleanupState: "pending",
+          });
+        }
+      } catch {
+        // An ambiguous platform result must not release reservations for work that might still be running.
+      }
+    }
+  }
+
+  private async cleanupFailedArtifacts(record: GrantRecord): Promise<void> {
     for (const conversion of record.conversions) {
       if (conversion.status !== "failed" || conversion.cleanupState !== "pending") continue;
+      if (
+        record.segmentUsage.some(
+          (segment) =>
+            segment.conversionId === conversion.conversionId && segment.state === "settled",
+        )
+      ) {
+        await this.setCleanupState(conversion.conversionId, "complete");
+        continue;
+      }
       try {
         let cursor: string | undefined;
         do {
@@ -455,20 +622,6 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
           await this.setCleanupState(conversion.conversionId, "cleanup_failed");
         }
       }
-    }
-
-    record = await this.sqlite.requireRecord();
-    const hasDueMaintenance =
-      record.registryConfirmedSnapshotRevision < record.registrySnapshotRevision ||
-      record.conversions.some(
-        (conversion) =>
-          (conversion.status === "pending" &&
-            conversion.workflowStartedAtMs === undefined &&
-            nowMilliseconds() - conversion.acceptedAtMs < RECONCILIATION_CUTOFF_MS) ||
-          (conversion.status === "failed" && conversion.cleanupState === "pending"),
-      );
-    if (hasDueMaintenance) {
-      await this.ctx.storage.setAlarm(nowMilliseconds() + MAINTENANCE_RETRY_MS);
     }
   }
 

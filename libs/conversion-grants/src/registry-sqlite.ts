@@ -119,6 +119,21 @@ export class ConversionGrantRegistrySqlite {
           .run();
       });
     }
+    if (latest < 3) {
+      this.storage.transactionSync(() => {
+        this.storage.sql.exec(
+          "ALTER TABLE registry_grants RENAME COLUMN projection_max_slots TO projection_allowance_milliseconds",
+        );
+        // Mirror the authority migration: every existing grant receives a fresh duration balance.
+        this.storage.sql.exec(
+          "UPDATE registry_grants SET projection_allowance_milliseconds = 7200000, projection_revision = projection_revision + 1, projection_reserved = 0, projection_spent = 0, projection_schema_version = 5 WHERE projection_revision IS NOT NULL",
+        );
+        this.database
+          .insert(schemaMigrations)
+          .values({ version: 3, appliedAtMs: nowMilliseconds() })
+          .run();
+      });
+    }
   }
 
   async load(): Promise<RegistryRecord> {
@@ -144,12 +159,12 @@ export class ConversionGrantRegistrySqlite {
               grantSnapshot: {
                 grantId: row.grantId,
                 revision: row.snapshotRevision,
-                maxSlots: row.snapshotMaxSlots,
+                allowanceMilliseconds: row.snapshotAllowanceMilliseconds,
                 ...(row.snapshotRevokedAtMs === null
                   ? {}
                   : { revokedAtMs: row.snapshotRevokedAtMs }),
-                reserved: row.snapshotReserved,
-                spent: row.snapshotSpent,
+                reservedMilliseconds: row.snapshotReserved,
+                spentMilliseconds: row.snapshotSpent,
                 schemaVersion: row.snapshotSchemaVersion,
               },
             }),
@@ -183,10 +198,10 @@ export class ConversionGrantRegistrySqlite {
             expiresAtMs: entry.expiresAtMs,
             credentialIssued: entry.credentialIssued,
             snapshotRevision: entry.grantSnapshot?.revision ?? null,
-            snapshotMaxSlots: entry.grantSnapshot?.maxSlots ?? 5,
+            snapshotAllowanceMilliseconds: entry.grantSnapshot?.allowanceMilliseconds ?? 7_200_000,
             snapshotRevokedAtMs: entry.grantSnapshot?.revokedAtMs ?? null,
-            snapshotReserved: entry.grantSnapshot?.reserved ?? null,
-            snapshotSpent: entry.grantSnapshot?.spent ?? null,
+            snapshotReserved: entry.grantSnapshot?.reservedMilliseconds ?? null,
+            snapshotSpent: entry.grantSnapshot?.spentMilliseconds ?? null,
             snapshotSchemaVersion: entry.grantSnapshot?.schemaVersion ?? null,
           })),
         )

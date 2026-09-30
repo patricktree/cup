@@ -58,7 +58,9 @@ test.describe("provider failure and recovery", () => {
 
     const { grantId } = await openNewTrial(page, workerEnvironment);
     await startConversion(page);
-    await expect(page.getByText("Failed!", { exact: true })).toBeVisible({ timeout: 90_000 });
+    await expect(page.getByText("Generation stopped.", { exact: true })).toBeVisible({
+      timeout: 90_000,
+    });
 
     await workerEnvironment.restart("success");
     await page.goto(`${workerEnvironment.origin}/app/trials/${grantId}`);

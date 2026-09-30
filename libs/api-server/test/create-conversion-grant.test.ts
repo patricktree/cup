@@ -19,10 +19,10 @@ test("provisions a grant and returns its root credential", async () => {
   const grantSnapshot = {
     grantId: "grant-id",
     revision: 1,
-    reserved: 0,
-    spent: 0,
+    reservedMilliseconds: 0,
+    spentMilliseconds: 0,
     schemaVersion: 2,
-    maxSlots: 5,
+    allowanceMilliseconds: 5,
   };
   const dependencies: CreateConversionGrantDependencies = {
     registry: {

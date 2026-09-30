@@ -1,3 +1,4 @@
+import { calculateDurationBalance, type SegmentUsage } from "#src/duration-accounting.ts";
 import type {
   ConversionFailureCategory,
   ConversionPhase,
@@ -6,12 +7,12 @@ import type {
   GrantSnapshot,
   GrantState,
   OperatorGrantSnapshot,
-  SlotCounts,
+  DurationBalance,
 } from "#src/grant-contracts.ts";
 import { toIsoString } from "#src/time.ts";
 
-export const GRANT_SCHEMA_VERSION = 4;
-export const DEFAULT_MAX_SLOTS = 5;
+export const GRANT_SCHEMA_VERSION = 5;
+export { DEFAULT_ALLOWANCE_MILLISECONDS } from "#src/duration-accounting.ts";
 export const RECONCILIATION_CUTOFF_MS = 48 * 60 * 60 * 1_000;
 
 export type PendingConversion = {
@@ -74,7 +75,7 @@ export type AudiobookReference = {
 };
 
 export type GrantRecord = {
-  maxSlots: number;
+  allowanceMilliseconds: number;
   grantId: string;
   createdAtMs: number;
   expiresAtMs: number;
@@ -87,15 +88,16 @@ export type GrantRecord = {
   registryConfirmedSnapshotRevision: number;
   startAttempts: number[];
   conversions: GrantConversion[];
+  segmentUsage: SegmentUsage[];
 };
 
 export type GrantRegistrySnapshot = {
-  maxSlots: number;
+  allowanceMilliseconds: number;
   grantId: string;
   revision: number;
   revokedAtMs?: number;
-  reserved: number;
-  spent: number;
+  reservedMilliseconds: number;
+  spentMilliseconds: number;
   schemaVersion: number;
 };
 
@@ -103,7 +105,7 @@ export type StartGrantConversionResult =
   | {
       result: "created" | "replayed";
       conversion: GrantConversion;
-      slots: SlotCounts;
+      duration: DurationBalance;
       registrySnapshot: GrantRegistrySnapshot;
     }
   | { result: "idempotency-conflict" }
@@ -153,7 +155,7 @@ export function createGrantSnapshot(record: GrantRecord, nowMs: number): GrantSn
     expiresAt: toIsoString(record.expiresAtMs),
     ...(record.revokedAtMs === undefined ? {} : { revokedAt: toIsoString(record.revokedAtMs) }),
     state: deriveGrantState(record, nowMs),
-    slots: deriveSlotCounts(record),
+    duration: deriveDurationBalance(record),
   };
 }
 
@@ -170,6 +172,7 @@ export function createOperatorGrantSnapshot(
   const snapshot = createGrantSnapshot(record, nowMs);
   return {
     ...snapshot,
+    allowanceMilliseconds: record.allowanceMilliseconds,
     signingKeyGeneration: record.signingKeyGeneration,
     registrySnapshotRevision: record.registrySnapshotRevision,
     registryConfirmedSnapshotRevision: record.registryConfirmedSnapshotRevision,
@@ -219,32 +222,28 @@ export function createOperatorGrantSnapshot(
   };
 }
 
-export function deriveSlotCounts(record: GrantRecord): SlotCounts {
-  const reserved = record.conversions.filter(
-    (conversion) => conversion.status === "pending",
-  ).length;
-  const spent = record.conversions.filter((conversion) => conversion.status === "ready").length;
-  return { remaining: record.maxSlots - reserved - spent, reserved, spent };
+export function deriveDurationBalance(record: GrantRecord): DurationBalance {
+  return calculateDurationBalance(record.allowanceMilliseconds, record.segmentUsage);
 }
 
 export function deriveGrantState(record: GrantRecord, nowMs: number): GrantState {
   if (record.revokedAtMs !== undefined) return "revoked";
   if (nowMs >= record.expiresAtMs) return "expired";
-  const slots = deriveSlotCounts(record);
-  if (slots.spent >= record.maxSlots) return "exhausted";
-  if (slots.remaining === 0) return "temporarily-full";
+  const duration = deriveDurationBalance(record);
+  if (duration.spentMilliseconds >= record.allowanceMilliseconds) return "exhausted";
+  if (duration.availableMilliseconds === 0) return "temporarily-full";
   return "open";
 }
 
 export function createGrantRegistrySnapshot(record: GrantRecord): GrantRegistrySnapshot {
-  const slots = deriveSlotCounts(record);
+  const duration = deriveDurationBalance(record);
   return {
     grantId: record.grantId,
     revision: record.registrySnapshotRevision,
-    maxSlots: record.maxSlots,
+    allowanceMilliseconds: record.allowanceMilliseconds,
     ...(record.revokedAtMs === undefined ? {} : { revokedAtMs: record.revokedAtMs }),
-    reserved: slots.reserved,
-    spent: slots.spent,
+    reservedMilliseconds: duration.reservedMilliseconds,
+    spentMilliseconds: duration.spentMilliseconds,
     schemaVersion: GRANT_SCHEMA_VERSION,
   };
 }

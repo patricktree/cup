@@ -27,7 +27,8 @@
     "@cup/conversion-grants": "workspace:*",
     "@cup/create-audiobook-from-url-workflow": "workspace:*",
     "@cup/narration-content-selection": "workspace:*",
-    "@cup/prepare-source-material": "workspace:*"
+    "@cup/prepare-source-material": "workspace:*",
+    "@cup/web-app-api.routes": "workspace:*"
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",

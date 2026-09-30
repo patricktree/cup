@@ -24,7 +24,11 @@ export const OpenGrant = {
         createdAt: "2026-08-28T10:00:00Z",
         expiresAt: "2026-11-26T10:00:00Z",
         state: "open",
-        slots: { remaining: 5, reserved: 0, spent: 0 },
+        duration: {
+          availableMilliseconds: 7_200_000,
+          reservedMilliseconds: 0,
+          spentMilliseconds: 0,
+        },
       } satisfies GrantSnapshot),
     ),
   ],

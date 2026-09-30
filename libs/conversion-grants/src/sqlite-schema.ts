@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
-import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { check, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+import type { SegmentUsage } from "#src/duration-accounting.ts";
 import type { ConversionPhase } from "#src/grant-contracts.ts";
 import type { AudiobookReference, ConversionMeasurements } from "#src/grant-model.ts";
 
@@ -13,7 +14,7 @@ export const grants = sqliteTable(
   "grant",
   {
     id: integer().primaryKey(),
-    maxSlots: integer("max_slots").notNull().default(5),
+    allowanceMilliseconds: integer("allowance_milliseconds").notNull().default(7_200_000),
     grantId: text("grant_id").notNull().unique(),
     createdAtMs: integer("created_at_ms").notNull(),
     expiresAtMs: integer("expires_at_ms").notNull(),
@@ -86,6 +87,37 @@ export const conversions = sqliteTable(
   ],
 );
 
+export const segmentUsage = sqliteTable(
+  "segment_usage",
+  {
+    conversionId: text("conversion_id")
+      .notNull()
+      .references(() => conversions.conversionId),
+    sequence: integer().notNull(),
+    narrationTextCharacters: integer("narration_text_characters").notNull(),
+    estimatedMilliseconds: integer("estimated_milliseconds").notNull(),
+    state: text({ enum: ["reserved", "settled", "released"] })
+      .$type<SegmentUsage["state"]>()
+      .notNull(),
+    actualMilliseconds: integer("actual_milliseconds").notNull(),
+    chargedMilliseconds: integer("charged_milliseconds").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.conversionId, table.sequence] }),
+    check("segment_usage_sequence", sql`${table.sequence} >= 0`),
+    check("segment_usage_characters", sql`${table.narrationTextCharacters} > 0`),
+    check("segment_usage_estimate", sql`${table.estimatedMilliseconds} > 0`),
+    check(
+      "segment_usage_duration",
+      sql`${table.chargedMilliseconds} >= 0 AND ${table.chargedMilliseconds} <= ${table.actualMilliseconds}`,
+    ),
+    check(
+      "segment_usage_state",
+      sql`(${table.state} = 'settled' AND ${table.actualMilliseconds} > 0) OR (${table.state} IN ('reserved', 'released') AND ${table.actualMilliseconds} = 0 AND ${table.chargedMilliseconds} = 0)`,
+    ),
+  ],
+);
+
 export const startAttempts = sqliteTable("start_attempts", {
   id: integer().primaryKey({ autoIncrement: true }),
   attemptedAtMs: integer("attempted_at_ms").notNull(),
@@ -103,7 +135,9 @@ export const registryGrants = sqliteTable(
     createdAtMs: integer("created_at_ms").notNull(),
     expiresAtMs: integer("expires_at_ms").notNull(),
     credentialIssued: integer("credential_issued", { mode: "boolean" }).notNull(),
-    snapshotMaxSlots: integer("projection_max_slots").notNull().default(5),
+    snapshotAllowanceMilliseconds: integer("projection_allowance_milliseconds")
+      .notNull()
+      .default(7_200_000),
     snapshotRevision: integer("projection_revision"),
     snapshotRevokedAtMs: integer("projection_revoked_at_ms"),
     snapshotReserved: integer("projection_reserved"),
@@ -131,5 +165,11 @@ export const conversionGrants = sqliteTable("conversion_grants", {
     .references(() => registryGrants.grantId),
 });
 
-export const grantSqliteSchema = { conversions, grants, schemaMigrations, startAttempts };
+export const grantSqliteSchema = {
+  conversions,
+  grants,
+  schemaMigrations,
+  segmentUsage,
+  startAttempts,
+};
 export const registrySqliteSchema = { conversionGrants, registryGrants, schemaMigrations };

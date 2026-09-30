@@ -14,7 +14,7 @@ export {
   operatorGrantSnapshotSchema,
   projectedGrantStates,
   projectedGrantStateSchema,
-  slotCountsSchema,
+  durationBalanceSchema,
   type ConversionFailureCategory,
   type GrantConversionSnapshot,
   type GrantMigrationReport,
@@ -25,7 +25,7 @@ export {
   type OperatorGrantFacts,
   type OperatorGrantSnapshot,
   type ProjectedGrantState,
-  type SlotCounts,
+  type DurationBalance,
 } from "#src/grant-contracts.ts";
 export type {
   AudiobookReference,

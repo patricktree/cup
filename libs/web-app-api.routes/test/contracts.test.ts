@@ -109,7 +109,7 @@ describe("web application transport contracts", () => {
         createdAt: "2026-08-28T12:00:00.000Z",
         expiresAt: "2026-08-29T12:00:00.000Z",
         state: "open",
-        slots: { remaining: 4, reserved: 0, spent: 1 },
+        duration: { availableMilliseconds: 4, reservedMilliseconds: 0, spentMilliseconds: 1 },
       }).success,
     ).toBe(true);
     expect(
@@ -118,7 +118,7 @@ describe("web application transport contracts", () => {
         createdAt: "2026-08-28T12:00:00.000Z",
         expiresAt: "2026-08-29T12:00:00.000Z",
         state: "open",
-        slots: { remaining: 4, reserved: 0, spent: 1 },
+        duration: { availableMilliseconds: 4, reservedMilliseconds: 0, spentMilliseconds: 1 },
         conversions: [],
       }).success,
     ).toBe(false);

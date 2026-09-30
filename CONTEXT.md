@@ -27,12 +27,20 @@ A URL that gives its bearer access to a conversion grant.
 _Avoid_: deep link, invite link
 
 **conversion grant**:
-A limited allowance of conversions available to anyone possessing its grant credential.
+A shared allowance for producing audiobooks, available to anyone possessing its grant credential.
 _Avoid_: trial link, user quota
 
-**conversion slot**:
-One allowance unit in a conversion grant. A slot is available before use, reserved while its conversion is pending, and spent when that conversion becomes ready. A failed conversion makes its reserved slot available again.
-_Avoid_: credit, token, conversion
+**duration allowance**:
+The amount of generated audio duration a conversion grant or future paid plan permits. A conversion grant's allowance is shared across its authorized users and conversions.
+_Avoid_: conversion slots, listening time
+
+**duration reservation**:
+A portion of a duration allowance temporarily held for requested narration synthesis, based on its estimated audio duration. It is unavailable to other requests until reconciled against delivered audio or released when synthesis ends without accessible audio.
+_Avoid_: charge, spent allowance
+
+**available duration**:
+The unspent portion of a duration allowance that is not held by active duration reservations. It is the balance shown to users and available for new synthesis requests.
+_Avoid_: total allowance, reserved duration
 
 **grant credential**:
 The secret carried by a trial link that proves access to its conversion grant.
@@ -81,6 +89,10 @@ _Avoid_: text chunk, audio chunk
 **audio segment**:
 The immutable, conversion-scoped audio produced from one narration chunk and identified by its sequence within the conversion. It remains part of the conversion whether or not audiobook production completes.
 _Avoid_: audio chunk
+
+**generated audio duration**:
+The duration of successfully produced narration audio made available to the user, which is the basis for consuming their trial or paid allowance regardless of whether they play it. It excludes failed synthesis attempts and measures audio duration rather than listening time.
+_Avoid_: listening time, playback time
 
 **spoken text**:
 The exact wording that a narration provider reports it spoke when producing narration audio. It exists only when supplied directly by the provider and is never inferred from the audio.

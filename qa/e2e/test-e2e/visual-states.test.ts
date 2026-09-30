@@ -183,7 +183,7 @@ test("shows a deterministic failed conversion", async ({ page, workerEnvironment
   await mockConversion(page, workerEnvironment.origin, createFailedConversion());
   await gotoPage(page, `${workerEnvironment.origin}/app/conversions/${CONVERSION_ID}`);
 
-  await expect(page.getByText("Failed!", { exact: true })).toBeVisible();
+  await expect(page.getByText("Generation stopped.", { exact: true })).toBeVisible();
 });
 
 test("retries a conversion loading failure", async ({
@@ -285,7 +285,7 @@ function createGrant(): Record<string, unknown> {
     createdAt: "2026-08-28T10:00:00Z",
     expiresAt: "2026-11-26T10:00:00Z",
     state: "open",
-    slots: { remaining: 5, reserved: 0, spent: 0 },
+    duration: { availableMilliseconds: 7_200_000, reservedMilliseconds: 0, spentMilliseconds: 0 },
   };
 }
 
@@ -331,7 +331,11 @@ function createStartResponse(): Record<string, unknown> {
       ...createConversionBase(),
       status: "pending",
     },
-    slots: { remaining: 4, reserved: 1, spent: 0 },
+    duration: {
+      availableMilliseconds: 7_140_000,
+      reservedMilliseconds: 60_000,
+      spentMilliseconds: 0,
+    },
   };
 }
 

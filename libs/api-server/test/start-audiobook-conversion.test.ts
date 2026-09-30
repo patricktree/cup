@@ -17,14 +17,14 @@ const CREATED_RESULT = {
     status: "pending",
     lastStartedPhase: "conversion-start",
   },
-  slots: { remaining: 4, reserved: 1, spent: 0 },
+  duration: { availableMilliseconds: 4, reservedMilliseconds: 1, spentMilliseconds: 0 },
   registrySnapshot: {
     grantId: "grant-id",
     revision: 1,
-    reserved: 1,
-    spent: 0,
+    reservedMilliseconds: 1,
+    spentMilliseconds: 0,
     schemaVersion: 2,
-    maxSlots: 5,
+    allowanceMilliseconds: 5,
   },
 } as const satisfies StartGrantConversionResult;
 

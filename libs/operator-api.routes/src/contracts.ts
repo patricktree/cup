@@ -127,5 +127,5 @@ export const errorResponseSchema = z
 export type ErrorResponse = z.infer<typeof errorResponseSchema>;
 
 export const setGrantAllowanceRequestSchema = z
-  .object({ maxSlots: z.number().int().positive() })
+  .object({ allowanceMilliseconds: z.number().int().positive() })
   .strict();

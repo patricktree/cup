@@ -52,14 +52,14 @@ export const conversionPhaseOrder = [
   ConversionPhase.FINALIZATION,
 ] as const satisfies ReadonlyArray<ConversionPhase>;
 
-export const slotCountsSchema = z
+export const durationBalanceSchema = z
   .object({
-    remaining: z.number().int().min(0),
-    reserved: z.number().int().min(0),
-    spent: z.number().int().min(0),
+    availableMilliseconds: z.number().int().min(0),
+    reservedMilliseconds: z.number().int().min(0),
+    spentMilliseconds: z.number().int().min(0),
   })
   .strict();
-export type SlotCounts = z.infer<typeof slotCountsSchema>;
+export type DurationBalance = z.infer<typeof durationBalanceSchema>;
 
 const conversionBaseSchema = z.object({
   conversionId: uuidV4Schema,
@@ -99,13 +99,14 @@ export const grantSnapshotSchema = z
     expiresAt: z.iso.datetime(),
     revokedAt: z.iso.datetime().optional(),
     state: grantStateSchema,
-    slots: slotCountsSchema,
+    duration: durationBalanceSchema,
   })
   .strict();
 export type GrantSnapshot = z.infer<typeof grantSnapshotSchema>;
 
 export const operatorGrantSnapshotSchema = grantSnapshotSchema
   .extend({
+    allowanceMilliseconds: z.number().int().positive(),
     conversions: z.array(
       z.discriminatedUnion("status", [
         conversionBaseSchema

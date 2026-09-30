@@ -8,7 +8,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 
-export type QaScenario = "success" | "tts-failure";
+export type QaScenario = "success" | "tts-failure" | "speech-gated";
 
 type CreatedGrant = {
   grantId: string;

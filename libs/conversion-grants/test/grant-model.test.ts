@@ -50,7 +50,11 @@ describe("conversion grant state", () => {
 
     const snapshot = createGrantSnapshot(record, CREATED_AT_MS + 5);
 
-    expect(snapshot.slots).toEqual({ remaining: 3, reserved: 1, spent: 1 });
+    expect(snapshot.duration).toEqual({
+      availableMilliseconds: 5,
+      reservedMilliseconds: 0,
+      spentMilliseconds: 0,
+    });
     expect(createGrantConversions(record).map((conversion) => conversion.status)).toEqual([
       "failed",
       "ready",
@@ -85,7 +89,7 @@ test("creates a non-recoverable credential shape and path-scoped session cookie"
 
 function createRecord(): GrantRecord {
   return {
-    maxSlots: 5,
+    allowanceMilliseconds: 5,
     grantId: "b4ad28a8-bbd7-46af-a17c-59527becd745",
     createdAtMs: CREATED_AT_MS,
     expiresAtMs: EXPIRES_AT_MS,
@@ -95,5 +99,6 @@ function createRecord(): GrantRecord {
     registryConfirmedSnapshotRevision: 0,
     startAttempts: [],
     conversions: [],
+    segmentUsage: [],
   };
 }

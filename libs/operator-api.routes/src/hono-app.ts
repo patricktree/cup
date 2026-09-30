@@ -90,7 +90,7 @@ const setGrantAllowanceRoute = createRoute({
       description: "Conversion allowance updated.",
     },
     404: errorResponse("Grant not found."),
-    409: errorResponse("Allowance is below reserved and spent slots."),
+    409: errorResponse("Allowance is below reserved and spent duration."),
     500: errorResponse("Operational error."),
   },
 });

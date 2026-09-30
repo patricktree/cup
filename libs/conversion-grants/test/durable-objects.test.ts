@@ -2,6 +2,7 @@ import nodeUrl from "node:url";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { createTestHarness } from "wrangler";
 
+import type { SegmentUsage } from "#src/duration-accounting.ts";
 import { ConversionPhase } from "#src/grant-contracts.ts";
 import { createRootCredential } from "#src/grant-session.ts";
 import type {
@@ -37,8 +38,8 @@ afterAll(async () => {
 describe("SQLite conversion grant Durable Object", () => {
   test("replays schema migrations and persists the authoritative record", async () => {
     const grant = grantStub("migration");
-    expect(await grant.migrate()).toBe(4);
-    expect(await grant.migrate()).toBe(4);
+    expect(await grant.migrate()).toBe(5);
+    expect(await grant.migrate()).toBe(5);
     await grant.initialize(grantId("migration"), CREATED_AT_MS, EXPIRES_AT_MS);
 
     const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", {
@@ -50,7 +51,7 @@ describe("SQLite conversion grant Durable Object", () => {
       )
     ).map((row) => row.version);
 
-    expect(versions).toEqual([1, 2, 3, 4]);
+    expect(versions).toEqual([1, 2, 3, 4, 5]);
     expect((await grant.inspect(CREATED_AT_MS)).state).toBe("open");
   });
 
@@ -109,9 +110,9 @@ describe("SQLite conversion grant Durable Object", () => {
     expect(rows).toEqual([{ last_started_phase: ConversionPhase.AUDIO_SEGMENT_PRODUCTION }]);
   });
 
-  test("serializes starts, replays request identity, and derives five slots", async () => {
-    const grant = grantStub("slots");
-    await grant.initialize(grantId("slots"), CREATED_AT_MS, EXPIRES_AT_MS);
+  test("serializes starts without reserving duration for source preparation", async () => {
+    const grant = grantStub("duration");
+    await grant.initialize(grantId("duration"), CREATED_AT_MS, EXPIRES_AT_MS);
     const first = await grant.startConversion(
       "https://example.com/one",
       grantId("request-one"),
@@ -147,11 +148,11 @@ describe("SQLite conversion grant Durable Object", () => {
       grantId("request-six"),
       CREATED_AT_MS + 6 * 61_000,
     );
-    expect(full.result).toBe("temporarily-full");
-    expect((await grant.inspect(CREATED_AT_MS + 6 * 61_000)).slots).toEqual({
-      remaining: 0,
-      reserved: 5,
-      spent: 0,
+    expect(full.result).toBe("created");
+    expect((await grant.inspect(CREATED_AT_MS + 6 * 61_000)).duration).toEqual({
+      availableMilliseconds: 7_200_000,
+      reservedMilliseconds: 0,
+      spentMilliseconds: 0,
     });
 
     if (first.result !== "created") throw new Error("The first conversion was not accepted.");
@@ -161,10 +162,12 @@ describe("SQLite conversion grant Durable Object", () => {
       explanation: "The source page could not be loaded.",
       cleanupState: "complete",
     });
-    expect((await grant.inspect(CREATED_AT_MS + 7 * 61_000)).slots.remaining).toBe(1);
+    expect((await grant.inspect(CREATED_AT_MS + 7 * 61_000)).duration.availableMilliseconds).toBe(
+      7_200_000,
+    );
   });
 
-  test("spends only ready outcomes and rejects contradictory terminals", async () => {
+  test("finalization alone does not charge duration and rejects contradictory terminals", async () => {
     const grant = grantStub("terminal");
     await grant.initialize(grantId("terminal"), CREATED_AT_MS, EXPIRES_AT_MS);
     const accepted = await grant.startConversion(
@@ -192,14 +195,14 @@ describe("SQLite conversion grant Durable Object", () => {
         explanation: "Contradiction",
       }),
     );
-    expect((await grant.inspect(CREATED_AT_MS + 2)).slots).toEqual({
-      remaining: 4,
-      reserved: 0,
-      spent: 1,
+    expect((await grant.inspect(CREATED_AT_MS + 2)).duration).toEqual({
+      availableMilliseconds: 7_200_000,
+      reservedMilliseconds: 0,
+      spentMilliseconds: 0,
     });
   });
 
-  test("records a restarted failed conversion as ready when a slot remains", async () => {
+  test("records a recovered conversion without a second charge", async () => {
     const grant = grantStub("recovered-terminal");
     await grant.initialize(grantId("recovered-terminal"), CREATED_AT_MS, EXPIRES_AT_MS);
     const accepted = await grant.startConversion(
@@ -227,14 +230,14 @@ describe("SQLite conversion grant Durable Object", () => {
     };
     expect(await grant.recordReady(accepted.conversion.conversionId, ready)).toBe("recorded");
     expect(await grant.recordReady(accepted.conversion.conversionId, ready)).toBe("replayed");
-    expect((await grant.inspect(CREATED_AT_MS + 2)).slots).toEqual({
-      remaining: 4,
-      reserved: 0,
-      spent: 1,
+    expect((await grant.inspect(CREATED_AT_MS + 2)).duration).toEqual({
+      availableMilliseconds: 7_200_000,
+      reservedMilliseconds: 0,
+      spentMilliseconds: 0,
     });
   });
 
-  test("rejects a restarted failed conversion after its slot has been reused", async () => {
+  test("accepts an already produced recovered audiobook independently of other conversion starts", async () => {
     const grant = grantStub("recovered-full");
     await grant.initialize(grantId("recovered-full"), CREATED_AT_MS, EXPIRES_AT_MS);
     const conversions = [];
@@ -266,8 +269,8 @@ describe("SQLite conversion grant Durable Object", () => {
       ).result,
     ).toBe("created");
 
-    await expectWorkerRpcRejection(
-      grant.recordReady(failedConversion.conversionId, {
+    expect(
+      await grant.recordReady(failedConversion.conversionId, {
         completedAtMs: CREATED_AT_MS + 7 * 61_000,
         title: "Recovered too late",
         audiobookReference: {
@@ -277,11 +280,11 @@ describe("SQLite conversion grant Durable Object", () => {
           etag: "recovered-full-etag",
         },
       }),
-    );
-    expect((await grant.inspect(CREATED_AT_MS + 7 * 61_000)).slots).toEqual({
-      remaining: 0,
-      reserved: 5,
-      spent: 0,
+    ).toBe("recorded");
+    expect((await grant.inspect(CREATED_AT_MS + 7 * 61_000)).duration).toEqual({
+      availableMilliseconds: 7_200_000,
+      reservedMilliseconds: 0,
+      spentMilliseconds: 0,
     });
   });
 
@@ -348,7 +351,7 @@ describe("SQLite conversion grant Registry Durable Object", () => {
 
   test("binds request IDs, pages snapshots, and rejects same-revision conflicts", async () => {
     const registry = registryStub("registry");
-    expect(await registry.migrate()).toBe(2);
+    expect(await registry.migrate()).toBe(3);
     const first = await registry.reserveProvisioning(
       grantId("provision-one"),
       "Alpha",
@@ -366,10 +369,10 @@ describe("SQLite conversion grant Registry Durable Object", () => {
     const grantSnapshot = {
       grantId: first.entry.grantId,
       revision: 1,
-      reserved: 0,
-      spent: 0,
+      reservedMilliseconds: 0,
+      spentMilliseconds: 0,
       schemaVersion: 2,
-      maxSlots: 5,
+      allowanceMilliseconds: 5,
     };
     await registry.activate(first.entry.requestId, grantSnapshot, true);
     expect(await registry.applyGrantRegistrySnapshot(grantSnapshot)).toBe("replayed");
@@ -377,7 +380,7 @@ describe("SQLite conversion grant Registry Durable Object", () => {
       "stale",
     );
     await expectWorkerRpcRejection(
-      registry.applyGrantRegistrySnapshot({ ...grantSnapshot, reserved: 1 }),
+      registry.applyGrantRegistrySnapshot({ ...grantSnapshot, reservedMilliseconds: 1 }),
     );
 
     const second = await registry.reserveProvisioning(
@@ -459,50 +462,36 @@ function grantId(seed: string): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
 
-test("raises an existing grant to twenty slots without replacing its credential", async () => {
+test("changes duration allowance without replacing credentials or sessions", async () => {
   const grant = grantStub("allowance");
   await grant.initialize(grantId("allowance"), CREATED_AT_MS, EXPIRES_AT_MS);
   const root = await createRootCredential();
   await grant.installCredentialVerifier(root.verifier, CREATED_AT_MS);
   const exchange = await grant.exchangeCredential(root.credential, CREATED_AT_MS);
   if (exchange.result !== "created") throw new Error("Credential exchange failed");
-  for (let index = 0; index < 5; index += 1)
-    expect(
-      (
-        await grant.startConversion(
-          `https://example.com/${index}`,
-          crypto.randomUUID(),
-          CREATED_AT_MS + index * 61_000,
-        )
-      ).result,
-    ).toBe("created");
-  expect((await grant.inspect(CREATED_AT_MS)).state).toBe("temporarily-full");
-  expect((await grant.setMaxSlots(20, CREATED_AT_MS)).result).toBe("updated");
-  expect(await grant.setMaxSlots(4, CREATED_AT_MS)).toEqual({ result: "below-used-slots" });
-  expect(await grant.setMaxSlots(20, CREATED_AT_MS)).toMatchObject({ changed: false });
-  for (let index = 5; index < 20; index += 1) {
-    expect(
-      (
-        await grant.startConversion(
-          `https://example.com/${index}`,
-          crypto.randomUUID(),
-          CREATED_AT_MS + index * 61_000,
-        )
-      ).result,
-    ).toBe("created");
-  }
-  expect(
-    (
-      await grant.startConversion(
-        "https://example.com/overflow",
-        crypto.randomUUID(),
-        CREATED_AT_MS + 20 * 61_000,
-      )
-    ).result,
-  ).toBe("temporarily-full");
+  const accepted = await grant.startConversion(
+    "https://example.com/allowance",
+    crypto.randomUUID(),
+    CREATED_AT_MS,
+  );
+  if (accepted.result !== "created") throw new Error("Conversion not accepted");
+  expect((await grant.reserveAudioSegment(accepted.conversion.conversionId, 0, 100)).result).toBe(
+    "reserved",
+  );
+  expect(await grant.setDurationAllowance(5_000, CREATED_AT_MS)).toEqual({
+    result: "below-used-duration",
+  });
+  expect((await grant.setDurationAllowance(20_000, CREATED_AT_MS)).result).toBe("updated");
+  expect(await grant.setDurationAllowance(20_000, CREATED_AT_MS)).toMatchObject({ changed: false });
   expect(await grant.validateSession(exchange.sessionToken, CREATED_AT_MS)).toMatchObject({
     result: "valid",
-    snapshot: { slots: { remaining: 0, reserved: 20, spent: 0 } },
+    snapshot: {
+      duration: {
+        availableMilliseconds: 12_000,
+        reservedMilliseconds: 8_000,
+        spentMilliseconds: 0,
+      },
+    },
   });
   expect((await grant.exchangeCredential(root.credential, CREATED_AT_MS)).result).toBe("created");
 });
@@ -512,10 +501,12 @@ test("migrates stored grants and registry bindings and persists larger snapshots
   const grant = grantStub(name);
   await grant.initialize(grantId(name), CREATED_AT_MS, EXPIRES_AT_MS);
   const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
-  await storage.exec("ALTER TABLE grant DROP COLUMN max_slots");
-  await storage.exec("DELETE FROM _schema_migrations WHERE version = 4");
-  expect(await grant.migrate()).toBe(4);
-  expect((await grant.inspect(CREATED_AT_MS)).slots.remaining).toBe(5);
+  await storage.exec("ALTER TABLE grant RENAME COLUMN allowance_milliseconds TO max_slots");
+  await storage.exec("DROP TABLE segment_usage");
+  await storage.exec("UPDATE grant SET max_slots = 5");
+  await storage.exec("DELETE FROM _schema_migrations WHERE version = 5");
+  expect(await grant.migrate()).toBe(5);
+  expect((await grant.inspect(CREATED_AT_MS)).duration.availableMilliseconds).toBe(7_200_000);
   const registry = registryStub(name);
   const { entry } = await registry.reserveProvisioning(
     crypto.randomUUID(),
@@ -527,25 +518,234 @@ test("migrates stored grants and registry bindings and persists larger snapshots
   const registryStorage = await worker.getDurableObjectStorage("CONVERSION_GRANT_REGISTRY", {
     name,
   });
-  await registryStorage.exec("ALTER TABLE registry_grants DROP COLUMN projection_max_slots");
-  await registryStorage.exec("DELETE FROM _schema_migrations WHERE version = 2");
-  expect(await registry.migrate()).toBe(2);
+  await registryStorage.exec(
+    "ALTER TABLE registry_grants RENAME COLUMN projection_allowance_milliseconds TO projection_max_slots",
+  );
+  await registryStorage.exec("DELETE FROM _schema_migrations WHERE version = 3");
+  expect(await registry.migrate()).toBe(3);
   expect(await registry.findGrantIdForConversion(conversionId)).toBe(entry.grantId);
   await registry.activate(
     entry.requestId,
-    { grantId: entry.grantId, revision: 2, maxSlots: 20, reserved: 0, spent: 6, schemaVersion: 4 },
+    {
+      grantId: entry.grantId,
+      revision: 2,
+      allowanceMilliseconds: 20,
+      reservedMilliseconds: 0,
+      spentMilliseconds: 6,
+      schemaVersion: 5,
+    },
     true,
   );
   expect((await registry.listGrants({ limit: 100 }, CREATED_AT_MS)).grants[0]?.state).toBe("open");
   await registry.applyGrantRegistrySnapshot({
     grantId: entry.grantId,
     revision: 3,
-    maxSlots: 20,
-    reserved: 0,
-    spent: 20,
-    schemaVersion: 4,
+    allowanceMilliseconds: 20,
+    reservedMilliseconds: 0,
+    spentMilliseconds: 20,
+    schemaVersion: 5,
   });
   expect((await registry.listGrants({ limit: 100 }, CREATED_AT_MS)).grants[0]?.state).toBe(
     "exhausted",
   );
+});
+
+test("persists segment usage as constrained rows without resetting the balance", async () => {
+  const name = "segment-usage-table";
+  const grant = grantStub(name);
+  await grant.initialize(grantId(name), CREATED_AT_MS, EXPIRES_AT_MS);
+  await grant.setDurationAllowance(20_000, CREATED_AT_MS);
+  const root = await createRootCredential();
+  await grant.installCredentialVerifier(root.verifier, CREATED_AT_MS);
+  const session = await grant.exchangeCredential(root.credential, CREATED_AT_MS);
+  if (session.result !== "created") throw new Error("Session not created");
+  const first = await grant.startConversion(
+    "https://example.com/first",
+    crypto.randomUUID(),
+    CREATED_AT_MS,
+  );
+  const second = await grant.startConversion(
+    "https://example.com/second",
+    crypto.randomUUID(),
+    CREATED_AT_MS,
+  );
+  if (first.result !== "created" || second.result !== "created")
+    throw new Error("Conversions not created");
+  await grant.reserveAudioSegment(first.conversion.conversionId, 0, 10);
+  await grant.completeAudioSegment(first.conversion.conversionId, 0, 800);
+  await grant.reserveAudioSegment(first.conversion.conversionId, 1, 10);
+  await grant.recordFailed(first.conversion.conversionId, {
+    failureCategory: "narration-synthesis",
+    explanation: "Later synthesis failed.",
+  });
+  await grant.reserveAudioSegment(second.conversion.conversionId, 0, 10);
+  const before = await grant.inspect(CREATED_AT_MS);
+  const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
+  const selectUsage = `SELECT conversion_id AS conversionId, sequence, narration_text_characters AS narrationTextCharacters,
+    estimated_milliseconds AS estimatedMilliseconds, state, actual_milliseconds AS actualMilliseconds,
+    charged_milliseconds AS chargedMilliseconds FROM segment_usage ORDER BY conversion_id, sequence`;
+  const usage = await storage.exec<SegmentUsage>(selectUsage);
+  expect(usage.map((segment) => segment.state).sort()).toEqual(["released", "reserved", "settled"]);
+  expect(await grant.migrate()).toBe(5);
+  expect(await storage.exec<SegmentUsage>(selectUsage)).toEqual(usage);
+  expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual(before.duration);
+  expect(
+    await storage.exec<{ allowance: number }>(
+      "SELECT allowance_milliseconds AS allowance FROM grant",
+    ),
+  ).toEqual([{ allowance: 20_000 }]);
+  expect((await grant.validateSession(session.sessionToken, CREATED_AT_MS)).result).toBe("valid");
+  expect(await grant.migrate()).toBe(5);
+  expect(await storage.exec<SegmentUsage>(selectUsage)).toEqual(usage);
+  const columns = await storage.exec<{ name: string }>("PRAGMA table_info(grant)");
+  expect(columns.map((column) => column.name)).not.toContain("segment_usage_json");
+
+  await expect(
+    storage.exec("INSERT INTO segment_usage SELECT * FROM segment_usage LIMIT 1"),
+  ).rejects.toThrow(/UNIQUE constraint failed/);
+  await expect(
+    storage.exec(
+      "UPDATE segment_usage SET charged_milliseconds = actual_milliseconds + 1 WHERE state = 'settled'",
+    ),
+  ).rejects.toThrow(/CHECK constraint failed/);
+  await expect(
+    storage.exec(
+      "INSERT INTO segment_usage VALUES ('missing-conversion', 0, 10, 1000, 'reserved', 0, 0)",
+    ),
+  ).rejects.toThrow(/FOREIGN KEY constraint failed/);
+  // Continuing generation updates the existing row and leaves the other ledger entries intact.
+  await grant.completeAudioSegment(second.conversion.conversionId, 0, 900);
+  const after = await storage.exec<SegmentUsage>(selectUsage);
+  expect(after).toHaveLength(usage.length);
+  expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual({
+    availableMilliseconds: 18_300,
+    reservedMilliseconds: 0,
+    spentMilliseconds: 1_700,
+  });
+});
+
+test("serializes concurrent duration reservations across conversions and absorbs aggregate overruns", async () => {
+  const grant = grantStub("duration-concurrency");
+  await grant.initialize(grantId("duration-concurrency"), CREATED_AT_MS, EXPIRES_AT_MS);
+  await grant.setDurationAllowance(2_000, CREATED_AT_MS);
+  const first = await grant.startConversion(
+    "https://example.com/first",
+    crypto.randomUUID(),
+    CREATED_AT_MS,
+  );
+  const second = await grant.startConversion(
+    "https://example.com/second",
+    crypto.randomUUID(),
+    CREATED_AT_MS,
+  );
+  if (first.result !== "created" || second.result !== "created")
+    throw new Error("Conversions not accepted");
+  const results = await Promise.all([
+    grant.reserveAudioSegment(first.conversion.conversionId, 0, 1),
+    grant.reserveAudioSegment(second.conversion.conversionId, 0, 1),
+    grant.reserveAudioSegment(second.conversion.conversionId, 1, 1),
+  ]);
+  expect(results.map((result) => result.result)).toEqual([
+    "reserved",
+    "reserved",
+    "temporarily-full",
+  ]);
+  expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual({
+    availableMilliseconds: 0,
+    reservedMilliseconds: 2_000,
+    spentMilliseconds: 0,
+  });
+  await grant.completeAudioSegment(first.conversion.conversionId, 0, 1_500);
+  expect(await grant.setDurationAllowance(2_000, CREATED_AT_MS)).toMatchObject({
+    result: "updated",
+    changed: false,
+  });
+  await grant.completeAudioSegment(second.conversion.conversionId, 0, 1_600);
+  expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual({
+    availableMilliseconds: 0,
+    reservedMilliseconds: 0,
+    spentMilliseconds: 2_000,
+  });
+  expect((await grant.completeAudioSegment(second.conversion.conversionId, 0, 1_600)).result).toBe(
+    "replayed",
+  );
+  expect(await grant.listAudioSegments(second.conversion.conversionId)).toMatchObject([
+    { actualMilliseconds: 1_600, chargedMilliseconds: 500 },
+  ]);
+  await grant.recordFailed(second.conversion.conversionId, {
+    failureCategory: "narration-synthesis",
+    explanation: "Later synthesis failed.",
+  });
+  expect(await grant.listAudioSegments(second.conversion.conversionId)).toHaveLength(1);
+  expect((await grant.inspect(CREATED_AT_MS)).duration.spentMilliseconds).toBe(2_000);
+});
+
+test("blocks an oversized reservation without spending or splitting the remaining duration", async () => {
+  const grant = grantStub("duration-insufficient");
+  await grant.initialize(grantId("duration-insufficient"), CREATED_AT_MS, EXPIRES_AT_MS);
+  await grant.setDurationAllowance(2_000, CREATED_AT_MS);
+  const accepted = await grant.startConversion(
+    "https://example.com/oversized",
+    crypto.randomUUID(),
+    CREATED_AT_MS,
+  );
+  if (accepted.result !== "created") throw new Error("Conversion not accepted");
+  expect((await grant.reserveAudioSegment(accepted.conversion.conversionId, 0, 30)).result).toBe(
+    "insufficient-duration",
+  );
+  expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual({
+    availableMilliseconds: 2_000,
+    reservedMilliseconds: 0,
+    spentMilliseconds: 0,
+  });
+});
+
+test("retries reuse reservations, failures release only unfinished work, and replay never charges twice", async () => {
+  const grant = grantStub("duration-failure");
+  await grant.initialize(grantId("duration-failure"), CREATED_AT_MS, EXPIRES_AT_MS);
+  const accepted = await grant.startConversion(
+    "https://example.com/failure",
+    crypto.randomUUID(),
+    CREATED_AT_MS,
+  );
+  if (accepted.result !== "created") throw new Error("Conversion not accepted");
+  const id = accepted.conversion.conversionId;
+  await grant.reserveAudioSegment(id, 0, 10);
+  await grant.reserveAudioSegment(id, 1, 10);
+  expect((await grant.reserveAudioSegment(id, 0, 10)).result).toBe("reserved");
+  expect((await grant.inspect(CREATED_AT_MS)).duration.reservedMilliseconds).toBe(2_000);
+  await grant.completeAudioSegment(id, 0, 700.25);
+  await grant.recordFailed(id, {
+    failureCategory: "narration-synthesis",
+    explanation: "Second segment failed.",
+  });
+  expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual({
+    availableMilliseconds: 7_199_299,
+    reservedMilliseconds: 0,
+    spentMilliseconds: 701,
+  });
+  expect((await grant.completeAudioSegment(id, 0, 700.25)).result).toBe("replayed");
+  await expectWorkerRpcRejection(grant.completeAudioSegment(id, 0, 800));
+  await expectWorkerRpcRejection(grant.completeAudioSegment(id, 1, 800));
+  expect(await grant.listAudioSegments(id)).toHaveLength(1);
+  expect(await grant.migrate()).toBe(5);
+  expect((await grant.inspect(CREATED_AT_MS)).duration.spentMilliseconds).toBe(701);
+});
+
+test("revocation blocks new reservations while existing reservations may finish", async () => {
+  const grant = grantStub("duration-revoked");
+  await grant.initialize(grantId("duration-revoked"), CREATED_AT_MS, EXPIRES_AT_MS);
+  const accepted = await grant.startConversion(
+    "https://example.com/revoked",
+    crypto.randomUUID(),
+    CREATED_AT_MS,
+  );
+  if (accepted.result !== "created") throw new Error("Conversion not accepted");
+  const id = accepted.conversion.conversionId;
+  await grant.reserveAudioSegment(id, 0, 10);
+  await grant.revoke(CREATED_AT_MS);
+  expect((await grant.reserveAudioSegment(id, 0, 10)).result).toBe("reserved");
+  expect((await grant.reserveAudioSegment(id, 1, 10)).result).toBe("revoked");
+  expect((await grant.completeAudioSegment(id, 0, 800)).result).toBe("recorded");
+  expect((await grant.inspect(CREATED_AT_MS)).duration.spentMilliseconds).toBe(800);
 });

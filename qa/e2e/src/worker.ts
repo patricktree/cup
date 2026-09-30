@@ -2,7 +2,6 @@ import { WorkflowEntrypoint } from "cloudflare:workers";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 import { createApiServer } from "@cup/api-server";
-import { createFakeSpeechSynthesisAi } from "@cup/audiobook-production/fake";
 import {
   ConversionGrantDurableObject,
   ConversionGrantRegistryDurableObject,
@@ -15,6 +14,7 @@ import { createFakeNarrationContentSelector } from "@cup/narration-content-selec
 import { createControlledSourceMaterialPreparer } from "@cup/prepare-source-material/fake";
 
 import sourceHtml from "#src/fixtures/source.html";
+import { createTrackedSpeechProvider, handleSpeechControl } from "#src/speech-controls.ts";
 
 const CONTROLLED_SOURCE_URL = "https://source.example.test/fixture";
 
@@ -36,23 +36,28 @@ export class CreateAudiobookFromUrlQaWorkflow extends WorkflowEntrypoint<Env, Co
           html: sourceHtml,
         }),
         selectNarrationContent: createFakeNarrationContentSelector(),
-        speechSynthesisAi: createFakeSpeechSynthesisAi(
-          scenario === "tts-failure" ? { failureStatus: 503 } : {},
-        ),
+        speechSynthesisAi: createTrackedSpeechProvider(this.env.AUDIO_BUCKET, scenario),
       },
     });
   }
 }
 
-export default createApiServer({
+const apiServer = createApiServer({
   validateOperatorAccess: (request) =>
     Promise.resolve(request.headers.get("Cf-Access-Token") === "local-access-token"),
 });
 
-type QaScenario = "success" | "tts-failure";
+export default {
+  async fetch(request, env, context) {
+    const control = await handleSpeechControl(request, env.AUDIO_BUCKET);
+    return control ?? apiServer.fetch(request, env, context);
+  },
+} satisfies ExportedHandler<Env>;
+
+type QaScenario = "success" | "tts-failure" | "speech-gated";
 
 function parseQaScenario(value: string): QaScenario {
-  if (value === "success" || value === "tts-failure") {
+  if (value === "success" || value === "tts-failure" || value === "speech-gated") {
     return value;
   }
 

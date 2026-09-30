@@ -130,33 +130,41 @@ test("updates only the selected grant allowance through the authenticated operat
       await fetch(url, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ maxSlots: 20 }),
+        body: JSON.stringify({ allowanceMilliseconds: 20 }),
       })
     ).status,
   ).toBe(401);
-  for (const maxSlots of [0, -1, 1.5])
+  for (const allowanceMilliseconds of [0, -1, 1.5])
     expect(
-      (await fetch(url, { method: "PUT", headers, body: JSON.stringify({ maxSlots }) })).status,
+      (
+        await fetch(url, {
+          method: "PUT",
+          headers,
+          body: JSON.stringify({ allowanceMilliseconds }),
+        })
+      ).status,
     ).toBe(400);
   const updated = await fetch(url, {
     method: "PUT",
     headers,
-    body: JSON.stringify({ maxSlots: 20 }),
+    body: JSON.stringify({ allowanceMilliseconds: 20 }),
   });
   expect(updated.status).toBe(200);
   await expect(updated.json()).resolves.toMatchObject({
     changed: true,
-    grant: { slots: { remaining: 20, reserved: 0, spent: 0 } },
+    grant: {
+      duration: { availableMilliseconds: 20, reservedMilliseconds: 0, spentMilliseconds: 0 },
+    },
   });
   const inspected = await fetch(`${origin}/api/operator/grants/${created.grantId}`, { headers });
   await expect(inspected.json()).resolves.toMatchObject({
-    authoritative: { slots: { remaining: 20 } },
+    authoritative: { duration: { availableMilliseconds: 20 } },
     registrySnapshotDisagreement: false,
   });
   const missing = await fetch(`${origin}/api/operator/grants/${crypto.randomUUID()}/allowance`, {
     method: "PUT",
     headers,
-    body: JSON.stringify({ maxSlots: 20 }),
+    body: JSON.stringify({ allowanceMilliseconds: 20 }),
   });
   expect(missing.status).toBe(404);
 });

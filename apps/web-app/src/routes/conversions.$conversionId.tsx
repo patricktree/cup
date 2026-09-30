@@ -52,7 +52,7 @@ function ConversionPage(): React.JSX.Element {
 
   return (
     <MainSection>
-      <span>Failed!</span>
+      <span>Generation stopped.</span>
       <span>{conversionQuery.data.failure.explanation}</span>
     </MainSection>
   );

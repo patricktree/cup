@@ -111,9 +111,9 @@ grant
           ["Grant ID", result.authoritative.grantId],
           ["Label", result.registry.label],
           ["State (authoritative)", result.authoritative.state],
-          ["Remaining", result.authoritative.slots.remaining],
-          ["Reserved", result.authoritative.slots.reserved],
-          ["Spent", result.authoritative.slots.spent],
+          ["Available minutes", result.authoritative.duration.availableMilliseconds / 60_000],
+          ["Reserved minutes", result.authoritative.duration.reservedMilliseconds / 60_000],
+          ["Spent minutes", result.authoritative.duration.spentMilliseconds / 60_000],
           ["Conversions", result.authoritative.conversions.length],
         ]),
       );
@@ -123,21 +123,23 @@ grant
 grant
   .command("set-allowance")
   .argument("<grant-id>")
-  .requiredOption("--conversions <number>", "total conversion allowance")
+  .requiredOption("--minutes <number>", "total audio duration allowance in minutes")
   .action(async (grantId, options, command) => {
-    const maxSlots = z.coerce.number().int().positive().parse(options.conversions);
+    const allowanceMilliseconds = z.coerce
+      .number()
+      .positive()
+      .transform((minutes) => minutes * 60_000)
+      .pipe(z.number().int().positive().max(Number.MAX_SAFE_INTEGER))
+      .parse(options.minutes);
     await run(command, async (client, output) => {
       const result = await parseOkResponse(
-        client.setGrantAllowance({ grantId: parseUuid(grantId) }, maxSlots),
+        client.setGrantAllowance({ grantId: parseUuid(grantId) }, allowanceMilliseconds),
       );
       output(result, () =>
         writeFields([
           ["Grant ID", result.grant.grantId],
-          [
-            "Total allowance",
-            result.grant.slots.remaining + result.grant.slots.reserved + result.grant.slots.spent,
-          ],
-          ["Remaining", result.grant.slots.remaining],
+          ["Total allowance (minutes)", allowanceMilliseconds / 60_000],
+          ["Available minutes", result.grant.duration.availableMilliseconds / 60_000],
           ["Changed", result.changed ? "yes" : "no"],
         ]),
       );

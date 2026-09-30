@@ -1,6 +1,7 @@
 import { asc, desc, eq } from "drizzle-orm";
 import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
+import { segmentUsageSchema } from "#src/duration-accounting.ts";
 import { conversionPhaseSchema } from "#src/grant-contracts.ts";
 import type { GrantConversion, GrantRecord } from "#src/grant-model.ts";
 import { GRANT_SCHEMA_VERSION } from "#src/grant-model.ts";
@@ -9,6 +10,7 @@ import {
   grants as grantTable,
   grantSqliteSchema,
   schemaMigrations,
+  segmentUsage as segmentUsageTable,
   startAttempts as startAttemptTable,
 } from "#src/sqlite-schema.ts";
 import { nowMilliseconds } from "#src/time.ts";
@@ -129,6 +131,38 @@ export class ConversionGrantSqlite {
       if (this.database.select({ id: grantTable.id }).from(grantTable).get() !== undefined)
         await this.storage.setAlarm(nowMilliseconds());
     }
+    if (latest < 5) {
+      this.storage.transactionSync(() => {
+        this.storage.sql.exec(
+          "ALTER TABLE grant RENAME COLUMN max_slots TO allowance_milliseconds",
+        );
+        this.storage.sql.exec(
+          `CREATE TABLE segment_usage (
+            conversion_id TEXT NOT NULL REFERENCES conversions(conversion_id),
+            sequence INTEGER NOT NULL CHECK (sequence >= 0),
+            narration_text_characters INTEGER NOT NULL CHECK (narration_text_characters > 0),
+            estimated_milliseconds INTEGER NOT NULL CHECK (estimated_milliseconds > 0),
+            state TEXT NOT NULL,
+            actual_milliseconds INTEGER NOT NULL,
+            charged_milliseconds INTEGER NOT NULL CHECK (charged_milliseconds >= 0 AND charged_milliseconds <= actual_milliseconds),
+            PRIMARY KEY (conversion_id, sequence),
+            CHECK (
+              (state = 'settled' AND actual_milliseconds > 0)
+              OR (state IN ('reserved', 'released') AND actual_milliseconds = 0 AND charged_milliseconds = 0)
+            )
+          )`,
+        );
+        this.storage.sql.exec(
+          "UPDATE grant SET allowance_milliseconds = 7200000, projection_revision = projection_revision + 1",
+        );
+        this.database
+          .insert(schemaMigrations)
+          .values({ version: 5, appliedAtMs: nowMilliseconds() })
+          .run();
+      });
+      if (this.database.select({ id: grantTable.id }).from(grantTable).get() !== undefined)
+        await this.storage.setAlarm(nowMilliseconds());
+    }
   }
 
   async load(): Promise<GrantRecord | undefined> {
@@ -142,7 +176,16 @@ export class ConversionGrantSqlite {
       .map(conversionRowToUnknown);
     const parsed: unknown = {
       grantId: row.grantId,
-      maxSlots: row.maxSlots,
+      allowanceMilliseconds: row.allowanceMilliseconds,
+      segmentUsage: segmentUsageSchema
+        .array()
+        .parse(
+          this.database
+            .select()
+            .from(segmentUsageTable)
+            .orderBy(asc(segmentUsageTable.conversionId), asc(segmentUsageTable.sequence))
+            .all(),
+        ),
       createdAtMs: row.createdAtMs,
       expiresAtMs: row.expiresAtMs,
       ...(row.revokedAtMs === null ? {} : { revokedAtMs: row.revokedAtMs }),
@@ -174,7 +217,7 @@ export class ConversionGrantSqlite {
 
   async save(record: GrantRecord): Promise<void> {
     const mutableGrant = {
-      maxSlots: record.maxSlots,
+      allowanceMilliseconds: record.allowanceMilliseconds,
       revokedAtMs: record.revokedAtMs ?? null,
       credentialVerifier: record.credentialVerifier ?? null,
       credentialIssuedAtMs: record.credentialIssuedAtMs ?? null,
@@ -194,9 +237,29 @@ export class ConversionGrantSqlite {
       })
       .onConflictDoUpdate({ target: grantTable.id, set: mutableGrant })
       .run();
-    this.database.delete(conversionTable).run();
-    for (const conversion of record.conversions)
-      this.database.insert(conversionTable).values(conversionToRow(conversion)).run();
+    for (const conversion of record.conversions) {
+      const row = conversionToRow(conversion);
+      const { conversionId, ...mutableConversion } = row;
+      this.database
+        .insert(conversionTable)
+        .values({ conversionId, ...mutableConversion })
+        .onConflictDoUpdate({ target: conversionTable.conversionId, set: mutableConversion })
+        .run();
+    }
+    for (const segment of record.segmentUsage)
+      this.database
+        .insert(segmentUsageTable)
+        .values(segment)
+        .onConflictDoUpdate({
+          target: [segmentUsageTable.conversionId, segmentUsageTable.sequence],
+          set: {
+            estimatedMilliseconds: segment.estimatedMilliseconds,
+            state: segment.state,
+            actualMilliseconds: segment.actualMilliseconds,
+            chargedMilliseconds: segment.chargedMilliseconds,
+          },
+        })
+        .run();
     this.database.delete(startAttemptTable).run();
     if (record.startAttempts.length > 0)
       this.database
@@ -294,9 +357,9 @@ function conversionToRow(conversion: GrantConversion): typeof conversionTable.$i
 function isGrantRecord(value: unknown): value is GrantRecord {
   return (
     isRecord(value) &&
-    typeof value["maxSlots"] === "number" &&
-    Number.isSafeInteger(value["maxSlots"]) &&
-    value["maxSlots"] > 0 &&
+    typeof value["allowanceMilliseconds"] === "number" &&
+    Number.isSafeInteger(value["allowanceMilliseconds"]) &&
+    value["allowanceMilliseconds"] > 0 &&
     typeof value["grantId"] === "string" &&
     typeof value["createdAtMs"] === "number" &&
     typeof value["expiresAtMs"] === "number" &&
@@ -306,6 +369,7 @@ function isGrantRecord(value: unknown): value is GrantRecord {
     typeof value["registryConfirmedSnapshotRevision"] === "number" &&
     Array.isArray(value["startAttempts"]) &&
     value["startAttempts"].every((attempt) => typeof attempt === "number") &&
+    Array.isArray(value["segmentUsage"]) &&
     Array.isArray(value["conversions"]) &&
     value["conversions"].every(isGrantConversion)
   );

@@ -298,14 +298,14 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
       return jsonError(
         context.get("requestId"),
         "grant-temporarily-full",
-        "All conversion slots are currently reserved or spent.",
+        "No audio duration is currently available. Try again when generation finishes.",
         409,
       );
     if (result.result === "exhausted")
       return jsonError(
         context.get("requestId"),
         "grant-exhausted",
-        "All conversion slots have been spent.",
+        "The audio duration allowance has been used.",
         409,
       );
     if (result.result === "expired")
@@ -347,7 +347,7 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
                 }
               : {}),
         },
-        slots: result.slots,
+        duration: result.duration,
       },
       result.result === "created" ? 202 : 200,
       { "Set-Cookie": createGrantSessionCookie(grantId, authenticated.token) },
@@ -576,12 +576,10 @@ const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
         },
         authoritative,
         registrySnapshotDisagreement:
-          entry.grantSnapshot?.reserved !== authoritative.slots.reserved ||
-          entry.grantSnapshot?.spent !== authoritative.slots.spent ||
-          entry.grantSnapshot?.maxSlots !==
-            authoritative.slots.remaining +
-              authoritative.slots.reserved +
-              authoritative.slots.spent,
+          entry.grantSnapshot?.reservedMilliseconds !==
+            authoritative.duration.reservedMilliseconds ||
+          entry.grantSnapshot?.spentMilliseconds !== authoritative.duration.spentMilliseconds ||
+          entry.grantSnapshot?.allowanceMilliseconds !== authoritative.allowanceMilliseconds,
       },
       200,
     );
@@ -589,7 +587,7 @@ const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
 
   async setGrantAllowance(context) {
     const { grantId } = context.req.valid("param");
-    const { maxSlots } = context.req.valid("json");
+    const { allowanceMilliseconds } = context.req.valid("json");
     if ((await getRegistryStub(context.env).getGrant(grantId)) === undefined)
       return jsonError(
         context.get("requestId"),
@@ -597,12 +595,14 @@ const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
         "Conversion grant not found.",
         404,
       );
-    const result = await getGrantStub(context.env, grantId).setMaxSlots(maxSlots);
-    if (result.result === "below-used-slots")
+    const result = await getGrantStub(context.env, grantId).setDurationAllowance(
+      allowanceMilliseconds,
+    );
+    if (result.result === "below-used-duration")
       return jsonError(
         context.get("requestId"),
-        "allowance-below-used-slots",
-        "Allowance cannot be lower than reserved and spent slots.",
+        "allowance-below-used-duration",
+        "Allowance cannot be lower than reserved and spent duration.",
         409,
       );
     await getRegistryStub(context.env).applyGrantRegistrySnapshot(result.registrySnapshot);
@@ -933,8 +933,12 @@ function deriveEntryState(
   if (entry.phase !== "active" || entry.grantSnapshot === undefined) return "provisioning" as const;
   if (entry.grantSnapshot.revokedAtMs !== undefined) return "revoked" as const;
   if (nowMs >= entry.expiresAtMs) return "expired" as const;
-  if (entry.grantSnapshot.spent >= entry.grantSnapshot.maxSlots) return "exhausted" as const;
-  if (entry.grantSnapshot.spent + entry.grantSnapshot.reserved >= entry.grantSnapshot.maxSlots)
+  if (entry.grantSnapshot.spentMilliseconds >= entry.grantSnapshot.allowanceMilliseconds)
+    return "exhausted" as const;
+  if (
+    entry.grantSnapshot.spentMilliseconds + entry.grantSnapshot.reservedMilliseconds >=
+    entry.grantSnapshot.allowanceMilliseconds
+  )
     return "temporarily-full" as const;
   return "open" as const;
 }

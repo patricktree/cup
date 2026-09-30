@@ -164,7 +164,7 @@ function grantFixture(state: "open" | "revoked") {
     expiresAt: EXPIRES_AT,
     ...(state === "revoked" ? { revokedAt: CREATED_AT } : {}),
     state,
-    slots: { remaining: 5, reserved: 0, spent: 0 },
+    duration: { availableMilliseconds: 5, reservedMilliseconds: 0, spentMilliseconds: 0 },
     conversions: [],
   };
 }
@@ -181,6 +181,7 @@ function inspectFixture() {
     },
     authoritative: {
       ...grantFixture("open"),
+      allowanceMilliseconds: 7_200_000,
       signingKeyGeneration: 1,
       registrySnapshotRevision: 1,
       registryConfirmedSnapshotRevision: 1,

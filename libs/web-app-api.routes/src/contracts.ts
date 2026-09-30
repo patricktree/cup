@@ -5,7 +5,7 @@ import {
   grantConversionSnapshotSchema,
   grantConversionsSchema,
   grantSnapshotSchema,
-  slotCountsSchema,
+  durationBalanceSchema,
   type GrantConversionSnapshot,
   type GrantConversions,
   type GrantSnapshot,
@@ -36,7 +36,9 @@ export const conversionParamsSchema = z.object({ conversionId: uuidV4Schema }).s
 export type ConversionParams = z.infer<typeof conversionParamsSchema>;
 
 export const conversionDetailSchema = z.discriminatedUnion("status", [
-  grantConversionSnapshotSchema.options[0].extend({ lastStartedPhase: conversionPhaseSchema }),
+  grantConversionSnapshotSchema.options[0].extend({
+    lastStartedPhase: conversionPhaseSchema,
+  }),
   grantConversionSnapshotSchema.options[1],
   grantConversionSnapshotSchema.options[2],
 ]);
@@ -67,7 +69,7 @@ export const startConversionResponseSchema = z
   .object({
     result: z.enum(["created", "replayed"]),
     conversion: grantConversionSnapshotSchema,
-    slots: slotCountsSchema,
+    duration: durationBalanceSchema,
   })
   .strict();
 export type StartConversionResponse = z.infer<typeof startConversionResponseSchema>;

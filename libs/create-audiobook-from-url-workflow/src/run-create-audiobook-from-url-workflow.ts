@@ -189,7 +189,22 @@ export async function runCreateAudiobookFromUrlWorkflow({
                   ConversionPhase.AUDIO_SEGMENT_PRODUCTION,
                 );
               try {
-                return await produceAudioSegment({
+                const grant = getGrantStub(env, grantId);
+                const existing = await env.AUDIO_BUCKET.head(
+                  createAudioSegmentKey(conversionId, chunkIndex),
+                );
+                if (existing === null) {
+                  const reservation = await grant.reserveAudioSegment(
+                    conversionId,
+                    chunkIndex,
+                    narrationText.length,
+                  );
+                  if (reservation.result !== "reserved" && reservation.result !== "settled")
+                    throw new NonRetryableError(
+                      "There is not enough available audio duration for the next segment.",
+                    );
+                }
+                const segment = await produceAudioSegment({
                   ai: services.speechSynthesisAi,
                   speechConfig,
                   bucket: env.AUDIO_BUCKET,
@@ -199,6 +214,24 @@ export async function runCreateAudiobookFromUrlWorkflow({
                   synthesisAttempt: attempt,
                   synthesisResponseMode: attempt === 1 ? "streaming" : "non-streaming",
                 });
+                if (existing !== null) {
+                  const usage = await grant.listAudioSegments(conversionId);
+                  if (!usage.some((item) => item.sequence === chunkIndex)) {
+                    // Existing objects without a billing reservation predate the allowance migration.
+                    await grant.retainHistoricalAudioSegment(
+                      conversionId,
+                      chunkIndex,
+                      narrationText.length,
+                      segment.durationMilliseconds,
+                    );
+                  }
+                }
+                await grant.completeAudioSegment(
+                  conversionId,
+                  chunkIndex,
+                  segment.durationMilliseconds,
+                );
+                return segment;
               } catch (error) {
                 if (error instanceof PermanentNarrationSynthesisError) {
                   throw new NonRetryableError(error.message, error.name);
@@ -208,7 +241,7 @@ export async function runCreateAudiobookFromUrlWorkflow({
               }
             },
           ),
-        { concurrency: SEGMENT_CONCURRENCY },
+        { concurrency: SEGMENT_CONCURRENCY, stopOnError: false },
       );
 
       stage = "audiobook-assembly";
@@ -270,7 +303,7 @@ export async function runCreateAudiobookFromUrlWorkflow({
             explanation:
               error instanceof ContentLimitError
                 ? "The source content exceeds the narration limit of 40,000 characters or 200 chunks."
-                : "The conversion could not be completed.",
+                : "Generation stopped. Unfinished segments did not consume allowance.",
             diagnosticReference: crypto.randomUUID(),
             cleanupState: "pending" as const,
             completedAtMs: Temporal.Now.instant().epochMilliseconds,

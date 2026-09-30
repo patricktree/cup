@@ -23,7 +23,7 @@ export type StartAudiobookConversionDependencies = {
   ): Promise<void>;
 };
 
-/** Reserves a conversion slot and starts the durable conversion workflow when needed. */
+/** Records an accepted conversion and starts its durable workflow when needed. */
 export async function startAudiobookConversion(
   input: StartAudiobookConversionInput,
   dependencies: StartAudiobookConversionDependencies,

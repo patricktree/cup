@@ -1,6 +1,6 @@
 # Operator runbook
 
-Use the operator CLI to create and manage production conversion grants. Each grant expires after 90 days and starts with five conversion slots.
+Use the operator CLI to create and manage production conversion grants. Each grant expires after 90 days and starts with 120 minutes of audio duration allowance.
 
 Run all commands from the repository root.
 
@@ -122,22 +122,26 @@ Use the returned opaque cursor with `--cursor` to fetch the next page.
 
 ### Inspect a grant
 
-Read the authoritative state, conversion slot counts, and conversion count:
+Read the authoritative state, duration balances, and conversion count:
 
 ```sh
 pnpm operator grant inspect "GRANT_ID"
 ```
 
-### Change a conversion allowance
+### Change a duration allowance
 
-Set the total number of conversion slots for an existing grant:
+Set the total audio duration allowance for an existing grant:
 
 ```sh
-pnpm operator grant set-allowance "GRANT_ID" --conversions 20
+pnpm operator grant set-allowance "GRANT_ID" --minutes 120
 pnpm operator grant inspect "GRANT_ID"
 ```
 
-The total includes reserved and spent slots. The command rejects totals below their sum. Repeating the same total is safe. The original link, browser sessions, and expiry remain valid.
+The total includes reserved and spent duration. The command rejects totals below their sum. Repeating the same total is safe. The original link, browser sessions, and expiry remain valid.
+
+Newly created grants start with 120 minutes.
+
+For a manual refund after permanent audio loss, inspect the grant and increase its total allowance by the duration being refunded. Changing the total does not reset spent duration.
 
 ### Revoke a grant
 

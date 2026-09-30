@@ -776,6 +776,9 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.11(@types/node@26.4.0)(@vitest/coverage-v8@4.1.11)
+      wrangler:
+        specifier: 'catalog:'
+        version: 4.136.1(@types/node@26.4.0)
 
   libs/mp3-encoding:
     devDependencies:
@@ -1140,6 +1143,9 @@ importers:
       '@cup/prepare-source-material':
         specifier: workspace:*
         version: link:../../libs/prepare-source-material
+      '@cup/web-app-api.routes':
+        specifier: workspace:*
+        version: link:../../libs/web-app-api.routes
     devDependencies:
       '@cup/config-oxlint':
         specifier: workspace:*

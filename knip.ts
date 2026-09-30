@@ -21,6 +21,8 @@ const config: KnipConfig = {
       ],
     },
     "libs/create-audiobook-from-url-workflow": {
+      /* Wrangler loads this module-only Worker entry point from wrangler.test.jsonc. */
+      entry: ["test/worker.ts"],
       ignoreDependencies: [
         /* knip doesn't detect `declare module "cloudflare:workers"` from Worker types */
         "cloudflare",

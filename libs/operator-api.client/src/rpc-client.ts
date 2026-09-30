@@ -33,9 +33,9 @@ export class OperatorApiClient {
     return this.#client.api.operator.grants[":grantId"].$get({ param: params }, this.options());
   }
 
-  setGrantAllowance(params: GrantParams, maxSlots: number) {
+  setGrantAllowance(params: GrantParams, allowanceMilliseconds: number) {
     return this.#client.api.operator.grants[":grantId"].allowance.$put(
-      { param: params, json: { maxSlots } },
+      { param: params, json: { allowanceMilliseconds } },
       this.options(),
     );
   }
