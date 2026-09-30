@@ -1,0 +1,469 @@
+no I don't have any Supabase / Google sign-in registration / Apple sign-in registration
+
+---
+
+what about https://workos.com/?
+
+---
+
+I have an Apple Developer Program membership
+
+---
+
+what next?
+
+---
+
+/wayfinder /Users/pkerschbaum/.codex/worktrees/3529/cup/.scratch/social-signup/map.md
+
+@/Users/pkerschbaum/.agents/skills/wayfinder/SKILL.md
+
+---
+
+Q1: agreed
+Q2: agreed
+Q3: agreed
+Q4: hmm, how about we do the real cleanup only after, lets say 7 days, and if the user signs up within this time period, the old account is "reactivated"?
+
+---
+
+Q5: agreed
+Q6: agreed
+Q7: agreed
+
+ad recovery period: not sure yet what period is good, WDYT?
+
+---
+
+agreed
+
+---
+
+Q8: agreed
+
+---
+
+/wayfinder /Users/pkerschbaum/.codex/worktrees/3529/cup/.scratch/social-signup/map.md
+
+@/Users/pkerschbaum/.agents/skills/wayfinder/SKILL.md
+
+---
+
+Q1: agreed
+Q2: agreed
+Q3: agreed. Not sure yet about the UX flow, but we keep the trial conversions anyways.
+Q4: agreed
+
+---
+
+Q5: agreed
+Q6: agreed
+
+---
+
+Q7: 8h
+Q8: let's make that a manual cleanup
+Q9: agreed
+
+---
+
+/wayfinder /Users/pkerschbaum/.codex/worktrees/3529/cup/.scratch/social-signup/map.md
+
+@/Users/pkerschbaum/.agents/skills/wayfinder/SKILL.md
+
+---
+
+Q10: agreed
+Q11: agreed
+Q12: agreed
+
+---
+
+Q13: agreed
+
+---
+
+/wayfinder /Users/pkerschbaum/.codex/worktrees/3529/cup/.scratch/social-signup/map.md
+
+@/Users/pkerschbaum/.agents/skills/wayfinder/SKILL.md
+
+---
+
+Q1: agreed. note: the app is not public yet, so we could even purge all data if we want. if that would avoid heavy "legacy code"
+Q2: agreed
+
+---
+
+Q1: agreed
+Q2: agreed
+
+---
+
+Q1: agreed
+Q2: agreed
+
+---
+
+correction: I don't want full data reset. Let's just not automatically import any trial conversions we didn't track import evidence for.
+
+---
+
+/wayfinder /Users/pkerschbaum/.codex/worktrees/3529/cup/.scratch/social-signup/map.md
+
+@/Users/pkerschbaum/.agents/skills/wayfinder/SKILL.md
+
+---
+
+Q3: agreed
+Q4: agreed
+Q5: agreed
+
+---
+
+Q6: agreed
+Q7: agreed
+Q8: agreed
+
+---
+
+Q9: agreed (thats idempotent then, right?)
+Q10: the deletion should be very fast so - can we not make that simpler? should be an extreme edge case?
+Q11: agreed
+
+---
+
+Q10: agreed
+
+Q11: let's discuss that question again
+
+---
+
+agreed, I want separate credit operations. I think I would even llike a full payment ledger from the beginning? how would that look like?
+
+---
+
+agreed
+
+---
+
+continue
+
+---
+
+Q12: agreed
+Q13: agreed
+Q14: agreed
+
+---
+
+/wayfinder /Users/pkerschbaum/.codex/worktrees/3529/cup/.scratch/social-signup/map.md
+
+@/Users/pkerschbaum/.agents/skills/wayfinder/SKILL.md
+
+---
+
+can we work on another ticket before? I don't have access to the apple account with the the Apple Developer Program individual membership right now.
+
+---
+
+let'S do that
+
+---
+
+Q1: all at once. no users yet, so no problem if downtime. just with as least effort as possible
+Q2: no emergency controls
+Q3: more details please - what is this about
+Q4: agreed
+
+---
+
+agreed
+
+---
+
+Q5: agreed
+Q6: agreed
+Q7: what would that look llike for the user?
+
+---
+
+agreed
+
+---
+
+Q8: agreed
+Q9: agreed
+Q10: agreed
+
+---
+
+Q11: agreed
+Q12: no
+
+---
+
+Q13: agreed
+
+---
+
+Q14: or `no-reply@cup-audio.com` ?
+
+---
+
+agreed - what's next?
+
+---
+
+Q15: would https://resend.com/ help instead? thinking about using that
+Q16: agreed
+
+---
+
+agreed
+
+---
+
+whats next
+
+---
+
+do that
+
+---
+
+what's next?
+
+---
+
+agreed
+
+---
+
+Q17: explain again
+
+---
+
+it makes sense but I think it is overkill
+
+---
+
+agreed
+
+---
+
+/wayfinder /Users/pkerschbaum/.codex/worktrees/3529/cup/.scratch/social-signup/map.md
+
+@/Users/pkerschbaum/.agents/skills/wayfinder/SKILL.md
+
+---
+
+Q18: agreed
+Q19: agreed
+Q20: agreed
+
+---
+
+ad Q20: what about we write telemetry (e.g. log) which we retain for a limited period of time, and that has included the user's identity the deletion failed for?
+
+---
+
+lets do 14 days retention for the telemetry
+
+put the user's email address in the logs, as the telemetry will be removed anyways after 14 days
+
+as observability solution, let's use either Cloudflare, or Sentry SaaS.
+
+---
+
+could we change Sentry SaaS Logs to 14 days retention?
+
+---
+
+agreed - let's use Sentry. let's try to set it to 14 day retention, but accept 30 day if not possible.
+
+---
+
+continue
+
+---
+
+Q22: agreed
+Q23: hmm, I feel like keeping  _something_ would be great...
+Q24: agreed
+
+---
+
+Q23: sounds good, how about we keep that forever? and how about we also store the supabase and apple IDs (which are not PII data I guess?)
+
+---
+
+Q23: I agree to the 90 days retented deletion receipt
+
+---
+
+continue
+
+---
+
+Q25: why should it temporary fail to finish account setup? 
+Q26: agreed
+
+---
+
+how about we do that step 2 as a durable workflow, or something like that?
+
+---
+
+Q25: agreed
+
+maybe we can use that pattern more often in implementing all of `Social signup and user accounts` -  your call
+
+---
+
+/wayfinder /Users/pkerschbaum/.codex/worktrees/3529/cup/.scratch/social-signup/map.md
+
+@/Users/pkerschbaum/.agents/skills/wayfinder/SKILL.md
+
+---
+
+I have a Resend account
+
+---
+
+what region should I use? I expect users to be mainly from europe, but is my Cloudflare setup in europe??
+
+---
+
+`Custom return-path`?
+
+---
+
+done
+
+---
+
+done
+
+---
+
+patrick.kerschbaum@gmail.com
+
+---
+
+stored in /Users/pkerschbaum/workspace/cup/apps/cloudflare-worker/.env.local
+
+---
+
+yes, in the inbox, not spam folder
+
+---
+
+whats next?
+
+---
+
+nope
+
+---
+
+https://oiehcntuiazvunyzngmi.supabase.co
+
+---
+
+how about `cup-production` as project name instead?
+
+---
+
+do the google auth platform steps via `gcloud` CLI
+
+---
+
+I've set up the google auth app
+
+---
+
+couldn't we do supabase, GCP, resend all with terraform?
+
+---
+
+agreed
+
+---
+
+I do not care if we drop the GCP & supabase projects again
+
+---
+
+whats next
+
+---
+
+how about GCP bucket?
+
+---
+
+agreed
+
+---
+
+continue
+
+---
+
+separate project
+
+---
+
+if we delete a project, would we be able to continue?
+
+---
+
+if we run terraform destroy on ~/workspace/forever-backup/terraform/, what would happen?
+
+---
+
+what if we just create another billing account?
+
+---
+
+do that
+
+---
+
+why
+
+---
+
+created it, https://console.cloud.google.com/billing/01EF28-40C66E-325909?organizationId=424428783863
+
+---
+
+do it
+
+---
+
+deploy the app again onto the connected ADB device
+
+---
+
+deploy the app again onto the connected ADB device
+
+---
+
+it plays continuesly. locking for 7 minutes then unlocking; switching apps... it plays continuously
+
+---
+
+one thing: I don't see an Android notification showing the running audio play. That would be great...
+
+---
+
+yea but what to do now?
+
+---
+
+agreed, let's do that
+
+---
+
+Q1: I would say if the user had a trial conversion and does the sign up, we just stop the playback. Not best UX, but the convert-from-trial-to-real-user case is anyways a rare case, an exception!
