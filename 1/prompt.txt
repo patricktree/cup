@@ -467,3 +467,7 @@ agreed, let's do that
 ---
 
 Q1: I would say if the user had a trial conversion and does the sign up, we just stop the playback. Not best UX, but the convert-from-trial-to-real-user case is anyways a rare case, an exception!
+
+---
+
+Q2: let's not even auto-open the private copy. the user sees the copy progress, when its finished the user can open it
