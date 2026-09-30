@@ -28,10 +28,13 @@ const SOURCE_PAGES = [
   {
     snapshotFilename: "gates-notes.html",
     stabilizeSourceMaterial: (html: string) =>
-      extractElementById(html, "a_turbulent_ai_era_and_critical_choices_to_make_a").replace(
-        /(published <span class="ArtDateTime">)[^<]+(<\/span>)/,
-        "$1[relative publication date]$2",
-      ),
+      extractElementById(html, "a_turbulent_ai_era_and_critical_choices_to_make_a")
+        // The site alternates between including and omitting its video hero on successive requests.
+        .replace(/<div class="articleInnerHeroIS"[^>]*>[\s\S]*?<\/div>/, "")
+        .replace(
+          /(published <span class="ArtDateTime">)[^<]+(<\/span>)/,
+          "$1[relative publication date]$2",
+        ),
     url: "https://www.gatesnotes.com/a-turbulent-ai-era-and-critical-choices-to-make",
   },
 ] as const;
