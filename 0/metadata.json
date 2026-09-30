@@ -1,0 +1,47 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M3RM3Y9ZCSB2EYXCCRD3FW1P",
+  "session_id": "01a0f13e-9ae6-7f11-a51a-d71d84875289",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-30T07:40:29.238905Z",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "libs/prepare-source-material/test-e2e/anthropic.html",
+    "libs/prepare-source-material/test-e2e/cloudflare.html"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-astra",
+  "turn_id": "b3b77cc82dab",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 426788,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 7439616,
+    "output_tokens": 19698,
+    "api_call_count": 21
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-30T07:40:29.215567Z",
+    "agent_lines": 135,
+    "agent_removed": 135,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 135,
+    "total_lines_changed": 270,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 70,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "docs/research/speechify-tts-comparison.md": 70
+      }
+    }
+  ]
+}
