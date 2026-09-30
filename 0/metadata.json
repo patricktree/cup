@@ -1,0 +1,63 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M3RPDBJ5ZAVN8GPFE3704C5J",
+  "session_id": "01a0f148-62b1-7140-b85c-d79c64019287",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-30T08:20:34.600483Z",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    ".gitignore",
+    "docs/research/gemini-3.8-tts-comparison.md",
+    "docs/research/gemini-3.8-tts-comparison.tar.xz"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6.1-sol",
+  "turn_id": "32d2f34ede42",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 196090,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 6982272,
+    "output_tokens": 26188,
+    "api_call_count": 51
+  },
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-30T08:20:34.535105Z",
+    "agent_lines": 99,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 1,
+    "human_removed": 0,
+    "total_committed": 100,
+    "total_lines_changed": 100,
+    "agent_percentage": 99,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 20,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".husky/_/commit-msg": 4,
+        ".husky/_/post-commit": 4,
+        ".husky/_/post-rewrite": 4,
+        ".husky/_/pre-push": 5,
+        ".husky/_/prepare-commit-msg": 3
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 120,
+      "agent_lines_removed": 0
+    }
+  ]
+}

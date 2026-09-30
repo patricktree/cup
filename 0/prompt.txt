@@ -1,0 +1,11 @@
+Plan how to upgrade to Gemini 3.8 TTS
+
+---
+
+what about gemini 3.8 flash lite tts?
+
+---
+
+do a comparison like /Users/pkerschbaum/workspace/cup/docs/research/speechify-tts-comparison.md with both 3.8 flash and 3.8 flash lite
+
+I want to have the listening comparison for all 5 things (Gemini 3.1, ElevenLabs, Speechify, Gemini 3.8 Flash, Gemini 3.8 Flash Lite)
