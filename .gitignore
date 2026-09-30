@@ -20,3 +20,6 @@
 # Local credentials
 **/.env.local
 **/.env.evals
+
+# Unpacked listening comparison; the reproducible record is stored in its archive.
+/docs/research/gemini-3.8-tts-comparison/
