@@ -1,18 +1,17 @@
-how to solve needing regular "refreshes" like 54caac2ec21b8a502e8914aab0a6e8c8fa2b2c43
+[$commit-and-push-staged-changes](/Users/pkerschbaum/.codex/skills/commit-and-push-staged-changes/SKILL.md)
 
 ---
 
-other idea: /Users/pkerschbaum/workspace/cup/libs/prepare-source-material/test-e2e/prepare-source-material.test.ts spins up a server serving the 3 websites (as they are today), and the test cases visit that.
-
+<skill>
+<name>commit-and-push-staged-changes</name>
+<path>/Users/pkerschbaum/.codex/skills/commit-and-push-staged-changes/SKILL.md</path>
+---
+name: commit-and-push-staged-changes
+description: Commit and push staged changes
 ---
 
-agreed
+Invocation arguments are supplied with the explicit skill mention. In the template below, interpret `$1` as the first argument, `$2` as the second, `$@` or `$ARGUMENTS` as all arguments, and `${@:N}` as arguments starting at position N.
 
+Commit and push all staged changes
 
-
-let's do these steps:
-
-
-
-- first add [https://www.gatesnotes.com/a-turbulent-ai-era-and-critical-choices-to-make](https://www.gatesnotes.com/a-turbulent-ai-era-and-critical-choices-to-make) to the existing setup. that is a page which shows nothing when JS is disabled.
-- then migrate to our "self-hosted" setup
+</skill>
