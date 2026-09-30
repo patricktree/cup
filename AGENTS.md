@@ -33,7 +33,7 @@ Run `pnpm validate:fast` as needed during development. Shipping to production me
 | `pnpm validate`          | Fast, then extended                                                                                          |
 | `pnpm validate:evals`    | Paid narration-content-selection evals; invoke explicitly                                                    |
 
-The groups are independent and stop on failure. Extended does not run the fast group. Both free groups require Docker; extended also needs internet access, `uvx`, and GitHub CLI authentication for zizmor. Live source-material E2E tests can fail when external pages change or become unavailable. Fast validation requires the configured environment files but does not invoke paid AI services.
+The groups are independent and stop on failure. Extended does not run the fast group. Both free groups require Docker; extended also needs internet access, `uvx`, and GitHub CLI authentication for zizmor. Source-material E2E tests replay locally hosted page fixtures, including the scripts and content API responses needed for JavaScript rendering; see `libs/prepare-source-material/test-e2e/fixtures/README.md`. Fast validation requires the configured environment files but does not invoke paid AI services.
 
 Use `pnpm test:e2e:app` or `pnpm test:e2e:source-material` to rerun a single E2E suite. `pnpm test:e2e` runs both. Builds use checked-in brand assets; after changing their sources, run `pnpm brand-assets:sync` and review the generated changes. `pnpm brand-assets:check` reports stale files without modifying them.
 

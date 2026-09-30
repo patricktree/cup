@@ -7,5 +7,3 @@ while read -r local_ref local_oid remote_ref remote_oid; do
 done <<EOF
 ${push_refs}
 EOF
-
-printf '%s\n' "${push_refs}" | sh .husky/entire.sh pre-push "$1"

@@ -50,6 +50,10 @@ const config: KnipConfig = {
       /* Live evals use separate Vitest discovery, so Knip cannot infer these entry points */
       entry: ["vitest.evals.config.ts", "test/evals/**/*.eval.ts"],
     },
+    "libs/prepare-source-material": {
+      /* Playwright starts this fixture server through its webServer command. */
+      entry: ["test-e2e/source-page-server.ts"],
+    },
   },
 };
 

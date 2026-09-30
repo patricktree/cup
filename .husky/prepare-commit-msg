@@ -1,1 +1,0 @@
-sh .husky/entire.sh prepare-commit-msg "$@"
