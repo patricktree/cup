@@ -1,0 +1,18 @@
+how to solve needing regular "refreshes" like 54caac2ec21b8a502e8914aab0a6e8c8fa2b2c43
+
+---
+
+other idea: /Users/pkerschbaum/workspace/cup/libs/prepare-source-material/test-e2e/prepare-source-material.test.ts spins up a server serving the 3 websites (as they are today), and the test cases visit that.
+
+---
+
+agreed
+
+
+
+let's do these steps:
+
+
+
+- first add [https://www.gatesnotes.com/a-turbulent-ai-era-and-critical-choices-to-make](https://www.gatesnotes.com/a-turbulent-ai-era-and-critical-choices-to-make) to the existing setup. that is a page which shows nothing when JS is disabled.
+- then migrate to our "self-hosted" setup
