@@ -5,24 +5,37 @@ import {
   createAudioSegmentMetadata,
   createAudioSegmentReference,
 } from "#src/audio-segment-storage.ts";
-import { ELEVENLABS_SPEECH_CONFIG, GEMINI_SPEECH_CONFIG } from "#src/speech-synthesis-config.ts";
+import {
+  ELEVENLABS_SPEECH_CONFIG,
+  GEMINI_SPEECH_CONFIG,
+  LEGACY_GEMINI_SPEECH_CONFIG,
+  type SpeechConfig,
+} from "#src/speech-synthesis-config.ts";
 
 afterEach(() => vi.unstubAllGlobals());
 
-test("assembly rejects mixed providers", async () => {
-  await expect(assembleAudiobook(createAudiobookAssemblyOptions(true))).rejects.toThrow(
+test.each([
+  { identity: "providers", configs: [GEMINI_SPEECH_CONFIG, ELEVENLABS_SPEECH_CONFIG] },
+  { identity: "Gemini models", configs: [LEGACY_GEMINI_SPEECH_CONFIG, GEMINI_SPEECH_CONFIG] },
+])("assembly rejects mixed $identity", async ({ configs }) => {
+  await expect(assembleAudiobook(createAudiobookAssemblyOptions(configs))).rejects.toThrow(
     "different synthesis identities",
   );
 });
 
-test("assembly accepts complete legacy Gemini audio", async () => {
-  await expect(assembleAudiobook(createAudiobookAssemblyOptions(false))).resolves.toMatchObject({
-    byteLength: 8,
-    durationMilliseconds: 48,
-  });
-});
+test.each([LEGACY_GEMINI_SPEECH_CONFIG, GEMINI_SPEECH_CONFIG])(
+  "assembly accepts complete $model audio",
+  async (speechConfig) => {
+    await expect(
+      assembleAudiobook(createAudiobookAssemblyOptions([speechConfig, speechConfig])),
+    ).resolves.toMatchObject({
+      byteLength: 8,
+      durationMilliseconds: 48,
+    });
+  },
+);
 
-function createAudiobookAssemblyOptions(shouldMixProviders: boolean) {
+function createAudiobookAssemblyOptions(speechConfigs: readonly SpeechConfig[]) {
   vi.stubGlobal(
     "FixedLengthStream",
     class extends TransformStream<Uint8Array, Uint8Array> {
@@ -32,10 +45,7 @@ function createAudiobookAssemblyOptions(shouldMixProviders: boolean) {
       }
     },
   );
-  const objects = [
-    GEMINI_SPEECH_CONFIG,
-    shouldMixProviders ? ELEVENLABS_SPEECH_CONFIG : GEMINI_SPEECH_CONFIG,
-  ].map((speechConfig, sequence) => ({
+  const objects = speechConfigs.map((speechConfig, sequence) => ({
     key: `conversions/conversion-id/audio-segments/${sequence}.mp3`,
     size: 4,
     httpMetadata: { contentType: "audio/mpeg" },

@@ -7,6 +7,14 @@ export type SpeechConfig = {
 
 export const GEMINI_SPEECH_CONFIG = {
   provider: "google-ai-studio",
+  model: "gemini-3.8-flash-lite-tts",
+  voice: "Charon",
+  policyVersion: "4",
+} as const satisfies SpeechConfig;
+
+// Resumed conversions retain the model and request policy they started with.
+export const LEGACY_GEMINI_SPEECH_CONFIG = {
+  provider: "google-ai-studio",
   model: "gemini-3.1-flash-tts-preview",
   voice: "Charon",
   policyVersion: "3",

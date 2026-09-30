@@ -6,7 +6,7 @@ import {
   type ProduceOptions,
   type SpeechSynthesisAi,
 } from "#src/produce-audio-segment.ts";
-import { GEMINI_SPEECH_CONFIG } from "#src/speech-synthesis-config.ts";
+import { GEMINI_SPEECH_CONFIG, LEGACY_GEMINI_SPEECH_CONFIG } from "#src/speech-synthesis-config.ts";
 
 const CONVERSION_ID = "018f4d80-5b9e-7a43-9cf4-8e192b37cbd8";
 type SpeechSynthesisRun = ReturnType<SpeechSynthesisAi["gateway"]>["run"];
@@ -26,7 +26,6 @@ test("configures a bounded observable non-streaming synthesis attempt", async ()
   };
 
   await produceAudioSegment({
-    speechConfig: GEMINI_SPEECH_CONFIG,
     ai: createSpeechSynthesisAi(run),
     bucket: createAudioSegmentBucket(),
     conversionId: CONVERSION_ID,
@@ -45,8 +44,12 @@ test("configures a bounded observable non-streaming synthesis attempt", async ()
       "Content-Type": "application/json",
     },
     query: {
-      input:
-        "Synthesize speech by reading the following transcript verbatim.\nSpeak only the transcript, without adding commentary.\n\nTRANSCRIPT:\nA bounded narration request.",
+      model: "gemini-3.8-flash-lite-tts",
+      input: [
+        { type: "user_input", content: [{ type: "text", text: "A bounded narration request." }] },
+      ],
+      response_format: { type: "audio", mime_type: "audio/l16", sample_rate: 24_000 },
+      generation_config: { speech_config: [{ voice: "Charon" }] },
       stream: false,
     },
   });
@@ -87,6 +90,38 @@ test.each(["streaming", "non-streaming"] as const)(
 
     expect(gatewayRequest).toMatchObject({
       query: {
+        model: "gemini-3.8-flash-lite-tts",
+        input: [{ type: "user_input", content: [{ type: "text", text: "News Writer" }] }],
+        response_format: { type: "audio", mime_type: "audio/l16", sample_rate: 24_000 },
+        stream: synthesisResponseMode === "streaming",
+      },
+    });
+  },
+);
+
+test.each(["streaming", "non-streaming"] as const)(
+  "retains the legacy Gemini request policy for resumed conversions in %s mode",
+  async (synthesisResponseMode) => {
+    let gatewayRequest: unknown;
+    const run: SpeechSynthesisRun = async (request: SpeechSynthesisRequest) => {
+      gatewayRequest = request;
+      return createAudioResponse();
+    };
+
+    const segment = await produceAudioSegment({
+      speechConfig: LEGACY_GEMINI_SPEECH_CONFIG,
+      ai: createSpeechSynthesisAi(run),
+      bucket: createAudioSegmentBucket(),
+      conversionId: CONVERSION_ID,
+      sequence: 0,
+      narrationChunk: { text: "News Writer" },
+      synthesisResponseMode,
+    });
+
+    expect(segment.speechConfig).toEqual(LEGACY_GEMINI_SPEECH_CONFIG);
+    expect(gatewayRequest).toMatchObject({
+      query: {
+        model: "gemini-3.1-flash-tts-preview",
         input:
           "Synthesize speech by reading the following transcript verbatim.\nSpeak only the transcript, without adding commentary.\n\nTRANSCRIPT:\nNews Writer",
         stream: synthesisResponseMode === "streaming",

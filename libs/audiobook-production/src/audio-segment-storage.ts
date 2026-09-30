@@ -2,6 +2,7 @@ import { AUDIO_FORMAT, AUDIOBOOK_CONTENT_TYPE } from "#src/audio-format.ts";
 import {
   SPEECH_CONFIG,
   GEMINI_SPEECH_CONFIG,
+  LEGACY_GEMINI_SPEECH_CONFIG,
   ELEVENLABS_SPEECH_CONFIG,
   type SpeechConfig,
 } from "#src/speech-synthesis-config.ts";
@@ -199,8 +200,8 @@ function hasExpectedFixedSynthesisMetadata(
   speechConfig?: SpeechConfig,
 ): boolean {
   if (!speechConfig) {
-    return [GEMINI_SPEECH_CONFIG, ELEVENLABS_SPEECH_CONFIG].some((config) =>
-      hasExpectedFixedSynthesisMetadata(metadata, config),
+    return [GEMINI_SPEECH_CONFIG, LEGACY_GEMINI_SPEECH_CONFIG, ELEVENLABS_SPEECH_CONFIG].some(
+      (config) => hasExpectedFixedSynthesisMetadata(metadata, config),
     );
   }
   return (

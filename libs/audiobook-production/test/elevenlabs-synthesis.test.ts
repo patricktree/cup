@@ -8,7 +8,11 @@ import {
 } from "#src/audio-segment-storage.ts";
 import { produceAudioSegment, type ProduceOptions } from "#src/produce-audio-segment.ts";
 import { createFakeSpeechSynthesisAi } from "#src/speech-synthesis-ai.fake.ts";
-import { ELEVENLABS_SPEECH_CONFIG, GEMINI_SPEECH_CONFIG } from "#src/speech-synthesis-config.ts";
+import {
+  ELEVENLABS_SPEECH_CONFIG,
+  GEMINI_SPEECH_CONFIG,
+  LEGACY_GEMINI_SPEECH_CONFIG,
+} from "#src/speech-synthesis-config.ts";
 import { PermanentNarrationSynthesisError, type SynthesisOptions } from "#src/speech-synthesis.ts";
 import { synthesizeElevenLabsAudio } from "#src/synthesize-elevenlabs-audio.ts";
 
@@ -124,19 +128,22 @@ test("stores ElevenLabs identity and refuses reuse under Gemini", async () => {
   ).rejects.toThrow("identity conflicts");
 });
 
-test("validates legacy Gemini segments after changing the production default", () => {
-  const object = {
-    key: "conversions/conversion-id/audio-segments/0.mp3",
-    size: 384,
-    httpMetadata: { contentType: "audio/mpeg" },
-    customMetadata: createAudioSegmentMetadata("Original narration", 24, 123, GEMINI_SPEECH_CONFIG),
-  };
-  const reference = createAudioSegmentReference(object, "conversion-id", 0);
-  expect(reference.speechConfig).toEqual(GEMINI_SPEECH_CONFIG);
-  expect(() => assertStoredAudioSegment(object, reference)).not.toThrow();
-  const { speechConfig: _, ...legacyReference } = reference;
-  expect(() => assertStoredAudioSegment(object, legacyReference)).not.toThrow();
-  expect(() =>
-    assertStoredAudioSegment(object, { ...reference, speechConfig: ELEVENLABS_SPEECH_CONFIG }),
-  ).toThrow("unexpected synthesis metadata");
-});
+test.each([LEGACY_GEMINI_SPEECH_CONFIG, GEMINI_SPEECH_CONFIG])(
+  "validates stored Gemini $model segments with legacy references",
+  (speechConfig) => {
+    const object = {
+      key: "conversions/conversion-id/audio-segments/0.mp3",
+      size: 384,
+      httpMetadata: { contentType: "audio/mpeg" },
+      customMetadata: createAudioSegmentMetadata("Original narration", 24, 123, speechConfig),
+    };
+    const reference = createAudioSegmentReference(object, "conversion-id", 0);
+    expect(reference.speechConfig).toEqual(speechConfig);
+    expect(() => assertStoredAudioSegment(object, reference)).not.toThrow();
+    const { speechConfig: _, ...legacyReference } = reference;
+    expect(() => assertStoredAudioSegment(object, legacyReference)).not.toThrow();
+    expect(() =>
+      assertStoredAudioSegment(object, { ...reference, speechConfig: ELEVENLABS_SPEECH_CONFIG }),
+    ).toThrow("unexpected synthesis metadata");
+  },
+);

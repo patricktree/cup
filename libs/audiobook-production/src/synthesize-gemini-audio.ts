@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { AUDIO_FORMAT } from "#src/audio-format.ts";
+import { LEGACY_GEMINI_SPEECH_CONFIG } from "#src/speech-synthesis-config.ts";
 import { PermanentNarrationSynthesisError, type SynthesisOptions } from "#src/speech-synthesis.ts";
 
 const AUDIO_STREAM_CHUNK_SIZE = 64 * 1024;
@@ -116,6 +117,7 @@ export async function synthesizeGeminiAudio({
   speechConfig,
 }: SynthesisOptions): Promise<Uint8Array> {
   const isStreaming = synthesisResponseMode === "streaming";
+  const isLegacyGemini = speechConfig.model === LEGACY_GEMINI_SPEECH_CONFIG.model;
   const response = await ai.gateway(SPEECH_GATEWAY_ID).run(
     {
       provider: speechConfig.provider,
@@ -127,11 +129,14 @@ export async function synthesizeGeminiAudio({
       },
       query: {
         model: speechConfig.model,
-        // Explicit speech instructions avoid Gemini's documented prompt-classifier false rejections.
-        // https://ai.google.dev/gemini-api/docs/speech-generation#limitations
-        input: `Synthesize speech by reading the following transcript verbatim.\nSpeak only the transcript, without adding commentary.\n\nTRANSCRIPT:\n${narrationText}`,
+        // Gemini 3.8 reads input verbatim; retain the classifier workaround only for legacy 3.1.
+        // https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash-lite-tts#migration-guide
+        input: isLegacyGemini
+          ? `Synthesize speech by reading the following transcript verbatim.\nSpeak only the transcript, without adding commentary.\n\nTRANSCRIPT:\n${narrationText}`
+          : [{ type: "user_input", content: [{ type: "text", text: narrationText }] }],
         response_format: {
           type: "audio",
+          ...(isLegacyGemini ? {} : { mime_type: "audio/l16" }),
           sample_rate: AUDIO_FORMAT.sampleRate,
         },
         generation_config: {
