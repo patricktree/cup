@@ -21,7 +21,7 @@ const parameters = new URLSearchParams(window.location.search);
 const mockingReady = parameters.has("canvas")
   ? worker.start({
       serviceWorker: { url: "/ui-gallery/mockServiceWorker.js" },
-      onUnhandledRequest: "bypass",
+      onUnhandledFrame: "bypass",
       quiet: true,
     })
   : Promise.resolve();

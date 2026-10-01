@@ -131,18 +131,18 @@ test.each(["streaming", "non-streaming"] as const)(
 );
 
 test("reports sanitized interaction diagnostics when a stream contains no audio", async () => {
-  const run: SpeechSynthesisRun = async () =>
-    createEventStreamResponse([
-      {
-        event_type: "interaction.created",
-        interaction: { status: "in_progress" },
-      },
-      {
-        event_type: "interaction.completed",
-        interaction: { status: "completed" },
-      },
-      "[DONE]",
-    ]);
+  const events: Parameters<typeof createEventStreamResponse>[0] = [
+    {
+      event_type: "interaction.created",
+      interaction: { status: "in_progress" },
+    },
+    {
+      event_type: "interaction.completed",
+      interaction: { status: "completed" },
+    },
+    "[DONE]",
+  ];
+  const run: SpeechSynthesisRun = async () => createEventStreamResponse(events);
 
   await expect(
     produceAudioSegment({
@@ -159,17 +159,17 @@ test("reports sanitized interaction diagnostics when a stream contains no audio"
 });
 
 test("marks a confirmed provider safety refusal as permanent", async () => {
-  const run: SpeechSynthesisRun = async () =>
-    createEventStreamResponse([
-      {
-        event_type: "interaction.completed",
-        interaction: {
-          status: "failed",
-          errors: [{ code: "SAFETY_BLOCKED", message: "The narration was blocked." }],
-        },
+  const events: Parameters<typeof createEventStreamResponse>[0] = [
+    {
+      event_type: "interaction.completed",
+      interaction: {
+        status: "failed",
+        errors: [{ code: "SAFETY_BLOCKED", message: "The narration was blocked." }],
       },
-      "[DONE]",
-    ]);
+    },
+    "[DONE]",
+  ];
+  const run: SpeechSynthesisRun = async () => createEventStreamResponse(events);
 
   const error = await produceAudioSegment({
     speechConfig: GEMINI_SPEECH_CONFIG,

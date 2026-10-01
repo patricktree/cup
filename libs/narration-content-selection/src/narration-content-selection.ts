@@ -595,13 +595,14 @@ class UnknownSelectionElementIdsError extends Error {}
 // Preserve native anchors in the output, but expose only selection IDs to the model.
 function stripNativeElementIds(html: string): string {
   const fragment = parseFragment(html);
-  function visit(parent: DefaultTreeAdapterMap["parentNode"]): void {
-    for (const child of parent.childNodes) {
-      if (!("tagName" in child)) continue;
-      child.attrs = child.attrs.filter((attribute) => attribute.name !== "id");
-      visit(getElementContent(child));
-    }
-  }
-  visit(fragment);
+  stripNativeElementIdsFromChildren(fragment);
   return serialize(fragment);
+}
+
+function stripNativeElementIdsFromChildren(parent: DefaultTreeAdapterMap["parentNode"]): void {
+  for (const child of parent.childNodes) {
+    if (!("tagName" in child)) continue;
+    child.attrs = child.attrs.filter((attribute) => attribute.name !== "id");
+    stripNativeElementIdsFromChildren(getElementContent(child));
+  }
 }

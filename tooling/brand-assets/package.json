@@ -26,8 +26,8 @@
   "dependencies": {
     "@commander-js/extra-typings": "^15.0.0",
     "commander": "^15.0.0",
-    "sharp": "0.35.2",
-    "zod": "^4.5.4"
+    "sharp": "0.35.5",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",

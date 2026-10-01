@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "parse5": "^8.0.1",
-    "zod": "^4.5.4"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",

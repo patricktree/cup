@@ -30,10 +30,10 @@
     "postinstall": "sh ./postinstall.sh",
     "test": "turbo run turbo:test",
     "test:e2e": "pnpm run test:e2e:app && pnpm run test:e2e:source-material",
-    "test:e2e:app": "docker pull mcr.microsoft.com/playwright:v1.62.1-noble && pnpm run build && pnpm --filter '@cup/e2e' test:e2e",
+    "test:e2e:app": "docker pull mcr.microsoft.com/playwright:v1.63.0-noble && pnpm run build && pnpm --filter '@cup/e2e' test:e2e",
     "test:e2e:source-material": "pnpm --filter '@cup/prepare-source-material' test:e2e",
     "test:e2e:ui": "pnpm run build && pnpm --filter '@cup/e2e' test:e2e:ui",
-    "test:e2e:update": "docker pull mcr.microsoft.com/playwright:v1.62.1-noble && pnpm run build && pnpm --filter '@cup/e2e' test:e2e:update",
+    "test:e2e:update": "docker pull mcr.microsoft.com/playwright:v1.63.0-noble && pnpm run build && pnpm --filter '@cup/e2e' test:e2e:update",
     "validate": "pnpm run validate:fast && pnpm run validate:extended",
     "validate:evals": "pnpm --filter '@cup/narration-content-selection' eval",
     "validate:extended": "pnpm run declutter && pnpm run brand-assets:check && pnpm run zizmor && pnpm run test:e2e",
@@ -45,25 +45,25 @@
     "@emnapi/core": "^1.11.3",
     "@emnapi/runtime": "^1.11.3",
     "@patricktree-stack/config-oxfmt": "workspace:*",
-    "cf": "^0.8.0",
+    "cf": "^1.0.0-beta.5",
     "del-cli": "^7.0.0",
     "eslint-plugin-react-you-might-not-need-an-effect": "^1.0.2",
     "husky": "^9.1.7",
-    "knip": "^6.33.0",
+    "knip": "^6.38.0",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
-    "turbo": "^2.10.12"
+    "turbo": "^2.11.5"
   },
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": "^24.20.0",
+      "version": "^24.21.0",
       "onFail": "download"
     }
   },
   "engines": {
-    "pnpm": "12.2.1"
+    "pnpm": "12.8.1"
   },
-  "packageManager": "pnpm@12.2.1"
+  "packageManager": "pnpm@12.8.1"
 }

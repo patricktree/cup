@@ -34,7 +34,7 @@
   "dependencies": {
     "@cup/web-app-api.routes": "workspace:*",
     "hono": "catalog:hono",
-    "type-fest": "^5.9.0"
+    "type-fest": "^5.10.0"
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",

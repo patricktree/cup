@@ -36,9 +36,9 @@
     "turbo:test": "pnpm run test:components"
   },
   "dependencies": {
-    "@base-ui/react": "^1.7.0",
+    "@base-ui/react": "^1.8.0",
     "@capacitor/app": "^8.1.1",
-    "@capacitor/core": "^8.5.1",
+    "@capacitor/core": "^8.5.2",
     "@cup/conversion-grants": "workspace:*",
     "@cup/web-app-api.client": "workspace:*",
     "@cup/web-app-api.routes": "workspace:*",
@@ -47,11 +47,11 @@
     "@linaria/core": "^8.2.0",
     "@patricktree-stack/utils-ecma": "workspace:*",
     "@tanstack/react-form": "^1.33.5",
-    "@tanstack/react-query": "^5.102.8",
-    "@tanstack/react-router": "^1.170.32",
+    "@tanstack/react-query": "^5.104.0",
+    "@tanstack/react-router": "^1.170.40",
     "react": "catalog:web-app",
     "react-dom": "catalog:web-app",
-    "zod": "^4.5.4"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",
@@ -67,7 +67,7 @@
     "@typescript/native": "catalog:",
     "@vitejs/plugin-react": "catalog:web-app",
     "@wyw-in-js/vite": "catalog:web-app",
-    "msw": "^2.15.0",
+    "msw": "^3.0.0",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
     "stylelint": "catalog:",

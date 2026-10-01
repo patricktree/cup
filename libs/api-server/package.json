@@ -46,8 +46,8 @@
     "@cup/operator-api.routes": "workspace:*",
     "@cup/web-app-api.routes": "workspace:*",
     "hono": "catalog:hono",
-    "jose": "^6.2.10",
-    "temporal-polyfill": "^1.0.4"
+    "jose": "^6.2.12",
+    "temporal-polyfill": "^1.0.5"
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",

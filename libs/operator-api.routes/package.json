@@ -38,7 +38,7 @@
     "@cup/conversion-grants": "workspace:*",
     "@hono/zod-openapi": "catalog:hono",
     "hono": "catalog:hono",
-    "zod": "^4.5.4"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",

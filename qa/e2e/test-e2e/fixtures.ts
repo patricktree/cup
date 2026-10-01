@@ -8,8 +8,6 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 
-export type QaScenario = "success" | "tts-failure" | "speech-gated";
-
 type CreatedGrant = {
   grantId: string;
   trialLink: string;
@@ -21,6 +19,8 @@ export type WorkerEnvironment = {
   createGrant(): Promise<CreatedGrant>;
   restart(scenario: QaScenario): Promise<void>;
 };
+
+type QaScenario = "success" | "tts-failure" | "speech-gated";
 
 type Fixtures = {
   expectConsoleError: ((message: string | RegExp) => void) & { messages: Array<string | RegExp> };

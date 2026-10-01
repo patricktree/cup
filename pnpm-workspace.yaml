@@ -26,38 +26,42 @@ allowBuilds:
 
 catalog:
   "@cloudflare/playwright": ^1.3.6
-  "@playwright/test": 1.62.1
+  "@playwright/test": 1.63.0
   "@typescript/native": "npm:typescript@^7.0.2"
-  "@types/node": ^26.4.0
+  "@types/node": ^26.6.3
+  # vitest-evals requires Vitest 4; keep the runner and coverage provider aligned.
   "@vitest/coverage-v8": 4.1.11
-  oxfmt: ^0.65.0
-  oxlint: ^1.80.0
-  oxlint-tsgolint: ^7.0.2001
-  postcss: ^8.5.3
-  postcss-styled-syntax: ^0.7.1
-  stylelint: ^16.19.1
-  stylelint-config-recess-order: ^6.0.0
-  stylelint-config-standard: ^38.0.0
+  oxfmt: ^0.71.0
+  oxlint: ^1.86.0
+  oxlint-tsgolint: ^7.0.2003
+  postcss: ^8.5.28
+  postcss-styled-syntax: ^0.7.3
+  stylelint: ^17.15.0
+  stylelint-config-recess-order: ^7.8.0
+  stylelint-config-standard: ^40.0.0
   typescript: "npm:@typescript/typescript6@^6.0.2"
   vitest: ^4.1.11
-  wrangler: ^4.136.1
+  wrangler: ^4.144.0
 
 catalogs:
   hono:
-    "@hono/zod-openapi": ^1.6.1
-    hono: ^4.13.5
+    "@hono/zod-openapi": ^1.6.3
+    hono: ^4.13.11
   web-app:
-    "@cloudflare/vite-plugin": ^1.54.2
-    "@tanstack/router-plugin": ^1.168.35
-    "@types/react": ^19.2.18
-    "@types/react-dom": ^19.2.5
+    "@cloudflare/vite-plugin": ^1.62.2
+    "@tanstack/router-plugin": ^1.168.41
+    "@types/react": ^19.3.0
+    "@types/react-dom": ^19.3.0
     "@vitejs/plugin-react": ^6.1.1
-    "@wyw-in-js/vite": ^2.4.4
-    react: ^19.2.8
-    react-dom: ^19.2.8
-    vite: ^8.2.2
+    "@wyw-in-js/vite": ^2.5.1
+    react: ^19.3.0
+    react-dom: ^19.3.0
+    vite: ^8.3.1
 
 packageExtensions:
+  stylelint-config-recess-order@7.8.0:
+    dependencies:
+      stylelint-order: ^8.1.1
   eslint-plugin-react-you-might-not-need-an-effect@1.0.2:
     # "eslint-plugin-react-you-might-not-need-an-effect" defines eslint as peer dependency, but that is not required when used by oxlint --> make it optional
     peerDependenciesMeta:

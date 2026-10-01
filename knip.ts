@@ -16,8 +16,6 @@ const config: KnipConfig = {
         "@emnapi/runtime",
         /* `cf` is an intentional CLI-only dependency used by agents for Cloudflare inspection */
         "cf",
-        /* oxlint doesn't resolve dependencies correctly, we need it in the root node_modules */
-        "eslint-plugin-react-you-might-not-need-an-effect",
       ],
     },
     "libs/create-audiobook-from-url-workflow": {

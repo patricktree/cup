@@ -40,9 +40,9 @@
     "turbo:test": "pnpm run test"
   },
   "dependencies": {
-    "drizzle-orm": "^0.45.2",
-    "temporal-polyfill": "^1.0.4",
-    "zod": "^4.5.4"
+    "drizzle-orm": "^0.45.3",
+    "temporal-polyfill": "^1.0.5",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",
