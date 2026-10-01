@@ -6,7 +6,7 @@ const GALLERY_URL = "http://127.0.0.1:3100/ui-gallery/index.html?canvas=1";
 const outputRoot = "./playwright-output";
 // oxlint-disable-next-line node/no-process-env -- Playwright uses CI to select server reuse safeguards.
 const isCI = Boolean(process.env["CI"]);
-const dockerConfig = createPlaywrightDockerConfig({ isCI, maxWorkers: 2 });
+const dockerConfig = createPlaywrightDockerConfig({ isCI, maxWorkers: 4 });
 
 export default defineConfig({
   ...dockerConfig,

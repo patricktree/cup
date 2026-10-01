@@ -5,7 +5,6 @@ import React from "react";
 
 import { type GrantSnapshot, startConversionRequestSchema } from "@cup/web-app-api.routes";
 
-import { MovingEllipse } from "#src/app/components/moving-ellipse.js";
 import { useAppForm } from "#src/app/form.js";
 import { useStartConversionMutation } from "#src/data-fetching/trial-link.js";
 import { subscribeToSharedUrl } from "#src/platform/share-intake.js";
@@ -54,7 +53,6 @@ export function StartConversionForm({ grant }: { grant: GrantSnapshot }): React.
         void form.handleSubmit();
       }}
     >
-      <MovingEllipse />
       <form.AppForm>
         <form.AppField name="sourceUrl">
           {(field) => (

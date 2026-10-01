@@ -183,7 +183,9 @@ test("shows a deterministic failed conversion", async ({ page, workerEnvironment
   await mockConversion(page, workerEnvironment.origin, createFailedConversion());
   await gotoPage(page, `${workerEnvironment.origin}/app/conversions/${CONVERSION_ID}`);
 
-  await expect(page.getByText("Generation stopped.", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Conversion failed.", exact: true }),
+  ).toBeVisible();
 });
 
 test("retries a conversion loading failure", async ({

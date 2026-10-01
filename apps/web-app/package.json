@@ -39,7 +39,6 @@
     "@base-ui/react": "^1.7.0",
     "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.5.1",
-    "@cup/brand-assets": "workspace:*",
     "@cup/conversion-grants": "workspace:*",
     "@cup/web-app-api.client": "workspace:*",
     "@cup/web-app-api.routes": "workspace:*",

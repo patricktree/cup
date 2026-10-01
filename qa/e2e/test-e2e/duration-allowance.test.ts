@@ -69,7 +69,7 @@ test("blocks oversized synthesis without calling the provider or deducting allow
   const { grantId } = await openNewTrial(page, workerEnvironment);
   await setAllowance(workerEnvironment, grantId, 1_000);
   await startConversion(page);
-  await expect(page.getByText("Generation stopped.", { exact: true })).toBeVisible({
+  await expect(page.getByRole("heading", { name: "Conversion failed.", exact: true })).toBeVisible({
     timeout: 30_000,
   });
   const conversionId = new URL(page.url()).pathname.split("/").at(-1);

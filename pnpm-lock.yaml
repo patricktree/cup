@@ -465,9 +465,6 @@ importers:
       '@capacitor/core':
         specifier: ^8.5.1
         version: 8.5.1
-      '@cup/brand-assets':
-        specifier: workspace:*
-        version: link:../../tooling/brand-assets
       '@cup/conversion-grants':
         specifier: workspace:*
         version: link:../../libs/conversion-grants

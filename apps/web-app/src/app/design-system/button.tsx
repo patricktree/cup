@@ -33,16 +33,15 @@ export const DSButton: React.FC<DSButtonProps> = ({
           gap: var(--spacing-base);
           align-items: center;
           justify-content: center;
-          min-height: 48px;
-          padding-block: calc(2 * var(--spacing-base));
-          padding-inline: calc(3 * var(--spacing-base));
+          padding-block: calc(1 * var(--spacing-base));
+          padding-inline: calc(1.5 * var(--spacing-base));
 
           font-size: var(--font-size-sm);
           font-weight: var(--font-weight-inter-figma-medium);
           color: inherit;
           background-color: transparent;
           border: 0;
-          border-radius: 999px;
+          border-radius: var(--border-radius-sm);
 
           &:hover {
             cursor: pointer;

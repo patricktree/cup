@@ -8,12 +8,9 @@ import {
 } from "@tanstack/react-router";
 import React from "react";
 
-import cupMaskUrl from "@cup/brand-assets/cup.svg?no-inline";
 import { ConversionPhase, conversionPhaseOrder } from "@cup/conversion-grants/contracts";
 
 import { ErrorMessage } from "#src/app/components/error-message.js";
-import { MainSection } from "#src/app/components/main-components.js";
-import { MovingEllipse } from "#src/app/components/moving-ellipse.js";
 import { DSButton } from "#src/app/design-system/button.js";
 import { createConversionQuery } from "#src/data-fetching/trial-link.js";
 
@@ -51,10 +48,9 @@ function ConversionPage(): React.JSX.Element {
   }
 
   return (
-    <MainSection>
-      <span>Generation stopped.</span>
+    <ErrorMessage title="Conversion failed.">
       <span>{conversionQuery.data.failure.explanation}</span>
-    </MainSection>
+    </ErrorMessage>
   );
 }
 
@@ -63,12 +59,10 @@ function PendingConversionProgress({
 }: {
   lastStartedPhase: ConversionPhase;
 }): React.JSX.Element {
-  const completedPhases = conversionPhaseOrder.indexOf(lastStartedPhase);
-  const filledPercentage = ((completedPhases + 1) / conversionPhaseOrder.length) * 100;
+  const completedPhases = conversionPhaseOrder.indexOf(lastStartedPhase) + 1;
 
   return (
     <>
-      <MovingEllipse />
       <div
         className={css`
           display: grid;
@@ -76,38 +70,6 @@ function PendingConversionProgress({
           justify-items: center;
         `}
       >
-        <div
-          className={css`
-            position: relative;
-            width: 170px;
-            height: 100px;
-            background: var(--color-fill-track);
-            mask-repeat: no-repeat;
-            mask-position: 72.16% 68.86%;
-            /* Fit the brand asset's painted bounds (70, 157)–(431, 387) to the loading indicator. */
-            mask-size: 126.87% 199.13%;
-
-            & > span {
-              position: absolute;
-              inset: 0;
-              background: var(--color-primary);
-              transition: transform 300ms ease;
-            }
-
-            @media (prefers-reduced-motion: reduce) {
-              & > span {
-                transition: none;
-              }
-            }
-          `}
-          style={{
-            maskImage: `url("${cupMaskUrl}")`,
-          }}
-          aria-hidden="true"
-          data-testid="cup-fill"
-        >
-          <span style={{ transform: `translateY(${100 - filledPercentage}%)` }} />
-        </div>
         <output
           aria-live="polite"
           className={css`
@@ -116,6 +78,7 @@ function PendingConversionProgress({
             color: var(--color-fg-emphasized-sm);
           `}
         >
+          ({completedPhases}/{conversionPhaseOrder.length}){" "}
           {CONVERSION_PHASE_LABELS[lastStartedPhase]}...
         </output>
       </div>

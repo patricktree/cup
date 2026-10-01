@@ -3,6 +3,7 @@ import React from "react";
 
 import { DSButton } from "#src/app/design-system/button.js";
 import { DSInput } from "#src/app/design-system/input.js";
+import { composeClassnames } from "#src/app/utils.js";
 
 export function Components(): React.ReactNode {
   const [clickCount, setClickCount] = React.useState(0);
@@ -10,11 +11,27 @@ export function Components(): React.ReactNode {
   return (
     <main>
       <h1>Design system</h1>
+
       <h2>Buttons</h2>
-      <div className={grid}>
+      <div className={composeClassnames(grid)}>
         {(["outlined", "contained", "text"] as const).map((variant) => (
-          <section key={variant} aria-label={`${variant} buttons`} className={grid}>
-            <h3>{variant}</h3>
+          <section
+            key={variant}
+            aria-label={`${variant} buttons`}
+            className={composeClassnames(
+              grid,
+              css`
+                justify-items: center;
+              `,
+            )}
+          >
+            <h3
+              className={css`
+                justify-self: start;
+              `}
+            >
+              {variant}
+            </h3>
             <DSButton variant={variant} onClick={() => setClickCount((count) => count + 1)}>
               Record click
             </DSButton>
@@ -28,8 +45,16 @@ export function Components(): React.ReactNode {
         ))}
       </div>
       <output>Clicks: {clickCount}</output>
+
       <h2>Inputs</h2>
-      <div className={grid}>
+      <div
+        className={composeClassnames(
+          grid,
+          css`
+            justify-items: start;
+          `,
+        )}
+      >
         <DSInput label="Text" placeholder="Enter text" />
         <DSInput label="Email" type="email" placeholder="you@example.com" />
         <DSInput label="Password" type="password" placeholder="Enter a password" />
