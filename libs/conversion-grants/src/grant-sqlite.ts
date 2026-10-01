@@ -9,10 +9,10 @@ import {
   conversions as conversionTable,
   grants as grantTable,
   grantSqliteSchema,
-  schemaMigrations,
   segmentUsage as segmentUsageTable,
   startAttempts as startAttemptTable,
-} from "#src/sqlite-schema.ts";
+} from "#src/grant-sqlite-schema.ts";
+import { schemaMigrations } from "#src/sqlite-schema-shared.ts";
 import { nowMilliseconds } from "#src/time.ts";
 
 export class ConversionGrantSqlite {

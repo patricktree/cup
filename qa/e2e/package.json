@@ -5,6 +5,8 @@
   "imports": {
     "#src/*.ts": "./src/*.ts",
     "#src/*": "./src/*",
+    "#test-vitest/*.ts": "./test-vitest/*.ts",
+    "#test-vitest/*": "./test-vitest/*",
     "#test-e2e/*.ts": "./test-e2e/*.ts",
     "#test-e2e/*": "./test-e2e/*"
   },

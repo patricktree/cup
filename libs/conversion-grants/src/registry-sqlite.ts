@@ -7,8 +7,8 @@ import {
   conversionGrants as conversionGrantTable,
   registryGrants as registryGrantTable,
   registrySqliteSchema,
-  schemaMigrations,
-} from "#src/sqlite-schema.ts";
+} from "#src/registry-sqlite-schema.ts";
+import { schemaMigrations } from "#src/sqlite-schema-shared.ts";
 import { nowMilliseconds } from "#src/time.ts";
 
 // https://developers.cloudflare.com/durable-objects/platform/limits/
