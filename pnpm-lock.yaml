@@ -1298,6 +1298,9 @@ importers:
       commander:
         specifier: ^15.0.0
         version: 15.0.0
+      zx:
+        specifier: ^8.8.5
+        version: 8.8.5
     devDependencies:
       '@cup/config-oxlint':
         specifier: workspace:*
@@ -5407,6 +5410,11 @@ packages:
   zod@4.6.5:
     resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
 
+  zx@8.8.5:
+    resolution: {integrity: sha512-SNgDF5L0gfN7FwVOdEFguY3orU5AkfFZm9B5YSHog/UDHv+lvmd82ZAsOenOkQixigwH2+yyH198AwNdKhj+RA==}
+    engines: {node: '>= 12.17.0'}
+    hasBin: true
+
 snapshots:
 
   '@asteasolutions/zod-to-openapi@9.1.0(zod@4.6.5)':
@@ -8878,3 +8886,5 @@ snapshots:
   zod@4.4.3: {}
 
   zod@4.6.5: {}
+
+  zx@8.8.5: {}

@@ -31,7 +31,8 @@
   },
   "dependencies": {
     "@commander-js/extra-typings": "^15.0.0",
-    "commander": "^15.0.0"
+    "commander": "^15.0.0",
+    "zx": "^8.8.5"
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",

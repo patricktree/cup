@@ -12,6 +12,7 @@
   ],
   "type": "module",
   "scripts": {
+    "auth:local": "node tooling/env-setup/src/local-auth.ts",
     "brand-assets:check": "pnpm --filter '@cup/brand-assets' check",
     "brand-assets:sync": "pnpm --filter '@cup/brand-assets' sync",
     "build": "turbo run turbo:build",

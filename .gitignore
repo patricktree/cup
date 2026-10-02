@@ -23,3 +23,18 @@
 
 # Unpacked listening comparison; the reproducible record is stored in its archive.
 /docs/research/gemini-3.8-tts-comparison/
+# Terraform local data and credentials (commit provider lock files)
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfplan
+**/*.tfvars
+**/*.tfvars.json
+**/crash.log
+**/crash.*.log
+
+# Local Supabase keys and runtime files
+/supabase/signing_keys.json
+/supabase/.temp/
+/supabase/.branches/
+/supabase/.local/
