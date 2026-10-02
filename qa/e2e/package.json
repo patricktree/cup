@@ -23,6 +23,7 @@
     "turbo:test": "vitest run"
   },
   "dependencies": {
+    "@cup/accounts": "workspace:*",
     "@cup/api-server": "workspace:*",
     "@cup/audiobook-production": "workspace:*",
     "@cup/cloudflare-worker": "workspace:*",
@@ -30,6 +31,7 @@
     "@cup/create-audiobook-from-url-workflow": "workspace:*",
     "@cup/narration-content-selection": "workspace:*",
     "@cup/prepare-source-material": "workspace:*",
+    "@cup/registry": "workspace:*",
     "@cup/web-app-api.routes": "workspace:*"
   },
   "devDependencies": {
@@ -43,6 +45,7 @@
     "fflate": "0.8.3",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
+    "temporal-polyfill": "^1.0.4",
     "typescript": "catalog:",
     "vitest": "catalog:",
     "wrangler": "catalog:"

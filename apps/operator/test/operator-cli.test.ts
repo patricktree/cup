@@ -63,6 +63,21 @@ describe("actual operator CLI process", () => {
     expect(`${result.stdout}${result.stderr}`).not.toContain("Cf-Access-Token");
   });
 
+  test("lists account deletions through the authenticated operator API", async () => {
+    const result = await runCli("--json", "account", "deletions");
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout) as unknown).toEqual({ attempts: [], receipts: [] });
+  });
+
+  test("reports account inspection errors through the shared RPC error handling", async () => {
+    const result = await runCli("--json", "account", "inspect", GRANT_ID);
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(JSON.parse(result.stderr) as unknown).toEqual({
+      error: { code: "operator-error", message: "The operator request failed." },
+    });
+  });
+
   test("labels projected and authoritative human output", async () => {
     expect((await runCli("grant", "list")).stdout).toContain("State (projected)");
     expect((await runCli("grant", "inspect", GRANT_ID)).stdout).toContain("State (authoritative)");
@@ -113,6 +128,18 @@ async function handleRequest(request: http.IncomingMessage, response: http.Serve
     return send(response, 401, {
       error: { code: "operator-unauthorized", message: "Local authorization required." },
     });
+  if (request.method === "GET") {
+    if (url.pathname === "/api/operator/accounts/deletions")
+      return send(response, 200, { attempts: [], receipts: [] });
+    if (url.pathname === `/api/operator/accounts/${GRANT_ID}`)
+      return send(response, 404, {
+        error: {
+          code: "account-unavailable",
+          message: "Account unavailable.",
+          requestId: REQUEST_ID,
+        },
+      });
+  }
   const body = await readBody(request);
   if (body !== "" && request.headers["content-type"] !== "application/json")
     return send(response, 415, {

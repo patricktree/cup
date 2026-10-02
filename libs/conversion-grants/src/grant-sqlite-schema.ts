@@ -1,10 +1,12 @@
 import { sql } from "drizzle-orm";
 import { check, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import type { SegmentUsage } from "#src/duration-accounting.ts";
-import type { ConversionPhase } from "#src/grant-contracts.ts";
-import type { AudiobookReference, ConversionMeasurements } from "#src/grant-model.ts";
-import { schemaMigrations } from "#src/sqlite-schema-shared.ts";
+import type {
+  ConversionPhase,
+  AudiobookReference,
+  ConversionMeasurements,
+} from "@cup/conversion-contracts";
+import type { SegmentUsage } from "@cup/conversion-contracts/duration-accounting";
 
 export const grants = sqliteTable(
   "grant",
@@ -23,6 +25,7 @@ export const grants = sqliteTable(
     registryConfirmedSnapshotRevision: integer("registry_confirmed_revision").notNull(),
   },
   (table) => [
+    check("grant_allowance", sql`${table.allowanceMilliseconds} > 0`),
     check("grant_singleton", sql`${table.id} = 1`),
     check("grant_expiry", sql`${table.expiresAtMs} > ${table.createdAtMs}`),
     check("grant_signing_key_generation", sql`${table.signingKeyGeneration} > 0`),
@@ -70,6 +73,31 @@ export const conversions = sqliteTable(
     cleanupState: text("cleanup_state", { enum: CLEANUP_STATES }),
   },
   (table) => [
+    check("conversion_status", sql`${table.status} IN ('pending', 'ready', 'failed')`),
+    check(
+      "conversion_phase",
+      sql`${table.lastStartedPhase} IN ('conversion-start', 'source-material-preparation', 'narration-content-selection', 'narration-document-creation', 'audio-segment-production', 'audiobook-assembly', 'audiobook-storage', 'finalization')`,
+    ),
+    check(
+      "conversion_failure_category",
+      sql`${table.failureCategory} IS NULL OR ${table.failureCategory} IN ('workflow-start', 'source-preparation', 'content-selection', 'content-limit', 'narration-synthesis', 'audiobook-assembly', 'workflow-platform', 'internal')`,
+    ),
+    check(
+      "conversion_cleanup_state",
+      sql`${table.cleanupState} IS NULL OR ${table.cleanupState} IN ('pending', 'complete', 'cleanup_failed')`,
+    ),
+    check(
+      "conversion_reference_json",
+      sql`${table.audiobookReference} IS NULL OR json_valid(${table.audiobookReference})`,
+    ),
+    check(
+      "conversion_measurements_json",
+      sql`${table.measurements} IS NULL OR json_valid(${table.measurements})`,
+    ),
+    check(
+      "conversion_usage_json",
+      sql`${table.providerUsage} IS NULL OR json_valid(${table.providerUsage})`,
+    ),
     check(
       "conversion_terminal_outcome",
       sql`(
@@ -122,7 +150,6 @@ export const startAttempts = sqliteTable("start_attempts", {
 export const grantSqliteSchema = {
   conversions,
   grants,
-  schemaMigrations,
   segmentUsage,
   startAttempts,
 };

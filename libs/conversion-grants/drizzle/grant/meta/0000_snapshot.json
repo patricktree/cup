@@ -1,0 +1,424 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "84199bfa-4049-420d-8f9f-0d1b2d81b9f2",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "conversions": {
+      "name": "conversions",
+      "columns": {
+        "conversion_id": {
+          "name": "conversion_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "accepted_at_ms": {
+          "name": "accepted_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "workflow_started_at_ms": {
+          "name": "workflow_started_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_started_phase": {
+          "name": "last_started_phase",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "completed_at_ms": {
+          "name": "completed_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "audiobook_reference_json": {
+          "name": "audiobook_reference_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "measurements_json": {
+          "name": "measurements_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "provider_usage_json": {
+          "name": "provider_usage_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "failure_category": {
+          "name": "failure_category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "explanation": {
+          "name": "explanation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "diagnostic_reference": {
+          "name": "diagnostic_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cleanup_state": {
+          "name": "cleanup_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "conversions_idempotency_key_unique": {
+          "name": "conversions_idempotency_key_unique",
+          "columns": ["idempotency_key"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "conversion_status": {
+          "name": "conversion_status",
+          "value": "\"conversions\".\"status\" IN ('pending', 'ready', 'failed')"
+        },
+        "conversion_phase": {
+          "name": "conversion_phase",
+          "value": "\"conversions\".\"last_started_phase\" IN ('conversion-start', 'source-material-preparation', 'narration-content-selection', 'narration-document-creation', 'audio-segment-production', 'audiobook-assembly', 'audiobook-storage', 'finalization')"
+        },
+        "conversion_failure_category": {
+          "name": "conversion_failure_category",
+          "value": "\"conversions\".\"failure_category\" IS NULL OR \"conversions\".\"failure_category\" IN ('workflow-start', 'source-preparation', 'content-selection', 'content-limit', 'narration-synthesis', 'audiobook-assembly', 'workflow-platform', 'internal')"
+        },
+        "conversion_cleanup_state": {
+          "name": "conversion_cleanup_state",
+          "value": "\"conversions\".\"cleanup_state\" IS NULL OR \"conversions\".\"cleanup_state\" IN ('pending', 'complete', 'cleanup_failed')"
+        },
+        "conversion_reference_json": {
+          "name": "conversion_reference_json",
+          "value": "\"conversions\".\"audiobook_reference_json\" IS NULL OR json_valid(\"conversions\".\"audiobook_reference_json\")"
+        },
+        "conversion_measurements_json": {
+          "name": "conversion_measurements_json",
+          "value": "\"conversions\".\"measurements_json\" IS NULL OR json_valid(\"conversions\".\"measurements_json\")"
+        },
+        "conversion_usage_json": {
+          "name": "conversion_usage_json",
+          "value": "\"conversions\".\"provider_usage_json\" IS NULL OR json_valid(\"conversions\".\"provider_usage_json\")"
+        },
+        "conversion_terminal_outcome": {
+          "name": "conversion_terminal_outcome",
+          "value": "(\n        \"conversions\".\"last_started_phase\" IS NOT NULL AND (\n          (\"conversions\".\"status\" = 'pending' AND \"conversions\".\"completed_at_ms\" IS NULL AND \"conversions\".\"audiobook_reference_json\" IS NULL AND \"conversions\".\"failure_category\" IS NULL AND \"conversions\".\"explanation\" IS NULL)\n          OR (\"conversions\".\"status\" = 'ready' AND \"conversions\".\"completed_at_ms\" IS NOT NULL AND \"conversions\".\"title\" IS NOT NULL AND \"conversions\".\"audiobook_reference_json\" IS NOT NULL AND \"conversions\".\"failure_category\" IS NULL AND \"conversions\".\"explanation\" IS NULL)\n          OR (\"conversions\".\"status\" = 'failed' AND \"conversions\".\"completed_at_ms\" IS NOT NULL AND \"conversions\".\"audiobook_reference_json\" IS NULL AND \"conversions\".\"failure_category\" IS NOT NULL AND \"conversions\".\"explanation\" IS NOT NULL)\n        )\n      )"
+        }
+      }
+    },
+    "grant": {
+      "name": "grant",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "allowance_milliseconds": {
+          "name": "allowance_milliseconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 7200000
+        },
+        "grant_id": {
+          "name": "grant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at_ms": {
+          "name": "created_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at_ms": {
+          "name": "expires_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "revoked_at_ms": {
+          "name": "revoked_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "credential_verifier": {
+          "name": "credential_verifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "credential_issued_at_ms": {
+          "name": "credential_issued_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "session_signing_key": {
+          "name": "session_signing_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "signing_key_generation": {
+          "name": "signing_key_generation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "projection_revision": {
+          "name": "projection_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "registry_confirmed_revision": {
+          "name": "registry_confirmed_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "grant_grant_id_unique": {
+          "name": "grant_grant_id_unique",
+          "columns": ["grant_id"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "grant_allowance": {
+          "name": "grant_allowance",
+          "value": "\"grant\".\"allowance_milliseconds\" > 0"
+        },
+        "grant_singleton": {
+          "name": "grant_singleton",
+          "value": "\"grant\".\"id\" = 1"
+        },
+        "grant_expiry": {
+          "name": "grant_expiry",
+          "value": "\"grant\".\"expires_at_ms\" > \"grant\".\"created_at_ms\""
+        },
+        "grant_signing_key_generation": {
+          "name": "grant_signing_key_generation",
+          "value": "\"grant\".\"signing_key_generation\" > 0"
+        },
+        "grant_registry_snapshot_revision": {
+          "name": "grant_registry_snapshot_revision",
+          "value": "\"grant\".\"projection_revision\" > 0"
+        },
+        "grant_registry_confirmed_snapshot_revision": {
+          "name": "grant_registry_confirmed_snapshot_revision",
+          "value": "\"grant\".\"registry_confirmed_revision\" >= 0"
+        }
+      }
+    },
+    "segment_usage": {
+      "name": "segment_usage",
+      "columns": {
+        "conversion_id": {
+          "name": "conversion_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "narration_text_characters": {
+          "name": "narration_text_characters",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "estimated_milliseconds": {
+          "name": "estimated_milliseconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "actual_milliseconds": {
+          "name": "actual_milliseconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "charged_milliseconds": {
+          "name": "charged_milliseconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "segment_usage_conversion_id_conversions_conversion_id_fk": {
+          "name": "segment_usage_conversion_id_conversions_conversion_id_fk",
+          "tableFrom": "segment_usage",
+          "tableTo": "conversions",
+          "columnsFrom": ["conversion_id"],
+          "columnsTo": ["conversion_id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "segment_usage_conversion_id_sequence_pk": {
+          "columns": ["conversion_id", "sequence"],
+          "name": "segment_usage_conversion_id_sequence_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "segment_usage_sequence": {
+          "name": "segment_usage_sequence",
+          "value": "\"segment_usage\".\"sequence\" >= 0"
+        },
+        "segment_usage_characters": {
+          "name": "segment_usage_characters",
+          "value": "\"segment_usage\".\"narration_text_characters\" > 0"
+        },
+        "segment_usage_estimate": {
+          "name": "segment_usage_estimate",
+          "value": "\"segment_usage\".\"estimated_milliseconds\" > 0"
+        },
+        "segment_usage_duration": {
+          "name": "segment_usage_duration",
+          "value": "\"segment_usage\".\"charged_milliseconds\" >= 0 AND \"segment_usage\".\"charged_milliseconds\" <= \"segment_usage\".\"actual_milliseconds\""
+        },
+        "segment_usage_state": {
+          "name": "segment_usage_state",
+          "value": "(\"segment_usage\".\"state\" = 'settled' AND \"segment_usage\".\"actual_milliseconds\" > 0) OR (\"segment_usage\".\"state\" IN ('reserved', 'released') AND \"segment_usage\".\"actual_milliseconds\" = 0 AND \"segment_usage\".\"charged_milliseconds\" = 0)"
+        }
+      }
+    },
+    "start_attempts": {
+      "name": "start_attempts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "attempted_at_ms": {
+          "name": "attempted_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

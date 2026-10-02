@@ -39,6 +39,7 @@
     "turbo:test": "pnpm run test"
   },
   "dependencies": {
+    "@cup/conversion-contracts": "workspace:*",
     "@cup/conversion-grants": "workspace:*",
     "@cup/create-audiobook-from-url-workflow": "workspace:*",
     "@cup/narration-document-creation": "workspace:*",

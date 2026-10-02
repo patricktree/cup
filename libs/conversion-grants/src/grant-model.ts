@@ -1,18 +1,26 @@
-import { calculateDurationBalance, type SegmentUsage } from "#src/duration-accounting.ts";
 import type {
+  AudiobookReference,
+  ConversionMeasurements,
   ConversionFailureCategory,
   ConversionPhase,
+  DurationBalance,
+} from "@cup/conversion-contracts";
+import {
+  calculateDurationBalance,
+  type SegmentUsage,
+} from "@cup/conversion-contracts/duration-accounting";
+
+import type {
   GrantConversionSnapshot,
   GrantConversions,
   GrantSnapshot,
   GrantState,
   OperatorGrantSnapshot,
-  DurationBalance,
 } from "#src/grant-contracts.ts";
 import { toIsoString } from "#src/time.ts";
 
-export const GRANT_SCHEMA_VERSION = 5;
-export { DEFAULT_ALLOWANCE_MILLISECONDS } from "#src/duration-accounting.ts";
+export const GRANT_SCHEMA_VERSION = 6;
+export const DEFAULT_ALLOWANCE_MILLISECONDS = 120 * 60 * 1_000;
 export const RECONCILIATION_CUTOFF_MS = 48 * 60 * 60 * 1_000;
 
 export type PendingConversion = {
@@ -24,11 +32,6 @@ export type PendingConversion = {
   lastStartedPhase: ConversionPhase;
   title?: string;
   workflowStartedAtMs?: number;
-};
-export type ConversionMeasurements = {
-  narrationTextCharacters: number;
-  narrationChunks: number;
-  audioDurationMilliseconds: number;
 };
 export type ReadyConversion = Omit<PendingConversion, "status"> & {
   status: "ready";
@@ -66,13 +69,6 @@ export type TerminalOutcome =
       diagnosticReference?: string;
       cleanupState?: "pending" | "complete" | "cleanup_failed";
     };
-
-export type AudiobookReference = {
-  key: string;
-  contentType: "application/json";
-  byteLength: number;
-  etag: string;
-};
 
 export type GrantRecord = {
   allowanceMilliseconds: number;

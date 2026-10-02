@@ -24,6 +24,7 @@ export {
 } from "#src/audio-segment-storage.ts";
 export {
   loadAudiobook,
+  audiobookSchema,
   storeAudiobook,
   type Audiobook,
   type ManifestStorage,

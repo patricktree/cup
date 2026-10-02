@@ -129,3 +129,113 @@ export type ErrorResponse = z.infer<typeof errorResponseSchema>;
 export const setGrantAllowanceRequestSchema = z
   .object({ allowanceMilliseconds: z.number().int().positive() })
   .strict();
+
+export const accountParamsSchema = z.object({ accountId: z.uuid() }).strict();
+export type AccountParams = z.infer<typeof accountParamsSchema>;
+
+const accountDurationBalanceSchema = z
+  .object({
+    unit: z.literal("audio-millisecond"),
+    available: z.number().int().nonnegative().safe(),
+    reserved: z.number().int().nonnegative().safe(),
+  })
+  .strict();
+const accountConversionOutcomeSchema = z.discriminatedUnion("status", [
+  z
+    .object({
+      status: z.literal("ready"),
+      title: z.string(),
+      audiobookReference: z
+        .object({
+          key: z.string(),
+          contentType: z.literal("application/json"),
+          byteLength: z.number().int().positive().safe(),
+          etag: z.string(),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({ status: z.literal("failed"), failureCategory: z.string(), explanation: z.string() })
+    .strict(),
+]);
+export const inspectAccountResponseSchema = z
+  .object({
+    account: z
+      .object({
+        accountId: z.uuid(),
+        subject: z.uuid(),
+        createdAtMs: z.number(),
+        state: z.enum(["active", "deletion_scheduled", "deleting"]),
+        executionEpoch: z.number().int().positive(),
+        recoveryDeadlineMs: z.number().nullable(),
+        balance: accountDurationBalanceSchema,
+      })
+      .strict(),
+    accounting: z
+      .object({
+        balance: accountDurationBalanceSchema,
+        reconstructed: z.object({ available: z.number(), reserved: z.number() }).strict(),
+        entries: z.number().int().nonnegative(),
+      })
+      .strict(),
+    history: z
+      .object({
+        items: z.array(
+          z
+            .object({
+              conversionId: z.uuid(),
+              idempotencyKey: z.uuid(),
+              sourceUrl: z.string(),
+              createdAtMs: z.number(),
+              status: z.enum(["pending", "ready", "failed"]),
+              outcome: accountConversionOutcomeSchema.nullable(),
+              completedAtMs: z.number().nullable(),
+            })
+            .strict(),
+        ),
+        nextCursor: z.string().nullable(),
+      })
+      .strict(),
+    writers: z.array(
+      z
+        .object({
+          writerId: z.string(),
+          prefix: z.string(),
+          state: z.string(),
+          effect: z.string().nullable(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+export type InspectAccountResponse = z.infer<typeof inspectAccountResponseSchema>;
+
+export const listAccountDeletionsResponseSchema = z
+  .object({
+    attempts: z.array(
+      z
+        .object({
+          attemptId: z.uuid(),
+          accountId: z.uuid(),
+          state: z.enum(["scheduled", "restored", "deleting", "erased"]),
+          identityDone: z.boolean(),
+          accountDone: z.boolean(),
+          failures: z.number().int(),
+          overdue: z.boolean(),
+        })
+        .strict(),
+    ),
+    receipts: z.array(
+      z
+        .object({
+          attemptId: z.uuid(),
+          completedAtMs: z.number(),
+          expiresAtMs: z.number(),
+          result: z.string(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+export type ListAccountDeletionsResponse = z.infer<typeof listAccountDeletionsResponseSchema>;

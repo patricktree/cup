@@ -1,26 +1,12 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import type { RouterHistory } from "@tanstack/react-router";
 import React from "react";
 
+import { queryClient } from "#src/data-fetching/query-client.js";
 import { routeTree } from "#src/routeTree.gen.js";
 
 export function createAppRouter(history?: RouterHistory) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      mutations: {
-        retry: false,
-      },
-      queries: {
-        retry: false,
-        refetchOnWindowFocus: false,
-        refetchOnReconnect: false,
-        gcTime: 0,
-        staleTime: 0,
-      },
-    },
-  });
-
   return createRouter({
     basepath: "/app",
     history,
@@ -51,7 +37,7 @@ export function GlobalProviders({
   router: ReturnType<typeof createAppRouter>;
 }): React.ReactNode {
   return (
-    <QueryClientProvider client={router.options.context.queryClient}>
+    <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
     </QueryClientProvider>
   );

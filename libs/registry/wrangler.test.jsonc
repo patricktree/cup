@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "registry-test",
+  "main": "test/worker.ts",
+  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_date": "2026-08-15",
+  "vars": { "CONVERSION_OWNER_LIMIT": "10" },
+  "durable_objects": {
+    "bindings": [
+      { "name": "DELETION_TEST", "class_name": "DeletionTestDurableObject" },
+      { "name": "ACCOUNT_DISPATCH_TEST", "class_name": "AccountDispatchTestDurableObject" },
+      { "name": "ACCOUNTS", "class_name": "AccountDurableObject" },
+      {
+        "name": "CONVERSION_GRANTS",
+        "class_name": "ConversionGrantDurableObject",
+      },
+      {
+        "name": "REGISTRY",
+        "class_name": "RegistryDurableObject",
+      },
+    ],
+  },
+  "r2_buckets": [{ "binding": "AUDIO_BUCKET", "bucket_name": "account-test-artifacts" }],
+  "migrations": [
+    { "tag": "test-deletion", "new_sqlite_classes": ["DeletionTestDurableObject"] },
+    { "tag": "test-dispatch", "new_sqlite_classes": ["AccountDispatchTestDurableObject"] },
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["ConversionGrantDurableObject", "RegistryDurableObject"],
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["AccountDurableObject"],
+    },
+  ],
+}

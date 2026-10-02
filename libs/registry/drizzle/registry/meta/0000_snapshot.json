@@ -1,0 +1,443 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "8463a2b2-78fb-473e-b0b8-2ea4dd72ec74",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "canceled_deletion_attempts": {
+      "name": "canceled_deletion_attempts",
+      "columns": {
+        "attempt_id": {
+          "name": "attempt_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at_ms": {
+          "name": "expires_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "deletion_jobs": {
+      "name": "deletion_jobs",
+      "columns": {
+        "attempt_id": {
+          "name": "attempt_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload_json": {
+          "name": "payload_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "deletion_notifications": {
+      "name": "deletion_notifications",
+      "columns": {
+        "notification_key": {
+          "name": "notification_key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "attempt_id": {
+          "name": "attempt_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload_json": {
+          "name": "payload_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "deletion_receipts": {
+      "name": "deletion_receipts",
+      "columns": {
+        "attempt_id": {
+          "name": "attempt_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "completed_at_ms": {
+          "name": "completed_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at_ms": {
+          "name": "expires_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "result_json": {
+          "name": "result_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "identity_accounts": {
+      "name": "identity_accounts",
+      "columns": {
+        "subject": {
+          "name": "subject",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at_ms": {
+          "name": "created_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "phase": {
+          "name": "phase",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "identity_accounts_account_id_unique": {
+          "name": "identity_accounts_account_id_unique",
+          "columns": ["account_id"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "identity_account_phase": {
+          "name": "identity_account_phase",
+          "value": "\"identity_accounts\".\"phase\" IN ('provisioning', 'active', 'deleting_identity')"
+        }
+      }
+    },
+    "provisioning_jobs": {
+      "name": "provisioning_jobs",
+      "columns": {
+        "subject": {
+          "name": "subject",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "next_attempt_ms": {
+          "name": "next_attempt_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "rate_events": {
+      "name": "rate_events",
+      "columns": {
+        "bucket": {
+          "name": "bucket",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at_ms": {
+          "name": "created_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at_ms": {
+          "name": "expires_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "rate_events_bucket": {
+          "name": "rate_events_bucket",
+          "columns": ["bucket", "created_at_ms"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "conversion_owners": {
+      "name": "conversion_owners",
+      "columns": {
+        "conversion_id": {
+          "name": "conversion_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_kind": {
+          "name": "owner_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "grant_id": {
+          "name": "grant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "conversion_owner_kind": {
+          "name": "conversion_owner_kind",
+          "value": "\"conversion_owners\".\"owner_kind\" IN ('trial', 'account')"
+        },
+        "conversion_owner_identity": {
+          "name": "conversion_owner_identity",
+          "value": "(\"conversion_owners\".\"owner_kind\" = 'trial' AND \"conversion_owners\".\"grant_id\" IS NOT NULL AND \"conversion_owners\".\"account_id\" IS NULL) OR (\"conversion_owners\".\"owner_kind\" = 'account' AND \"conversion_owners\".\"account_id\" IS NOT NULL AND \"conversion_owners\".\"grant_id\" IS NULL)"
+        }
+      }
+    },
+    "registry_grants": {
+      "name": "registry_grants",
+      "columns": {
+        "grant_id": {
+          "name": "grant_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "phase": {
+          "name": "phase",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at_ms": {
+          "name": "created_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at_ms": {
+          "name": "expires_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "credential_issued": {
+          "name": "credential_issued",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "projection_allowance_milliseconds": {
+          "name": "projection_allowance_milliseconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 7200000
+        },
+        "projection_revision": {
+          "name": "projection_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "projection_revoked_at_ms": {
+          "name": "projection_revoked_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "projection_reserved": {
+          "name": "projection_reserved",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "projection_spent": {
+          "name": "projection_spent",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "projection_schema_version": {
+          "name": "projection_schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "registry_grants_request_id_unique": {
+          "name": "registry_grants_request_id_unique",
+          "columns": ["request_id"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "registry_grant_phase": {
+          "name": "registry_grant_phase",
+          "value": "\"registry_grants\".\"phase\" IN ('reserved', 'initialized', 'active')"
+        },
+        "registry_grant_credential": {
+          "name": "registry_grant_credential",
+          "value": "\"registry_grants\".\"credential_issued\" IN (0, 1)"
+        },
+        "registry_grant_allowance": {
+          "name": "registry_grant_allowance",
+          "value": "\"registry_grants\".\"projection_allowance_milliseconds\" > 0"
+        },
+        "registry_grant_expiry": {
+          "name": "registry_grant_expiry",
+          "value": "\"registry_grants\".\"expires_at_ms\" > \"registry_grants\".\"created_at_ms\""
+        },
+        "registry_grant_snapshot_reserved": {
+          "name": "registry_grant_snapshot_reserved",
+          "value": "\"registry_grants\".\"projection_reserved\" >= 0"
+        },
+        "registry_grant_snapshot_spent": {
+          "name": "registry_grant_snapshot_spent",
+          "value": "\"registry_grants\".\"projection_spent\" >= 0"
+        },
+        "registry_grant_snapshot": {
+          "name": "registry_grant_snapshot",
+          "value": "(\n        (\"registry_grants\".\"projection_revision\" IS NULL AND \"registry_grants\".\"projection_reserved\" IS NULL AND \"registry_grants\".\"projection_spent\" IS NULL AND \"registry_grants\".\"projection_schema_version\" IS NULL)\n        OR (\"registry_grants\".\"projection_revision\" > 0 AND \"registry_grants\".\"projection_reserved\" IS NOT NULL AND \"registry_grants\".\"projection_spent\" IS NOT NULL AND \"registry_grants\".\"projection_schema_version\" > 0)\n      )"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

@@ -6,7 +6,7 @@ import React from "react";
 
 import type { Story } from "#ui-gallery/story.js";
 
-import { ConversionPhase, conversionPhaseOrder } from "@cup/conversion-grants/contracts";
+import { ConversionPhase, conversionPhaseOrder } from "@cup/conversion-contracts";
 import type { ConversionDetail, ErrorResponse } from "@cup/web-app-api.routes";
 
 import { DSButton } from "#src/app/design-system/button.js";

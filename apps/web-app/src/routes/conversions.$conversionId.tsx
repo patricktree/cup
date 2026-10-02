@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-router";
 import React from "react";
 
-import { ConversionPhase, conversionPhaseOrder } from "@cup/conversion-grants/contracts";
+import { ConversionPhase, conversionPhaseOrder } from "@cup/conversion-contracts";
 
 import { ErrorMessage } from "#src/app/components/error-message.js";
 import { DSButton } from "#src/app/design-system/button.js";

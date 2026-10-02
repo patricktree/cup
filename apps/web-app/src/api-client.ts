@@ -1,11 +1,7 @@
-import { Capacitor } from "@capacitor/core";
-
 import { WebAppApiClient } from "@cup/web-app-api.client";
 
-const BACKEND_ORIGIN = "https://cup-audio.com";
+import { apiOrigin } from "#src/platform/api-origin.js";
 
 export function createAppApiClient(): WebAppApiClient {
-  return new WebAppApiClient(
-    Capacitor.isNativePlatform() ? BACKEND_ORIGIN : window.location.origin,
-  );
+  return new WebAppApiClient(apiOrigin());
 }

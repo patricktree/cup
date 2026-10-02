@@ -24,7 +24,22 @@ export const sourceUrlSchema = z
 
 const uuidV4Schema = z.string().regex(LOWERCASE_UUID_V4_PATTERN, "Must be a lowercase UUIDv4");
 
-export const conversionParamsSchema = z
+const historicalConversionParamsSchema = z
   .object({ sourceUrl: sourceUrlSchema, grantId: uuidV4Schema })
   .strict();
+export const conversionParamsSchema = z.union([
+  historicalConversionParamsSchema,
+  z
+    .object({
+      v: z.literal(2),
+      sourceUrl: sourceUrlSchema,
+      owner: z.discriminatedUnion("kind", [
+        z.object({ kind: z.literal("account"), accountId: uuidV4Schema }).strict(),
+        z.object({ kind: z.literal("trial"), grantId: uuidV4Schema }).strict(),
+      ]),
+      conversionId: uuidV4Schema,
+      executionEpoch: z.number().int().positive().safe(),
+    })
+    .strict(),
+]);
 export type ConversionParams = z.infer<typeof conversionParamsSchema>;

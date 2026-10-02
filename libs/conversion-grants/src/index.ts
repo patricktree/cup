@@ -1,11 +1,6 @@
 export { ConversionGrantDurableObject } from "#src/conversion-grant-durable-object.ts";
-export { ConversionGrantRegistryDurableObject } from "#src/conversion-grant-registry-durable-object.ts";
+
 export {
-  conversionFailureCategories,
-  conversionFailureCategorySchema,
-  ConversionPhase,
-  conversionPhaseSchema,
-  conversionPhaseOrder,
   grantConversionSnapshotSchema,
   grantConversionsSchema,
   grantSnapshotSchema,
@@ -14,8 +9,6 @@ export {
   operatorGrantSnapshotSchema,
   projectedGrantStates,
   projectedGrantStateSchema,
-  durationBalanceSchema,
-  type ConversionFailureCategory,
   type GrantConversionSnapshot,
   type GrantMigrationReport,
   type GrantConversions,
@@ -25,11 +18,8 @@ export {
   type OperatorGrantFacts,
   type OperatorGrantSnapshot,
   type ProjectedGrantState,
-  type DurationBalance,
 } from "#src/grant-contracts.ts";
 export type {
-  AudiobookReference,
-  ConversionMeasurements,
   ExchangeCredentialResult,
   FailedConversion,
   GrantConversion,

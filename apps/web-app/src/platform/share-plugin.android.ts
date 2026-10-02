@@ -11,7 +11,7 @@ type AndroidSharePlugin = {
 };
 
 const androidSharePlugin = registerPlugin<AndroidSharePlugin>("AndroidShare");
-export async function initializeAndroidShare(onShare: () => void): Promise<void> {
+export async function initializeAndroidShare(onShare: () => void | Promise<void>): Promise<void> {
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
     return;
   }

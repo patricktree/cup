@@ -71,3 +71,31 @@ test("renders a pending conversion start", async ({ mount }) => {
   );
   await expect(component).toHaveScreenshot("start-pending.png");
 });
+
+test("retrying a trial submission reuses its key and sends only the source URL", async ({
+  mount,
+  page,
+}) => {
+  const keys: Array<string | undefined> = [];
+  const payloads: unknown[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      /\/api\/grants\/[^/]+\/conversions$/.test(new URL(request.url()).pathname)
+    ) {
+      keys.push(request.headers()["idempotency-key"]);
+      payloads.push(request.postDataJSON());
+    }
+  });
+  const component = await mount("routes/trials.$grantId/StartUnavailable");
+  const sourceUrl = "https://source.example.test/fixture";
+  await component.getByRole("textbox", { name: "URL", exact: true }).fill(sourceUrl);
+  for (const count of [1, 2]) {
+    await component.getByRole("button", { name: "Load & listen" }).click();
+    await expect(component.getByRole("alert")).toHaveText("The service is unavailable.");
+    await expect.poll(() => keys.length).toBe(count);
+  }
+  expect(keys[0]).toBeTruthy();
+  expect(keys).toEqual([keys[0], keys[0]]);
+  expect(payloads).toEqual([{ sourceUrl }, { sourceUrl }]);
+});

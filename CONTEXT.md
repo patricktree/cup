@@ -22,6 +22,14 @@ _Avoid_: source page URL
 The transformation of source content into an audiobook.
 _Avoid_: workflow, job
 
+**account**:
+A person’s persistent identity in Cup that owns their conversions and conversion allowance. An account can have multiple sign-in methods without becoming a different account.
+_Avoid_: trial grant, sign-in method
+
+**account conversion allowance**:
+The duration allowance issued to an account. Its spent duration remains spent when completed conversions are deleted.
+_Avoid_: conversion grant, trial allowance
+
 **trial link**:
 A URL that gives its bearer access to a conversion grant.
 _Avoid_: deep link, invite link
@@ -31,7 +39,7 @@ A shared allowance for producing audiobooks, available to anyone possessing its 
 _Avoid_: trial link, user quota
 
 **duration allowance**:
-The amount of generated audio duration a conversion grant or future paid plan permits. A conversion grant's allowance is shared across its authorized users and conversions.
+The amount of generated audio duration an account, conversion grant, or future paid plan permits. A conversion grant's allowance is shared across its authorized users and conversions.
 _Avoid_: conversion slots, listening time
 
 **duration reservation**:
@@ -47,7 +55,7 @@ The secret carried by a trial link that proves access to its conversion grant.
 _Avoid_: trial link, user identity
 
 **grant session**:
-Browser or native-app authorization derived from a grant credential. A grant session does not expire independently. It may inspect its conversion grant and, while the grant remains open, start conversions. After grant expiry or revocation, an existing grant session retains read-only access to grant history and ready audiobooks unless an emergency signing-key replacement invalidates every session for the grant.
+Browser or native-app authorization derived from a grant credential. A grant session does not expire independently. It may inspect its conversion grant and, while the grant remains open, start conversions. A grant session does not authorize listing the grant’s conversions. Individual trial audiobook links provide unlisted access independently of grant expiry or revocation.
 _Avoid_: grant credential, user session
 
 **conversion status**:

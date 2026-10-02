@@ -144,13 +144,26 @@ async function createConversion() {
   return { grant, grantId, conversionId: accepted.conversion.conversionId, now };
 }
 
-function runConversion(grantId: string, conversionId: string, ai: SpeechSynthesisAi) {
+function runConversion(
+  grantId: string,
+  conversionId: string,
+  ai: SpeechSynthesisAi,
+  accountId?: string,
+) {
   return runCreateAudiobookFromUrlWorkflow({
     env: environment,
     event: {
       workflowName: "provider-failure-test",
       instanceId: conversionId,
-      payload: { grantId, sourceUrl: SOURCE_URL },
+      payload: accountId
+        ? {
+            v: 2,
+            owner: { kind: "account", accountId },
+            conversionId,
+            executionEpoch: 1,
+            sourceUrl: SOURCE_URL,
+          }
+        : { grantId, sourceUrl: SOURCE_URL },
       timestamp: new globalThis.Date(Temporal.Now.instant().epochMilliseconds),
     },
     step: createImmediateRetryStep(),
@@ -200,3 +213,79 @@ async function doStep<T>(
     }
   }
 }
+
+test.each([400, 503])(
+  "account provider status %i releases estimated duration without spending minutes",
+  async (status) => {
+    const accountId = crypto.randomUUID();
+    const account = environment.ACCOUNTS.get(environment.ACCOUNTS.idFromName(accountId));
+    const now = Temporal.Now.instant().epochMilliseconds;
+    await account.initialize({ accountId, subject: crypto.randomUUID(), createdAtMs: now });
+    const started = await account.startConversion(
+      { sourceUrl: SOURCE_URL, idempotencyKey: crypto.randomUUID() },
+      now,
+    );
+    if (!started.conversion) throw new Error("Expected conversion");
+    const failing = createFakeSpeechSynthesisAi({ failureStatus: status });
+    const reserved: number[] = [];
+    const ai: SpeechSynthesisAi = {
+      gateway: () => ({
+        run: async (request, options) => {
+          reserved.push((await account.inspect()).balance.reserved);
+          return failing.gateway("default").run(request, options);
+        },
+      }),
+    };
+    await expect(
+      runConversion(accountId, started.conversion.conversionId, ai, accountId),
+    ).rejects.toBeDefined();
+    expect(reserved.every((amount) => amount > 0)).toBe(true);
+    expect((await account.inspect()).balance).toEqual({
+      unit: "audio-millisecond",
+      available: 1_800_000,
+      reserved: 0,
+    });
+    expect((await account.getConversion(started.conversion.conversionId))?.status).toBe("failed");
+    expect((await account.inspectAccounting()).reconstructed).toEqual({
+      available: 1_800_000,
+      reserved: 0,
+    });
+  },
+);
+
+test("account provider failure after a completed segment retains that encoded duration charge", async () => {
+  const accountId = crypto.randomUUID();
+  const account = environment.ACCOUNTS.get(environment.ACCOUNTS.idFromName(accountId));
+  const now = Temporal.Now.instant().epochMilliseconds;
+  await account.initialize({ accountId, subject: crypto.randomUUID(), createdAtMs: now });
+  const started = await account.startConversion(
+    { sourceUrl: SOURCE_URL, idempotencyKey: crypto.randomUUID() },
+    now,
+  );
+  if (!started.conversion) throw new Error("Expected conversion");
+  const successful = createFakeSpeechSynthesisAi();
+  const failing = createFakeSpeechSynthesisAi({ failureStatus: 503 });
+  const ai: SpeechSynthesisAi = {
+    gateway: () => ({
+      run: (request, options) =>
+        (options?.gateway?.metadata?.["narrationSegmentSequence"] === 0 ? successful : failing)
+          .gateway("default")
+          .run(request, options),
+    }),
+  };
+  const conversionId = started.conversion.conversionId;
+  await expect(runConversion(accountId, conversionId, ai, accountId)).rejects.toBeDefined();
+  const segments = await account.listAudioSegments(conversionId);
+  expect(segments.filter((item) => item.state === "settled")).toHaveLength(1);
+  const spent = segments.reduce((sum, item) => sum + item.chargedMilliseconds, 0);
+  expect(spent).toBeGreaterThan(0);
+  expect((await account.inspect()).balance).toEqual({
+    unit: "audio-millisecond",
+    available: 1_800_000 - spent,
+    reserved: 0,
+  });
+  expect((await account.inspectAccounting()).reconstructed).toEqual({
+    available: 1_800_000 - spent,
+    reserved: 0,
+  });
+});

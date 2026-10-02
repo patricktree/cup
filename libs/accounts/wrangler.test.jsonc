@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "accounts-test",
+  "main": "test/worker.ts",
+  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_date": "2026-08-15",
+  "vars": {
+    "CONVERSION_OWNER_LIMIT": "10",
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ACCOUNTS",
+        "class_name": "AccountDurableObject",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["AccountDurableObject"],
+    },
+  ],
+}

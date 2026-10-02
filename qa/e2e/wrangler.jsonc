@@ -2,6 +2,7 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "create-audiobook-from-url-e2e",
   "main": "src/worker.ts",
+  "compatibility_flags": ["nodejs_compat"],
   "compatibility_date": "2026-08-18",
   "rules": [{ "type": "Text", "globs": ["**/*.html"], "fallthrough": true }],
   "assets": {
@@ -20,22 +21,35 @@
   ],
   "durable_objects": {
     "bindings": [
+      { "name": "ACCOUNTS", "class_name": "AccountDurableObject" },
       { "name": "CONVERSION_GRANTS", "class_name": "ConversionGrantDurableObject" },
       {
-        "name": "CONVERSION_GRANT_REGISTRY",
-        "class_name": "ConversionGrantRegistryDurableObject",
+        "name": "REGISTRY",
+        "class_name": "RegistryDurableObject",
       },
     ],
   },
   "migrations": [
     {
+      "tag": "account-e2e",
+      "new_sqlite_classes": ["AccountDurableObject"],
+    },
+    {
       "tag": "v1",
-      "new_sqlite_classes": [
-        "ConversionGrantDurableObject",
-        "ConversionGrantRegistryDurableObject",
-      ],
+      "new_sqlite_classes": ["ConversionGrantDurableObject", "RegistryDurableObject"],
     },
   ],
   "r2_buckets": [{ "binding": "AUDIO_BUCKET", "bucket_name": "create-audiobook-from-url-e2e" }],
-  "vars": { "QA_SCENARIO": "success" },
+  "vars": {
+    "CONVERSION_OWNER_LIMIT": "10",
+    "QA_SCENARIO": "success",
+    "LOCAL_DEVELOPMENT": "true",
+    "SUPABASE_URL": "http://127.0.0.1:54321",
+    "SUPABASE_PUBLISHABLE_KEY": "qa-key",
+    "SUPABASE_SECRET_KEY": "qa-admin",
+    "GOOGLE_WEB_CLIENT_ID": "qa-google-client",
+    "OPERATOR_ACCESS_ISSUER": "https://access.example.test",
+    "OPERATOR_ACCESS_AUDIENCE": "qa-operator",
+    "OPERATOR_EMAIL": "operator@example.test",
+  },
 }

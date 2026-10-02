@@ -1,3 +1,5 @@
+import { createConversionArtifactPrefix } from "@cup/conversion-contracts";
+
 import { EPUB_CONTENT_TYPE } from "#src/audio-format.ts";
 import {
   assertStoredAudioSegment,
@@ -22,6 +24,7 @@ export type EpubReference = {
 
 /** Supplies the canonical audiobook, its segments, and publication metadata for EPUB export. */
 export type ExportOptions = {
+  artifactPrefix?: string;
   bucket: EpubStorage;
   conversionId: string;
   audiobook: Audiobook;
@@ -64,6 +67,7 @@ type CentralEntry = {
 
 /** Builds an EPUB without buffering or transcoding the complete audiobook. */
 export async function exportEpub({
+  artifactPrefix,
   bucket,
   conversionId,
   audiobook,
@@ -79,7 +83,7 @@ export async function exportEpub({
     modifiedAt,
   });
   const archiveByteLength = getArchiveByteLength(byteEntries, streamEntries);
-  const key = `conversions/${conversionId}/audiobook.epub`;
+  const key = `${artifactPrefix ?? createConversionArtifactPrefix(conversionId)}audiobook.epub`;
   const archive = new FixedLengthStream(archiveByteLength);
   const writer = archive.writable.getWriter();
   const upload = bucket.put(key, archive.readable, {
@@ -130,7 +134,7 @@ export async function exportEpub({
         );
       }
 
-      assertStoredAudioSegment(audioObject, entry.audioSegment);
+      assertStoredAudioSegment(audioObject, entry.audioSegment, artifactPrefix);
       await writer.write(localHeader);
       await copyBody(audioObject.body, writer);
       centralEntries.push({

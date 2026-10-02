@@ -42,6 +42,7 @@
     "turbo:test": "pnpm run test"
   },
   "dependencies": {
+    "@cup/conversion-contracts": "workspace:*",
     "@cup/mp3-encoding": "workspace:*",
     "@cup/narration-document-creation": "workspace:*",
     "zod": "^4.6.5"

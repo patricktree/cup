@@ -45,11 +45,14 @@
   },
   "dependencies": {
     "@cloudflare/playwright": "catalog:",
+    "@cup/accounts": "workspace:*",
     "@cup/audiobook-production": "workspace:*",
+    "@cup/conversion-contracts": "workspace:*",
     "@cup/conversion-grants": "workspace:*",
     "@cup/narration-content-selection": "workspace:*",
     "@cup/narration-document-creation": "workspace:*",
     "@cup/prepare-source-material": "workspace:*",
+    "@cup/registry": "workspace:*",
     "p-map": "^7.0.8",
     "temporal-polyfill": "^1.0.5",
     "zod": "^4.6.5"

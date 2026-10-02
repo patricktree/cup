@@ -136,6 +136,7 @@ test("builds a missing EPUB from the canonical audio and segment metadata", asyn
   expect(exports).toEqual([
     {
       conversionId: "conversion-id",
+      artifactPrefix: "conversions/conversion-id/",
       audiobook: AUDIOBOOK,
       audioSegments: [
         {

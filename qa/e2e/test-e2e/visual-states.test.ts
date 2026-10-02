@@ -17,17 +17,11 @@ const CONSOLE_ERRORS = {
     "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
 } as const;
 
-test("shows the public portfolio page", async ({ page, workerEnvironment }) => {
+test("shows the conversion entry page", async ({ page, workerEnvironment }) => {
   await gotoPage(page, workerEnvironment.origin);
 
-  await expect(page.getByRole("heading", { name: "Cup" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "GitHub" })).toHaveAttribute(
-    "href",
-    "https://github.com/patricktree/create-audiobook-from-url",
-  );
-  await expect(
-    page.getByText(/Conversions are available only through a supplied trial link/),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Just listen." })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "URL" })).toBeVisible();
 });
 
 test("shows the open trial URL input screen", async ({ page, workerEnvironment }) => {

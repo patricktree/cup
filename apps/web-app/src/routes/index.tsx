@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import React from "react";
 
-import { MainSection } from "#src/app/components/main-components.js";
+import { ConversionEntryPage } from "#src/app/components/conversion-entry-page.js";
+import { StartConversionForm } from "#src/app/components/start-conversion-form.js";
 
 export const Route = createFileRoute("/")({
   component: IndexPage,
@@ -9,17 +10,8 @@ export const Route = createFileRoute("/")({
 
 function IndexPage(): React.JSX.Element {
   return (
-    <MainSection>
-      <h1>Cup</h1>
-      <p>Turn a real source page into a synchronized audiobook with narrated MP3 and EPUB files.</p>
-      <p>
-        Explore the implementation on{" "}
-        <a href="https://github.com/patricktree/create-audiobook-from-url">GitHub</a>.
-      </p>
-      <p>
-        Conversions are available only through a supplied trial link - reach out to{" "}
-        <a href="mailto:patrick.kerschbaum@gmail.com">patrick.kerschbaum@gmail.com</a> to get one!
-      </p>
-    </MainSection>
+    <ConversionEntryPage>
+      <StartConversionForm mode="account" />
+    </ConversionEntryPage>
   );
 }

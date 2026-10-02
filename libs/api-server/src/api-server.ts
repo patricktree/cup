@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { NONCE, secureHeaders } from "hono/secure-headers";
 import { createRemoteJWKSet, jwtVerify } from "jose";
@@ -10,18 +10,22 @@ import {
   createRootCredential,
   getGrantSessionCookie,
   type ConversionGrantDurableObject,
-  type ConversionGrantRegistryDurableObject,
 } from "@cup/conversion-grants";
-import { createOperatorApi, type OperatorApiHandlers } from "@cup/operator-api.routes";
 import {
-  audiobookSchema,
-  createWebAppApi,
-  type ErrorResponse,
-  type WebAppApiHandlers,
-} from "@cup/web-app-api.routes";
+  createOperatorApi,
+  inspectAccountResponseSchema,
+  listAccountDeletionsResponseSchema,
+  type OperatorApiHandlers,
+} from "@cup/operator-api.routes";
+import type { RegistryDurableObject } from "@cup/registry";
+import { audiobookSchema, createWebAppApi, type WebAppApiHandlers } from "@cup/web-app-api.routes";
 
+import { authenticateAccount, mediaCookie, mediaRequest } from "#src/account-auth.ts";
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
 import { routeApplicationDomain } from "#src/domain-routing.ts";
+import { revokeVerifiedGoogleToken } from "#src/google-token-revocation.ts";
+import { accountAuthError, jsonError } from "#src/http-errors.ts";
+import { ingressIdentity } from "#src/ingress-identity.ts";
 import { isDevelopmentOperatorRequest } from "#src/operator-access.ts";
 import {
   loadReadyAudiobookFromEnvironment,
@@ -30,12 +34,12 @@ import {
   serveEpub,
 } from "#src/serve-audiobook.ts";
 import { createConversionGrant } from "#src/use-cases/create-conversion-grant.ts";
-import { getGrantConversion } from "#src/use-cases/get-grant-conversion.ts";
+import { getGrantConversion as loadGrantConversion } from "#src/use-cases/get-grant-conversion.ts";
 import { startAudiobookConversion } from "#src/use-cases/start-audiobook-conversion.ts";
 import { applyWebAppCspNonce } from "#src/web-app-csp.ts";
 
 type GrantStub = DurableObjectStub<ConversionGrantDurableObject>;
-type RegistryStub = DurableObjectStub<ConversionGrantRegistryDurableObject>;
+type RegistryStub = DurableObjectStub<RegistryDurableObject>;
 const accessKeySets = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 type ApiServerDependencies = {
   validateOperatorAccess(request: Request, env: ApiServerEnvironment): Promise<boolean>;
@@ -49,7 +53,315 @@ const productionDependencies: ApiServerDependencies = {
     )),
 };
 
+async function getGrantConversion(
+  context: Parameters<WebAppApiHandlers<ApiServerEnvironment>["getConversion"]>[0],
+  conversionId: string,
+  grantId: string,
+) {
+  const authenticated = await authenticateGrant(context.env, grantId, context.req.header("Cookie"));
+  if (authenticated.result === "missing")
+    return jsonError(
+      context.get("requestId"),
+      "grant-session-required",
+      "A grant session is required.",
+      401,
+    );
+  if (authenticated.result === "invalid")
+    return jsonError(
+      context.get("requestId"),
+      "grant-session-invalid",
+      "This browser no longer has access. Open the original trial link again.",
+      401,
+      { "Set-Cookie": clearGrantSessionCookie(grantId) },
+    );
+  if (authenticated.result === "operational-error")
+    return jsonError(
+      context.get("requestId"),
+      "operational-error",
+      "The conversion could not be loaded.",
+      500,
+    );
+  try {
+    const conversion = await loadGrantConversion(conversionId, getGrantStub(context.env, grantId));
+    if (conversion === undefined)
+      return jsonError(
+        context.get("requestId"),
+        "conversion-not-found",
+        "Conversion not found.",
+        404,
+        { "Set-Cookie": createGrantSessionCookie(grantId, authenticated.token) },
+      );
+    return context.json(conversion, 200, {
+      "Set-Cookie": createGrantSessionCookie(grantId, authenticated.token),
+    });
+  } catch {
+    return jsonError(
+      context.get("requestId"),
+      "operational-error",
+      "The conversion could not be loaded.",
+      500,
+    );
+  }
+}
+
+async function getAccountConversion(
+  context: Parameters<WebAppApiHandlers<ApiServerEnvironment>["getConversion"]>[0],
+  conversionId: string,
+  accountId: string,
+) {
+  const auth = await authenticateAccount(context.req.raw, context.env);
+  if (auth.result !== "authenticated")
+    return accountAuthError(
+      auth.result,
+      context.get("requestId"),
+      auth.result === "rate-limited" ? auth.retryAfter : undefined,
+    );
+  if (auth.snapshot.state !== "active")
+    return accountAuthError("blocked", context.get("requestId"));
+  if (auth.snapshot.accountId !== accountId)
+    return jsonError(
+      context.get("requestId"),
+      "conversion-not-found",
+      "Conversion not found.",
+      404,
+    );
+  const conversion = await auth.account.getConversion(conversionId);
+  if (!conversion)
+    return jsonError(
+      context.get("requestId"),
+      "conversion-not-found",
+      "Conversion not found.",
+      404,
+    );
+  const base = {
+    conversionId,
+    sourceUrl: conversion.sourceUrl,
+    acceptedAt: toIsoString(conversion.createdAtMs),
+  };
+  if (conversion.outcome?.status === "ready")
+    return context.json(
+      {
+        ...base,
+        status: "ready",
+        title: conversion.outcome.title,
+        completedAt: toIsoString(conversion.completedAtMs ?? conversion.createdAtMs),
+        audiobookUrl: `/app/audiobooks/${conversionId}`,
+      },
+      200,
+    );
+  if (conversion.outcome?.status === "failed")
+    return context.json(
+      {
+        ...base,
+        status: "failed",
+        completedAt: toIsoString(conversion.completedAtMs ?? conversion.createdAtMs),
+        failure: { category: "internal", explanation: conversion.outcome.explanation },
+      },
+      200,
+    );
+  return context.json({ ...base, status: "pending", lastStartedPhase: "conversion-start" }, 200);
+}
+
+const validateAccountLifecycleRequest: MiddlewareHandler<{
+  Bindings: ApiServerEnvironment;
+  Variables: { requestId: string };
+}> = async (context, next) => {
+  if (!["POST", "DELETE"].includes(context.req.method)) return next();
+  const origin = context.req.header("Origin");
+  if (
+    context.req.header("X-Create-Audiobook-From-URL-Request") !== "1" ||
+    context.req.header("Content-Type") !== "application/json" ||
+    (origin && ![new URL(context.req.url).origin, "https://localhost"].includes(origin))
+  )
+    return jsonError(
+      context.get("requestId"),
+      "origin-blocked",
+      "The request origin is not allowed.",
+      403,
+    );
+  return next();
+};
+
 const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
+  async deletionChallenge(context) {
+    const auth = await authenticateAccount(context.req.raw, context.env);
+    if (auth.result !== "authenticated")
+      return accountAuthError(auth.result, context.get("requestId"));
+    return context.json(await auth.account.deletionChallenge(), 200);
+  },
+  async scheduleDeletion(context) {
+    const auth = await authenticateAccount(context.req.raw, context.env);
+    if (auth.result !== "authenticated")
+      return accountAuthError(auth.result, context.get("requestId"));
+    const input = context.req.valid("json");
+    if (
+      !auth.identity.email ||
+      !auth.identity.googleAuthenticated ||
+      !auth.identity.authenticatedAtSeconds
+    )
+      return jsonError(
+        context.get("requestId"),
+        "fresh-auth-required",
+        "Fresh Google sign-in is required.",
+        400,
+      );
+    const result = await auth.account.scheduleDeletion({
+      challengeId: input.challengeId,
+      authenticatedAtSeconds: auth.identity.authenticatedAtSeconds,
+      email: auth.identity.email,
+    });
+    if (result.result === "conflict")
+      return jsonError(
+        context.get("requestId"),
+        "confirmation-unavailable",
+        "Confirm deletion with a fresh sign-in using the same Google account.",
+        409,
+      );
+    const { attempt } = result;
+    if (input.providerToken) {
+      const revoked = await revokeVerifiedGoogleToken(
+        context.env,
+        auth.identity.subject,
+        input.providerToken,
+      ).catch(() => false);
+      if (attempt)
+        await context.env.REGISTRY.get(
+          context.env.REGISTRY.idFromName("registry"),
+        ).recordGoogleRevocation(
+          attempt.attemptId,
+          auth.identity.subject,
+          revoked ? "revoked" : "failed",
+        );
+    }
+    return context.json(
+      { state: "deletion_scheduled", recoveryDeadlineMs: attempt?.deadlineMs },
+      200,
+    );
+  },
+  async restoreAccount(context) {
+    const auth = await authenticateAccount(context.req.raw, context.env);
+    if (auth.result !== "authenticated")
+      return accountAuthError(auth.result, context.get("requestId"));
+    const input = context.req.valid("json");
+    if (!auth.identity.googleAuthenticated || !auth.identity.authenticatedAtSeconds)
+      return jsonError(
+        context.get("requestId"),
+        "fresh-auth-required",
+        "Fresh Google sign-in is required.",
+        400,
+      );
+    const result = await auth.account.restoreAccount(
+      input.challengeId,
+      auth.identity.authenticatedAtSeconds,
+    );
+    if (result.result === "conflict")
+      return jsonError(
+        context.get("requestId"),
+        "confirmation-unavailable",
+        "Recovery is unavailable. Use the same Google account before the recovery deadline.",
+        409,
+      );
+    return context.json(result.account, 200);
+  },
+  authConfig(context) {
+    return context.json(
+      {
+        supabaseUrl: context.env.SUPABASE_URL,
+        publishableKey: context.env.SUPABASE_PUBLISHABLE_KEY,
+        googleWebClientId: context.env.GOOGLE_WEB_CLIENT_ID,
+      },
+      200,
+    );
+  },
+  async getHistory(context) {
+    const auth = await authenticateAccount(context.req.raw, context.env);
+    if (auth.result !== "authenticated")
+      return accountAuthError(auth.result, context.get("requestId"));
+    if (auth.snapshot.state !== "active")
+      return accountAuthError("blocked", context.get("requestId"));
+    const cursor = context.req.valid("query").cursor;
+    const split = cursor?.split(":");
+    const page = await auth.account.history(
+      split?.[1] ? { createdAtMs: Number(split[0]), conversionId: split[1] } : undefined,
+    );
+    return context.json(page, 200);
+  },
+  async mediaSession(context) {
+    const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
+    if (validation.result === "invalid") return validation.response;
+    const auth = await authenticateAccount(context.req.raw, context.env);
+    if (auth.result !== "authenticated")
+      return accountAuthError(auth.result, context.get("requestId"));
+    if (auth.snapshot.state !== "active")
+      return accountAuthError("blocked", context.get("requestId"));
+    const token = context.req.header("Authorization")?.slice(7);
+    if (!token) return accountAuthError("unauthorized", context.get("requestId"));
+    context.header(
+      "Set-Cookie",
+      mediaCookie(
+        context.req.raw,
+        token,
+        Math.max(
+          0,
+          auth.identity.expiresAt - Math.floor(Temporal.Now.instant().epochMilliseconds / 1000),
+        ),
+      ),
+    );
+    return context.body(null, 204);
+  },
+  clearMedia(context) {
+    const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
+    if (validation.result === "invalid") return validation.response;
+    context.header("Set-Cookie", mediaCookie(context.req.raw, "", 0));
+    return context.body(null, 204);
+  },
+  async getAccount(context) {
+    const auth = await authenticateAccount(context.req.raw, context.env);
+    if (auth.result !== "authenticated")
+      return accountAuthError(auth.result, context.get("requestId"));
+    return context.json(auth.snapshot, 200);
+  },
+  async startAccountConversion(context) {
+    const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
+    if (validation.result === "invalid") return validation.response;
+    const auth = await authenticateAccount(context.req.raw, context.env);
+    if (auth.result !== "authenticated")
+      return accountAuthError(auth.result, context.get("requestId"));
+    if (auth.snapshot.state !== "active")
+      return accountAuthError("blocked", context.get("requestId"));
+    try {
+      const result = await auth.account.startConversion({
+        sourceUrl: new URL(context.req.valid("json").sourceUrl).toString(),
+        idempotencyKey: context.req.valid("header")["idempotency-key"],
+      });
+      if (result.result === "rate-limited")
+        return jsonError(
+          context.get("requestId"),
+          "rate-limited",
+          "Too many conversion requests. Please wait before retrying.",
+          429,
+          { "Retry-After": String(result.retryAfter ?? 60) },
+        );
+      if (!result.conversion)
+        return jsonError(
+          context.get("requestId"),
+          "credits-unavailable",
+          "No conversion credits are available.",
+          409,
+        );
+      return context.json(
+        { conversionId: result.conversion.conversionId },
+        result.result === "created" ? 202 : 200,
+      );
+    } catch {
+      return jsonError(
+        context.get("requestId"),
+        "account-start-conflict",
+        "The conversion request could not be accepted. Retry the same request.",
+        409,
+      );
+    }
+  },
   async exchangeSession(context) {
     const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
     if (validation.result === "invalid") return validation.response;
@@ -126,52 +438,13 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
     });
   },
 
-  async getGrantConversions(context) {
-    const { grantId } = context.req.valid("param");
-    const authenticated = await authenticateGrant(
-      context.env,
-      grantId,
-      context.req.header("Cookie"),
-    );
-    if (authenticated.result === "missing")
-      return jsonError(
-        context.get("requestId"),
-        "grant-session-required",
-        "A grant session is required.",
-        401,
-      );
-    if (authenticated.result === "invalid")
-      return jsonError(
-        context.get("requestId"),
-        "grant-session-invalid",
-        "This browser no longer has access. Open the original trial link again.",
-        401,
-        { "Set-Cookie": clearGrantSessionCookie(grantId) },
-      );
-    if (authenticated.result === "operational-error")
-      return jsonError(
-        context.get("requestId"),
-        "operational-error",
-        "The conversions could not be loaded.",
-        500,
-      );
-    try {
-      return context.json(await getGrantStub(context.env, grantId).listConversions(), 200, {
-        "Set-Cookie": createGrantSessionCookie(grantId, authenticated.token),
-      });
-    } catch {
-      return jsonError(
-        context.get("requestId"),
-        "operational-error",
-        "The conversions could not be loaded.",
-        500,
-      );
-    }
-  },
-
   async getConversion(context) {
     const { conversionId } = context.req.valid("param");
-    const grantId = await getRegistryStub(context.env).findGrantIdForConversion(conversionId);
+    const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
+    if (owner?.kind === "account") {
+      return getAccountConversion(context, conversionId, owner.accountId);
+    }
+    const grantId = owner?.kind === "trial" ? owner.grantId : undefined;
     if (grantId === undefined)
       return jsonError(
         context.get("requestId"),
@@ -179,57 +452,10 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
         "Conversion not found.",
         404,
       );
-    const authenticated = await authenticateGrant(
-      context.env,
-      grantId,
-      context.req.header("Cookie"),
-    );
-    if (authenticated.result === "missing")
-      return jsonError(
-        context.get("requestId"),
-        "grant-session-required",
-        "A grant session is required.",
-        401,
-      );
-    if (authenticated.result === "invalid")
-      return jsonError(
-        context.get("requestId"),
-        "grant-session-invalid",
-        "This browser no longer has access. Open the original trial link again.",
-        401,
-        { "Set-Cookie": clearGrantSessionCookie(grantId) },
-      );
-    if (authenticated.result === "operational-error")
-      return jsonError(
-        context.get("requestId"),
-        "operational-error",
-        "The conversion could not be loaded.",
-        500,
-      );
-    try {
-      const conversion = await getGrantConversion(conversionId, getGrantStub(context.env, grantId));
-      if (conversion === undefined)
-        return jsonError(
-          context.get("requestId"),
-          "conversion-not-found",
-          "Conversion not found.",
-          404,
-          { "Set-Cookie": createGrantSessionCookie(grantId, authenticated.token) },
-        );
-      return context.json(conversion, 200, {
-        "Set-Cookie": createGrantSessionCookie(grantId, authenticated.token),
-      });
-    } catch {
-      return jsonError(
-        context.get("requestId"),
-        "operational-error",
-        "The conversion could not be loaded.",
-        500,
-      );
-    }
+    return getGrantConversion(context, conversionId, grantId);
   },
 
-  async startConversion(context) {
+  async startTrialConversion(context) {
     const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
     if (validation.result === "invalid") return validation.response;
     const { grantId } = context.req.valid("param");
@@ -447,6 +673,30 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
 };
 
 const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
+  async listAccountDeletions(context) {
+    const registry = context.env.REGISTRY;
+    const accountRegistry = registry.get(registry.idFromName("registry"));
+    return context.json(
+      listAccountDeletionsResponseSchema.parse({
+        attempts: await accountRegistry.inspectDeletions(),
+        receipts: await accountRegistry.deletionReceipts(),
+      }),
+      200,
+    );
+  },
+  async inspectAccount(context) {
+    const { accountId } = context.req.valid("param");
+    const account = context.env.ACCOUNTS.get(context.env.ACCOUNTS.idFromName(accountId));
+    return context.json(
+      inspectAccountResponseSchema.parse({
+        account: await account.inspect(),
+        accounting: await account.inspectAccounting(),
+        history: await account.history(),
+        writers: await account.inspectArtifactWriters(),
+      }),
+      200,
+    );
+  },
   async createGrant(context) {
     const { label, requestId } = context.req.valid("json");
     try {
@@ -696,12 +946,11 @@ export function createApiServer(dependencies: ApiServerDependencies = production
         413,
       ),
   });
-  app.use(
-    "*",
+  app.use("*", (context, next) =>
     secureHeaders({
       contentSecurityPolicy: {
         defaultSrc: ["'self'"],
-        connectSrc: ["'self'"],
+        connectSrc: ["'self'", new URL(context.env.SUPABASE_URL).origin],
         imgSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'", NONCE],
@@ -711,7 +960,7 @@ export function createApiServer(dependencies: ApiServerDependencies = production
       },
       referrerPolicy: "no-referrer",
       xFrameOptions: "DENY",
-    }),
+    })(context, next),
   );
   app.use("*", async (context, next) => {
     context.set("requestId", crypto.randomUUID());
@@ -732,6 +981,80 @@ export function createApiServer(dependencies: ApiServerDependencies = production
   app.use("/api/*", async (context, next) => {
     if (context.req.method === "GET" || context.req.method === "HEAD") return next();
     return limitApiRequestBody(context, next);
+  });
+
+  app.use("/api/*", async (context, next) => {
+    if (
+      context.req.method !== "POST" ||
+      !/^\/api\/(?:account\/conversions|grants\/[^/]+\/conversions)$/.test(context.req.path)
+    )
+      return next();
+    const key = await ingressIdentity(context.req.raw, context.env.LOCAL_DEVELOPMENT === "true");
+    if (!key)
+      return jsonError(
+        context.get("requestId"),
+        "ingress-unavailable",
+        "Request ingress metadata is unavailable.",
+        503,
+      );
+    const retryAfter = await context.env.REGISTRY.get(
+      context.env.REGISTRY.idFromName("registry"),
+    ).consumeIngressRequest(key);
+    if (retryAfter)
+      return jsonError(
+        context.get("requestId"),
+        "rate-limited",
+        "Too many requests. Please wait before retrying.",
+        429,
+        { "Retry-After": String(retryAfter) },
+      );
+    return next();
+  });
+
+  app.use("/api/audiobooks/*", async (context, next) => {
+    const origin = context.req.header("Origin");
+    if (origin === "https://localhost" || origin === "https://cup-audio.com") {
+      context.header("Access-Control-Allow-Origin", origin);
+      context.header("Access-Control-Allow-Credentials", "true");
+      context.header("Vary", "Origin");
+    }
+    const rawConversionId = context.req.path.split("/")[3];
+    if (!rawConversionId) return next();
+    let conversionId: string;
+    try {
+      conversionId = decodeURIComponent(rawConversionId);
+    } catch {
+      return jsonError(context.get("requestId"), "invalid-input", "Invalid conversion ID.", 400);
+    }
+    const registry = getRegistryStub(context.env);
+    const owner = await registry.findConversionOwner(conversionId);
+    if (owner?.kind !== "account") {
+      await next();
+      if (origin !== "https://localhost" && origin !== "https://cup-audio.com")
+        context.header("Access-Control-Allow-Origin", "*");
+      context.header("Cross-Origin-Resource-Policy", "cross-origin");
+      return;
+    }
+    const isMedia = /\/(?:audio\.mp3|captions\.vtt|book\.epub)$/.test(context.req.path);
+    const auth = await authenticateAccount(
+      isMedia ? mediaRequest(context.req.raw) : context.req.raw,
+      context.env,
+    );
+    if (auth.result !== "authenticated")
+      return accountAuthError(auth.result, context.get("requestId"));
+    if (auth.snapshot.state !== "active")
+      return accountAuthError("blocked", context.get("requestId"));
+    if (auth.snapshot.accountId !== owner.accountId)
+      return jsonError(
+        context.get("requestId"),
+        "audiobook-not-found",
+        "Audiobook not found.",
+        404,
+      );
+    await next();
+    if (origin !== "https://localhost" && origin !== "https://cup-audio.com")
+      context.header("Access-Control-Allow-Origin", undefined);
+    context.header("Cross-Origin-Resource-Policy", "same-origin");
   });
 
   app.use("/api/operator/*", async (context, next) => {
@@ -814,6 +1137,9 @@ export function createApiServer(dependencies: ApiServerDependencies = production
     ),
   );
 
+  app.use("/api/account/deletion", validateAccountLifecycleRequest);
+  app.use("/api/account/deletion/*", validateAccountLifecycleRequest);
+
   return app
     .route("/", createWebAppApi(webAppApiHandlers))
     .route("/", createOperatorApi(operatorApiHandlers));
@@ -824,7 +1150,7 @@ function getGrantStub(env: ApiServerEnvironment, grantId: string): GrantStub {
 }
 
 function getRegistryStub(env: ApiServerEnvironment): RegistryStub {
-  return env.CONVERSION_GRANT_REGISTRY.get(env.CONVERSION_GRANT_REGISTRY.idFromName("registry"));
+  return env.REGISTRY.get(env.REGISTRY.idFromName("registry"));
 }
 
 async function authenticateGrant(
@@ -890,28 +1216,11 @@ function validateSessionMutationRequest(
   return { result: "valid" };
 }
 
-function createErrorBody(requestId: string, code: string, message: string): ErrorResponse {
-  return { error: { code, message, requestId } };
-}
-
-function jsonError(
-  requestId: string,
-  code: string,
-  message: string,
-  status: 400 | 401 | 403 | 404 | 405 | 409 | 413 | 415 | 429 | 500 | 503,
-  headers?: HeadersInit,
-): Response {
-  return Response.json(createErrorBody(requestId, code, message), {
-    status,
-    ...(headers === undefined ? {} : { headers }),
-  });
-}
-
 function allowedMethodsForApiPath(pathname: string): string[] | undefined {
   const routes: ReadonlyArray<readonly [RegExp, string[]]> = [
     [/^\/api\/grants\/[^/]+\/sessions$/, ["POST"]],
     [/^\/api\/grants\/[^/]+$/, ["GET"]],
-    [/^\/api\/grants\/[^/]+\/conversions$/, ["GET", "POST"]],
+    [/^\/api\/grants\/[^/]+\/conversions$/, ["POST"]],
     [/^\/api\/conversions\/[^/]+$/, ["GET"]],
     [/^\/api\/audiobooks\/[^/]+$/, ["GET"]],
     [/^\/api\/audiobooks\/[^/]+\/audio$/, ["GET", "HEAD"]],
@@ -947,13 +1256,7 @@ async function validateAccessAssertion(
   assertion: string | undefined,
   env: ApiServerEnvironment,
 ): Promise<boolean> {
-  if (
-    assertion === undefined ||
-    env.OPERATOR_ACCESS_ISSUER === undefined ||
-    env.OPERATOR_ACCESS_AUDIENCE === undefined ||
-    env.OPERATOR_EMAIL === undefined
-  )
-    return false;
+  if (assertion === undefined) return false;
   try {
     const { payload } = await jwtVerify(assertion, getAccessKeySet(env.OPERATOR_ACCESS_ISSUER), {
       issuer: env.OPERATOR_ACCESS_ISSUER,

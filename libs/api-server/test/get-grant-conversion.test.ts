@@ -6,7 +6,8 @@ vi.mock("cloudflare:workers", () => ({
   },
 }));
 
-import { ConversionPhase, type GrantConversion } from "@cup/conversion-grants";
+import { ConversionPhase } from "@cup/conversion-contracts";
+import { type GrantConversion } from "@cup/conversion-grants";
 
 import { getGrantConversion } from "#src/use-cases/get-grant-conversion.ts";
 

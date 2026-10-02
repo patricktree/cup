@@ -30,6 +30,24 @@ const program = new Command()
   .option("--debug", "include redacted diagnostic details", false)
   .showHelpAfterError();
 
+const account = program.command("account").description("Inspect account lifecycle");
+account
+  .command("inspect")
+  .argument("<account-id>")
+  .action(async (accountId, _options, command) =>
+    run(command, async (client, output) => {
+      const result = await parseOkResponse(
+        client.inspectAccount({ accountId: parseUuid(accountId) }),
+      );
+      output(result, () => process.stdout.write(`${JSON.stringify(result, null, 2)}\n`));
+    }),
+  );
+account.command("deletions").action(async (_options, command) =>
+  run(command, async (client, output) => {
+    const result = await parseOkResponse(client.listAccountDeletions());
+    output(result, () => process.stdout.write(`${JSON.stringify(result, null, 2)}\n`));
+  }),
+);
 const grant = program.command("grant").description("Manage conversion grants");
 
 grant

@@ -1,4 +1,5 @@
 import { loadAudiobook, type Audiobook, type AudiobookReference } from "@cup/audiobook-production";
+import { createConversionArtifactPrefix } from "@cup/conversion-contracts";
 
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
 import { ConversionConflictError } from "#src/errors.ts";
@@ -66,7 +67,7 @@ function parseAudiobookReference(
     !("contentType" in output) ||
     output.contentType !== "application/json" ||
     !("key" in output) ||
-    output.key !== `conversions/${conversionId}/audiobook.json` ||
+    output.key !== `${createConversionArtifactPrefix(conversionId)}audiobook.json` ||
     !("byteLength" in output) ||
     typeof output.byteLength !== "number" ||
     !Number.isSafeInteger(output.byteLength) ||

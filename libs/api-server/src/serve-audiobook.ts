@@ -1,8 +1,8 @@
+import { accountArtifactBucket } from "@cup/accounts/artifact-writer";
 import { exportEpub, loadAudiobook, type Audiobook } from "@cup/audiobook-production";
-import type {
-  ConversionGrantDurableObject,
-  ConversionGrantRegistryDurableObject,
-} from "@cup/conversion-grants";
+import { createConversionArtifactPrefix } from "@cup/conversion-contracts";
+import type { ConversionGrantDurableObject } from "@cup/conversion-grants";
+import type { RegistryDurableObject } from "@cup/registry";
 import type { ErrorResponse } from "@cup/web-app-api.routes";
 
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
@@ -10,12 +10,29 @@ import { getAudiobookEpub } from "#src/use-cases/get-audiobook-epub.ts";
 import { loadReadyAudiobook } from "#src/use-cases/load-ready-audiobook.ts";
 
 type GrantStub = DurableObjectStub<ConversionGrantDurableObject>;
-type RegistryStub = DurableObjectStub<ConversionGrantRegistryDurableObject>;
+type RegistryStub = DurableObjectStub<RegistryDurableObject>;
 
 export async function loadReadyAudiobookFromEnvironment(
   env: ApiServerEnvironment,
   conversionId: string,
 ): Promise<Audiobook | undefined> {
+  const owner = await getRegistryStub(env).findConversionOwner(conversionId);
+  if (owner?.kind === "account") {
+    const account = env.ACCOUNTS.get(env.ACCOUNTS.idFromName(owner.accountId));
+    if ((await account.inspect()).state !== "active") return undefined;
+    const conversion = await account.getConversion(conversionId);
+    if (conversion?.outcome?.status !== "ready") return undefined;
+    const prefix = createConversionArtifactPrefix(conversionId, owner);
+    if (conversion.outcome.audiobookReference.key !== `${prefix}audiobook.json`)
+      throw new Error("Private manifest ownership mismatch");
+    const audiobook = await loadAudiobook({
+      bucket: env.AUDIO_BUCKET,
+      audiobookReference: conversion.outcome.audiobookReference,
+    });
+    if (!audiobook.audio.key.startsWith(prefix))
+      throw new Error("Private audio ownership mismatch");
+    return audiobook;
+  }
   return loadReadyAudiobook(conversionId, {
     findGrantIdForConversion: (id) => getRegistryStub(env).findGrantIdForConversion(id),
     getReadyAudiobookReference: (grantId, id) =>
@@ -39,7 +56,6 @@ export async function serveAudio(
   if (object === null) return audiobookNotFound(requestId);
 
   const headers = new Headers({
-    "Access-Control-Allow-Origin": "*",
     "Accept-Ranges": "bytes",
     "Content-Type": "audio/mpeg",
     ETag: object.httpEtag,
@@ -140,7 +156,22 @@ export async function serveEpub(
           };
     },
     exportEpub: async (input) => {
-      await exportEpub({ bucket: env.AUDIO_BUCKET, ...input });
+      const owner = await getRegistryStub(env).findConversionOwner(conversionId);
+      if (owner?.kind === "account") {
+        const account = env.ACCOUNTS.get(env.ACCOUNTS.idFromName(owner.accountId));
+        const snapshot = await account.inspect();
+        if (snapshot.state !== "active") throw new Error("Account export is fenced");
+        await exportEpub({
+          ...input,
+          bucket: accountArtifactBucket(
+            env.AUDIO_BUCKET,
+            account,
+            snapshot.executionEpoch,
+            createConversionArtifactPrefix(conversionId, owner),
+            "export",
+          ),
+        });
+      } else await exportEpub({ bucket: env.AUDIO_BUCKET, ...input });
     },
   });
   if (object === undefined) return audiobookNotFound(requestId);
@@ -162,7 +193,7 @@ function getGrantStub(env: ApiServerEnvironment, grantId: string): GrantStub {
 }
 
 function getRegistryStub(env: ApiServerEnvironment): RegistryStub {
-  return env.CONVERSION_GRANT_REGISTRY.get(env.CONVERSION_GRANT_REGISTRY.idFromName("registry"));
+  return env.REGISTRY.get(env.REGISTRY.idFromName("registry"));
 }
 
 function parseRange(value: string, size: number): { start: number; end: number } | undefined {

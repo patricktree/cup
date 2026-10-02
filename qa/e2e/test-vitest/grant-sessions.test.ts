@@ -25,8 +25,7 @@ test("exchanges persistent cookies and authorizes native requests without a brow
   expect(snapshot.status).toBe(200);
   expect(snapshot.headers.get("Set-Cookie")).toContain("HttpOnly");
   const history = await fetch(`${origin}/api/grants/${grant.grantId}/conversions`, { headers });
-  expect(history.status).toBe(200);
-  expect(history.headers.get("Set-Cookie")).toContain("HttpOnly");
+  expect(history.status).toBe(405);
 
   const start = await fetch(`${origin}/api/grants/${grant.grantId}/conversions`, {
     method: "POST",

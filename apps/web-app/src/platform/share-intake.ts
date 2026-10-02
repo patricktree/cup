@@ -1,10 +1,9 @@
 let pendingUrl: string | undefined;
 let formListener: ((url: string) => void) | undefined;
 
-export function receiveSharedUrl(url: string, onShare: () => void): void {
+export function receiveSharedUrl(url: string, onShare: () => void | Promise<void>): void {
   pendingUrl = url;
-  onShare();
-  deliverPendingUrl();
+  void Promise.resolve(onShare()).then(deliverPendingUrl);
 }
 
 export function subscribeToSharedUrl(listener: (url: string) => void): () => void {

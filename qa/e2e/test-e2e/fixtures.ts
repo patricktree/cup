@@ -8,6 +8,8 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 
+import { startAuthProvider } from "#test-e2e/auth-provider.ts";
+
 type CreatedGrant = {
   grantId: string;
   trialLink: string;
@@ -15,6 +17,7 @@ type CreatedGrant = {
 
 export type WorkerEnvironment = {
   origin: string;
+  authProvider: Awaited<ReturnType<typeof startAuthProvider>>;
   persistenceDirectory: string;
   createGrant(): Promise<CreatedGrant>;
   restart(scenario: QaScenario): Promise<void>;
@@ -56,6 +59,7 @@ export const test = base.extend<Fixtures>({
       const url = new URL(route.request().url());
       if (
         url.origin === workerEnvironment.origin ||
+        url.origin === workerEnvironment.authProvider.origin ||
         url.protocol === "data:" ||
         url.protocol === "blob:"
       ) {
@@ -101,6 +105,7 @@ type InternalWorkerEnvironment = WorkerEnvironment & {
 async function createWorkerEnvironment(
   initialScenario: QaScenario,
 ): Promise<InternalWorkerEnvironment> {
+  const authProvider = await startAuthProvider();
   const port = await reservePort();
   const inspectorPort = await reservePort();
   const origin = `http://127.0.0.1:${port}`;
@@ -136,6 +141,14 @@ async function createWorkerEnvironment(
         persistenceDirectory,
         "--var",
         `QA_SCENARIO:${scenario}`,
+        "--var",
+        `SUPABASE_URL:${authProvider.origin}`,
+        "--var",
+        "SUPABASE_PUBLISHABLE_KEY:qa-key",
+        "--var",
+        "SUPABASE_SECRET_KEY:qa-admin",
+        "--var",
+        "GOOGLE_WEB_CLIENT_ID:qa-google-client",
       ],
       { cwd: qaRoot, detached: true, env: environment, stdio: ["ignore", "pipe", "pipe"] },
     );
@@ -147,6 +160,7 @@ async function createWorkerEnvironment(
 
   return {
     origin,
+    authProvider,
     persistenceDirectory,
     async createGrant() {
       const response = await fetch(`${origin}/api/operator/grants`, {
@@ -175,6 +189,7 @@ async function createWorkerEnvironment(
     },
     async dispose(currentTestInfo) {
       await stopProcess(workerProcess);
+      await authProvider.close();
       await attachText(currentTestInfo, "wrangler-output", logs);
       const didFail = currentTestInfo.status !== currentTestInfo.expectedStatus;
       const shouldRetain = didFail && process.env["E2E_RETAIN_STATE"] === "1";

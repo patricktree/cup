@@ -1,28 +1,38 @@
-import { css } from "@linaria/core";
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
+  Navigate,
   redirect,
   useNavigate,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import React from "react";
 
-import { appIdentity } from "#src/app-identity.js";
+import { ConversionEntryPage } from "#src/app/components/conversion-entry-page.js";
 import { ErrorMessage } from "#src/app/components/error-message.js";
 import { StartConversionForm } from "#src/app/components/start-conversion-form.js";
 import { DSButton } from "#src/app/design-system/button.js";
+import { getResourceAccountSession } from "#src/data-fetching/account-session.js";
+import { useAccountSession } from "#src/data-fetching/account.js";
 import {
   ApiError,
   createGrantQuery,
   createGrantQueryKey,
   exchangeCredential,
 } from "#src/data-fetching/trial-link.js";
+import { trialBrowserState } from "#src/trial-browser-state.js";
 
 export const Route = createFileRoute("/trials/$grantId")({
   component: TrialPage,
   beforeLoad: async ({ context, location, params }) => {
+    if (
+      new URLSearchParams(location.searchStr).has("code") ||
+      (await getResourceAccountSession())
+    ) {
+      return redirect({ to: "/", search: true, replace: true });
+    }
+
     const access = readCredentialFromFragment(location.hash);
 
     if (access.kind === "malformed") {
@@ -34,7 +44,7 @@ export const Route = createFileRoute("/trials/$grantId")({
     if (access.kind === "credential") {
       const snapshot = await exchangeCredential(params.grantId, access.credential);
       context.queryClient.setQueryData(createGrantQueryKey(params.grantId), snapshot);
-      appIdentity.store({ lastGrantId: params.grantId });
+      trialBrowserState.setLastGrantId(params.grantId);
       return redirect({ to: ".", hash: "" });
     }
 
@@ -51,43 +61,19 @@ export const Route = createFileRoute("/trials/$grantId")({
 });
 
 function TrialPage(): React.JSX.Element {
+  const session = useAccountSession();
+  if (session) return <Navigate to="/" replace />;
+  return <TrialConversionPage />;
+}
+
+function TrialConversionPage(): React.JSX.Element {
   const { grantId } = Route.useParams();
   const grantQuery = useSuspenseQuery(createGrantQuery(grantId));
 
   return (
-    <div
-      className={css`
-        display: grid;
-        gap: calc(3 * var(--spacing-base));
-        width: 100%;
-      `}
-    >
-      <header
-        className={css`
-          text-align: center;
-        `}
-      >
-        <p
-          className={css`
-            font-family: var(--font-family-2);
-            font-size: var(--font-size-lg);
-            color: var(--color-fg-emphasized-sm);
-          `}
-        >
-          No reading lists, no tldr.
-        </p>
-        <h1
-          className={css`
-            font-size: var(--font-size-display);
-            font-weight: var(--font-weight-inter-figma-medium);
-            line-height: var(--line-height-display);
-          `}
-        >
-          Just listen.
-        </h1>
-      </header>
-      <StartConversionForm grant={grantQuery.data} />
-    </div>
+    <ConversionEntryPage>
+      <StartConversionForm mode="trial" grant={grantQuery.data} />
+    </ConversionEntryPage>
   );
 }
 

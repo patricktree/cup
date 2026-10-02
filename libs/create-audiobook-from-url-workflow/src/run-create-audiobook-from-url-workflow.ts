@@ -3,6 +3,8 @@ import { NonRetryableError } from "cloudflare:workflows";
 import pMap from "p-map";
 import { Temporal } from "temporal-polyfill";
 
+import { type AccountDurableObject } from "@cup/accounts";
+import { accountArtifactBucket } from "@cup/accounts/artifact-writer";
 import {
   assembleAudiobook,
   SPEECH_CONFIG,
@@ -14,11 +16,9 @@ import {
   type AudioSegmentReference,
   type SpeechSynthesisAi,
 } from "@cup/audiobook-production";
-import {
-  ConversionPhase,
-  type ConversionFailureCategory,
-  type ConversionGrantDurableObject,
-} from "@cup/conversion-grants";
+import { createConversionArtifactPrefix } from "@cup/conversion-contracts";
+import { ConversionPhase, type ConversionFailureCategory } from "@cup/conversion-contracts";
+import { type ConversionGrantDurableObject } from "@cup/conversion-grants";
 import type {
   NarrationContentSelectionResult,
   SelectionChunkRunner,
@@ -87,6 +87,7 @@ export type CreateAudiobookFromUrlWorkflowServices = {
 
 export type CreateAudiobookFromUrlWorkflowEnvironment = {
   AUDIO_BUCKET: R2Bucket;
+  ACCOUNTS: DurableObjectNamespace<AccountDurableObject>;
   CONVERSION_GRANTS: DurableObjectNamespace<ConversionGrantDurableObject>;
 };
 
@@ -104,7 +105,25 @@ export async function runCreateAudiobookFromUrlWorkflow({
   step: WorkflowStep;
   services: CreateAudiobookFromUrlWorkflowServices;
 }) {
-  const { sourceUrl, grantId } = conversionParamsSchema.parse(event.payload);
+  const params = conversionParamsSchema.parse(event.payload);
+  const { sourceUrl } = params;
+  if ("v" in params && params.conversionId !== event.instanceId)
+    throw new NonRetryableError("Workflow conversion identity mismatch");
+  const owner = "v" in params ? params.owner : { kind: "trial" as const, grantId: params.grantId };
+  const artifactPrefix = createConversionArtifactPrefix(event.instanceId, owner);
+  const executionEpoch = "v" in params ? params.executionEpoch : 1;
+  const account =
+    owner.kind === "account"
+      ? env.ACCOUNTS.get(env.ACCOUNTS.idFromName(owner.accountId))
+      : undefined;
+  const bucket = account
+    ? accountArtifactBucket(env.AUDIO_BUCKET, account, executionEpoch, artifactPrefix)
+    : env.AUDIO_BUCKET;
+  const phaseStarted = async (phase: ConversionPhase) => {
+    if (account) await account.assertExecution(event.instanceId, executionEpoch);
+    else if (owner.kind === "trial")
+      await recordPhaseStarted(env, owner.grantId, event.instanceId, phase);
+  };
   const conversionId = event.instanceId;
   let stage: ConversionFailureCategory = "source-preparation";
 
@@ -114,19 +133,14 @@ export async function runCreateAudiobookFromUrlWorkflow({
         "prepare audiobook source material",
         PREPARE_STEP_CONFIG,
         async () => {
-          await recordPhaseStarted(
-            env,
-            grantId,
-            conversionId,
-            ConversionPhase.SOURCE_MATERIAL_PREPARATION,
-          );
+          await phaseStarted(ConversionPhase.SOURCE_MATERIAL_PREPARATION);
           return services.prepareSourceMaterial(sourceUrl);
         },
       );
 
       stage = "content-selection";
       await step.do("start narration content selection", PROCESSING_STEP_CONFIG, () =>
-        recordPhaseStarted(env, grantId, conversionId, ConversionPhase.NARRATION_CONTENT_SELECTION),
+        phaseStarted(ConversionPhase.NARRATION_CONTENT_SELECTION),
       );
       const { selectedSourceMaterialHtml, usage: contentSelectionUsage } =
         await services.selectNarrationContent(sourceMaterial.html, {
@@ -139,12 +153,7 @@ export async function runCreateAudiobookFromUrlWorkflow({
         "create narration document",
         PROCESSING_STEP_CONFIG,
         async () => {
-          await recordPhaseStarted(
-            env,
-            grantId,
-            conversionId,
-            ConversionPhase.NARRATION_DOCUMENT_CREATION,
-          );
+          await phaseStarted(ConversionPhase.NARRATION_DOCUMENT_CREATION);
           return createNarrationDocument({
             sourceTitle: sourceMaterial.title,
             sourceMaterialHtml: selectedSourceMaterialHtml,
@@ -170,7 +179,9 @@ export async function runCreateAudiobookFromUrlWorkflow({
         PROCESSING_STEP_CONFIG,
         async () => {
           // Retain the original provider when resuming a conversion started before this step existed.
-          const firstSegment = await env.AUDIO_BUCKET.head(createAudioSegmentKey(conversionId, 0));
+          const firstSegment = await bucket.head(
+            createAudioSegmentKey(conversionId, 0, artifactPrefix),
+          );
           return firstSegment ? getStoredSpeechConfig(firstSegment) : SPEECH_CONFIG;
         },
       );
@@ -181,24 +192,25 @@ export async function runCreateAudiobookFromUrlWorkflow({
             `produce audio segment ${chunkIndex + 1}`,
             NARRATION_SYNTHESIS_STEP_CONFIG,
             async ({ attempt }) => {
-              if (chunkIndex === 0)
-                await recordPhaseStarted(
-                  env,
-                  grantId,
-                  conversionId,
-                  ConversionPhase.AUDIO_SEGMENT_PRODUCTION,
-                );
+              if (chunkIndex === 0) await phaseStarted(ConversionPhase.AUDIO_SEGMENT_PRODUCTION);
               try {
-                const grant = getGrantStub(env, grantId);
-                const existing = await env.AUDIO_BUCKET.head(
-                  createAudioSegmentKey(conversionId, chunkIndex),
+                const grant = owner.kind === "trial" ? getGrantStub(env, owner.grantId) : undefined;
+                const existing = await bucket.head(
+                  createAudioSegmentKey(conversionId, chunkIndex, artifactPrefix),
                 );
-                if (existing === null) {
-                  const reservation = await grant.reserveAudioSegment(
-                    conversionId,
-                    chunkIndex,
-                    narrationText.length,
-                  );
+                if (account || (grant && existing === null)) {
+                  const reservation = account
+                    ? await account.reserveAudioSegment(
+                        conversionId,
+                        chunkIndex,
+                        narrationText.length,
+                        executionEpoch,
+                      )
+                    : await grant!.reserveAudioSegment(
+                        conversionId,
+                        chunkIndex,
+                        narrationText.length,
+                      );
                   if (reservation.result !== "reserved" && reservation.result !== "settled")
                     throw new NonRetryableError(
                       "There is not enough available audio duration for the next segment.",
@@ -207,14 +219,15 @@ export async function runCreateAudiobookFromUrlWorkflow({
                 const segment = await produceAudioSegment({
                   ai: services.speechSynthesisAi,
                   speechConfig,
-                  bucket: env.AUDIO_BUCKET,
+                  bucket,
                   conversionId,
+                  artifactPrefix,
                   sequence: chunkIndex,
                   narrationChunk: { text: narrationText },
                   synthesisAttempt: attempt,
                   synthesisResponseMode: attempt === 1 ? "streaming" : "non-streaming",
                 });
-                if (existing !== null) {
+                if (grant && existing !== null) {
                   const usage = await grant.listAudioSegments(conversionId);
                   if (!usage.some((item) => item.sequence === chunkIndex)) {
                     // Existing objects without a billing reservation predate the allowance migration.
@@ -226,7 +239,14 @@ export async function runCreateAudiobookFromUrlWorkflow({
                     );
                   }
                 }
-                await grant.completeAudioSegment(
+                if (account)
+                  await account.completeAudioSegment(
+                    conversionId,
+                    chunkIndex,
+                    segment.durationMilliseconds,
+                    executionEpoch,
+                  );
+                await grant?.completeAudioSegment(
                   conversionId,
                   chunkIndex,
                   segment.durationMilliseconds,
@@ -249,10 +269,11 @@ export async function runCreateAudiobookFromUrlWorkflow({
         "assemble audiobook audio",
         PROCESSING_STEP_CONFIG,
         async () => {
-          await recordPhaseStarted(env, grantId, conversionId, ConversionPhase.AUDIOBOOK_ASSEMBLY);
+          await phaseStarted(ConversionPhase.AUDIOBOOK_ASSEMBLY);
           return assembleAudiobook({
-            bucket: env.AUDIO_BUCKET,
+            bucket,
             conversionId,
+            artifactPrefix,
             audioSegments,
           });
         },
@@ -262,10 +283,11 @@ export async function runCreateAudiobookFromUrlWorkflow({
         "store audiobook",
         PROCESSING_STEP_CONFIG,
         async () => {
-          await recordPhaseStarted(env, grantId, conversionId, ConversionPhase.AUDIOBOOK_STORAGE);
+          await phaseStarted(ConversionPhase.AUDIOBOOK_STORAGE);
           return storeAudiobook({
-            bucket: env.AUDIO_BUCKET,
+            bucket,
             conversionId,
+            artifactPrefix,
             title: sourceMaterial.title,
             originalUrl: sourceUrl,
             narrationDocument,
@@ -297,7 +319,7 @@ export async function runCreateAudiobookFromUrlWorkflow({
         "create failed conversion outcome",
         PROCESSING_STEP_CONFIG,
         async () => {
-          await recordPhaseStarted(env, grantId, conversionId, ConversionPhase.FINALIZATION);
+          await phaseStarted(ConversionPhase.FINALIZATION);
           return {
             failureCategory: stage,
             explanation:
@@ -311,9 +333,21 @@ export async function runCreateAudiobookFromUrlWorkflow({
         },
       );
 
-      await step.do("record conversion failure", TERMINAL_STATE_STEP_CONFIG, () =>
-        getGrantStub(env, grantId).recordFailed(conversionId, failedOutcome),
-      );
+      await step.do("record conversion failure", TERMINAL_STATE_STEP_CONFIG, async () => {
+        if (account)
+          await account.settleConversion(
+            conversionId,
+            {
+              status: "failed",
+              failureCategory: failedOutcome.failureCategory,
+              explanation: failedOutcome.explanation,
+            },
+            undefined,
+            executionEpoch,
+          );
+        else if (owner.kind === "trial")
+          await getGrantStub(env, owner.grantId).recordFailed(conversionId, failedOutcome);
+      });
       throw error;
     }
   })();
@@ -322,7 +356,7 @@ export async function runCreateAudiobookFromUrlWorkflow({
     "create ready conversion outcome",
     PROCESSING_STEP_CONFIG,
     async () => {
-      await recordPhaseStarted(env, grantId, conversionId, ConversionPhase.FINALIZATION);
+      await phaseStarted(ConversionPhase.FINALIZATION);
       return {
         ...result.readyOutcome,
         completedAtMs: Temporal.Now.instant().epochMilliseconds,
@@ -330,9 +364,21 @@ export async function runCreateAudiobookFromUrlWorkflow({
     },
   );
 
-  await step.do("record conversion ready", TERMINAL_STATE_STEP_CONFIG, () =>
-    getGrantStub(env, grantId).recordReady(conversionId, readyOutcome),
-  );
+  await step.do("record conversion ready", TERMINAL_STATE_STEP_CONFIG, async () => {
+    if (account)
+      await account.settleConversion(
+        conversionId,
+        {
+          status: "ready",
+          title: readyOutcome.title,
+          audiobookReference: readyOutcome.audiobookReference,
+        },
+        undefined,
+        executionEpoch,
+      );
+    else if (owner.kind === "trial")
+      await getGrantStub(env, owner.grantId).recordReady(conversionId, readyOutcome);
+  });
 
   return result.audiobookReference;
 }

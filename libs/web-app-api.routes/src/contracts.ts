@@ -1,11 +1,10 @@
 import { z } from "zod";
 
+import { conversionPhaseSchema, durationBalanceSchema } from "@cup/conversion-contracts";
 import {
-  conversionPhaseSchema,
   grantConversionSnapshotSchema,
   grantConversionsSchema,
   grantSnapshotSchema,
-  durationBalanceSchema,
   type GrantConversionSnapshot,
   type GrantConversions,
   type GrantSnapshot,
@@ -30,6 +29,12 @@ export const uuidV4Schema = z
   .string()
   .regex(LOWERCASE_UUID_V4_PATTERN, "Must be a lowercase UUIDv4");
 
+export const authConfigResponseSchema = z.object({
+  supabaseUrl: z.string(),
+  publishableKey: z.string().min(1),
+  googleWebClientId: z.string(),
+});
+
 export const grantParamsSchema = z.object({ grantId: uuidV4Schema }).strict();
 export type GrantParams = z.infer<typeof grantParamsSchema>;
 export const conversionParamsSchema = z.object({ conversionId: uuidV4Schema }).strict();
@@ -49,7 +54,11 @@ export const exchangeCredentialRequestSchema = z
   .strict();
 export type ExchangeCredentialRequest = z.infer<typeof exchangeCredentialRequestSchema>;
 
-export const startConversionRequestSchema = z.object({ sourceUrl: sourceUrlSchema }).strict();
+export const startConversionRequestSchema = z
+  .object({
+    sourceUrl: sourceUrlSchema,
+  })
+  .strict();
 export type StartConversionRequest = z.infer<typeof startConversionRequestSchema>;
 
 export const startConversionHeadersSchema = z
@@ -114,3 +123,51 @@ export const errorResponseSchema = z
   })
   .strict();
 export type ErrorResponse = z.infer<typeof errorResponseSchema>;
+
+export const accountConfirmationSchema = z
+  .object({
+    challengeId: z.uuidv4(),
+    providerToken: z.string().min(1).max(8192).optional(),
+  })
+  .strict();
+export type AccountConfirmationRequest = z.infer<typeof accountConfirmationSchema>;
+
+export const accountSnapshotSchema = z.object({
+  accountId: z.uuid(),
+  subject: z.uuid(),
+  createdAtMs: z.number(),
+  state: z.enum(["active", "deletion_scheduled", "deleting"]),
+  executionEpoch: z.number(),
+  recoveryDeadlineMs: z.number().nullable(),
+  balance: z.object({
+    unit: z.literal("audio-millisecond"),
+    available: z.number(),
+    reserved: z.number(),
+  }),
+});
+
+export const historyItemSchema = z.object({
+  conversionId: z.uuidv4(),
+  idempotencyKey: z.uuidv4(),
+  sourceUrl: z.string(),
+  createdAtMs: z.number(),
+  status: z.enum(["pending", "ready", "failed"]),
+  outcome: z.union([
+    z.object({ status: z.literal("ready"), title: z.string() }).passthrough(),
+    z.object({ status: z.literal("failed"), explanation: z.string() }).passthrough(),
+    z.null(),
+  ]),
+});
+
+export const accountStartResponseSchema = z.object({ conversionId: z.uuidv4() });
+
+export const deletionChallengeSchema = z.object({
+  challengeId: z.uuidv4(),
+  subject: z.uuid(),
+  issuedAtMs: z.number(),
+  expiresAtMs: z.number(),
+});
+export const accountHistorySchema = z.object({
+  items: z.array(historyItemSchema),
+  nextCursor: z.string().nullable(),
+});

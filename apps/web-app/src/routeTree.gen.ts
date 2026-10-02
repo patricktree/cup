@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as AudiobooksConversionIdRouteImport } from './routes/audiobooks.$conversionId'
 import { Route as ConversionsConversionIdRouteImport } from './routes/conversions.$conversionId'
 import { Route as TrialsGrantIdRouteImport } from './routes/trials.$grantId'
@@ -17,6 +19,16 @@ import { Route as TrialsGrantIdRouteImport } from './routes/trials.$grantId'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AudiobooksConversionIdRoute = AudiobooksConversionIdRouteImport.update({
@@ -37,12 +49,16 @@ const TrialsGrantIdRoute = TrialsGrantIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/history': typeof HistoryRoute
   '/audiobooks/$conversionId': typeof AudiobooksConversionIdRoute
   '/conversions/$conversionId': typeof ConversionsConversionIdRoute
   '/trials/$grantId': typeof TrialsGrantIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/history': typeof HistoryRoute
   '/audiobooks/$conversionId': typeof AudiobooksConversionIdRoute
   '/conversions/$conversionId': typeof ConversionsConversionIdRoute
   '/trials/$grantId': typeof TrialsGrantIdRoute
@@ -50,6 +66,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/history': typeof HistoryRoute
   '/audiobooks/$conversionId': typeof AudiobooksConversionIdRoute
   '/conversions/$conversionId': typeof ConversionsConversionIdRoute
   '/trials/$grantId': typeof TrialsGrantIdRoute
@@ -58,18 +76,24 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account'
+    | '/history'
     | '/audiobooks/$conversionId'
     | '/conversions/$conversionId'
     | '/trials/$grantId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account'
+    | '/history'
     | '/audiobooks/$conversionId'
     | '/conversions/$conversionId'
     | '/trials/$grantId'
   id:
     | '__root__'
     | '/'
+    | '/account'
+    | '/history'
     | '/audiobooks/$conversionId'
     | '/conversions/$conversionId'
     | '/trials/$grantId'
@@ -77,6 +101,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRoute
+  HistoryRoute: typeof HistoryRoute
   AudiobooksConversionIdRoute: typeof AudiobooksConversionIdRoute
   ConversionsConversionIdRoute: typeof ConversionsConversionIdRoute
   TrialsGrantIdRoute: typeof TrialsGrantIdRoute
@@ -89,6 +115,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/audiobooks/$conversionId': {
@@ -117,6 +157,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRoute,
+  HistoryRoute: HistoryRoute,
   AudiobooksConversionIdRoute: AudiobooksConversionIdRoute,
   ConversionsConversionIdRoute: ConversionsConversionIdRoute,
   TrialsGrantIdRoute: TrialsGrantIdRoute,

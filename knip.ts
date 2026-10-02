@@ -30,6 +30,19 @@ const config: KnipConfig = {
       /* Playwright and Vite load these component-testing modules indirectly. */
       entry: ["ui-gallery/main.tsx", "src/**/*.story.tsx"],
     },
+    "libs/registry": {
+      /* Wrangler loads the integration Worker and its Cloudflare virtual module. */
+      entry: ["test/worker.ts"],
+      ignoreDependencies: ["cloudflare"],
+    },
+    "libs/accounts": {
+      /* Wrangler loads this module-only Worker entry point from wrangler.test.jsonc. */
+      entry: ["test/worker.ts"],
+      ignoreDependencies: [
+        /* knip doesn't detect `declare module "cloudflare:workers"` from Worker types */
+        "cloudflare",
+      ],
+    },
     "libs/conversion-grants": {
       /* Wrangler loads this module-only Worker entry point from wrangler.test.jsonc. */
       entry: ["test/worker.ts"],

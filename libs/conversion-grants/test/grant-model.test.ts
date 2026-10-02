@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import { ConversionPhase } from "#src/grant-contracts.ts";
+import { ConversionPhase } from "@cup/conversion-contracts";
+
 import { createGrantConversions, createGrantSnapshot, type GrantRecord } from "#src/grant-model.ts";
 import { createGrantSessionCookie, createRootCredential } from "#src/grant-session.ts";
 

@@ -24,18 +24,11 @@ test("fills the form from a cold-start share and accepts repeat shares without s
       },
     });
   });
-  await mount("routes/index/LandingPage");
+  await mount("routes/trials.$grantId/OpenGrant");
   await page.evaluate(async () => {
     const modulePath = "/src/platform/share-plugin.android.ts";
     const { initializeAndroidShare } = await import(modulePath);
     await initializeAndroidShare(() => {});
-  });
-  // The mount fixture reloads the page; switch stories in place to preserve the pending share.
-  await page.evaluate(async () => {
-    if (!("mount" in window) || typeof window.mount !== "function") {
-      throw new Error("The component gallery must expose mount().");
-    }
-    await window.mount({ story: "routes/trials.$grantId/OpenGrant" });
   });
   const component = page.locator("#root");
 

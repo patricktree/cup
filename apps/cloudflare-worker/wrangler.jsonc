@@ -2,6 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "create-audiobook-from-url",
   "main": "src/index.ts",
+  "compatibility_flags": ["nodejs_compat"],
   "compatibility_date": "2026-08-18",
   "workers_dev": false,
   "preview_urls": false,
@@ -52,13 +53,14 @@
   ],
   "durable_objects": {
     "bindings": [
+      { "name": "ACCOUNTS", "class_name": "AccountDurableObject" },
       {
         "name": "CONVERSION_GRANTS",
         "class_name": "ConversionGrantDurableObject",
       },
       {
-        "name": "CONVERSION_GRANT_REGISTRY",
-        "class_name": "ConversionGrantRegistryDurableObject",
+        "name": "REGISTRY",
+        "class_name": "RegistryDurableObject",
       },
     ],
   },
@@ -70,11 +72,26 @@
         "ConversionGrantRegistryDurableObject",
       ],
     },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["AccountDurableObject"],
+    },
+    {
+      "tag": "v3",
+      "renamed_classes": [
+        { "from": "ConversionGrantRegistryDurableObject", "to": "RegistryDurableObject" },
+      ],
+    },
   ],
   "ai": {
     "binding": "AI",
   },
   "vars": {
+    "LOCAL_DEVELOPMENT": "false",
+    "SIGNUP_IP_LIMIT": "10",
+    "CONVERSION_IP_LIMIT": "60",
+    "CONVERSION_OWNER_LIMIT": "10",
+    "SUPABASE_URL": "https://evwjipxgacwotgbmqtla.supabase.co",
     "CLOUDFLARE_ACCOUNT_ID": "a7648178b6a63bb8a13f0c9de89d253f",
     "OPERATOR_ACCESS_ISSUER": "https://patricktree.cloudflareaccess.com",
     "OPERATOR_ACCESS_AUDIENCE": "eb0bf97161ed0be7fdbaa018493cc84d3b25332315cfa8fec3569570035e3461",
@@ -87,6 +104,13 @@
     },
   ],
   "secrets": {
-    "required": ["CLOUDFLARE_API_KEY", "SOURCE_PAGE_COOKIES_JSON"],
+    "required": [
+      "CLOUDFLARE_API_KEY",
+      "SOURCE_PAGE_COOKIES_JSON",
+      "SUPABASE_SECRET_KEY",
+      "SUPABASE_PUBLISHABLE_KEY",
+      "GOOGLE_WEB_CLIENT_ID",
+      "RESEND_API_KEY",
+    ],
   },
 }

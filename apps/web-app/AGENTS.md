@@ -14,7 +14,9 @@
 
 - Use package imports such as `#src/...`.
 - Prefer `DSButton` over raw buttons for app UI.
-- Use native HTML constraint validation until the form needs application-specific validation.
+- Define all `useMutation` hooks in `src/data-fetching/*` files and import those hooks into components and routes.
+- Use `useAppForm` for forms; follow `src/app/components/start-conversion-form.tsx`.
+- Use `WebAppApiClient` from `@cup/web-app-api.client` for API calls, including its authenticated RPC client for account requests; follow `libs/web-app-api.client/src/rpc-client.ts` from the repo root.
 
 ## Commands
 

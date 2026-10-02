@@ -30,7 +30,7 @@ test("delivers share URLs to the form and preserves trial credentials", async ({
       },
     });
   });
-  await mount("routes/index/LandingPage");
+  await mount("routes/trials.$grantId/OpenGrant");
   await page.evaluate(async () => {
     const modulePath = "/src/platform/incoming-urls.ios.ts";
     const { initializeIosIncomingUrls } = await import(modulePath);
@@ -40,9 +40,6 @@ test("delivers share URLs to the form and preserves trial credentials", async ({
       },
       () => {},
     );
-    if (!("mount" in window) || typeof window.mount !== "function")
-      throw new Error("Missing gallery mount");
-    await window.mount({ story: "routes/trials.$grantId/OpenGrant" });
   });
   const input = page.getByRole("textbox", { name: "URL", exact: true });
   await expect(input).toHaveValue("https://example.com/first?a=1&b=2#section");

@@ -16,12 +16,12 @@ export async function openNewTrial(
   expect(
     await page.evaluate(() => ({
       local: localStorage.length,
-      appIdentity: localStorage.getItem("app-identity"),
+      trialBrowserState: localStorage.getItem("cup_trial_browser_state"),
       session: sessionStorage.length,
     })),
   ).toEqual({
     local: 1,
-    appIdentity: JSON.stringify({ lastGrantId: grant.grantId }),
+    trialBrowserState: JSON.stringify({ lastGrantId: grant.grantId }),
     session: 0,
   });
   expect(await page.content()).not.toContain("#credential=");

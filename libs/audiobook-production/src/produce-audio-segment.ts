@@ -52,6 +52,7 @@ type AudioSegmentBucket = {
 /** Supplies synthesis, storage, ownership, and sequence data for one narration segment. */
 export type ProduceOptions = {
   speechConfig?: SpeechConfig;
+  artifactPrefix?: string;
   ai: SpeechSynthesisAi;
   bucket: AudioSegmentBucket;
   conversionId: string;
@@ -63,6 +64,7 @@ export type ProduceOptions = {
 
 /** Synthesizes and stores one segment, reusing an identical existing object when possible. */
 export async function produceAudioSegment({
+  artifactPrefix,
   ai,
   speechConfig = SPEECH_CONFIG,
   bucket,
@@ -79,7 +81,7 @@ export async function produceAudioSegment({
     throw new Error("Cannot produce an audio segment from an empty narration chunk");
   }
 
-  const key = createAudioSegmentKey(conversionId, sequence);
+  const key = createAudioSegmentKey(conversionId, sequence, artifactPrefix);
   const expectedMetadata = createAudioSegmentMetadata(
     narrationChunk.text,
     undefined,

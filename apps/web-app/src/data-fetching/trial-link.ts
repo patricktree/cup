@@ -1,4 +1,5 @@
 import { queryOptions, useMutation } from "@tanstack/react-query";
+import React from "react";
 
 import {
   audiobookSchema,
@@ -13,6 +14,10 @@ import {
 } from "@cup/web-app-api.routes";
 
 import { createAppApiClient } from "#src/api-client.js";
+import { invalidateAccountHistory } from "#src/data-fetching/account-history.js";
+import { getResourceAccountSession } from "#src/data-fetching/account-session.js";
+import { invalidateAccountQueries } from "#src/data-fetching/account.js";
+import { queryClient } from "#src/data-fetching/query-client.js";
 
 const POLL_INTERVAL_MS = 2_000;
 const rpcClient = createAppApiClient();
@@ -36,10 +41,22 @@ export function createConversionQuery(conversionId: string) {
   });
 }
 
-export function useStartConversionMutation(grantId: string) {
+export function useStartTrialConversionMutation(
+  grantId: string,
+  onStarted: (conversionId: string) => Promise<void>,
+) {
+  const pending = React.useRef<{
+    grantId: string;
+    sourceUrl: string;
+    idempotencyKey: string;
+  } | null>(null);
   return useMutation({
-    mutationFn: ({ sourceUrl, idempotencyKey }: { sourceUrl: string; idempotencyKey: string }) =>
-      startConversion(grantId, sourceUrl, idempotencyKey),
+    mutationFn: async (sourceUrl: string) => {
+      if (pending.current?.grantId !== grantId || pending.current.sourceUrl !== sourceUrl)
+        pending.current = { grantId, sourceUrl, idempotencyKey: crypto.randomUUID() };
+      return startTrialConversion(grantId, sourceUrl, pending.current.idempotencyKey);
+    },
+    onSuccess: (result) => onStarted(result.conversion.conversionId),
   });
 }
 
@@ -58,12 +75,12 @@ export async function exchangeCredential(
   return parseResponse(response, (body) => grantSnapshotSchema.parse(body));
 }
 
-async function startConversion(
+async function startTrialConversion(
   grantId: string,
   sourceUrl: string,
   idempotencyKey: string,
 ): Promise<StartConversionResponse> {
-  const response = await rpcClient.startConversion({ grantId }, { sourceUrl }, idempotencyKey);
+  const response = await rpcClient.startTrialConversion({ grantId }, { sourceUrl }, idempotencyKey);
   return parseResponse(response, (body) => startConversionResponseSchema.parse(body));
 }
 
@@ -73,12 +90,33 @@ async function getGrant(grantId: string, signal: AbortSignal): Promise<GrantSnap
 }
 
 async function getConversion(conversionId: string, signal: AbortSignal): Promise<ConversionDetail> {
-  const response = await rpcClient.getConversion({ conversionId }, signal);
-  return parseResponse(response, (body) => conversionDetailSchema.parse(body));
+  const session = await getResourceAccountSession();
+  const response = session
+    ? await rpcClient
+        .createAuthenticatedRpcClient(session.access_token)
+        .getConversion({ conversionId }, signal)
+    : await rpcClient.getConversion({ conversionId }, signal);
+  const conversion = await parseResponse(response, (body) => conversionDetailSchema.parse(body));
+  if (
+    session &&
+    conversion.status !== "pending" &&
+    queryClient.getQueryData(createConversionQuery(conversionId).queryKey)?.status === "pending"
+  ) {
+    await Promise.all([
+      invalidateAccountQueries(session.user.id),
+      invalidateAccountHistory(session.user.id),
+    ]);
+  }
+  return conversion;
 }
 
 async function getAudiobook(conversionId: string, signal: AbortSignal): Promise<Audiobook> {
-  const response = await rpcClient.getAudiobook({ conversionId }, signal);
+  const session = await getResourceAccountSession();
+  const response = session
+    ? await rpcClient
+        .createAuthenticatedRpcClient(session.access_token)
+        .getAudiobook({ conversionId }, signal)
+    : await rpcClient.getAudiobook({ conversionId }, signal);
   return parseResponse(response, (body) => audiobookSchema.parse(body));
 }
 

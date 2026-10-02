@@ -1,3 +1,5 @@
+import { createConversionArtifactPrefix } from "@cup/conversion-contracts";
+
 import { AUDIO_FORMAT, AUDIOBOOK_CONTENT_TYPE } from "#src/audio-format.ts";
 import {
   SPEECH_CONFIG,
@@ -43,8 +45,12 @@ export type StoredAudioSegment = {
 };
 
 /** Creates the canonical R2 key for a conversion's segment sequence. */
-export function createAudioSegmentKey(conversionId: string, sequence: number): string {
-  return `conversions/${conversionId}/audio-segments/${sequence}.mp3`;
+export function createAudioSegmentKey(
+  conversionId: string,
+  sequence: number,
+  artifactPrefix?: string,
+): string {
+  return `${artifactPrefix ?? createConversionArtifactPrefix(conversionId)}audio-segments/${sequence}.mp3`;
 }
 
 /** Serializes the synthesis identity and optional analyzed audio metadata for R2. */
@@ -96,8 +102,13 @@ export function createAudioSegmentMetadata(
 export function assertStoredAudioSegment(
   audioObject: StoredAudioSegment,
   audioSegment: AudioSegmentReference,
+  artifactPrefix?: string,
 ): void {
-  const expectedKey = createAudioSegmentKey(audioSegment.conversionId, audioSegment.sequence);
+  const expectedKey = createAudioSegmentKey(
+    audioSegment.conversionId,
+    audioSegment.sequence,
+    artifactPrefix,
+  );
   const httpMetadata = audioObject.httpMetadata ?? {};
   const customMetadata = audioObject.customMetadata ?? {};
 

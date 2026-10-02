@@ -8,7 +8,11 @@ export type StartAudiobookConversionInput = {
 
 export type StartAudiobookConversionDependencies = {
   grant: {
-    startConversion(sourceUrl: string, idempotencyKey: string): Promise<StartGrantConversionResult>;
+    startConversion(
+      sourceUrl: string,
+      idempotencyKey: string,
+      nowMs?: number,
+    ): Promise<StartGrantConversionResult>;
     markWorkflowStarted(conversionId: string): Promise<void>;
   };
   registry: {

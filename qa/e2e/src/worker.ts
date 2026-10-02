@@ -1,24 +1,23 @@
 import { WorkflowEntrypoint } from "cloudflare:workers";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
+import { AccountDurableObject } from "@cup/accounts";
 import { createApiServer } from "@cup/api-server";
-import {
-  ConversionGrantDurableObject,
-  ConversionGrantRegistryDurableObject,
-} from "@cup/conversion-grants";
+import { ConversionGrantDurableObject } from "@cup/conversion-grants";
 import {
   runCreateAudiobookFromUrlWorkflow,
   type ConversionParams,
 } from "@cup/create-audiobook-from-url-workflow/runner";
 import { createFakeNarrationContentSelector } from "@cup/narration-content-selection/fake";
 import { createControlledSourceMaterialPreparer } from "@cup/prepare-source-material/fake";
+import { RegistryDurableObject } from "@cup/registry";
 
 import sourceHtml from "#src/fixtures/source.html";
 import { createTrackedSpeechProvider, handleSpeechControl } from "#src/speech-controls.ts";
 
 const CONTROLLED_SOURCE_URL = "https://source.example.test/fixture";
 
-export { ConversionGrantDurableObject, ConversionGrantRegistryDurableObject };
+export { RegistryDurableObject, AccountDurableObject, ConversionGrantDurableObject };
 
 /** Runs the production Workflow pipeline with deterministic local provider adapters. */
 export class CreateAudiobookFromUrlQaWorkflow extends WorkflowEntrypoint<Env, ConversionParams> {

@@ -2,6 +2,9 @@ import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import type { RouteHandler } from "@hono/zod-openapi";
 
 import {
+  accountParamsSchema,
+  inspectAccountResponseSchema,
+  listAccountDeletionsResponseSchema,
   setGrantAllowanceRequestSchema,
   createGrantRequestSchema,
   createGrantResponseSchema,
@@ -147,6 +150,32 @@ const migrateGrantsRoute = createRoute({
   },
 });
 
+const inspectAccountRoute = createRoute({
+  method: "get",
+  path: "/api/operator/accounts/{accountId}",
+  request: { params: accountParamsSchema },
+  responses: {
+    200: {
+      content: { "application/json": { schema: inspectAccountResponseSchema } },
+      description: "Account state, accounting, conversions, and artifact writers.",
+    },
+    404: errorResponse("Account unavailable."),
+    500: errorResponse("Operational error."),
+  },
+});
+const listAccountDeletionsRoute = createRoute({
+  method: "get",
+  path: "/api/operator/accounts/deletions",
+  responses: {
+    200: {
+      content: { "application/json": { schema: listAccountDeletionsResponseSchema } },
+      description: "Account deletion attempts and retained receipts.",
+    },
+    503: errorResponse("Account registry unavailable."),
+    500: errorResponse("Operational error."),
+  },
+});
+
 type OperatorApiEnvironment<Bindings extends object> = {
   Bindings: Bindings;
   Variables: { requestId: string };
@@ -161,6 +190,8 @@ type OperatorApiRouteHandler<Route, Bindings extends object> = Route extends Par
     ) => Response | Promise<Response>
   : never;
 export type OperatorApiHandlers<Bindings extends object> = {
+  inspectAccount: OperatorApiRouteHandler<typeof inspectAccountRoute, Bindings>;
+  listAccountDeletions: OperatorApiRouteHandler<typeof listAccountDeletionsRoute, Bindings>;
   createGrant: OperatorApiRouteHandler<typeof createGrantRoute, Bindings>;
   listGrants: OperatorApiRouteHandler<typeof listGrantsRoute, Bindings>;
   inspectGrant: OperatorApiRouteHandler<typeof inspectGrantRoute, Bindings>;
@@ -175,6 +206,21 @@ export function createOperatorApi<Bindings extends object>(
   handlers: OperatorApiHandlers<Bindings>,
 ) {
   return new OpenAPIHono<OperatorApiEnvironment<Bindings>>({ defaultHook })
+    .openapi(listAccountDeletionsRoute, handlers.listAccountDeletions)
+    .openapi(inspectAccountRoute, handlers.inspectAccount, (result, context) => {
+      if (!result.success)
+        return context.json(
+          {
+            error: {
+              code: "account-unavailable",
+              message: "Account unavailable.",
+              requestId: context.get("requestId"),
+            },
+          },
+          404,
+        );
+      return undefined;
+    })
     .openapi(createGrantRoute, handlers.createGrant)
     .openapi(listGrantsRoute, handlers.listGrants)
     .openapi(inspectGrantRoute, handlers.inspectGrant)

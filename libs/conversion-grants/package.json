@@ -13,7 +13,8 @@
     "#src/*": {
       "types": "./dist/types/*",
       "default": "./src/*"
-    }
+    },
+    "#test/*.ts": "./test/*.ts"
   },
   "exports": {
     "./package.json": "./package.json",
@@ -24,6 +25,10 @@
     "./contracts": {
       "types": "./dist/types/grant-contracts.d.ts",
       "default": "./src/grant-contracts.ts"
+    },
+    "./session": {
+      "types": "./dist/types/grant-session.d.ts",
+      "default": "./src/grant-session.ts"
     }
   },
   "scripts": {
@@ -33,6 +38,7 @@
     "clean": "del-cli --dot=true \"dist\" \"*.tsbuildinfo\"",
     "lint": "turbo run turbo:lint",
     "lint:fix": "turbo run turbo:lint:fix",
+    "migrations:generate": "node scripts/generate-migrations.mjs",
     "test": "vitest run",
     "turbo:build": "pnpm run cf-typegen:check && tsc --build ./tsconfig.json",
     "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
@@ -40,6 +46,7 @@
     "turbo:test": "pnpm run test"
   },
   "dependencies": {
+    "@cup/conversion-contracts": "workspace:*",
     "drizzle-orm": "^0.45.3",
     "temporal-polyfill": "^1.0.5",
     "zod": "^4.6.5"
@@ -50,6 +57,7 @@
     "@patricktree-stack/config-vitest": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native": "catalog:",
+    "drizzle-kit": "0.31.10",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
     "typescript": "catalog:",

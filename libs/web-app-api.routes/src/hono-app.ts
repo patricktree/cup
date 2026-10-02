@@ -3,12 +3,17 @@ import type { RouteHandler } from "@hono/zod-openapi";
 
 import {
   audiobookSchema,
+  authConfigResponseSchema,
+  accountSnapshotSchema,
+  accountHistorySchema,
+  accountStartResponseSchema,
+  deletionChallengeSchema,
+  accountConfirmationSchema,
   browserMutationHeadersSchema,
   conversionParamsSchema,
   errorResponseSchema,
   exchangeCredentialRequestSchema,
   conversionDetailSchema,
-  grantConversionsSchema,
   grantParamsSchema,
   grantSnapshotSchema,
   startConversionHeadersSchema,
@@ -31,6 +36,183 @@ const routeBrowserMutationHeadersSchema = browserMutationHeadersSchema.omit({
 });
 const routeStartConversionHeadersSchema = startConversionHeadersSchema.omit({
   "content-type": true,
+});
+
+const authConfigRoute = createRoute({
+  method: "get",
+  path: "/api/auth/config",
+  responses: {
+    500: errorResponse("Unavailable."),
+    200: {
+      description: "Public sign-in configuration.",
+      content: {
+        "application/json": {
+          schema: authConfigResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+const getAccountRoute = createRoute({
+  method: "get",
+  path: "/api/account",
+  responses: {
+    200: {
+      content: { "application/json": { schema: accountSnapshotSchema } },
+      description: "Account and allowance.",
+    },
+    401: errorResponse("Sign in required."),
+    403: errorResponse("Account blocked."),
+    429: errorResponse("Rate limited."),
+    503: errorResponse("Account setup unavailable."),
+  },
+});
+
+const lifecycleResponses = {
+  400: errorResponse("Invalid confirmation."),
+  401: errorResponse("Sign in required."),
+  403: errorResponse("Access blocked."),
+  409: errorResponse("Confirmation unavailable."),
+  429: errorResponse("Rate limited."),
+  500: errorResponse("Operational error."),
+  503: errorResponse("Account setup unavailable."),
+};
+const deletionChallengeRoute = createRoute({
+  method: "post",
+  path: "/api/account/deletion/challenge",
+  request: {
+    headers: routeBrowserMutationHeadersSchema,
+    body: { required: true, content: { "application/json": { schema: z.object({}).strict() } } },
+  },
+  responses: {
+    ...lifecycleResponses,
+    200: {
+      description: "Fresh authentication challenge.",
+      content: {
+        "application/json": {
+          schema: deletionChallengeSchema,
+        },
+      },
+    },
+  },
+});
+const scheduleDeletionRoute = createRoute({
+  method: "post",
+  path: "/api/account/deletion",
+  request: {
+    headers: routeBrowserMutationHeadersSchema,
+    body: {
+      required: true,
+      content: { "application/json": { schema: accountConfirmationSchema } },
+    },
+  },
+  responses: {
+    ...lifecycleResponses,
+    200: {
+      description: "Deletion scheduled.",
+      content: {
+        "application/json": {
+          schema: z.object({
+            state: z.literal("deletion_scheduled"),
+            recoveryDeadlineMs: z.number().optional(),
+          }),
+        },
+      },
+    },
+  },
+});
+const restoreAccountRoute = createRoute({
+  method: "post",
+  path: "/api/account/deletion/restore",
+  request: {
+    headers: routeBrowserMutationHeadersSchema,
+    body: {
+      required: true,
+      content: { "application/json": { schema: accountConfirmationSchema } },
+    },
+  },
+  responses: {
+    ...lifecycleResponses,
+    200: {
+      description: "Account restored.",
+      content: { "application/json": { schema: accountSnapshotSchema } },
+    },
+  },
+});
+const historyRoute = createRoute({
+  method: "get",
+  path: "/api/account/conversions",
+  request: {
+    query: z.object({
+      cursor: z
+        .string()
+        .regex(/^\d+:[0-9a-f-]{36}$/)
+        .optional(),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: accountHistorySchema,
+        },
+      },
+      description: "Private account history.",
+    },
+    401: errorResponse("Sign in required."),
+    403: errorResponse("Account blocked."),
+    503: errorResponse("Unavailable."),
+  },
+});
+const mediaSessionRoute = createRoute({
+  method: "post",
+  path: "/api/media/session",
+  request: {
+    headers: routeBrowserMutationHeadersSchema,
+    body: { required: true, content: { "application/json": { schema: z.object({}).strict() } } },
+  },
+  responses: {
+    204: { description: "Media cookie issued." },
+    401: errorResponse("Sign in required."),
+    403: errorResponse("Account blocked."),
+    503: errorResponse("Unavailable."),
+  },
+});
+const clearMediaRoute = createRoute({
+  method: "delete",
+  path: "/api/media/session",
+  request: { headers: routeBrowserMutationHeadersSchema },
+  responses: {
+    204: { description: "Media cookie removed." },
+    403: errorResponse("Origin blocked."),
+  },
+});
+
+const startAccountConversionRoute = createRoute({
+  method: "post",
+  path: "/api/account/conversions",
+  request: {
+    headers: routeStartConversionHeadersSchema,
+    body: {
+      required: true,
+      content: { "application/json": { schema: startConversionRequestSchema } },
+    },
+  },
+  responses: {
+    202: {
+      content: { "application/json": { schema: accountStartResponseSchema } },
+      description: "Account conversion accepted.",
+    },
+    200: {
+      content: { "application/json": { schema: accountStartResponseSchema } },
+      description: "Account conversion replayed.",
+    },
+    401: errorResponse("Sign in required."),
+    403: errorResponse("Account blocked."),
+    409: errorResponse("Credits unavailable or request conflict."),
+    503: errorResponse("Account unavailable."),
+  },
 });
 
 const exchangeSessionRoute = createRoute({
@@ -71,20 +253,6 @@ const getGrantRoute = createRoute({
   },
 });
 
-const getGrantConversionsRoute = createRoute({
-  method: "get",
-  path: "/api/grants/{grantId}/conversions",
-  request: { params: grantParamsSchema },
-  responses: {
-    200: {
-      content: { "application/json": { schema: grantConversionsSchema } },
-      description: "Conversions belonging to the grant.",
-    },
-    401: errorResponse("Grant session required or invalid."),
-    500: errorResponse("Operational error."),
-  },
-});
-
 const getConversionRoute = createRoute({
   method: "get",
   path: "/api/conversions/{conversionId}",
@@ -100,7 +268,7 @@ const getConversionRoute = createRoute({
   },
 });
 
-const startConversionRoute = createRoute({
+const startTrialConversionRoute = createRoute({
   method: "post",
   path: "/api/grants/{grantId}/conversions",
   request: {
@@ -216,11 +384,19 @@ type WebAppApiRouteHandler<Route, Bindings extends object> = Route extends Param
     ) => Response | Promise<Response>
   : never;
 export type WebAppApiHandlers<Bindings extends object> = {
+  deletionChallenge: WebAppApiRouteHandler<typeof deletionChallengeRoute, Bindings>;
+  scheduleDeletion: WebAppApiRouteHandler<typeof scheduleDeletionRoute, Bindings>;
+  restoreAccount: WebAppApiRouteHandler<typeof restoreAccountRoute, Bindings>;
+  authConfig: WebAppApiRouteHandler<typeof authConfigRoute, Bindings>;
+  getHistory: WebAppApiRouteHandler<typeof historyRoute, Bindings>;
+  mediaSession: WebAppApiRouteHandler<typeof mediaSessionRoute, Bindings>;
+  clearMedia: WebAppApiRouteHandler<typeof clearMediaRoute, Bindings>;
+  getAccount: WebAppApiRouteHandler<typeof getAccountRoute, Bindings>;
+  startAccountConversion: WebAppApiRouteHandler<typeof startAccountConversionRoute, Bindings>;
   exchangeSession: WebAppApiRouteHandler<typeof exchangeSessionRoute, Bindings>;
   getGrant: WebAppApiRouteHandler<typeof getGrantRoute, Bindings>;
-  getGrantConversions: WebAppApiRouteHandler<typeof getGrantConversionsRoute, Bindings>;
   getConversion: WebAppApiRouteHandler<typeof getConversionRoute, Bindings>;
-  startConversion: WebAppApiRouteHandler<typeof startConversionRoute, Bindings>;
+  startTrialConversion: WebAppApiRouteHandler<typeof startTrialConversionRoute, Bindings>;
   getAudiobook: WebAppApiRouteHandler<typeof audiobookRoute, Bindings>;
   getAudio: WebAppApiRouteHandler<typeof audioRoute, Bindings>;
   headAudio: WebAppApiRouteHandler<typeof audioHeadRoute, Bindings>;
@@ -232,11 +408,19 @@ export type WebAppApiHandlers<Bindings extends object> = {
 /** Creates the typed HTTP interface used by the web application. */
 export function createWebAppApi<Bindings extends object>(handlers: WebAppApiHandlers<Bindings>) {
   return new OpenAPIHono<WebAppApiEnvironment<Bindings>>({ defaultHook })
+    .openapi(deletionChallengeRoute, handlers.deletionChallenge)
+    .openapi(scheduleDeletionRoute, handlers.scheduleDeletion)
+    .openapi(restoreAccountRoute, handlers.restoreAccount)
+    .openapi(authConfigRoute, handlers.authConfig)
+    .openapi(historyRoute, handlers.getHistory)
+    .openapi(mediaSessionRoute, handlers.mediaSession)
+    .openapi(clearMediaRoute, handlers.clearMedia)
+    .openapi(getAccountRoute, handlers.getAccount)
+    .openapi(startAccountConversionRoute, handlers.startAccountConversion)
     .openapi(exchangeSessionRoute, handlers.exchangeSession)
     .openapi(getGrantRoute, handlers.getGrant)
-    .openapi(getGrantConversionsRoute, handlers.getGrantConversions)
     .openapi(getConversionRoute, handlers.getConversion)
-    .openapi(startConversionRoute, handlers.startConversion)
+    .openapi(startTrialConversionRoute, handlers.startTrialConversion)
     .openapi(audiobookRoute, handlers.getAudiobook)
     .openapi(audioRoute, handlers.getAudio)
     .openapi(audioHeadRoute, handlers.headAudio)
@@ -252,11 +436,19 @@ const unavailable = (): never => {
 /** Creates a handler-less application used only by local OpenAPI generation. */
 export function createWebAppContractApp() {
   return createWebAppApi({
+    deletionChallenge: unavailable,
+    scheduleDeletion: unavailable,
+    restoreAccount: unavailable,
+    authConfig: unavailable,
+    getHistory: unavailable,
+    mediaSession: unavailable,
+    clearMedia: unavailable,
+    getAccount: unavailable,
+    startAccountConversion: unavailable,
     exchangeSession: unavailable,
     getGrant: unavailable,
-    getGrantConversions: unavailable,
     getConversion: unavailable,
-    startConversion: unavailable,
+    startTrialConversion: unavailable,
     getAudiobook: unavailable,
     getAudio: unavailable,
     headAudio: unavailable,

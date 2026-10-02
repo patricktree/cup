@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { conversionFailureCategorySchema, durationBalanceSchema } from "@cup/conversion-contracts";
+
 const AUDIOBOOK_PATH_PATTERN =
   /^\/app\/audiobooks\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const LOWERCASE_UUID_V4_PATTERN =
@@ -15,51 +17,6 @@ export type GrantState = z.infer<typeof grantStateSchema>;
 export const projectedGrantStates = ["provisioning", ...grantStates] as const;
 export const projectedGrantStateSchema = z.enum(projectedGrantStates);
 export type ProjectedGrantState = z.infer<typeof projectedGrantStateSchema>;
-
-export const conversionFailureCategories = [
-  "workflow-start",
-  "source-preparation",
-  "content-selection",
-  "content-limit",
-  "narration-synthesis",
-  "audiobook-assembly",
-  "workflow-platform",
-  "internal",
-] as const;
-export const conversionFailureCategorySchema = z.enum(conversionFailureCategories);
-export type ConversionFailureCategory = z.infer<typeof conversionFailureCategorySchema>;
-
-export const ConversionPhase = {
-  CONVERSION_START: "conversion-start",
-  SOURCE_MATERIAL_PREPARATION: "source-material-preparation",
-  NARRATION_CONTENT_SELECTION: "narration-content-selection",
-  NARRATION_DOCUMENT_CREATION: "narration-document-creation",
-  AUDIO_SEGMENT_PRODUCTION: "audio-segment-production",
-  AUDIOBOOK_ASSEMBLY: "audiobook-assembly",
-  AUDIOBOOK_STORAGE: "audiobook-storage",
-  FINALIZATION: "finalization",
-} as const;
-export const conversionPhaseSchema = z.enum(ConversionPhase);
-export type ConversionPhase = z.infer<typeof conversionPhaseSchema>;
-export const conversionPhaseOrder = [
-  ConversionPhase.CONVERSION_START,
-  ConversionPhase.SOURCE_MATERIAL_PREPARATION,
-  ConversionPhase.NARRATION_CONTENT_SELECTION,
-  ConversionPhase.NARRATION_DOCUMENT_CREATION,
-  ConversionPhase.AUDIO_SEGMENT_PRODUCTION,
-  ConversionPhase.AUDIOBOOK_ASSEMBLY,
-  ConversionPhase.AUDIOBOOK_STORAGE,
-  ConversionPhase.FINALIZATION,
-] as const satisfies ReadonlyArray<ConversionPhase>;
-
-export const durationBalanceSchema = z
-  .object({
-    availableMilliseconds: z.number().int().min(0),
-    reservedMilliseconds: z.number().int().min(0),
-    spentMilliseconds: z.number().int().min(0),
-  })
-  .strict();
-export type DurationBalance = z.infer<typeof durationBalanceSchema>;
 
 const conversionBaseSchema = z.object({
   conversionId: uuidV4Schema,

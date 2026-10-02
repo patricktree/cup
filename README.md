@@ -70,3 +70,5 @@ Cup produces MP3 audio, WebVTT captions, and EPUB 3 documents with Media Overlay
 ## Development
 
 See [./AGENTS.md](./AGENTS.md).
+
+See [Social signup operations](docs/social-signup-operations.md) for local Supabase setup, account lifecycle operations, and deployment configuration.

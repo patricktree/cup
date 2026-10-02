@@ -73,11 +73,16 @@ test("follows homepage and app entry redirects and loads assets under app", asyn
   for (const pathname of ["/", "/app"]) {
     await gotoPage(page, `${workerEnvironment.origin}${pathname}`);
     await expect(page).toHaveURL(`${workerEnvironment.origin}/app/`);
-    await expect(page.getByRole("heading", { name: "Cup" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Just listen." })).toBeVisible();
   }
 
   const assetPaths = await page.evaluate(() =>
-    performance.getEntriesByType("resource").map((entry) => new URL(entry.name).pathname),
+    performance
+      .getEntriesByType("resource")
+      .filter(
+        (entry) => !(entry instanceof PerformanceResourceTiming && entry.initiatorType === "fetch"),
+      )
+      .map((entry) => new URL(entry.name).pathname),
   );
   expect(assetPaths.some((pathname) => pathname.startsWith("/app/assets/"))).toBe(true);
   expect(assetPaths.every((pathname) => pathname.startsWith("/app/"))).toBe(true);

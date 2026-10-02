@@ -1,3 +1,5 @@
+import { createConversionArtifactPrefix } from "@cup/conversion-contracts";
+
 import { AUDIOBOOK_CONTENT_TYPE } from "#src/audio-format.ts";
 import {
   assertStoredAudioSegment,
@@ -17,6 +19,7 @@ export type AudioReference = {
 
 /** Supplies the storage target and ordered segment sequence for audiobook assembly. */
 export type AssembleOptions = {
+  artifactPrefix?: string;
   bucket: {
     get(key: string): Promise<(StoredAudioSegment & { body: ReadableStream<Uint8Array> }) | null>;
     put(
@@ -31,6 +34,7 @@ export type AssembleOptions = {
 
 /** Streams contiguous MP3 segments into one stored audiobook without buffering the full output. */
 export async function assembleAudiobook({
+  artifactPrefix,
   bucket,
   conversionId,
   audioSegments,
@@ -45,7 +49,7 @@ export async function assembleAudiobook({
     (total, audioSegment) => total + audioSegment.durationMilliseconds,
     0,
   );
-  const key = `conversions/${conversionId}/audiobook.mp3`;
+  const key = `${artifactPrefix ?? createConversionArtifactPrefix(conversionId)}audiobook.mp3`;
   const fixedLengthStream = new FixedLengthStream(audiobookByteLength);
   const writer = fixedLengthStream.writable.getWriter();
   const upload = bucket.put(key, fixedLengthStream.readable, {
@@ -63,7 +67,7 @@ export async function assembleAudiobook({
         );
       }
 
-      assertStoredAudioSegment(audioObject, audioSegment);
+      assertStoredAudioSegment(audioObject, audioSegment, artifactPrefix);
       const identity = JSON.stringify(getStoredSpeechConfig(audioObject));
       if (synthesisIdentity !== undefined && synthesisIdentity !== identity) {
         throw new Error("Cannot assemble audio segments with different synthesis identities");

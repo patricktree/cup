@@ -1,6 +1,7 @@
 import { hc } from "hono/client";
 
 import type {
+  AccountParams,
   CreateGrantRequest,
   GrantParams,
   ListGrantsQuery,
@@ -56,6 +57,14 @@ export class OperatorApiClient {
 
   migrateGrants() {
     return this.#client.api.operator["grant-migrations"].$post({ json: {} }, this.options());
+  }
+
+  inspectAccount(params: AccountParams) {
+    return this.#client.api.operator.accounts[":accountId"].$get({ param: params }, this.options());
+  }
+
+  listAccountDeletions() {
+    return this.#client.api.operator.accounts.deletions.$get({}, this.options());
   }
 
   private options() {

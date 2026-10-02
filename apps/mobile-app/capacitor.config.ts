@@ -1,7 +1,9 @@
 const path = require("node:path");
 
+import type {} from "@aparajita/capacitor-secure-storage";
 import type {} from "@capacitor/app";
 import type { CapacitorConfig } from "@capacitor/cli";
+import type {} from "@capawesome/capacitor-google-sign-in";
 
 const pathToWebApp = require.resolve("@cup/web-app/package.json");
 const pathToWebAppDist = path.join(pathToWebApp, "..", "./dist/web");

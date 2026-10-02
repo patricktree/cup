@@ -3,18 +3,21 @@
   "name": "workflow-integration-test",
   "main": "test/worker.ts",
   "compatibility_date": "2026-08-18",
+  "vars": { "CONVERSION_OWNER_LIMIT": "10" },
   "durable_objects": {
     "bindings": [
+      { "name": "ACCOUNTS", "class_name": "AccountDurableObject" },
       { "name": "CONVERSION_GRANTS", "class_name": "ConversionGrantDurableObject" },
-      { "name": "CONVERSION_GRANT_REGISTRY", "class_name": "ConversionGrantRegistryDurableObject" },
+      { "name": "REGISTRY", "class_name": "RegistryDurableObject" },
     ],
   },
   "migrations": [
     {
       "tag": "v1",
       "new_sqlite_classes": [
+        "AccountDurableObject",
         "ConversionGrantDurableObject",
-        "ConversionGrantRegistryDurableObject",
+        "RegistryDurableObject",
       ],
     },
   ],

@@ -4,24 +4,32 @@ import { createFileRoute, useNavigate, type ErrorComponentProps } from "@tanstac
 import React from "react";
 
 import { ErrorMessage } from "#src/app/components/error-message.js";
-import { MainSection } from "#src/app/components/main-components.js";
 import { DSButton } from "#src/app/design-system/button.js";
+import {
+  refreshPlaybackAuthorization,
+  getFreshAccountSession,
+  getResourceAccountSession,
+  stopPlayback,
+} from "#src/data-fetching/account-session.js";
+import { useAccountSession } from "#src/data-fetching/account.js";
 import { ApiError, createAudiobookQuery } from "#src/data-fetching/trial-link.js";
 
 export const Route = createFileRoute("/audiobooks/$conversionId")({
   component: AudiobookPage,
   loader: async ({ context, params }) => {
+    await refreshPlaybackAuthorization(await getResourceAccountSession());
     await context.queryClient.ensureQueryData(createAudiobookQuery(params.conversionId));
   },
   errorComponent: RouteErrorComponent,
 });
 
 function AudiobookPage(): React.JSX.Element {
+  const session = useAccountSession();
   const { conversionId } = Route.useParams();
   const { data: audiobook } = useSuspenseQuery(createAudiobookQuery(conversionId));
 
   return (
-    <MainSection>
+    <>
       <h1>{audiobook.title}</h1>
       <p>
         <a href={audiobook.originalUrl}>Open original source</a>
@@ -45,13 +53,17 @@ function AudiobookPage(): React.JSX.Element {
         `}
         aria-label={`Play ${audiobook.title}`}
         controls
-        crossOrigin="anonymous"
+        onError={() => {
+          stopPlayback();
+          void getFreshAccountSession().then(refreshPlaybackAuthorization).catch(stopPlayback);
+        }}
+        crossOrigin={session ? "use-credentials" : "anonymous"}
         preload="metadata"
       >
         <source src={audiobook.audio.url} type={audiobook.audio.contentType} />
         <track default kind="captions" label="Narration" src={audiobook.captions.url} />
       </audio>
-    </MainSection>
+    </>
   );
 }
 

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { createConversionArtifactPrefix } from "@cup/conversion-contracts";
 import { SYNCHRONIZATION_UNIT_SCHEMA } from "@cup/narration-document-creation";
 import type { NarrationDocument } from "@cup/narration-document-creation";
 
@@ -62,6 +63,7 @@ export type ManifestStorage = {
 
 /** Supplies the artifacts and source metadata used to create an audiobook manifest. */
 export type StoreOptions = {
+  artifactPrefix?: string;
   bucket: ManifestStorage;
   conversionId: string;
   title: string;
@@ -77,7 +79,7 @@ export type LoadOptions = {
   audiobookReference: AudiobookReference;
 };
 
-const audiobookSchema: z.ZodType<Audiobook> = z
+export const audiobookSchema: z.ZodType<Audiobook> = z
   .object({
     title: z.string().min(1),
     originalUrl: z.url(),
@@ -135,6 +137,7 @@ const audiobookSchema: z.ZodType<Audiobook> = z
 
 /** Derives synchronization cues and stores the canonical audiobook manifest. */
 export async function storeAudiobook({
+  artifactPrefix,
   bucket,
   conversionId,
   title,
@@ -190,7 +193,7 @@ export async function storeAudiobook({
     synchronizationCues,
   });
   const body = JSON.stringify(audiobook);
-  const key = `conversions/${conversionId}/audiobook.json`;
+  const key = `${artifactPrefix ?? createConversionArtifactPrefix(conversionId)}audiobook.json`;
   const storedManifest = await bucket.put(key, body, {
     httpMetadata: { contentType: AUDIOBOOK_MANIFEST_CONTENT_TYPE },
   });

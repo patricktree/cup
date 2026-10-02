@@ -18,6 +18,19 @@ const router = createAppRouter(memoryHistory);
 export const OpenGrant = {
   component: () => <TrialRoute />,
   handlers: [
+    // Native share tests use the production API origin; keep auth initialization local too.
+    http.get("*/api/auth/config", () =>
+      HttpResponse.json(
+        {
+          error: {
+            code: "auth-unavailable",
+            message: "Sign-in is unavailable in this trial story.",
+            requestId: "trial-story",
+          },
+        } satisfies ErrorResponse,
+        { status: 503 },
+      ),
+    ),
     http.get(`*/api/grants/${GRANT_ID}`, () =>
       HttpResponse.json({
         grantId: GRANT_ID,
@@ -112,3 +125,22 @@ function TrialRoute({ hash = "" }: { hash?: string }) {
 
   return <GlobalProviders router={router} />;
 }
+
+export const StartUnavailable = {
+  component: () => <TrialRoute />,
+  handlers: [
+    ...OpenGrant.handlers,
+    http.post(`/api/grants/${GRANT_ID}/conversions`, () =>
+      HttpResponse.json(
+        {
+          error: {
+            requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
+            code: "dependency-unavailable",
+            message: "The service is unavailable.",
+          },
+        } satisfies ErrorResponse,
+        { status: 503 },
+      ),
+    ),
+  ],
+} satisfies Story;

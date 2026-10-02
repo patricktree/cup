@@ -1,18 +1,21 @@
 import { DurableObject } from "cloudflare:workers";
 
-import type { ConversionGrantRegistryDurableObject } from "#src/conversion-grant-registry-durable-object.ts";
-import { estimateAudioDuration } from "#src/duration-accounting.ts";
+import { createConversionArtifactPrefix } from "@cup/conversion-contracts";
+import {
+  ConversionPhase,
+  type ConversionFailureCategory,
+  type AudiobookReference,
+  type ConversionMeasurements,
+} from "@cup/conversion-contracts";
+import { estimateAudioDuration } from "@cup/conversion-contracts/duration-accounting";
+
 import { canonicalJson, encodeBase64Url } from "#src/encoding.ts";
-import { ConversionPhase } from "#src/grant-contracts.ts";
 import type {
-  ConversionFailureCategory,
   GrantConversions,
   GrantSnapshot,
   OperatorGrantSnapshot,
 } from "#src/grant-contracts.ts";
 import type {
-  AudiobookReference,
-  ConversionMeasurements,
   ExchangeCredentialResult,
   GrantConversion,
   GrantRegistrySnapshot,
@@ -33,20 +36,21 @@ import {
   DEFAULT_ALLOWANCE_MILLISECONDS,
   RECONCILIATION_CUTOFF_MS,
 } from "#src/grant-model.ts";
+import type { GrantRegistry } from "#src/grant-registry.ts";
 import { signSession, verifyRootCredential, verifySession } from "#src/grant-session.ts";
 import { ConversionGrantSqlite } from "#src/grant-sqlite.ts";
 import { nowMilliseconds } from "#src/time.ts";
 
 const START_RATE_WINDOW_MS = 60_000;
-const START_RATE_LIMIT = 5;
 const RECONCILIATION_RETRY_MS = 60_000;
 const MAINTENANCE_RETRY_MS = 60 * 60 * 1_000;
 const CLEANUP_RETRY_CUTOFF_MS = 7 * 24 * 60 * 60 * 1_000;
 
 type ConversionGrantEnvironment = {
+  CONVERSION_OWNER_LIMIT: string;
   CREATE_AUDIOBOOK_FROM_URL_WORKFLOW: Workflow<{ sourceUrl: string; grantId: string }>;
   AUDIO_BUCKET: R2Bucket;
-  CONVERSION_GRANT_REGISTRY: DurableObjectNamespace<ConversionGrantRegistryDurableObject>;
+  REGISTRY: GrantRegistry;
 };
 
 export class ConversionGrantDurableObject extends DurableObject<ConversionGrantEnvironment> {
@@ -175,16 +179,21 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
 
       const windowStart = nowMs - START_RATE_WINDOW_MS;
       record.startAttempts = record.startAttempts.filter((attempt) => attempt > windowStart);
-      record.startAttempts.push(nowMs);
-      if (record.startAttempts.length > START_RATE_LIMIT) {
+      const startLimit = Number(this.env.CONVERSION_OWNER_LIMIT);
+
+      if (!Number.isSafeInteger(startLimit) || startLimit <= 0)
+        throw new Error("Invalid conversion rate limit");
+
+      if (record.startAttempts.length >= startLimit) {
         await this.sqlite.save(record);
-        const retryAt = record.startAttempts.at(-START_RATE_LIMIT)! + START_RATE_WINDOW_MS;
+        const retryAt = record.startAttempts[0]! + START_RATE_WINDOW_MS;
         return {
           result: "rate-limited",
           retryAfterSeconds: Math.max(1, Math.ceil((retryAt - nowMs) / 1_000)),
         };
       }
 
+      record.startAttempts.push(nowMs);
       const state = deriveGrantState(record, nowMs);
       if (state !== "open") {
         await this.sqlite.save(record);
@@ -541,9 +550,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
     record = await this.sqlite.requireRecord();
     if (record.registryConfirmedSnapshotRevision < record.registrySnapshotRevision) {
       try {
-        const registry = this.env.CONVERSION_GRANT_REGISTRY.get(
-          this.env.CONVERSION_GRANT_REGISTRY.idFromName("registry"),
-        );
+        const registry = this.env.REGISTRY.get(this.env.REGISTRY.idFromName("registry"));
         await registry.applyGrantRegistrySnapshot(createGrantRegistrySnapshot(record));
         await this.confirmRegistrySnapshot(record.registrySnapshotRevision);
       } catch {
@@ -608,7 +615,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
         let cursor: string | undefined;
         do {
           const page = await this.env.AUDIO_BUCKET.list({
-            prefix: `conversions/${conversion.conversionId}/`,
+            prefix: createConversionArtifactPrefix(conversion.conversionId),
             ...(cursor === undefined ? {} : { cursor }),
           });
           if (page.objects.length > 0) {

@@ -26,9 +26,11 @@
     "turbo:lint:fix": "pnpm run turbo:lint --fix"
   },
   "dependencies": {
+    "@cup/accounts": "workspace:*",
     "@cup/api-server": "workspace:*",
     "@cup/conversion-grants": "workspace:*",
     "@cup/create-audiobook-from-url-workflow": "workspace:*",
+    "@cup/registry": "workspace:*",
     "@cup/web-app": "workspace:*"
   },
   "devDependencies": {

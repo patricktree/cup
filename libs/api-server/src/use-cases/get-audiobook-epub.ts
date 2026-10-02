@@ -1,4 +1,5 @@
 import {
+  createAudioSegmentKey,
   createAudioSegmentReference,
   type Audiobook,
   type AudioSegmentReference,
@@ -23,6 +24,7 @@ export type GetAudiobookEpubDependencies = {
   getArtifactMetadata(key: string): Promise<StoredArtifactMetadata | undefined>;
   exportEpub(input: {
     conversionId: string;
+    artifactPrefix: string;
     audiobook: Audiobook;
     audioSegments: readonly AudioSegmentReference[];
     modifiedAt: string;
@@ -35,7 +37,8 @@ export async function getAudiobookEpub(
   audiobook: Audiobook,
   dependencies: GetAudiobookEpubDependencies,
 ): Promise<AudiobookEpubArtifact | undefined> {
-  const key = `conversions/${conversionId}/audiobook.epub`;
+  const artifactPrefix = audiobook.audio.key.slice(0, -"audiobook.mp3".length);
+  const key = `${artifactPrefix}audiobook.epub`;
   const existingEpub = await dependencies.getEpub(key);
   if (existingEpub !== undefined) return existingEpub;
 
@@ -45,7 +48,7 @@ export async function getAudiobookEpub(
   const audioSegments = await Promise.all(
     audiobook.synchronizationCues.map(async (_cue, sequence) => {
       const segment = await dependencies.getArtifactMetadata(
-        `conversions/${conversionId}/audio-segments/${sequence}.mp3`,
+        createAudioSegmentKey(conversionId, sequence, artifactPrefix),
       );
       if (segment === undefined) throw new Error("Audiobook segment not found");
       return createAudioSegmentReference(segment, conversionId, sequence);
@@ -54,6 +57,7 @@ export async function getAudiobookEpub(
 
   await dependencies.exportEpub({
     conversionId,
+    artifactPrefix,
     audiobook,
     audioSegments,
     modifiedAt: storedAudio.uploadedAt,
