@@ -18,11 +18,11 @@ export const ReadyAudiobook = {
   handlers: [
     http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(createAudiobook())),
     http.get(
-      `/api/audiobooks/${CONVERSION_ID}/audio.mp3`,
+      `/api/files/audiobooks/${CONVERSION_ID}/audio.mp3`,
       () => new HttpResponse(null, { headers: { "Content-Type": "audio/mpeg" } }),
     ),
     http.get(
-      `/api/audiobooks/${CONVERSION_ID}/captions.vtt`,
+      `/api/files/audiobooks/${CONVERSION_ID}/captions.vtt`,
       () =>
         new HttpResponse(
           "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nKeep the important boundaries real.\n",
@@ -83,15 +83,15 @@ function createAudiobook(): Audiobook {
     ],
     audio: {
       contentType: "audio/mpeg",
-      url: `${window.location.origin}/api/audiobooks/${CONVERSION_ID}/audio.mp3`,
+      url: `${window.location.origin}/api/files/audiobooks/${CONVERSION_ID}/audio.mp3`,
     },
     captions: {
       contentType: "text/vtt",
-      url: `${window.location.origin}/api/audiobooks/${CONVERSION_ID}/captions.vtt`,
+      url: `${window.location.origin}/api/files/audiobooks/${CONVERSION_ID}/captions.vtt`,
     },
     epub: {
       contentType: "application/epub+zip",
-      url: `${window.location.origin}/api/audiobooks/${CONVERSION_ID}/book.epub`,
+      url: `${window.location.origin}/api/files/audiobooks/${CONVERSION_ID}/book.epub`,
     },
   };
 }

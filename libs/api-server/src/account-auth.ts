@@ -112,5 +112,5 @@ export function mediaRequest(request: Request): Request {
 
 export function mediaCookie(request: Request, token: string, maxAge: number) {
   const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
-  return `cup_media=${token}; Path=/api/audiobooks; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
+  return `cup_media=${token}; Path=/api/files; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
 }

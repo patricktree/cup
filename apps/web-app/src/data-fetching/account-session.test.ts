@@ -25,21 +25,21 @@ test("logout clears a cookie issued by an earlier pending media request", async 
   await page.route("https://auth.example.com/auth/v1/logout**", (route) =>
     route.fulfill({ status: 204 }),
   );
-  await page.route("**/api/media/session", async (route) => {
+  await page.route("**/api/files/session", async (route) => {
     if (route.request().method() === "POST") {
       markStarted?.();
       await issuanceHeld;
       await route.fulfill({
         status: 204,
         headers: {
-          "Set-Cookie": "cup_media=old-session; Path=/api/audiobooks; HttpOnly; SameSite=Lax",
+          "Set-Cookie": "cup_media=old-session; Path=/api/files; HttpOnly; SameSite=Lax",
         },
       });
     } else {
       await route.fulfill({
         status: 204,
         headers: {
-          "Set-Cookie": "cup_media=; Path=/api/audiobooks; Max-Age=0; HttpOnly; SameSite=Lax",
+          "Set-Cookie": "cup_media=; Path=/api/files; Max-Age=0; HttpOnly; SameSite=Lax",
         },
       });
     }
@@ -171,7 +171,7 @@ test("concurrent session reads share an SDK refresh and cannot restore a signed-
   await page.route("https://auth.example.com/auth/v1/logout**", (route) =>
     route.fulfill({ status: 204 }),
   );
-  await page.route("**/api/media/session", (route) => route.fulfill({ status: 204 }));
+  await page.route("**/api/files/session", (route) => route.fulfill({ status: 204 }));
   await page.goto("/ui-gallery/index.html");
   await page.evaluate(
     async ({ storageKey, stored }) => {

@@ -350,15 +350,15 @@ function createAudiobook(origin: string): Record<string, unknown> {
     ],
     audio: {
       contentType: "audio/mpeg",
-      url: `${origin}/api/audiobooks/${CONVERSION_ID}/audio.mp3`,
+      url: `${origin}/api/files/audiobooks/${CONVERSION_ID}/audio.mp3`,
     },
     captions: {
       contentType: "text/vtt",
-      url: `${origin}/api/audiobooks/${CONVERSION_ID}/captions.vtt`,
+      url: `${origin}/api/files/audiobooks/${CONVERSION_ID}/captions.vtt`,
     },
     epub: {
       contentType: "application/epub+zip",
-      url: `${origin}/api/audiobooks/${CONVERSION_ID}/book.epub`,
+      url: `${origin}/api/files/audiobooks/${CONVERSION_ID}/book.epub`,
     },
   };
 }
@@ -394,16 +394,19 @@ async function mockAudiobook(page: Page, origin: string): Promise<void> {
 }
 
 async function mockAudiobookMedia(page: Page, origin: string): Promise<void> {
-  await page.route(`${origin}/api/audiobooks/${CONVERSION_ID}/audio.mp3`, async (route) => {
+  await page.route(`${origin}/api/files/audiobooks/${CONVERSION_ID}/audio.mp3`, async (route) => {
     await route.fulfill({ status: 200, contentType: "audio/mpeg", body: "" });
   });
-  await page.route(`${origin}/api/audiobooks/${CONVERSION_ID}/captions.vtt`, async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "text/vtt",
-      body: "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nKeep the important boundaries real.\n",
-    });
-  });
+  await page.route(
+    `${origin}/api/files/audiobooks/${CONVERSION_ID}/captions.vtt`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/vtt",
+        body: "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nKeep the important boundaries real.\n",
+      });
+    },
+  );
 }
 
 async function fulfillJson(route: Route, status: number, body: unknown): Promise<void> {

@@ -38,7 +38,7 @@ public class AccountMediaPlugin extends Plugin {
 
     private void setCookie(PluginCall call, String value) {
         CookieManager manager = CookieManager.getInstance();
-        manager.setCookie(ORIGIN, value + "; Path=/api/audiobooks; Secure; HttpOnly; SameSite=None", accepted -> {
+        manager.setCookie(ORIGIN, value + "; Path=/api/files; Secure; HttpOnly; SameSite=None", accepted -> {
             manager.flush();
             if (Boolean.TRUE.equals(accepted)) call.resolve(new JSObject());
             else call.reject("Media cookie could not be installed");

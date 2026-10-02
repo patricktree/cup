@@ -26,8 +26,8 @@ export class WebAppApiClient {
     return this.#honoClient.api.auth.config.$get();
   }
 
-  async clearMediaSession() {
-    return this.#honoClient.api.media.session.$delete(
+  async clearFilesSession() {
+    return this.#honoClient.api.files.session.$delete(
       { header: browserHeaders() },
       { init: { credentials: "include" } },
     );
@@ -130,8 +130,8 @@ export class AuthenticatedRpcClient {
     );
   }
 
-  async createMediaSession() {
-    return this.#honoClient.api.media.session.$post(
+  async createFilesSession() {
+    return this.#honoClient.api.files.session.$post(
       { json: {}, header: browserHeaders() },
       this.#options(),
     );

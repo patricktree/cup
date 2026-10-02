@@ -158,7 +158,7 @@ export function refreshPlaybackAuthorization(current: Session | null = sessionSn
       if (!latest || isSigningOut || generation !== sessionGeneration) return undefined;
       const response = await createAppApiClient()
         .createAuthenticatedRpcClient(latest.access_token)
-        .createMediaSession();
+        .createFilesSession();
       if (!response.ok) {
         stopPlayback();
         throw new Error("Sign in again to continue playback.");
@@ -197,7 +197,7 @@ async function finishSignOut() {
   // A late POST response may set a cookie; deletion must follow all prior issuance.
   await mediaUpdates.catch(() => undefined);
   await createAppApiClient()
-    .clearMediaSession()
+    .clearFilesSession()
     .catch(() => undefined);
   await clearNativeAuthSession();
   if (response.error)

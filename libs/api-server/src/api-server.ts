@@ -286,7 +286,7 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
     );
     return context.json(page, 200);
   },
-  async mediaSession(context) {
+  async filesSession(context) {
     const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
     if (validation.result === "invalid") return validation.response;
     const auth = await authenticateAccount(context.req.raw, context.env);
@@ -309,7 +309,7 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
     );
     return context.body(null, 204);
   },
-  clearMedia(context) {
+  clearFilesSession(context) {
     const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
     if (validation.result === "invalid") return validation.response;
     context.header("Set-Cookie", mediaCookie(context.req.raw, "", 0));
@@ -600,15 +600,15 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
           synchronizationCues: audiobook.synchronizationCues,
           audio: {
             contentType: "audio/mpeg",
-            url: `${origin}/api/audiobooks/${conversionId}/audio.mp3`,
+            url: `${origin}/api/files/audiobooks/${conversionId}/audio.mp3`,
           },
           captions: {
             contentType: "text/vtt",
-            url: `${origin}/api/audiobooks/${conversionId}/captions.vtt`,
+            url: `${origin}/api/files/audiobooks/${conversionId}/captions.vtt`,
           },
           epub: {
             contentType: "application/epub+zip",
-            url: `${origin}/api/audiobooks/${conversionId}/book.epub`,
+            url: `${origin}/api/files/audiobooks/${conversionId}/book.epub`,
           },
         }),
         200,
@@ -1011,51 +1011,53 @@ export function createApiServer(dependencies: ApiServerDependencies = production
     return next();
   });
 
-  app.use("/api/audiobooks/*", async (context, next) => {
-    const origin = context.req.header("Origin");
-    if (origin === "https://localhost" || origin === "https://cup-audio.com") {
-      context.header("Access-Control-Allow-Origin", origin);
-      context.header("Access-Control-Allow-Credentials", "true");
-      context.header("Vary", "Origin");
-    }
-    const rawConversionId = context.req.path.split("/")[3];
-    if (!rawConversionId) return next();
-    let conversionId: string;
-    try {
-      conversionId = decodeURIComponent(rawConversionId);
-    } catch {
-      return jsonError(context.get("requestId"), "invalid-input", "Invalid conversion ID.", 400);
-    }
-    const registry = getRegistryStub(context.env);
-    const owner = await registry.findConversionOwner(conversionId);
-    if (owner?.kind !== "account") {
+  for (const path of ["/api/audiobooks/*", "/api/files/audiobooks/*"]) {
+    app.use(path, async (context, next) => {
+      const origin = context.req.header("Origin");
+      if (origin === "https://localhost" || origin === "https://cup-audio.com") {
+        context.header("Access-Control-Allow-Origin", origin);
+        context.header("Access-Control-Allow-Credentials", "true");
+        context.header("Vary", "Origin");
+      }
+      const isFile = path === "/api/files/audiobooks/*";
+      const rawConversionId = context.req.path.split("/")[isFile ? 4 : 3];
+      if (!rawConversionId) return next();
+      let conversionId: string;
+      try {
+        conversionId = decodeURIComponent(rawConversionId);
+      } catch {
+        return jsonError(context.get("requestId"), "invalid-input", "Invalid conversion ID.", 400);
+      }
+      const registry = getRegistryStub(context.env);
+      const owner = await registry.findConversionOwner(conversionId);
+      if (owner?.kind !== "account") {
+        await next();
+        if (origin !== "https://localhost" && origin !== "https://cup-audio.com")
+          context.header("Access-Control-Allow-Origin", "*");
+        context.header("Cross-Origin-Resource-Policy", "cross-origin");
+        return;
+      }
+      const auth = await authenticateAccount(
+        isFile ? mediaRequest(context.req.raw) : context.req.raw,
+        context.env,
+      );
+      if (auth.result !== "authenticated")
+        return accountAuthError(auth.result, context.get("requestId"));
+      if (auth.snapshot.state !== "active")
+        return accountAuthError("blocked", context.get("requestId"));
+      if (auth.snapshot.accountId !== owner.accountId)
+        return jsonError(
+          context.get("requestId"),
+          "audiobook-not-found",
+          "Audiobook not found.",
+          404,
+        );
       await next();
       if (origin !== "https://localhost" && origin !== "https://cup-audio.com")
-        context.header("Access-Control-Allow-Origin", "*");
-      context.header("Cross-Origin-Resource-Policy", "cross-origin");
-      return;
-    }
-    const isMedia = /\/(?:audio\.mp3|captions\.vtt|book\.epub)$/.test(context.req.path);
-    const auth = await authenticateAccount(
-      isMedia ? mediaRequest(context.req.raw) : context.req.raw,
-      context.env,
-    );
-    if (auth.result !== "authenticated")
-      return accountAuthError(auth.result, context.get("requestId"));
-    if (auth.snapshot.state !== "active")
-      return accountAuthError("blocked", context.get("requestId"));
-    if (auth.snapshot.accountId !== owner.accountId)
-      return jsonError(
-        context.get("requestId"),
-        "audiobook-not-found",
-        "Audiobook not found.",
-        404,
-      );
-    await next();
-    if (origin !== "https://localhost" && origin !== "https://cup-audio.com")
-      context.header("Access-Control-Allow-Origin", undefined);
-    context.header("Cross-Origin-Resource-Policy", "same-origin");
-  });
+        context.header("Access-Control-Allow-Origin", undefined);
+      context.header("Cross-Origin-Resource-Policy", "same-origin");
+    });
+  }
 
   app.use("/api/operator/*", async (context, next) => {
     if (!(await dependencies.validateOperatorAccess(context.req.raw, context.env)))
@@ -1223,8 +1225,9 @@ function allowedMethodsForApiPath(pathname: string): string[] | undefined {
     [/^\/api\/grants\/[^/]+\/conversions$/, ["POST"]],
     [/^\/api\/conversions\/[^/]+$/, ["GET"]],
     [/^\/api\/audiobooks\/[^/]+$/, ["GET"]],
-    [/^\/api\/audiobooks\/[^/]+\/audio$/, ["GET", "HEAD"]],
-    [/^\/api\/audiobooks\/[^/]+\/epub$/, ["GET", "HEAD"]],
+    [/^\/api\/files\/audiobooks\/[^/]+\/audio\.mp3$/, ["GET", "HEAD"]],
+    [/^\/api\/files\/audiobooks\/[^/]+\/captions\.vtt$/, ["GET"]],
+    [/^\/api\/files\/audiobooks\/[^/]+\/book\.epub$/, ["GET", "HEAD"]],
     [/^\/api\/operator\/grants$/, ["GET", "POST"]],
     [/^\/api\/operator\/grants\/[^/]+$/, ["GET"]],
     [/^\/api\/operator\/grants\/[^/]+\/allowance$/, ["PUT"]],

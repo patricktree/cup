@@ -24,7 +24,7 @@ test("Google PKCE signup resumes conversion, protects history and media, and sup
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
   expect(authProvider.exchanges()).toBe(1);
   const conversionId = new URL(page.url()).pathname.split("/").at(-1);
-  const mediaUrl = `${origin}/api/audiobooks/${conversionId}/audio.mp3`;
+  const mediaUrl = `${origin}/api/files/audiobooks/${conversionId}/audio.mp3`;
   const remainingAllowance = (await readAccount(page, origin)).balance.available;
   expect(remainingAllowance).toBeLessThan(30 * 60 * 1_000);
   await page.reload();
@@ -143,11 +143,11 @@ test("signup keeps trial conversions separate from the new account and its histo
   await page.getByRole("button", { name: "Schedule deletion", exact: true }).click();
   await expect
     .poll(async () =>
-      (await page.request.get(`${origin}/api/audiobooks/${privateId}/audio.mp3`)).status(),
+      (await page.request.get(`${origin}/api/files/audiobooks/${privateId}/audio.mp3`)).status(),
     )
     .toBe(401);
   expect(
-    (await page.request.get(`${origin}/api/audiobooks/${originalId}/audio.mp3`)).status(),
+    (await page.request.get(`${origin}/api/files/audiobooks/${originalId}/audio.mp3`)).status(),
   ).toBe(200);
 });
 

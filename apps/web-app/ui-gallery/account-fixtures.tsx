@@ -59,7 +59,7 @@ export function accountStory({
           googleWebClientId: "story-client",
         }),
       ),
-      http.post("/api/media/session", () => new HttpResponse(null, { status: 204 })),
+      http.post("/api/files/session", () => new HttpResponse(null, { status: 204 })),
       http.get("/api/account", () => {
         if (setupFailure && (setupFailure !== "once" || !setupFailed)) {
           setupFailed = true;

@@ -165,9 +165,9 @@ const historyRoute = createRoute({
     503: errorResponse("Unavailable."),
   },
 });
-const mediaSessionRoute = createRoute({
+const filesSessionRoute = createRoute({
   method: "post",
-  path: "/api/media/session",
+  path: "/api/files/session",
   request: {
     headers: routeBrowserMutationHeadersSchema,
     body: { required: true, content: { "application/json": { schema: z.object({}).strict() } } },
@@ -179,9 +179,9 @@ const mediaSessionRoute = createRoute({
     503: errorResponse("Unavailable."),
   },
 });
-const clearMediaRoute = createRoute({
+const clearFilesSessionRoute = createRoute({
   method: "delete",
-  path: "/api/media/session",
+  path: "/api/files/session",
   request: { headers: routeBrowserMutationHeadersSchema },
   responses: {
     204: { description: "Media cookie removed." },
@@ -313,7 +313,7 @@ const audiobookRoute = createRoute({
 
 const audioRoute = createRoute({
   method: "get",
-  path: "/api/audiobooks/{conversionId}/audio.mp3",
+  path: "/api/files/audiobooks/{conversionId}/audio.mp3",
   request: { params: conversionParamsSchema },
   responses: {
     200: { content: { "audio/mpeg": { schema: binarySchema } }, description: "Complete MP3." },
@@ -326,7 +326,7 @@ const audioRoute = createRoute({
 
 const audioHeadRoute = createRoute({
   method: "head",
-  path: "/api/audiobooks/{conversionId}/audio.mp3",
+  path: "/api/files/audiobooks/{conversionId}/audio.mp3",
   request: { params: conversionParamsSchema },
   responses: {
     200: { description: "MP3 headers." },
@@ -337,7 +337,7 @@ const audioHeadRoute = createRoute({
 
 const captionsRoute = createRoute({
   method: "get",
-  path: "/api/audiobooks/{conversionId}/captions.vtt",
+  path: "/api/files/audiobooks/{conversionId}/captions.vtt",
   request: { params: conversionParamsSchema },
   responses: {
     200: { content: { "text/vtt": { schema: z.string() } }, description: "Timed narration text." },
@@ -347,7 +347,7 @@ const captionsRoute = createRoute({
 
 const epubRoute = createRoute({
   method: "get",
-  path: "/api/audiobooks/{conversionId}/book.epub",
+  path: "/api/files/audiobooks/{conversionId}/book.epub",
   request: { params: conversionParamsSchema },
   responses: {
     200: {
@@ -361,7 +361,7 @@ const epubRoute = createRoute({
 
 const epubHeadRoute = createRoute({
   method: "head",
-  path: "/api/audiobooks/{conversionId}/book.epub",
+  path: "/api/files/audiobooks/{conversionId}/book.epub",
   request: { params: conversionParamsSchema },
   responses: {
     200: { description: "EPUB headers." },
@@ -389,8 +389,8 @@ export type WebAppApiHandlers<Bindings extends object> = {
   restoreAccount: WebAppApiRouteHandler<typeof restoreAccountRoute, Bindings>;
   authConfig: WebAppApiRouteHandler<typeof authConfigRoute, Bindings>;
   getHistory: WebAppApiRouteHandler<typeof historyRoute, Bindings>;
-  mediaSession: WebAppApiRouteHandler<typeof mediaSessionRoute, Bindings>;
-  clearMedia: WebAppApiRouteHandler<typeof clearMediaRoute, Bindings>;
+  filesSession: WebAppApiRouteHandler<typeof filesSessionRoute, Bindings>;
+  clearFilesSession: WebAppApiRouteHandler<typeof clearFilesSessionRoute, Bindings>;
   getAccount: WebAppApiRouteHandler<typeof getAccountRoute, Bindings>;
   startAccountConversion: WebAppApiRouteHandler<typeof startAccountConversionRoute, Bindings>;
   exchangeSession: WebAppApiRouteHandler<typeof exchangeSessionRoute, Bindings>;
@@ -413,8 +413,8 @@ export function createWebAppApi<Bindings extends object>(handlers: WebAppApiHand
     .openapi(restoreAccountRoute, handlers.restoreAccount)
     .openapi(authConfigRoute, handlers.authConfig)
     .openapi(historyRoute, handlers.getHistory)
-    .openapi(mediaSessionRoute, handlers.mediaSession)
-    .openapi(clearMediaRoute, handlers.clearMedia)
+    .openapi(filesSessionRoute, handlers.filesSession)
+    .openapi(clearFilesSessionRoute, handlers.clearFilesSession)
     .openapi(getAccountRoute, handlers.getAccount)
     .openapi(startAccountConversionRoute, handlers.startAccountConversion)
     .openapi(exchangeSessionRoute, handlers.exchangeSession)
@@ -441,8 +441,8 @@ export function createWebAppContractApp() {
     restoreAccount: unavailable,
     authConfig: unavailable,
     getHistory: unavailable,
-    mediaSession: unavailable,
-    clearMedia: unavailable,
+    filesSession: unavailable,
+    clearFilesSession: unavailable,
     getAccount: unavailable,
     startAccountConversion: unavailable,
     exchangeSession: unavailable,
