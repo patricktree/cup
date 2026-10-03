@@ -3,12 +3,11 @@ import type { ResolveParams } from "@tanstack/react-router";
 import { delay, http, HttpResponse } from "msw";
 import React from "react";
 
-import type { Story } from "#ui-gallery/story.js";
-
 import type { ErrorResponse, GrantSnapshot } from "@cup/web-app-api.routes";
 
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
 import { Route as trialRoute } from "#src/routes/trials.$grantId.js";
+import type { Story } from "#src/ui-gallery/story.js";
 
 const GRANT_ID = "b4ad28a8-bbd7-46af-a17c-59527becd745";
 const memoryHistory = createMemoryHistory({ initialEntries: ["/app/"] });

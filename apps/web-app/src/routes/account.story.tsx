@@ -1,4 +1,4 @@
-import { accountStory } from "#ui-gallery/account-fixtures.jsx";
+import { accountStory } from "#src/ui-gallery/account-fixtures.jsx";
 
 export const ActiveAccount = accountStory({ path: "/account" });
 export const SetupPending = accountStory({ path: "/account", setupFailure: true });

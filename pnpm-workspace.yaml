@@ -13,6 +13,7 @@ packages:
   - .patricktree-stack/tooling/config-vitest
   - .patricktree-stack/tooling/config-wyw-in-js
   - .patricktree-stack/libs/utils-ecma
+  - .patricktree-stack/qa-utils/test-utils-node
 
 allowBuilds:
   '@google/genai': true

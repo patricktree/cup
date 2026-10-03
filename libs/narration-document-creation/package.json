@@ -6,14 +6,7 @@
   ],
   "type": "module",
   "imports": {
-    "#src/*.ts": {
-      "types": "./dist/types/*.d.ts",
-      "default": "./src/*.ts"
-    },
-    "#src/*": {
-      "types": "./dist/types/*",
-      "default": "./src/*"
-    }
+    "#src/*": "./src/*"
   },
   "exports": {
     "./package.json": "./package.json",
@@ -30,7 +23,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "turbo:build": "tsc --build ./tsconfig.json",
+    "turbo:build": "prepare-declaration-build --declaration-output-dir ./dist/types --build-info-file ./dist/tsconfig.build.tsbuildinfo --source-package-json ./src/package.json && tsc --build ./tsconfig.json",
     "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
     "turbo:lint:fix": "pnpm run turbo:lint --fix",
     "turbo:test": "pnpm run test"
@@ -41,6 +34,7 @@
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",
+    "@cup/prepare-declaration-build": "workspace:*",
     "@patricktree-stack/config-typescript": "workspace:*",
     "@patricktree-stack/config-vitest": "workspace:*",
     "@types/node": "catalog:",

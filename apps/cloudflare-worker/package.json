@@ -8,7 +8,7 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "types": "./dist/types/src/index.d.ts",
+      "types": "./dist/types/index.d.ts",
       "default": "./src/index.ts"
     }
   },
@@ -21,7 +21,7 @@
     "lint:fix": "turbo run turbo:lint:fix",
     "preview": "vite preview",
     "start": "pnpm run dev",
-    "turbo:build": "tsc --build ./tsconfig.json && vite build",
+    "turbo:build": "prepare-declaration-build --declaration-output-dir ./dist/types --build-info-file ./dist/tsconfig.build.tsbuildinfo --source-package-json ./src/package.json && tsc --build ./tsconfig.json && vite build",
     "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
     "turbo:lint:fix": "pnpm run turbo:lint --fix"
   },
@@ -36,6 +36,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "catalog:web-app",
     "@cup/config-oxlint": "workspace:*",
+    "@cup/prepare-declaration-build": "workspace:*",
     "@patricktree-stack/config-typescript": "workspace:*",
     "@patricktree-stack/utils-ecma": "workspace:*",
     "@types/node": "catalog:",

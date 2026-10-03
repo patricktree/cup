@@ -2,11 +2,10 @@ import { createMemoryHistory } from "@tanstack/react-router";
 import { http, HttpResponse } from "msw";
 import React from "react";
 
-import type { Story } from "#ui-gallery/story.js";
-
 import type { Audiobook, ErrorResponse } from "@cup/web-app-api.routes";
 
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
+import type { Story } from "#src/ui-gallery/story.js";
 
 const CONVERSION_ID = "693af4c4-9fa8-430d-9dc5-c00e88fb38a7";
 const SOURCE_URL = "https://source.example.test/fixture";

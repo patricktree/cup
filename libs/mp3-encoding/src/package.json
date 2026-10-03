@@ -1,0 +1,10 @@
+{
+  "type": "module",
+  "imports": {
+    "#src/mp3-encoder.wasm": {
+      "workerd": "./mp3-encoder.wasm",
+      "node": "./mp3-encoder-node-loader.ts"
+    },
+    "#src/*": "./*"
+  }
+}

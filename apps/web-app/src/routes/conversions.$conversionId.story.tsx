@@ -4,8 +4,6 @@ import type { ResolveParams } from "@tanstack/react-router";
 import { http, HttpResponse } from "msw";
 import React from "react";
 
-import type { Story } from "#ui-gallery/story.js";
-
 import { ConversionPhase, conversionPhaseOrder } from "@cup/conversion-contracts";
 import type { ConversionDetail, ErrorResponse } from "@cup/web-app-api.routes";
 
@@ -13,6 +11,7 @@ import { DSButton } from "#src/app/design-system/button.js";
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
 import { createConversionQuery } from "#src/data-fetching/trial-link.js";
 import { Route as conversionRoute } from "#src/routes/conversions.$conversionId.js";
+import type { Story } from "#src/ui-gallery/story.js";
 
 const CONVERSION_ID = "a3fcb5d8-9162-4c1a-b804-3be130c5e92a";
 const memoryHistory = createMemoryHistory({ initialEntries: ["/app/"] });

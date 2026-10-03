@@ -6,9 +6,8 @@
     "@patricktree-stack/config-typescript/tsconfig.vitest.json"
   ],
   "compilerOptions": {
-    "types": ["../conversion-grants/worker-configuration.d.ts", "node", "vitest/globals"],
+    "types": ["../conversion-grants/worker-configuration.d.ts", "node", "vitest/globals"]
     /* Modules */
-    "rootDir": "./test"
   },
   "include": ["test/**/*", "**/*.test.ts"],
   "references": [{ "path": "./tsconfig.build.json" }]

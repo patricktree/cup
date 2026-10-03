@@ -5,9 +5,9 @@ import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 
 import { worker } from "#ui-gallery/mocks.js";
-import type { Story, StoryComponent } from "#ui-gallery/story.js";
 
 import { AppStyles } from "#src/app/app-styles.js";
+import type { Story, StoryComponent } from "#src/ui-gallery/story.js";
 
 type MountParams = {
   props?: Record<string, unknown>;

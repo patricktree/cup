@@ -1,4 +1,4 @@
-import { accountStory, CONVERSION_ID } from "#ui-gallery/account-fixtures.jsx";
+import { accountStory, CONVERSION_ID } from "#src/ui-gallery/account-fixtures.jsx";
 
 export const EmptyHistory = accountStory({ path: "/history" });
 export const ConversionHistory = accountStory({

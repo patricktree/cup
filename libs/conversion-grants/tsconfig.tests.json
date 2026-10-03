@@ -7,7 +7,6 @@
     "@patricktree-stack/config-typescript/tsconfig.vitest.json"
   ],
   "compilerOptions": {
-    "rootDir": "./test",
     "types": ["./worker-configuration.d.ts", "node", "vitest/globals"]
   },
   "include": ["test/**/*", "**/*.test.ts", "worker-configuration.d.ts"],

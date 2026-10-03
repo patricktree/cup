@@ -6,14 +6,7 @@
   ],
   "type": "module",
   "imports": {
-    "#src/*.ts": {
-      "types": "./dist/types/*.d.ts",
-      "default": "./src/*.ts"
-    },
-    "#src/*": {
-      "types": "./dist/types/*",
-      "default": "./src/*"
-    }
+    "#src/*": "./src/*"
   },
   "exports": {
     "./package.json": "./package.json",
@@ -27,7 +20,7 @@
     "clean": "del-cli --dot=true \"dist\" \"*.tsbuildinfo\"",
     "lint": "turbo run turbo:lint",
     "lint:fix": "turbo run turbo:lint:fix",
-    "turbo:build": "tsc --build ./tsconfig.json && node ./scripts/export-openapi-json.ts && oxfmt ./dist/create-audiobook-from-url-openapi.json",
+    "turbo:build": "prepare-declaration-build --declaration-output-dir ./dist/types --build-info-file ./dist/tsconfig.build.tsbuildinfo --build-info-file ./dist/tsconfig.scripts.tsbuildinfo --source-package-json ./src/package.json && tsc --build ./tsconfig.json && node ./scripts/export-openapi-json.ts && oxfmt ./dist/create-audiobook-from-url-openapi.json",
     "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
     "turbo:lint:fix": "pnpm run turbo:lint --fix"
   },
@@ -38,6 +31,7 @@
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",
+    "@cup/prepare-declaration-build": "workspace:*",
     "@patricktree-stack/config-typescript": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native": "catalog:",

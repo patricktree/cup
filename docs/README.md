@@ -15,18 +15,19 @@ Start with the [domain context](CONTEXT.md) for Cup's vocabulary and the [system
 
 ## Operate and develop Cup
 
-| Guide                                                                | Purpose                                                                               |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| [Repository setup and validation](../AGENTS.md)                      | Prepare a checkout and run checks                                                     |
-| [Social signup operations](social-signup-operations.md)              | Configure local authentication, supply production configuration, and inspect accounts |
-| [Mobile development](../apps/mobile-app/README.md)                   | Build native shells and configure platform links and sharing                          |
-| [Account migrations](../libs/accounts/README.md#database-migrations) | Change account Drizzle schemas and validate account storage                           |
-| [Grant migrations](../libs/conversion-grants/README.md)              | Change trial Drizzle schemas and validate grant storage                               |
-| [Registry migrations](../libs/registry/README.md)                    | Change the shared registry schema and preserve deployed registry storage              |
-| [Conversion contracts](../libs/conversion-contracts/README.md)       | Shared conversion types, schemas, and duration calculations                           |
-| [Operator CLI](../apps/operator/README.md)                           | Manage trial grants and inspect account lifecycle operations                          |
-| [Terraform infrastructure](../terraform/README.md)                   | Manage infrastructure state, provider configuration, and manual prerequisites         |
-| [Brand assets](../tooling/brand-assets/README.md)                    | Maintain generated application branding                                               |
+| Guide                                                                | Purpose                                                                                |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [Repository setup and validation](../AGENTS.md)                      | Prepare a checkout and run checks                                                      |
+| [Social signup operations](social-signup-operations.md)              | Configure local authentication, supply production configuration, and inspect accounts  |
+| [Mobile development](../apps/mobile-app/README.md)                   | Build native shells and configure platform links and sharing                           |
+| [Account migrations](../libs/accounts/README.md#database-migrations) | Change account Drizzle schemas and validate account storage                            |
+| [Grant migrations](../libs/conversion-grants/README.md)              | Change trial Drizzle schemas and validate grant storage                                |
+| [Registry migrations](../libs/registry/README.md)                    | Change the shared registry schema and preserve deployed registry storage               |
+| [Conversion contracts](../libs/conversion-contracts/README.md)       | Shared conversion types, schemas, and duration calculations                            |
+| [Operator CLI](../apps/operator/README.md)                           | Manage trial grants and inspect account lifecycle operations                           |
+| [Terraform infrastructure](../terraform/README.md)                   | Manage infrastructure state, provider configuration, and manual prerequisites          |
+| [Declaration builds](declaration-builds.md)                          | Understand source and declaration package scopes, compiler settings, and build caching |
+| [Brand assets](../tooling/brand-assets/README.md)                    | Maintain generated application branding                                                |
 
 ## Decisions and evidence
 
