@@ -1,8 +1,10 @@
 ---
-status: accepted
+status: partially superseded by ADR 0004
 ---
 
 # Charge for accessible generated narration
+
+[ADR 0004](0004-preserve-only-grants-during-drizzle-transition.md) supersedes historical audiobook retention only for the one-time transition to Drizzle. The duration-accounting policy below remains accepted for subsequent conversions; the original rationale and retention decision are preserved here.
 
 Use generated audio duration as the common usage unit for account allowances, trial allowances, and future paid plans, replacing conversion-count allowances because conversions vary in size and future narration may be generated progressively. Deduct allowance for successfully produced audio that the user can access, whether or not they play it; provider failures and automatic retries do not add charges. On cancellation, retain and charge completed, accessible audio segments while Cup initially absorbs the cost of the unfinished segment, prioritizing delivered value over recovering every provider expense.
 

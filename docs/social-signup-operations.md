@@ -1,8 +1,6 @@
 # Operate social signup and accounts
 
-Cup supports Google sign-in on the web and Android, private conversion history, 30 minutes of welcome duration allowance, and account deletion. Apple sign-in, iOS account support, and payments are deferred. Account records and the append-only credit ledger live in SQLite Durable Objects; Supabase supplies identity, and R2 supplies artifacts.
-
-Duration is recorded in integer milliseconds and displayed as minutes. Reserve estimated duration before synthesizing each segment, charge its actual encoded duration once, release unfinished reservations when a conversion terminates, and cap total charges at the allowance. Existing completed-segment charges survive a later failure. Account schema migration preserves existing history and archives the old conversion-unit ledger; migrated accounts receive the 30-minute duration grant once.
+Use this guide to configure authentication and inspect account operations. The [authentication](architecture/authentication.md), [conversion](architecture/conversion.md), and [account-deletion](architecture/account-deletion.md) pages explain behavior and guarantees. Apple sign-in, native iOS account support, and payments are deferred.
 
 ## Run local Supabase
 
@@ -23,11 +21,11 @@ Stop the stack and restore the previous Worker environment:
 pnpm auth:local stop
 ```
 
-Restart the development server after either command. Android continues to use the production API origin; this helper configures web development. Local fixture bypasses require `LOCAL_DEVELOPMENT=true`; never enable that flag in production.
+Restart the development server after either command. Android continues to use the production API origin; this helper configures web development. The API server requires all bindings and authentication settings in its [environment contract](../libs/api-server/src/api-server-environment.ts); missing configuration is not a supported reduced-functionality mode. Wrangler defaults `LOCAL_DEVELOPMENT` to `false`. Local fixture bypasses require `LOCAL_DEVELOPMENT=true`; never enable that flag in production.
 
 ## Configure production
 
-The Worker configuration retains the existing trial stores and adds account/registry classes. Apply the additive Wrangler migrations through the normal deployment; do not delete or reset trial data.
+The Worker configuration adds the account class and renames the deployed `ConversionGrantRegistryDurableObject` to `RegistryDurableObject` using Cloudflare's `renamed_classes` migration. The registry retains its namespace and singleton name `registry`; its binding is now `REGISTRY`. The account-registry class was never deployed and is folded into this registry. The unified baseline includes account coordination tables and `conversion_owners`; the old `conversion_routes` table was never deployed. The [registry migration guide](../libs/registry/README.md) describes the rename. Separately, the [SQLite transition](../libs/conversion-grants/README.md#schemas-and-migration-baselines) deliberately preserves only the existing grants: it discards old conversions and ownership routes and restores each grant's full configured allowance. Trial links and sessions keep their credentials, expiry, and revocation state; old audiobook links become unavailable. Finish or terminate existing workflows before rollout. Do not delete or reset the trial namespaces, which contain the credentials being preserved. The transition does not clean up R2 files, and rollback to the old handwritten-migration Worker is unsupported.
 
 | Configuration              | Purpose                                                               |
 | -------------------------- | --------------------------------------------------------------------- |
@@ -42,11 +40,11 @@ The Worker configuration retains the existing trial stores and adds account/regi
 
 Supply the required values with the existing deployment secret mechanism. Keep Google client secrets in Supabase/Terraform, not browser configuration. Configure Google as the enabled social provider, ES256 JWT signing, a 300-second JWT lifetime, and the production redirect allow-list. Preserve the existing Android OAuth client, package name, and signing certificate registration.
 
-Use the verified Resend domain and sender `Cup <no-reply@cup-audio.com>`. Scheduled and completed deletion messages have distinct immutable idempotency keys. Provider acceptance does not establish inbox delivery. Retries stop 23 hours after the first attempt, including restarts; expired ambiguous messages are not resent automatically.
+Configure the Resend domain and sender used by the [deletion coordinator](../libs/registry/src/deletion-coordinator.ts). Inspect notification outcomes through the operator CLI; provider acceptance is not proof of inbox delivery.
 
-Deletion and notification outcomes remain in the durable coordinator and are inspectable through the operator CLI. No external failure telemetry is configured, and user email is not emitted to diagnostic logs.
+On 2026-10-02, the production Worker `create-audiobook-from-url` received `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, and `GOOGLE_WEB_CLIENT_ID` through Wrangler. Both Supabase keys were verified against project `evwjipxgacwotgbmqtla`: the publishable key could read Auth settings with Google enabled, and the secret key could access the Auth admin users endpoint. Wrangler then listed all six required secrets from the [Worker configuration](../apps/cloudflare-worker/wrangler.jsonc), including the existing `CLOUDFLARE_API_KEY`, `SOURCE_PAGE_COOKIES_JSON`, and `RESEND_API_KEY`. The existing three credentials were checked for presence, not validity. The Worker retains its sending-only Resend key; Terraform uses a separate management key.
 
-Production credentials were not verified in the initial implementation session. The saved Supabase management token returned 401, and no usable production public/admin auth key was available. That implementation was validated locally; it was not deployed.
+The operator confirmed on 2026-10-02 that the old Supabase project `oiehcntuiazvunyzngmi` had been deleted. Use `evwjipxgacwotgbmqtla` exclusively. The [Terraform guide](../terraform/README.md) records infrastructure adoption and the verified Google provider configuration. Uploading Worker secrets and obtaining a no-change Terraform plan do not establish that this checkout has been deployed or that production sign-in works. Application rollout and end-to-end web/Android sign-in verification remain outstanding.
 
 ## Inspect and retry
 
@@ -59,17 +57,7 @@ pnpm operator account deletions
 
 Account inspection includes the current balance, ledger totals, the first history page, and unresolved artifact writers. Deletion inspection includes unfinished cleanup and completed receipts.
 
-Trial conversions remain separate from accounts. Signing in does not copy, claim or import trial conversions, and account history contains only conversions started by that account. Losing access to earlier trial results after signing in is accepted. Existing trial links and source data are not deleted.
-
-## Deletion and recovery
-
-Deletion blocks account access immediately and stops playback. The user must freshly sign in with the same Google identity, then explicitly confirm recovery before the seven-day deadline. Signing in alone does not restore the account. Restoration preserves the duration allowance and history.
-
-At the deadline, cleanup fences new writes and publication, waits for registered storage effects to drain, removes only that account's artifacts/routes/records, and deletes the exact old Supabase identity. Original trial conversions and other accounts remain separate. Cleanup retries with persisted backoff; jobs unfinished for 24 hours are marked overdue and continue retrying.
-
-Successful tagged production writes can be reconciled after a lost acknowledgment. Effects with an uncertain outcome remain pending until confirmed. The operator can inspect them but cannot force a potentially active writer to disappear.
-
-Completed deletion receipts contain only the agreed identifiers, timestamps, and outcomes, and expire after 90 days. They exclude email, tokens, and provider response bodies. Terminal notification payloads are redacted. Erased account objects retain only a constant erasure marker to fence late execution, without the deletion attempt identifier.
+For recovery deadlines, cleanup retries, unresolved writers, and retained receipts, see [account deletion](architecture/account-deletion.md). For the relationship between trial and account conversions, see [trial access](architecture/authentication.md#trial-access).
 
 ## Validate a change
 

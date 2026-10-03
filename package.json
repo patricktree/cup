@@ -19,6 +19,8 @@
     "build:watch": "turbo watch turbo:build",
     "clean": "pnpm run --parallel clean && pnpm exec del-cli \"**/node_modules\" \"**/.turbo\"",
     "declutter": "knip",
+    "docs:check": "markdownlint-cli2",
+    "docs:search": "node tooling/docs-search/src/cli.ts",
     "env:check": "pnpm --filter env-setup env:check",
     "env:setup": "pnpm --filter env-setup env:setup",
     "fix": "pnpm run format && pnpm run lint:fix",
@@ -38,7 +40,7 @@
     "validate": "pnpm run validate:fast && pnpm run validate:extended",
     "validate:evals": "pnpm --filter '@cup/narration-content-selection' eval",
     "validate:extended": "pnpm run declutter && pnpm run brand-assets:check && pnpm run zizmor && pnpm run test:e2e",
-    "validate:fast": "pnpm run env:check && pnpm run format:check && turbo run turbo:build turbo:lint turbo:test",
+    "validate:fast": "pnpm run env:check && pnpm run format:check && pnpm run docs:check && turbo run turbo:build turbo:lint turbo:test",
     "zizmor": "uvx zizmor@1.29.0 --gh-token \"$(gh auth token)\" ."
   },
   "devDependencies": {
@@ -51,6 +53,8 @@
     "eslint-plugin-react-you-might-not-need-an-effect": "^1.0.2",
     "husky": "^9.1.7",
     "knip": "^6.38.0",
+    "markdownlint-cli2": "^0.23.3",
+    "markdownlint-rule-relative-links": "^5.1.3",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",

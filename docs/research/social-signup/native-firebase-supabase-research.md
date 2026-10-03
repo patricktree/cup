@@ -1,0 +1,51 @@
+# Firebase and Supabase: native Capacitor social login
+
+> Historical research, incorporated 2026-10-02. Historical supporting evidence for the [native sign-in comparison](native-social-sso-research.md). See [current authentication](../../architecture/authentication.md) for the implemented Supabase integration; Apple/iOS findings remain deferred. External claims retain their original research dates and have not been reverified during this migration.
+
+[Original investigation](https://github.com/patricktree/cup/blob/28971d5dca7915dd74ad629878aac9287ec7f7a3/.scratch/social-signup/native-firebase-supabase-research.md).
+
+Research date: 2026-09-17. Scope: Google native sign-in on Android and Apple AuthenticationServices on iOS, with a resulting Firebase or Supabase session. Browser OAuth, custom tabs, and ASWebAuthenticationSession do not qualify. Documentation/source inspection only; no device prototype was run.
+
+## Verdict
+
+| Service                 | Google on Android                         | Apple on iOS                              | Capacitor integration                                                                                            |
+| ----------------------- | ----------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Firebase Authentication | Yes: Credential Manager                   | Yes: AuthenticationServices               | Existing third-party Capawesome Firebase plugin, including Firebase session creation                             |
+| Supabase Auth           | Yes: native plugin plus ID-token exchange | Yes: native plugin plus ID-token exchange | Existing third-party Capawesome social plugins plus official Supabase JS API; small application adapter required |
+
+Neither requires a custom native bridge for these two paths. Firebase has the more integrated existing package; Supabase cleanly separates native provider UI from managed session issuance. This does not prove their behavior in Cup on devices.
+
+## Firebase Authentication
+
+Use `@capacitor-firebase/authentication` from Capawesome, not a Google-maintained Capacitor plugin. Its package currently declares version 8.5.2 and Capacitor core `>=8.0.0`; this establishes explicit Capacitor 8 compatibility. Call `FirebaseAuthentication.signInWithGoogle({ useCredentialManager: true })` on Android and `FirebaseAuthentication.signInWithApple()` on iOS. [Package manifest](https://github.com/capawesome-team/capacitor-firebase/blob/main/packages/authentication/package.json), [plugin documentation](https://capawesome.io/docs/sdks/capacitor/firebase/authentication/).
+
+The Android implementation builds `GetSignInWithGoogleOption`, invokes `CredentialManager.getCredentialAsync`, extracts the Google ID token, and constructs a Firebase `GoogleAuthProvider` credential. `useCredentialManager` defaults to true. It uses `default_web_client_id` as the server audience, not the Android client ID. The alternative false setting selects the older Google Sign-In SDK; it is unnecessary for the desired path. No browser is explicitly launched by the inspected Credential Manager path. [Android handler source](https://github.com/capawesome-team/capacitor-firebase/blob/main/packages/authentication/android/src/main/java/io/capawesome/capacitorjs/plugins/firebase/authentication/handlers/GoogleAuthProviderHandler.java).
+
+The iOS Apple implementation calls `ASAuthorizationAppleIDProvider.createRequest()` and `ASAuthorizationController.performRequests()`. It generates a random nonce, sends its SHA-256 hash to Apple, then constructs `OAuthProvider.appleCredential` using the Apple ID token and raw nonce. This is a native Apple sheet, not a web authentication session. [Apple handler source](https://github.com/capawesome-team/capacitor-firebase/blob/main/packages/authentication/ios/Plugin/Handlers/AppleAuthProviderHandler.swift).
+
+By default the plugin establishes a native Firebase session; it does not also sign the Firebase JavaScript SDK in. Cup can use the native plugin to manage auth and obtain its Firebase ID token, or deliberately use the documented JS-session route: obtain provider credentials natively, then call Firebase JS `signInWithCredential`. For Apple with the JS SDK, the maintainer specifically requires `skipNativeAuth: true`; this skips Firebase native session creation, not Apple's native login UI. If both session layers are used, sign out of both and configure JS persistence. [Maintainer's Firebase JS integration guide](https://github.com/capawesome-team/capacitor-firebase/blob/main/packages/authentication/docs/firebase-js-sdk.md).
+
+Cup's Worker must verify the resulting Firebase ID token; the Google/Apple identity token is an input to Firebase sign-in and is not interchangeable with the Firebase token authenticating Cup API requests. Firebase documents server verification requirements including project audience and issuer. [Firebase token verification](https://firebase.google.com/docs/auth/admin/verify-id-tokens).
+
+## Supabase Auth
+
+Use `@capawesome/capacitor-google-sign-in` for Android and `@capawesome/capacitor-apple-sign-in` for iOS, then exchange their ID tokens through official `@supabase/supabase-js` `supabase.auth.signInWithIdToken({ provider, token, nonce })`. Supabase explicitly supports native Google and Apple ID-token authentication; this is not `signInWithOAuth`, which launches browser OAuth. The complete Capacitor adapter is a composition of supported interfaces, not a Supabase-maintained all-in-one plugin. [Supabase native mobile auth](https://supabase.com/blog/native-mobile-auth), [JS ID-token API](https://supabase.com/docs/reference/javascript/auth-signinwithidtoken).
+
+Both Capawesome standalone plugins describe themselves as unofficial and list 0.1.x with Capacitor `>=8.x.x` support. Google uses `GoogleSignIn.initialize({ clientId: WEB_CLIENT_ID })`, then `GoogleSignIn.signIn({ nonce: HASHED_NONCE })`, returning `idToken`. Register the Android package and signing SHA-1 with Google as well; the web client ID remains the token audience. Apple uses `AppleSignIn.signIn({ nonce: HASHED_NONCE, scopes: [...] })`, returning `idToken` and a separate `authorizationCode`; iOS requires the Sign in with Apple entitlement and no plugin `initialize` call. [Google plugin](https://capawesome.io/docs/sdks/capacitor/google-sign-in/), [Apple plugin](https://capawesome.io/docs/sdks/capacitor/apple-sign-in/).
+
+The Google plugin source confirms `CredentialManager.getCredentialAsync` with `GetSignInWithGoogleOption`, forwarding the caller's nonce unchanged. Apple source confirms `ASAuthorizationAppleIDProvider` and `ASAuthorizationController`, also forwarding the nonce unchanged. Therefore generate a fresh raw nonce in Cup, pass its SHA-256 hexadecimal digest to either native plugin, and pass the raw nonce to Supabase. Supabase verifies that hash relationship and checks the token audience against configured client IDs before creating/linking the identity and issuing its session. [Google implementation](https://github.com/capawesome-team/capacitor-plugins/blob/main/packages/google-sign-in/android/src/main/java/io/capawesome/capacitorjs/plugins/googlesignin/GoogleSignIn.java), [Apple implementation](https://github.com/capawesome-team/capacitor-plugins/blob/main/packages/apple-sign-in/ios/Plugin/AppleSignIn.swift), [Supabase ID-token grant implementation](https://github.com/supabase/auth/blob/master/internal/api/token_oidc.go).
+
+Configure Supabase's Google provider for the Google web-client audience and its Apple provider to accept the iOS bundle ID; keep the Apple Services ID for web OAuth. Supabase's Apple documentation describes multiple accepted client IDs and notes that a user's full name arrives only during the first Apple authorization and must be saved separately if wanted. Web Apple OAuth also brings secret rotation requirements; native-only Apple ID-token login does not. [Supabase Google configuration](https://supabase.com/docs/guides/auth/social-login/auth-google), [Supabase Apple configuration](https://supabase.com/docs/guides/auth/social-login/auth-apple).
+
+This exchange consumes an ID token, not Apple's `authorizationCode` or Google's `serverAuthCode`. Supabase JS's example accepts a Google ID token without an access token. Its current server source optionally verifies an accompanying access token and warns when an ID token contains `at_hash` but no access token was supplied. Pass a matching provider access token when applicable; do not add Google API authorization scopes merely to obtain an unrelated token. [JS API](https://supabase.com/docs/reference/javascript/auth-signinwithidtoken), [Supabase grant implementation](https://github.com/supabase/auth/blob/master/internal/api/token_oidc.go).
+
+The native social plugins do not create a Supabase session themselves. After the exchange, Supabase owns access/refresh tokens; Cup must implement deliberate session persistence, refresh lifecycle, and logout around its JS client. Do not treat a Google account selection or Apple credential alone as a completed Cup login. This is an architectural consequence of the two-step flow, not a device-tested integration claim.
+
+## Remaining device checks
+
+- Exercise returning accounts, first consent, cancellation, missing/outdated Play services, and signed release builds on Android; test Apple first and repeat authorization on real iOS hardware.
+- Verify nonce and client-ID configuration, refresh after app restart, and Worker token validation using actual service tenants.
+- Confirm account-switch and logout behavior in the chosen session layer.
+- Native describes the APIs and intended account-selection flow. The inspected bridges do not launch browser OAuth for the target paths, but this does not guarantee that every OS/provider-managed recovery, adding-an-account, or exceptional challenge flow never displays web content. Do not silently substitute browser login when native sign-in fails if Cup treats that as a hard requirement.
+
+All source links were inspected on the research date; main/master branches are moving references. No claim is made here about native Google on iOS or native Apple on Android.

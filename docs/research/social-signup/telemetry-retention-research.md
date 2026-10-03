@@ -1,0 +1,32 @@
+# Cloudflare and Sentry telemetry retention
+
+> Historical research, incorporated 2026-10-02. The fourteen-day telemetry requirement and Sentry alternatives below belong to earlier planning. They do not establish current retention or deployment configuration. See [current account deletion](../../architecture/account-deletion.md) for application receipt retention and its external-provider limits. External claims retain their original research dates and have not been reverified during this migration.
+
+[Original investigation](https://github.com/patricktree/cup/blob/28971d5dca7915dd74ad629878aac9287ec7f7a3/.scratch/social-signup/telemetry-retention-research.md).
+
+Research date: 2026-09-21. Scope: managed observability for Cup deletion/notification failures, including the user's email address, with the requested fourteen-day retention. No provider was configured.
+
+## Findings
+
+| Option                      | Documented behavior                                                                                       | Fit for fourteen-day deletion                                                                                                                           |
+| --------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare Workers Logs     | Three days on Free; seven days on Paid; maximum seven days.                                               | Does not provide fourteen days of diagnostic history.                                                                                                   |
+| Sentry SaaS Logs            | Thirty-day retention on every standard plan. Team's fourteen-day query window is a separate access limit. | Does not establish deletion after fourteen days.                                                                                                        |
+| Sentry SaaS errors          | Thirty days Developer; ninety days Team/Business.                                                         | Email attached to error/user context can survive longer than logs.                                                                                      |
+| Cloudflare log export to R2 | R2 is a supported Logpush destination; lifecycle expiry can be configured by age.                         | Can express fourteen-day expiry, but physical deletion normally follows within twenty-four hours; not a strict fourteen-day physical-erasure guarantee. |
+
+Cloudflare figures come from [Workers Logs limits and pricing](https://developers.cloudflare.com/workers/observability/logs/workers-logs/). Export support comes from [Workers Logpush](https://developers.cloudflare.com/workers/observability/logs/logpush/) and [R2 destination configuration](https://developers.cloudflare.com/logs/logpush/logpush-job/enable-destinations/r2/).
+
+Sentry's current [retention table](https://docs.sentry.io/security-legal-pii/security/data-retention-periods/) specifies thirty days for Logs across Developer, Team, Business, and Enterprise defaults. Its [Logs overview](https://docs.sentry.io/product/logs/) separately lists query windows of seven days Developer, fourteen Team, and thirty Business. A fourteen-day query window must not be described as fourteen-day deletion. These docs were fetched directly using the documented Markdown representation when the web reader could not render them.
+
+Sentry's [official erasure explanation](https://www.sentry.help/en/articles/16187006-how-do-i-complete-a-gdpr-erasure-request-for-a-user-in-sentry) says individual logs cannot be deleted: deleting the whole project is the available removal mechanism. It also says ingested events are immutable and event-data backups expire on thirty/ninety-day schedules. An application cron cannot simply delete individual old Sentry log entries. The [official error-retention answer](https://sentry.zendesk.com/hc/en-us/articles/27118913621019-How-Long-Are-Errors-Events-Stored-in-Sentry) mentions custom Enterprise retention; a supported fourteen-day policy would require explicit vendor confirmation, including Logs and backup semantics. No self-service fourteen-day retention setting was verified.
+
+R2 [object lifecycle documentation](https://developers.cloudflare.com/r2/buckets/object-lifecycles/) permits expiry by days, but says removal typically occurs within twenty-four hours after expiration. An export's object age also starts when the object is written, which can be later than its contained events. Inference: strict expiry from the original event timestamp needs deliberate access filtering and deletion logic, rather than describing a fourteen-day bucket lifecycle as exact compliance. A private R2 archive also adds configuration and a separate inspection path; it is not fourteen-day search in Workers Logs.
+
+## Recommendation for the decision
+
+Do not silently select Sentry Team on the basis of its fourteen-day query window. Neither standard hosted log product directly verifies the exact requested retention. Ask whether fourteen days means a maximum (in which case Workers Paid seven-day logs are a simpler, shorter-retention option), or fourteen days of retained history (in which case Cloudflare plus an R2 archive is a plausible managed path, with expiry timing clarified). Sentry remains viable if the user accepts its thirty-day Logs retention or obtains a custom verified policy.
+
+The user has explicitly authorized email in diagnostic failure logs. Keep it a structured field on those specific events, alongside Cup account/job IDs, failed step, error category, timestamp, and retry count. This is a design recommendation, not a provider constraint: avoid globally attaching it to every error/span and thereby creating longer-lived copies. Provider selection must account for every sink receiving that field. No tokens, receipt secrets, full email bodies, or arbitrary provider response bodies are required for this use case.
+
+Telemetry is for diagnosis. It should not restart notification retries after the separately agreed payload-retention window, and unsuccessful operational jobs still need their own durable retry state. Clarify that account cleanup completion may precede expiry of this expressly retained diagnostic email data.

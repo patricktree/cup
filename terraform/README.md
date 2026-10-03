@@ -50,16 +50,16 @@ The GCS backend uses its native state locking; leave locking enabled.
 Bootstrap imports successfully wrote remote state with default locking enabled, and the subsequent plan reported no changes.
 A concurrent lock-contention test has not been performed.
 
-## Remaining application adoption
+## Application infrastructure and adoption
 
 The production backend manages the existing cup-production GCP project, imported on 2026-09-22 with deletion protection.
 The project currently has no organization parent and billing is disabled; adoption preserves those settings.
-Terraform creates a new Supabase project named cup-production in Ireland (eu-west-1), with a five-minute JWT lifetime and <https://cup-audio.com/app> as the site URL.
-Google OAuth configuration and Cloudflare DNS records remain outside Terraform state.
+Terraform created the Supabase project named cup-production in Ireland (eu-west-1), with a five-minute JWT lifetime and <https://cup-audio.com/app> as the site URL. This project was created through Terraform; the Google Cloud projects, state bucket, and Resend domain were adopted by importing existing resources.
+The Google OAuth client and Cloudflare DNS records remain outside Terraform state. Terraform configures Supabase to use the manually created Google OAuth client. Application deployment and Cloudflare Worker secrets are managed separately with Wrangler; see [production configuration](../docs/social-signup-operations.md#configure-production).
 Supabase uses a management access token; Resend uses a separate full-access management credential.
 Keep secrets outside committed files.
 Select and lock application providers when adding their resources, then review imports and plans before applying configuration changes.
-Google consumer OAuth client setup remains a manual prerequisite under the current provider research.
+Creating or changing the Google consumer OAuth client remains a manual operation.
 
 Store infrastructure credentials in the ignored local file `terraform/.env.local`: `SUPABASE_ACCESS_TOKEN` for a Supabase personal access token and `RESEND_API_KEY` for a separate Resend full-access key.
 This file is not automatically loaded by Terraform; credentials must be passed to the provider process when continuing adoption.
@@ -67,10 +67,10 @@ The Worker keeps its existing sending-only key.
 
 The generated Supabase database password is stored as `TF_VAR_supabase_database_password` in the same local credentials file and as a sensitive value in protected remote state.
 Retain it for subsequent plans; sensitive marking suppresses terminal output but does not remove the value from state.
-The manually created Supabase project oiehcntuiazvunyzngmi remains outside Terraform pending retirement after replacement verification.
+On 2026-10-02, the operator confirmed that the manually created Supabase project `oiehcntuiazvunyzngmi` had been deleted. It was never managed by this Terraform configuration; use the replacement project below.
 
 The Terraform-created project reference is `evwjipxgacwotgbmqtla`, with URL <https://evwjipxgacwotgbmqtla.supabase.co>.
-Configure social providers against callback <https://evwjipxgacwotgbmqtla.supabase.co/auth/v1/callback>; provider credentials and native login validation are still pending.
+Configure social providers against callback <https://evwjipxgacwotgbmqtla.supabase.co/auth/v1/callback>. On 2026-10-01, the replacement management token successfully authenticated, the operator-verified Google OAuth secret was applied, and the subsequent production plan reported no changes. The bootstrap plan also reported no changes. These checks do not establish end-to-end sign-in or application deployment.
 
 ## Resend domain
 
@@ -86,5 +86,5 @@ The Google Web application OAuth client is created manually in the cup-productio
 Store its ID and secret in `terraform/.env.local` as `TF_VAR_google_web_client_id` and `TF_VAR_google_web_client_secret`.
 Terraform configures Supabase's Google provider from these values, with nonce validation enabled.
 Google must allow the new Supabase callback shown above and JavaScript origin <https://cup-audio.com>.
-Native Android/iOS client registration and end-to-end sign-in testing remain separate prerequisites.
+Android OAuth registration and end-to-end web/Android sign-in still require rollout verification. Native iOS account support is deferred.
 The Supabase provider preserves masked OAuth secrets in state, so a no-change plan does not prove the secret works or detect an out-of-band secret change.

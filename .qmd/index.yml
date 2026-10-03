@@ -1,0 +1,33 @@
+global_context: Cup documentation for this checkout. Read current files and linked implementation before relying on search results.
+collections:
+  cup-docs:
+    path: ./docs
+    pattern: "**/*.md"
+    ignore:
+      - "adr/**"
+      - "research/**"
+    context:
+      /: Cup domain context, documentation navigation, and maintenance guidance for this checkout.
+      /architecture: Current Cup architecture and cross-component flows. Describes this checkout, not verified production deployment.
+  cup-decisions:
+    path: ./docs/adr
+    pattern: "**/*.md"
+    includeByDefault: false
+    context:
+      /: Historical architectural decisions and rationale. Accepted consequences may not yet be implemented; consult current architecture.
+  cup-research:
+    path: ./docs/research
+    pattern: "**/*.md"
+    includeByDefault: false
+    context:
+      /: Historical investigations and experimental evidence. Recommendations, prices, and provider capabilities may be superseded.
+  cup-guides:
+    path: .
+    pattern: README.md,apps/*/README.md,terraform/README.md,tooling/*/README.md,qa/*/README.md
+    includeByDefault: false
+    context:
+      /: Cup operational and development guides. Verify external configuration separately from repository declarations.
+models:
+  embed: hf:ggml-org/embeddinggemma-300M-GGUF/embeddinggemma-300M-Q8_0.gguf
+  generate: hf:tobil/qmd-query-expansion-1.7B-gguf/qmd-query-expansion-1.7B-q4_k_m.gguf
+  rerank: hf:ggml-org/Qwen3-Reranker-0.6B-Q8_0-GGUF/qwen3-reranker-0.6b-q8_0.gguf

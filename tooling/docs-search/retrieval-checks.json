@@ -1,0 +1,38 @@
+[
+  {
+    "id": "authentication-keywords",
+    "mode": "search",
+    "query": "\"media session\"",
+    "expectedFile": "qmd://cup-docs/architecture/authentication.md"
+  },
+  {
+    "id": "deletion-keywords",
+    "mode": "search",
+    "query": "\"deletion\" \"recovery\"",
+    "expectedFile": "qmd://cup-docs/architecture/account-deletion.md"
+  },
+  {
+    "id": "allowance-keywords",
+    "mode": "search",
+    "query": "\"duration\" \"accounting\"",
+    "expectedFile": "qmd://cup-docs/architecture/conversion.md"
+  },
+  {
+    "id": "authentication-question",
+    "mode": "query",
+    "query": "How can the audio player access a private audiobook without sending an Authorization header?",
+    "expectedFile": "qmd://cup-docs/architecture/authentication.md"
+  },
+  {
+    "id": "deletion-question",
+    "mode": "query",
+    "query": "What prevents an in-flight conversion from recreating files after the account is erased?",
+    "expectedFile": "qmd://cup-docs/architecture/account-deletion.md"
+  },
+  {
+    "id": "allowance-question",
+    "mode": "query",
+    "query": "Why does a failed conversion still consume some of the user's allowance?",
+    "expectedFile": "qmd://cup-docs/architecture/conversion.md"
+  }
+]
