@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("#src/account-auth.ts", async (original) => ({
   ...(await original<typeof import("#src/account-auth.ts")>()),
-  authenticateAccount: mocks.authenticate,
+  authenticateAccountRequest: mocks.authenticate,
 }));
 vi.mock("#src/google-token-revocation.ts", () => ({ revokeVerifiedGoogleToken: mocks.revoke }));
 

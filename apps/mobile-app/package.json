@@ -4,7 +4,7 @@
   "scripts": {
     "build": "turbo run turbo:build && pnpm run native:sync",
     "native:sync": "CUP_NATIVE_PLATFORM=android cap sync android && CUP_NATIVE_PLATFORM=ios cap sync ios",
-    "turbo:build": "tsc --build --noEmit"
+    "turbo:build": "tsc --build"
   },
   "dependencies": {
     "@aparajita/capacitor-secure-storage": "8.0.0",

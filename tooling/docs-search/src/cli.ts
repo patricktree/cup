@@ -2,36 +2,13 @@ import { Command, CommanderError, Option } from "@commander-js/extra-typings";
 import childProcess from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
+import url from "node:url";
 import { z } from "zod";
 
 const ROOT = path.resolve(import.meta.dirname, "../../..");
 const QMD_DIRECTORY = path.join(ROOT, ".qmd");
 const LOCK_DIRECTORY = path.join(QMD_DIRECTORY, "run.lock");
-// QMD requires a TypeScript 5 peer; isolate it from Cup's TypeScript 6 toolchain.
-const QMD_COMMAND = [
-  "--reporter",
-  "silent",
-  "--package",
-  "@tobilu/qmd@2.8.3",
-  "--package",
-  "typescript@5.9.3",
-  "dlx",
-  "--allow-build",
-  "better-sqlite3",
-  "--allow-build",
-  "node-llama-cpp",
-  "--allow-build",
-  "tree-sitter-go",
-  "--allow-build",
-  "tree-sitter-javascript",
-  "--allow-build",
-  "tree-sitter-python",
-  "--allow-build",
-  "tree-sitter-rust",
-  "--allow-build",
-  "tree-sitter-typescript",
-  "qmd",
-];
+const QMD_COMMAND = url.fileURLToPath(new URL("../bin/qmd", import.meta.resolve("@tobilu/qmd")));
 const searchResultsSchema = z.array(z.object({ file: z.string() }));
 const retrievalChecksSchema = z.array(
   z.object({
@@ -151,7 +128,7 @@ async function runQmd(args: string[], progress = false): Promise<string> {
     ];
   }
   return new Promise((resolve, reject) => {
-    const child = childProcess.spawn("pnpm", [...QMD_COMMAND, ...args], {
+    const child = childProcess.spawn(process.execPath, [QMD_COMMAND, ...args], {
       cwd: ROOT,
       env: {
         ...process.env,
@@ -169,7 +146,10 @@ async function runQmd(args: string[], progress = false): Promise<string> {
     child.on("error", reject);
     child.on("close", (code, signal) => {
       if (code === 0) resolve(output);
-      else reject(new Error(`QMD ${args[0]} failed (${signal ?? code}).`));
+      else {
+        if (!progress && output) process.stderr.write(output);
+        reject(new Error(`QMD ${args[0]} failed (${signal ?? code}).`));
+      }
     });
   });
 }

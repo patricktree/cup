@@ -19,8 +19,14 @@ allowBuilds:
   better-sqlite3: true
   esbuild: true
   msgpackr-extract: true
+  node-llama-cpp: true
   msw: false
   protobufjs: true
+  tree-sitter-go: true
+  tree-sitter-javascript: true
+  tree-sitter-python: true
+  tree-sitter-rust: true
+  tree-sitter-typescript: true
   unrs-resolver: true
   workerd: true
 

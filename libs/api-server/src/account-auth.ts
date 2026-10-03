@@ -69,7 +69,7 @@ export async function verifyAccountToken(
   };
 }
 
-export async function authenticateAccount(request: Request, env: ApiServerEnvironment) {
+export async function authenticateAccountRequest(request: Request, env: ApiServerEnvironment) {
   const authorization = request.headers.get("Authorization");
   if (!authorization?.startsWith("Bearer ")) return { result: "unauthorized" } as const;
   let identity: Awaited<ReturnType<typeof verifyAccountToken>>;

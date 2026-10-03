@@ -1,5 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
+import { Temporal } from "temporal-polyfill";
 
 import { conversionPhaseSchema } from "@cup/conversion-contracts";
 import { segmentUsageSchema } from "@cup/conversion-contracts/duration-accounting";
@@ -13,7 +14,6 @@ import {
   startAttempts as startAttemptTable,
 } from "#src/grant-sqlite-schema.ts";
 import { migrateLegacyGrant } from "#src/legacy-grant-migrations.ts";
-import { nowMilliseconds } from "#src/time.ts";
 
 export class ConversionGrantSqlite {
   private readonly database: DrizzleSqliteDODatabase<typeof grantSqliteSchema>;
@@ -33,7 +33,7 @@ export class ConversionGrantSqlite {
       grant.registryConfirmedSnapshotRevision < grant.registrySnapshotRevision &&
       (await this.storage.getAlarm()) === null
     )
-      await this.storage.setAlarm(nowMilliseconds());
+      await this.storage.setAlarm(Temporal.Now.instant().epochMilliseconds);
   }
 
   async load(): Promise<GrantRecord | undefined> {

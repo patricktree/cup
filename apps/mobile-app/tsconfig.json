@@ -3,7 +3,7 @@
 
   "extends": [
     "@patricktree-stack/config-typescript/tsconfig.defaults.json",
-    "@patricktree-stack/config-typescript/tsconfig.typescript-execution-via-type-stripping.json"
+    "@patricktree-stack/config-typescript/tsconfig.capacitor.json"
   ],
   "compilerOptions": {
     /* Modules */

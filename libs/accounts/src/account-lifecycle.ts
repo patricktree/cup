@@ -1,10 +1,10 @@
 import { and, desc, eq, lte, or, sql } from "drizzle-orm";
 import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
+import { Temporal } from "temporal-polyfill";
 import { z } from "zod";
 
 import type { AccountSnapshot } from "#src/account-contracts.ts";
 import { accounts, deletionChallenges, deletionAttempts } from "#src/account-sqlite-schema.ts";
-import { nowMilliseconds } from "#src/time.ts";
 
 export type DeletionAttempt = {
   attemptId: string;
@@ -32,7 +32,7 @@ export class AccountLifecycle {
     this.snapshot = snapshot;
   }
 
-  challenge(nowMs = nowMilliseconds()) {
+  challenge(nowMs = Temporal.Now.instant().epochMilliseconds) {
     const account = this.snapshot();
     if (account.state === "deleting") throw new Error("Account deletion has started");
     const challengeId = crypto.randomUUID();
@@ -60,7 +60,7 @@ export class AccountLifecycle {
 
   schedule(
     input: { challengeId: string; authenticatedAtSeconds: number; email: string },
-    nowMs = nowMilliseconds(),
+    nowMs = Temporal.Now.instant().epochMilliseconds,
   ) {
     z.email().parse(input.email);
     return this.database.transaction(() => {
@@ -91,7 +91,11 @@ export class AccountLifecycle {
     });
   }
 
-  restore(challengeId: string, authenticatedAtSeconds: number, nowMs = nowMilliseconds()) {
+  restore(
+    challengeId: string,
+    authenticatedAtSeconds: number,
+    nowMs = Temporal.Now.instant().epochMilliseconds,
+  ) {
     return this.database.transaction(() => {
       const account = this.snapshot();
       this.consume(challengeId, authenticatedAtSeconds, nowMs);
@@ -153,7 +157,7 @@ export class AccountLifecycle {
         .run();
     });
   }
-  fence(attemptId: string, nowMs = nowMilliseconds()) {
+  fence(attemptId: string, nowMs = Temporal.Now.instant().epochMilliseconds) {
     this.database.transaction(() => {
       const attempt = this.current();
       if (!attempt || attempt.attemptId !== attemptId || attempt.state === "restored")

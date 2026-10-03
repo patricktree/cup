@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { Temporal } from "temporal-polyfill";
 
 import { createConversionArtifactPrefix } from "@cup/conversion-contracts";
 import {
@@ -39,7 +40,6 @@ import {
 import type { GrantRegistry } from "#src/grant-registry.ts";
 import { signSession, verifyRootCredential, verifySession } from "#src/grant-session.ts";
 import { ConversionGrantSqlite } from "#src/grant-sqlite.ts";
-import { nowMilliseconds } from "#src/time.ts";
 
 const START_RATE_WINDOW_MS = 60_000;
 const RECONCILIATION_RETRY_MS = 60_000;
@@ -113,7 +113,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
 
   async exchangeCredential(
     credential: string,
-    nowMs = nowMilliseconds(),
+    nowMs = Temporal.Now.instant().epochMilliseconds,
   ): Promise<ExchangeCredentialResult> {
     const record = await this.sqlite.requireRecord();
     if (record.credentialVerifier === undefined) return { result: "invalid-credential" };
@@ -127,14 +127,17 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
     };
   }
 
-  async validateSession(token: string, nowMs = nowMilliseconds()): Promise<ValidateSessionResult> {
+  async validateSession(
+    token: string,
+    nowMs = Temporal.Now.instant().epochMilliseconds,
+  ): Promise<ValidateSessionResult> {
     const record = await this.sqlite.requireRecord();
     return (await verifySession(record, token, nowMs))
       ? { result: "valid", snapshot: createGrantSnapshot(record, nowMs) }
       : { result: "invalid" };
   }
 
-  async inspect(nowMs = nowMilliseconds()): Promise<GrantSnapshot> {
+  async inspect(nowMs = Temporal.Now.instant().epochMilliseconds): Promise<GrantSnapshot> {
     return createGrantSnapshot(await this.sqlite.requireRecord(), nowMs);
   }
 
@@ -142,7 +145,9 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
     return createGrantConversions(await this.sqlite.requireRecord());
   }
 
-  async inspectOperator(nowMs = nowMilliseconds()): Promise<OperatorGrantSnapshot> {
+  async inspectOperator(
+    nowMs = Temporal.Now.instant().epochMilliseconds,
+  ): Promise<OperatorGrantSnapshot> {
     return createOperatorGrantSnapshot(await this.sqlite.requireRecord(), nowMs);
   }
 
@@ -160,7 +165,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
   async startConversion(
     sourceUrl: string,
     idempotencyKey: string,
-    nowMs = nowMilliseconds(),
+    nowMs = Temporal.Now.instant().epochMilliseconds,
   ): Promise<StartGrantConversionResult> {
     return this.ctx.storage.transaction(async () => {
       const record = await this.sqlite.requireRecord();
@@ -238,7 +243,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
         throw new Error("Segment reservation conflicts with synthesis identity");
       if (existing?.state === "settled") return { result: "settled" as const };
       if (existing?.state === "reserved") return { result: "reserved" as const };
-      const state = deriveGrantState(record, nowMilliseconds());
+      const state = deriveGrantState(record, Temporal.Now.instant().epochMilliseconds);
       if (state !== "open") return { result: state };
       const estimatedMilliseconds = estimateAudioDuration(narrationTextCharacters);
       if (estimatedMilliseconds > deriveDurationBalance(record).availableMilliseconds)
@@ -256,7 +261,9 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
       else record.segmentUsage.push(reservation);
       record.registrySnapshotRevision += 1;
       await this.sqlite.save(record);
-      await this.ctx.storage.setAlarm(nowMilliseconds() + RECONCILIATION_RETRY_MS);
+      await this.ctx.storage.setAlarm(
+        Temporal.Now.instant().epochMilliseconds + RECONCILIATION_RETRY_MS,
+      );
       return { result: "reserved" as const };
     });
   }
@@ -288,7 +295,9 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
       );
       record.registrySnapshotRevision += 1;
       await this.sqlite.save(record);
-      await this.ctx.storage.setAlarm(nowMilliseconds() + RECONCILIATION_RETRY_MS);
+      await this.ctx.storage.setAlarm(
+        Temporal.Now.instant().epochMilliseconds + RECONCILIATION_RETRY_MS,
+      );
       return { result: "recorded" as const };
     });
   }
@@ -328,7 +337,10 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
       .toSorted((left, right) => left.sequence - right.sequence);
   }
 
-  async markWorkflowStarted(conversionId: string, nowMs = nowMilliseconds()): Promise<void> {
+  async markWorkflowStarted(
+    conversionId: string,
+    nowMs = Temporal.Now.instant().epochMilliseconds,
+  ): Promise<void> {
     await this.ctx.storage.transaction(async () => {
       const record = await this.sqlite.requireRecord();
       const conversion = record.conversions.find((item) => item.conversionId === conversionId);
@@ -362,7 +374,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
   ): Promise<"recorded" | "replayed"> {
     return this.recordTerminal(conversionId, {
       status: "ready",
-      completedAtMs: input.completedAtMs ?? nowMilliseconds(),
+      completedAtMs: input.completedAtMs ?? Temporal.Now.instant().epochMilliseconds,
       title: input.title,
       audiobookReference: input.audiobookReference,
       ...(input.measurements === undefined ? {} : { measurements: input.measurements }),
@@ -383,7 +395,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
   ): Promise<"recorded" | "replayed"> {
     return this.recordTerminal(conversionId, {
       status: "failed",
-      completedAtMs: input.completedAtMs ?? nowMilliseconds(),
+      completedAtMs: input.completedAtMs ?? Temporal.Now.instant().epochMilliseconds,
       ...(input.title === undefined ? {} : { title: input.title }),
       failureCategory: input.failureCategory,
       explanation: input.explanation,
@@ -394,7 +406,10 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
     });
   }
 
-  async setDurationAllowance(allowanceMilliseconds: number, nowMs = nowMilliseconds()) {
+  async setDurationAllowance(
+    allowanceMilliseconds: number,
+    nowMs = Temporal.Now.instant().epochMilliseconds,
+  ) {
     if (!Number.isSafeInteger(allowanceMilliseconds) || allowanceMilliseconds < 1)
       throw new Error("Duration allowance must be a positive safe integer");
     return this.ctx.storage.transaction(async () => {
@@ -421,7 +436,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
     });
   }
 
-  async revoke(nowMs = nowMilliseconds()): Promise<{
+  async revoke(nowMs = Temporal.Now.instant().epochMilliseconds): Promise<{
     changed: boolean;
     snapshot: GrantSnapshot;
     registrySnapshot: GrantRegistrySnapshot;
@@ -442,7 +457,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
     });
   }
 
-  async invalidateSessions(nowMs = nowMilliseconds()): Promise<{
+  async invalidateSessions(nowMs = Temporal.Now.instant().epochMilliseconds): Promise<{
     invalidatedAtMs: number;
     snapshot: GrantSnapshot;
     registrySnapshot: GrantRegistrySnapshot;
@@ -512,7 +527,9 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
       }
       record.registrySnapshotRevision += 1;
       await this.sqlite.save(record);
-      await this.ctx.storage.setAlarm(nowMilliseconds() + RECONCILIATION_RETRY_MS);
+      await this.ctx.storage.setAlarm(
+        Temporal.Now.instant().epochMilliseconds + RECONCILIATION_RETRY_MS,
+      );
       return "recorded";
     });
   }
@@ -524,7 +541,8 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
       if (
         conversion.status !== "pending" ||
         conversion.workflowStartedAtMs !== undefined ||
-        nowMilliseconds() - conversion.acceptedAtMs >= RECONCILIATION_CUTOFF_MS
+        Temporal.Now.instant().epochMilliseconds - conversion.acceptedAtMs >=
+          RECONCILIATION_CUTOFF_MS
       ) {
         continue;
       }
@@ -570,11 +588,14 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
         (conversion) =>
           (conversion.status === "pending" &&
             conversion.workflowStartedAtMs === undefined &&
-            nowMilliseconds() - conversion.acceptedAtMs < RECONCILIATION_CUTOFF_MS) ||
+            Temporal.Now.instant().epochMilliseconds - conversion.acceptedAtMs <
+              RECONCILIATION_CUTOFF_MS) ||
           (conversion.status === "failed" && conversion.cleanupState === "pending"),
       );
     if (hasDueMaintenance) {
-      await this.ctx.storage.setAlarm(nowMilliseconds() + MAINTENANCE_RETRY_MS);
+      await this.ctx.storage.setAlarm(
+        Temporal.Now.instant().epochMilliseconds + MAINTENANCE_RETRY_MS,
+      );
     }
   }
 
@@ -625,7 +646,10 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
         } while (cursor !== undefined);
         await this.setCleanupState(conversion.conversionId, "complete");
       } catch {
-        if (nowMilliseconds() - conversion.completedAtMs >= CLEANUP_RETRY_CUTOFF_MS) {
+        if (
+          Temporal.Now.instant().epochMilliseconds - conversion.completedAtMs >=
+          CLEANUP_RETRY_CUTOFF_MS
+        ) {
           await this.setCleanupState(conversion.conversionId, "cleanup_failed");
         }
       }

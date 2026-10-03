@@ -1,12 +1,12 @@
 import { eq, ne } from "drizzle-orm";
 import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
+import { Temporal } from "temporal-polyfill";
 
 import { getAccountConversionIdFromArtifactPrefix } from "@cup/conversion-contracts";
 
 import type { AccountSnapshot } from "#src/account-contracts.ts";
 import { artifactWriters, accountConversions } from "#src/account-sqlite-schema.ts";
 import { requireRow } from "#src/sqlite-row.ts";
-import { nowMilliseconds } from "#src/time.ts";
 
 /** Tracks account storage effects so deletion waits for acknowledged production/export writes. */
 export class AccountArtifactWriters {
@@ -130,7 +130,7 @@ export class AccountArtifactWriters {
       (account.state === "active" ||
         (account.state === "deletion_scheduled" &&
           account.recoveryDeadlineMs !== null &&
-          nowMilliseconds() < account.recoveryDeadlineMs))
+          Temporal.Now.instant().epochMilliseconds < account.recoveryDeadlineMs))
     );
   }
 

@@ -14,7 +14,6 @@ import {
 } from "#src/registry-sqlite-schema.ts";
 import { requireRow } from "#src/sqlite-row.ts";
 import type { SupabaseAdminEnvironment } from "#src/supabase-identity.ts";
-import { nowMilliseconds } from "#src/time.ts";
 
 export type DeletionEnvironment = SupabaseAdminEnvironment & {
   ACCOUNTS: DurableObjectNamespace<AccountDurableObject>;
@@ -60,7 +59,7 @@ export class DeletionCoordinator {
 
   async accept(input: DeletionAttempt) {
     const attempt = deletionAttemptSchema.parse(input);
-    await this.storage.setAlarm(nowMilliseconds() + 60_000);
+    await this.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
     this.database.transaction(() => {
       const canceled = this.database
         .select({ attemptId: canceledDeletionAttempts.attemptId })
@@ -80,7 +79,10 @@ export class DeletionCoordinator {
         if (existing?.state === "deleting") throw new Error("Deletion cleanup has started");
         this.database
           .insert(canceledDeletionAttempts)
-          .values({ attemptId: attempt.attemptId, expiresAtMs: nowMilliseconds() + 90 * DAY })
+          .values({
+            attemptId: attempt.attemptId,
+            expiresAtMs: Temporal.Now.instant().epochMilliseconds + 90 * DAY,
+          })
           .onConflictDoNothing()
           .run();
         if (existing) this.save({ ...existing, state: "restored", email: "" });
@@ -111,7 +113,7 @@ export class DeletionCoordinator {
     fenceIdentity: (subject: string, accountId: string) => void,
     removeIdentity: (subject: string, accountId: string) => void,
   ) {
-    const nowMs = nowMilliseconds();
+    const nowMs = Temporal.Now.instant().epochMilliseconds;
     this.database.delete(deletionReceipts).where(lte(deletionReceipts.expiresAtMs, nowMs)).run();
     this.database
       .delete(canceledDeletionAttempts)
@@ -226,7 +228,9 @@ export class DeletionCoordinator {
         .get(),
     ).next;
     if (canceled !== null) times.push(canceled);
-    return times.length ? Math.max(nowMilliseconds() + 1_000, Math.min(...times)) : null;
+    return times.length
+      ? Math.max(Temporal.Now.instant().epochMilliseconds + 1_000, Math.min(...times))
+      : null;
   }
   pending() {
     return (
@@ -251,7 +255,7 @@ export class DeletionCoordinator {
           identityDone: job.identityDone,
           accountDone: job.accountDone,
           failures: job.failures,
-          overdue: nowMilliseconds() >= job.deadlineMs + DAY,
+          overdue: Temporal.Now.instant().epochMilliseconds >= job.deadlineMs + DAY,
         };
       });
   }
@@ -293,7 +297,7 @@ export class DeletionCoordinator {
       subject,
       text,
       firstAttemptMs: null,
-      nextAttemptMs: nowMilliseconds(),
+      nextAttemptMs: Temporal.Now.instant().epochMilliseconds,
       attempts: 0,
       state: "pending",
     };
@@ -337,7 +341,7 @@ export class DeletionCoordinator {
           eq(sql<string>`json_extract(${deletionNotifications.json}, '$.state')`, "pending"),
           lte(
             sql<number>`json_extract(${deletionNotifications.json}, '$.nextAttemptMs')`,
-            nowMilliseconds(),
+            Temporal.Now.instant().epochMilliseconds,
           ),
         ),
       )
@@ -348,7 +352,7 @@ export class DeletionCoordinator {
       .limit(100)
       .all()) {
       const notification = notificationSchema.parse(JSON.parse(row.json));
-      const nowMs = nowMilliseconds();
+      const nowMs = Temporal.Now.instant().epochMilliseconds;
       if (notification.state !== "pending" || notification.nextAttemptMs > nowMs) continue;
       if (
         notification.firstAttemptMs !== null &&
@@ -423,15 +427,15 @@ export class DeletionCoordinator {
           .insert(deletionReceipts)
           .values({
             attemptId: job.attemptId,
-            completedAtMs: nowMilliseconds(),
-            expiresAtMs: nowMilliseconds() + 90 * DAY,
+            completedAtMs: Temporal.Now.instant().epochMilliseconds,
+            expiresAtMs: Temporal.Now.instant().epochMilliseconds + 90 * DAY,
             result: JSON.stringify({
               result,
               accountId: job.accountId,
               supabaseUserId: job.subject,
               scheduledAtMs: job.scheduledAtMs,
               recoveryDeadlineMs: job.deadlineMs,
-              completedAtMs: nowMilliseconds(),
+              completedAtMs: Temporal.Now.instant().epochMilliseconds,
               identityDeleted: job.identityDone,
               accountErased: job.accountDone,
               googleRevocation: job.googleRevocation,

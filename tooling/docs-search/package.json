@@ -13,13 +13,15 @@
     "build": "turbo run turbo:build",
     "lint": "turbo run turbo:lint",
     "lint:fix": "turbo run turbo:lint:fix",
-    "turbo:build": "tsc --build ./tsconfig.json",
+    "turbo:build": "node node_modules/@typescript/native/bin/tsc --build ./tsconfig.json",
     "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
     "turbo:lint:fix": "pnpm run turbo:lint --fix"
   },
   "dependencies": {
     "@commander-js/extra-typings": "^15.0.0",
+    "@tobilu/qmd": "2.8.3",
     "commander": "^15.0.0",
+    "typescript": "5.9.3",
     "zod": "^4.5.4"
   },
   "devDependencies": {
@@ -28,7 +30,6 @@
     "@types/node": "catalog:",
     "@typescript/native": "catalog:",
     "oxlint": "catalog:",
-    "oxlint-tsgolint": "catalog:",
-    "typescript": "catalog:"
+    "oxlint-tsgolint": "catalog:"
   }
 }

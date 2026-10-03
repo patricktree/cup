@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { and, eq, lte, min, sql } from "drizzle-orm";
 import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
+import { Temporal } from "temporal-polyfill";
 import { z } from "zod";
 
 import type { AccountSnapshot } from "@cup/accounts";
@@ -28,7 +29,6 @@ import { identityAccounts, provisioningJobs } from "#src/registry-sqlite-schema.
 import { RegistrySqlite } from "#src/registry-sqlite.ts";
 import { requireRow } from "#src/sqlite-row.ts";
 import { verifySupabaseIdentity } from "#src/supabase-identity.ts";
-import { nowMilliseconds } from "#src/time.ts";
 
 export type IdentityAccount = {
   subject: string;
@@ -58,7 +58,10 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
     this.limits = new RollingLimits(context.storage);
   }
 
-  reserveVerifiedIdentity(subject: string, nowMs = nowMilliseconds()): IdentityAccount {
+  reserveVerifiedIdentity(
+    subject: string,
+    nowMs = Temporal.Now.instant().epochMilliseconds,
+  ): IdentityAccount {
     z.uuid().parse(subject);
     z.number().int().nonnegative().safe().parse(nowMs);
     return this.database.transaction(() => {
@@ -80,16 +83,20 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
 
   async provisionVerifiedIdentity(
     subject: string,
-    nowMs = nowMilliseconds(),
+    nowMs = Temporal.Now.instant().epochMilliseconds,
   ): Promise<AccountSnapshot> {
     const existing = this.findIdentity(subject);
     if (!existing && this.env.SUPABASE_URL && !(await verifySupabaseIdentity(this.env, subject)))
       throw new Error("Supabase identity no longer exists");
-    await this.ctx.storage.setAlarm(nowMilliseconds() + 60_000);
+    await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
     const identity = this.reserveVerifiedIdentity(subject, nowMs);
     this.database
       .insert(provisioningJobs)
-      .values({ subject, attempts: 0, nextAttemptMs: nowMilliseconds() + 60_000 })
+      .values({
+        subject,
+        attempts: 0,
+        nextAttemptMs: Temporal.Now.instant().epochMilliseconds + 60_000,
+      })
       .onConflictDoNothing()
       .run();
     const account = this.env.ACCOUNTS.get(this.env.ACCOUNTS.idFromName(identity.accountId));
@@ -115,11 +122,11 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
   }
 
   override async alarm() {
-    await this.ctx.storage.setAlarm(nowMilliseconds() + 60_000);
+    await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
     const jobs = this.database
       .select({ subject: provisioningJobs.subject, attempts: provisioningJobs.attempts })
       .from(provisioningJobs)
-      .where(lte(provisioningJobs.nextAttemptMs, nowMilliseconds()))
+      .where(lte(provisioningJobs.nextAttemptMs, Temporal.Now.instant().epochMilliseconds))
       .all();
     for (const job of jobs) {
       try {
@@ -137,7 +144,8 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
           .update(provisioningJobs)
           .set({
             attempts: sql`${provisioningJobs.attempts} + 1`,
-            nextAttemptMs: nowMilliseconds() + delay + Math.floor(Math.random() * 5_000),
+            nextAttemptMs:
+              Temporal.Now.instant().epochMilliseconds + delay + Math.floor(Math.random() * 5_000),
           })
           .where(eq(provisioningJobs.subject, job.subject))
           .run();
@@ -164,7 +172,7 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
         .from(provisioningJobs)
         .get(),
     ).next;
-    this.limits.expire(nowMilliseconds());
+    this.limits.expire(Temporal.Now.instant().epochMilliseconds);
     const candidates = [this.deletions.nextAlarm(), this.limits.nextAlarm()].filter(
       (time): time is number => time !== null,
     );
@@ -183,12 +191,12 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
     z.string()
       .regex(/^[a-f0-9]{64}$/)
       .parse(key);
-    await this.ctx.storage.setAlarm(nowMilliseconds() + 60_000);
+    await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
     return this.limits.consume(
       `conversion-ip:${key}`,
       this.env.CONVERSION_IP_LIMIT ? Number(this.env.CONVERSION_IP_LIMIT) : 60,
       60_000,
-      nowMilliseconds(),
+      Temporal.Now.instant().epochMilliseconds,
     );
   }
   async provisionFromIngress(subject: string, key: string) {
@@ -202,14 +210,14 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
       !(await verifySupabaseIdentity(this.env, subject))
     )
       throw new Error("Identity unavailable");
-    await this.ctx.storage.setAlarm(nowMilliseconds() + 60_000);
+    await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
     const retryAfter = this.database.transaction(() => {
       if (this.findIdentity(subject)) return 0;
       const limited = this.limits.consume(
         `signup-ip:${key}`,
         this.env.SIGNUP_IP_LIMIT ? Number(this.env.SIGNUP_IP_LIMIT) : 10,
         3_600_000,
-        nowMilliseconds(),
+        Temporal.Now.instant().epochMilliseconds,
       );
       if (!limited) this.reserveVerifiedIdentity(subject);
       return limited;
@@ -262,7 +270,7 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
   async reserveProvisioning(
     requestId: string,
     label: string,
-    nowMs = nowMilliseconds(),
+    nowMs = Temporal.Now.instant().epochMilliseconds,
   ): Promise<{ entry: RegistryEntry; created: boolean }> {
     return this.ctx.storage.transaction(async () => {
       const registry = await this.sqlite.load();
@@ -323,7 +331,7 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
 
   async listGrants(
     input: { label?: string; state?: ProjectedGrantState; limit: number; cursor?: string },
-    nowMs = nowMilliseconds(),
+    nowMs = Temporal.Now.instant().epochMilliseconds,
   ): Promise<ListGrantsResult> {
     const registry = await this.sqlite.load();
     const after = input.cursor === undefined ? undefined : decodeCursor(input.cursor);

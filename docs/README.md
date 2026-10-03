@@ -38,6 +38,8 @@ Start with the [domain context](CONTEXT.md) for Cup's vocabulary and the [system
 
 Use [local documentation search](../tooling/docs-search/README.md) to discover related explanations as well as locate pages. Follow the [required search procedure for concept and behavior changes](agents/domain.md#find-supporting-documentation), including removals where the exact phrase is already known. Search supports keyword and semantic retrieval with a separate index for each checkout. Read the current source files before relying on results.
 
+For Cloudflare runtime, configuration, and design decisions, follow the [Cloudflare documentation guidance](agents/cloudflare.md), including product references and the AI Gateway binding requirement.
+
 Before design or implementation, read the domain context and relevant architecture pages and ADRs. Update affected explanations, diagrams, and source links in the same change as the implementation. Follow the [documentation maintenance instructions](agents/domain.md).
 
 Keep implementation detail in code: link to route contracts, schemas, and configuration instead of copying their contents. Document responsibilities, relationships, guarantees, and behavior that requires reading across components. Extend existing pages before adding another explanation of the same subject.

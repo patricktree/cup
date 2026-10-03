@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { Temporal } from "temporal-polyfill";
 
 import { createAccountArtifactPrefix } from "@cup/conversion-contracts";
 
@@ -11,7 +12,6 @@ import type {
 import { AccountLifecycle, AccountLifecycleConflictError } from "#src/account-lifecycle.ts";
 import type { AccountRegistry } from "#src/account-registry.ts";
 import { AccountSqlite } from "#src/account-sqlite.ts";
-import { nowMilliseconds } from "#src/time.ts";
 
 type AccountEnvironment = {
   CONVERSION_OWNER_LIMIT: string;
@@ -54,9 +54,9 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
 
   async startConversion(
     input: { idempotencyKey: string; sourceUrl: string },
-    nowMs = nowMilliseconds(),
+    nowMs = Temporal.Now.instant().epochMilliseconds,
   ) {
-    await this.ctx.storage.setAlarm(nowMilliseconds() + 60_000);
+    await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
     const result = this.sqlite.startConversion(
       input,
       nowMs,
@@ -69,7 +69,7 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
   settleConversion(
     conversionId: string,
     outcome: AccountConversionOutcome,
-    nowMs = nowMilliseconds(),
+    nowMs = Temporal.Now.instant().epochMilliseconds,
     executionEpoch?: number,
   ) {
     this.sqlite.settleConversion(conversionId, outcome, nowMs, executionEpoch);
@@ -82,7 +82,12 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     executionEpoch: number,
   ) {
     this.assertExecution(conversionId, executionEpoch);
-    return this.sqlite.reserveAudioSegment(conversionId, sequence, characters, nowMilliseconds());
+    return this.sqlite.reserveAudioSegment(
+      conversionId,
+      sequence,
+      characters,
+      Temporal.Now.instant().epochMilliseconds,
+    );
   }
 
   completeAudioSegment(
@@ -96,7 +101,7 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
       conversionId,
       sequence,
       durationMilliseconds,
-      nowMilliseconds(),
+      Temporal.Now.instant().epochMilliseconds,
     );
   }
 
@@ -104,7 +109,12 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     return this.sqlite.listAudioSegments(conversionId);
   }
 
-  adjustAllowance(requestId: string, amount: number, cause: string, nowMs = nowMilliseconds()) {
+  adjustAllowance(
+    requestId: string,
+    amount: number,
+    cause: string,
+    nowMs = Temporal.Now.instant().epochMilliseconds,
+  ) {
     this.sqlite.adjustAllowance(requestId, amount, cause, nowMs);
   }
 
@@ -125,7 +135,8 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     if (
       account.state === "deleting" ||
       (account.state === "deletion_scheduled" &&
-        (account.recoveryDeadlineMs === null || nowMilliseconds() >= account.recoveryDeadlineMs)) ||
+        (account.recoveryDeadlineMs === null ||
+          Temporal.Now.instant().epochMilliseconds >= account.recoveryDeadlineMs)) ||
       account.executionEpoch !== executionEpoch ||
       this.sqlite.getConversion(conversionId)?.status !== "pending"
     )
@@ -138,7 +149,7 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
       return;
     }
     // Re-arm before external calls: abrupt termination must not lose dispatch intent.
-    await this.ctx.storage.setAlarm(nowMilliseconds() + 60_000);
+    await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
     await this.reconcileArtifactWriters();
     await this.reconcileLifecycle();
     if (this.sqlite.snapshot().state === "deleting") return;
@@ -170,7 +181,7 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
                 failureCategory: "execution-failed",
                 explanation: "The conversion could not be completed.",
               },
-              nowMilliseconds(),
+              Temporal.Now.instant().epochMilliseconds,
               job.executionEpoch,
             );
           continue;
@@ -257,7 +268,7 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     authenticatedAtSeconds: number;
     email: string;
   }) {
-    await this.ctx.storage.setAlarm(nowMilliseconds() + 60_000);
+    await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
     let attempt;
     try {
       attempt = this.lifecycle.schedule(input);
@@ -269,7 +280,7 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     return { result: "scheduled", attempt } as const;
   }
   async restoreAccount(challengeId: string, authenticatedAtSeconds: number) {
-    await this.ctx.storage.setAlarm(nowMilliseconds() + 60_000);
+    await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
     try {
       this.lifecycle.restore(challengeId, authenticatedAtSeconds);
     } catch (error) {
@@ -287,7 +298,10 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
       this.lifecycle.delivered(attempt.attemptId, attempt.state);
     }
     const attempt = this.lifecycle.current();
-    if (attempt?.state === "scheduled" && nowMilliseconds() >= attempt.deadlineMs) {
+    if (
+      attempt?.state === "scheduled" &&
+      Temporal.Now.instant().epochMilliseconds >= attempt.deadlineMs
+    ) {
       await registry.get(registry.idFromName("registry")).acceptDeletionAttempt(attempt);
       this.lifecycle.fence(attempt.attemptId);
     }

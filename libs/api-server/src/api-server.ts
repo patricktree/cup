@@ -20,7 +20,7 @@ import {
 import type { RegistryDurableObject } from "@cup/registry";
 import { audiobookSchema, createWebAppApi, type WebAppApiHandlers } from "@cup/web-app-api.routes";
 
-import { authenticateAccount, mediaCookie, mediaRequest } from "#src/account-auth.ts";
+import { authenticateAccountRequest, mediaCookie, mediaRequest } from "#src/account-auth.ts";
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
 import { routeApplicationDomain } from "#src/domain-routing.ts";
 import { revokeVerifiedGoogleToken } from "#src/google-token-revocation.ts";
@@ -109,7 +109,7 @@ async function getAccountConversion(
   conversionId: string,
   accountId: string,
 ) {
-  const auth = await authenticateAccount(context.req.raw, context.env);
+  const auth = await authenticateAccountRequest(context.req.raw, context.env);
   if (auth.result !== "authenticated")
     return accountAuthError(
       auth.result,
@@ -184,13 +184,13 @@ const validateAccountLifecycleRequest: MiddlewareHandler<{
 
 const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
   async deletionChallenge(context) {
-    const auth = await authenticateAccount(context.req.raw, context.env);
+    const auth = await authenticateAccountRequest(context.req.raw, context.env);
     if (auth.result !== "authenticated")
       return accountAuthError(auth.result, context.get("requestId"));
     return context.json(await auth.account.deletionChallenge(), 200);
   },
   async scheduleDeletion(context) {
-    const auth = await authenticateAccount(context.req.raw, context.env);
+    const auth = await authenticateAccountRequest(context.req.raw, context.env);
     if (auth.result !== "authenticated")
       return accountAuthError(auth.result, context.get("requestId"));
     const input = context.req.valid("json");
@@ -239,7 +239,7 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
     );
   },
   async restoreAccount(context) {
-    const auth = await authenticateAccount(context.req.raw, context.env);
+    const auth = await authenticateAccountRequest(context.req.raw, context.env);
     if (auth.result !== "authenticated")
       return accountAuthError(auth.result, context.get("requestId"));
     const input = context.req.valid("json");
@@ -274,7 +274,7 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
     );
   },
   async getHistory(context) {
-    const auth = await authenticateAccount(context.req.raw, context.env);
+    const auth = await authenticateAccountRequest(context.req.raw, context.env);
     if (auth.result !== "authenticated")
       return accountAuthError(auth.result, context.get("requestId"));
     if (auth.snapshot.state !== "active")
@@ -289,7 +289,7 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
   async filesSession(context) {
     const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
     if (validation.result === "invalid") return validation.response;
-    const auth = await authenticateAccount(context.req.raw, context.env);
+    const auth = await authenticateAccountRequest(context.req.raw, context.env);
     if (auth.result !== "authenticated")
       return accountAuthError(auth.result, context.get("requestId"));
     if (auth.snapshot.state !== "active")
@@ -316,7 +316,7 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
     return context.body(null, 204);
   },
   async getAccount(context) {
-    const auth = await authenticateAccount(context.req.raw, context.env);
+    const auth = await authenticateAccountRequest(context.req.raw, context.env);
     if (auth.result !== "authenticated")
       return accountAuthError(auth.result, context.get("requestId"));
     return context.json(auth.snapshot, 200);
@@ -324,7 +324,7 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
   async startAccountConversion(context) {
     const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
     if (validation.result === "invalid") return validation.response;
-    const auth = await authenticateAccount(context.req.raw, context.env);
+    const auth = await authenticateAccountRequest(context.req.raw, context.env);
     if (auth.result !== "authenticated")
       return accountAuthError(auth.result, context.get("requestId"));
     if (auth.snapshot.state !== "active")
@@ -701,7 +701,7 @@ const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
     const { label, requestId } = context.req.valid("json");
     try {
       const result = await createConversionGrant(
-        { label, requestId, issuedAtMs: nowMilliseconds() },
+        { label, requestId, issuedAtMs: Temporal.Now.instant().epochMilliseconds },
         {
           registry: getRegistryStub(context.env),
           getGrant: (grantId) => getGrantStub(context.env, grantId),
@@ -822,7 +822,7 @@ const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
           label: entry.label,
           createdAt: toIsoString(entry.createdAtMs),
           expiresAt: toIsoString(entry.expiresAtMs),
-          state: deriveEntryState(entry, nowMilliseconds()),
+          state: deriveEntryState(entry, Temporal.Now.instant().epochMilliseconds),
         },
         authoritative,
         registrySnapshotDisagreement:
@@ -1037,7 +1037,7 @@ export function createApiServer(dependencies: ApiServerDependencies = production
         context.header("Cross-Origin-Resource-Policy", "cross-origin");
         return;
       }
-      const auth = await authenticateAccount(
+      const auth = await authenticateAccountRequest(
         isFile ? mediaRequest(context.req.raw) : context.req.raw,
         context.env,
       );
@@ -1280,10 +1280,6 @@ function getAccessKeySet(issuer: string): ReturnType<typeof createRemoteJWKSet> 
   const keySet = createRemoteJWKSet(new URL(`${normalizedIssuer}/cdn-cgi/access/certs`));
   accessKeySets.set(normalizedIssuer, keySet);
   return keySet;
-}
-
-function nowMilliseconds(): number {
-  return Temporal.Now.instant().epochMilliseconds;
 }
 
 function toIsoString(epochMilliseconds: number): string {
