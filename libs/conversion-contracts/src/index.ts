@@ -51,6 +51,55 @@ export const conversionOwnerSchema = z.discriminatedUnion("kind", [
 ]);
 export type ConversionOwner = z.infer<typeof conversionOwnerSchema>;
 
+export const playbackPositionSchema = z
+  .object({
+    synchronizationUnitId: z.string().min(1).max(128),
+    offsetMilliseconds: z.number().finite().nonnegative().max(3_600_000),
+  })
+  .strict();
+export type PlaybackPosition = z.infer<typeof playbackPositionSchema>;
+
+export const segmentWorkflowParamsSchema = z
+  .object({
+    v: z.literal(3),
+    conversionId: z.uuidv4(),
+    owner: conversionOwnerSchema,
+    executionEpoch: z.number().int().positive().safe(),
+    sequence: z.number().int().min(0).max(199),
+  })
+  .strict();
+export type SegmentWorkflowParams = z.infer<typeof segmentWorkflowParamsSchema>;
+
+export type SynthesisWorkflowDispatcher = {
+  create(input: { id: string; params: SegmentWorkflowParams }): Promise<unknown>;
+  get(id: string): Promise<{
+    status(): Promise<{ status: string; error?: { message: string } }>;
+    restart(): Promise<void>;
+  }>;
+};
+
+/** Called under the owner's concurrency gate so explicit retries cannot restart each other. */
+export async function dispatchSegmentWorkflow(
+  workflow: SynthesisWorkflowDispatcher,
+  params: SegmentWorkflowParams,
+  retry: boolean,
+) {
+  const id = `segment-${params.conversionId}-${params.sequence}`;
+  try {
+    await workflow.create({ id, params });
+    return { status: "queued" };
+  } catch {
+    // Creation can succeed before its response is lost. Resolve through the stable identity.
+    const instance = await workflow.get(id);
+    const result = await instance.status();
+    if (retry && (result.status === "errored" || result.status === "terminated")) {
+      await instance.restart();
+      return { status: "queued" };
+    }
+    return result;
+  }
+}
+
 export type AudiobookReference = {
   key: string;
   contentType: "application/json";
@@ -61,7 +110,6 @@ export type AudiobookReference = {
 export type ConversionMeasurements = {
   narrationTextCharacters: number;
   narrationChunks: number;
-  audioDurationMilliseconds: number;
 };
 
 export {
@@ -69,3 +117,10 @@ export {
   createConversionArtifactPrefix,
   getAccountConversionIdFromArtifactPrefix,
 } from "#src/artifact-prefix.ts";
+
+export {
+  sourceUrlSchema,
+  conversionParamsSchema,
+  type ConversionParams,
+  type TrialWorkflowParams,
+} from "#src/preparation-workflow-params.ts";

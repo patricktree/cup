@@ -6,7 +6,6 @@ export function accountArtifactBucket(
   account: DurableObjectStub<AccountDurableObject>,
   executionEpoch: number,
   prefix: string,
-  purpose: "production" | "export" = "production",
 ): R2Bucket {
   return new Proxy(bucket, {
     get(target, property, receiver) {
@@ -20,7 +19,7 @@ export function accountArtifactBucket(
             const digest = new Uint8Array(
               await crypto.subtle.digest(
                 "SHA-256",
-                new TextEncoder().encode(executionEpoch + ":" + purpose + ":" + key),
+                new TextEncoder().encode(executionEpoch + ":" + key),
               ),
             );
             const writerId = Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join(
@@ -35,7 +34,7 @@ export function accountArtifactBucket(
                 await args[1].pipeTo(new WritableStream({ write() {} }));
               return existing;
             }
-            await account.prepareArtifactWrite(writerId, executionEpoch, prefix, purpose, key);
+            await account.prepareArtifactWrite(writerId, executionEpoch, prefix, key);
             handedToR2 = true;
             const object = await target.put(args[0], args[1], {
               ...args[2],

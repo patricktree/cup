@@ -4,6 +4,7 @@
   "scripts": {
     "build": "turbo run turbo:build && pnpm run native:sync",
     "native:sync": "CUP_NATIVE_PLATFORM=android cap sync android && CUP_NATIVE_PLATFORM=ios cap sync ios",
+    "test:native": "node test-native/run-tests.mjs",
     "turbo:build": "tsc --build"
   },
   "dependencies": {

@@ -73,7 +73,7 @@ test("anonymous range, HEAD and conditional requests cannot touch private storag
     ["GET", { "If-None-Match": "known" }],
   ] as const) {
     const response = await app.request(
-      `https://cup-audio.com/api/files/audiobooks/${conversionId}/audio.mp3`,
+      `https://cup-audio.com/api/files/audiobooks/${conversionId}/segments/0/audio.mp3`,
       { method, headers },
       env,
     );
@@ -90,7 +90,7 @@ test("non-owners and blocked accounts cannot touch private storage", async () =>
   ] as const) {
     const { app, env, token, bucketRead } = await fixture(owner, state);
     const response = await app.request(
-      `https://cup-audio.com/api/files/audiobooks/${conversionId}/book.epub`,
+      `https://cup-audio.com/api/files/audiobooks/${conversionId}/segments/1/audio.mp3`,
       { headers: { Cookie: `cup_media=${token}` } },
       env,
     );
@@ -134,7 +134,12 @@ test("media cookie is HttpOnly and never authorizes JSON account APIs", async ()
 
 test("percent-encoded owner identifiers cannot bypass media authorization", async () => {
   const { app, env, bucketRead } = await fixture();
-  for (const resource of ["", "/audio.mp3", "/captions.vtt", "/book.epub"]) {
+  for (const resource of [
+    "",
+    "/segments/0/audio.mp3",
+    "/segments/2/audio.mp3",
+    "/segments/1/audio.mp3",
+  ]) {
     const response = await app.request(
       `https://cup-audio.com/api/${resource ? "files/audiobooks" : "audiobooks"}/%66${conversionId.slice(1)}${resource}`,
       {},

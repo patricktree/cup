@@ -48,6 +48,16 @@ export const accountConversions = sqliteTable(
   ],
 );
 
+export const accountPlaybackPositions = sqliteTable(
+  "account_playback_positions",
+  {
+    conversionId: text("conversion_id").primaryKey(),
+    synchronizationUnitId: text("synchronization_unit_id").notNull(),
+    offsetMilliseconds: integer("offset_milliseconds").notNull(),
+  },
+  (table) => [check("playback_offset", sql`${table.offsetMilliseconds} >= 0`)],
+);
+
 export const pendingJobs = sqliteTable(
   "pending_jobs",
   {
@@ -179,7 +189,6 @@ export const artifactWriters = sqliteTable(
     prefix: text().notNull(),
     state: text({ enum: ["running", "drained", "uncertain"] }).notNull(),
     effect: text("unresolved_effect"),
-    purpose: text().notNull(),
   },
   (table) => [
     check("artifact_writer_state", sql`${table.state} IN ('running', 'drained', 'uncertain')`),

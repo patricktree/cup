@@ -1,10 +1,10 @@
 import type { Page } from "@playwright/test";
-import { unzipSync } from "fflate";
 
-import { analyzeMp3 } from "@cup/audiobook-production";
-import { accountSnapshotSchema } from "@cup/web-app-api.routes";
+import { audiobookSchema, accountSnapshotSchema } from "@cup/web-app-api.routes";
 
 import { expect, test } from "#test-e2e/fixtures.ts";
+import { waitForAudiobook } from "#test-e2e/journey.ts";
+import { generateUnit } from "#test-e2e/synthesis.ts";
 
 const SOURCE_URL = "https://source.example.test/fixture";
 
@@ -24,11 +24,17 @@ test("Google PKCE signup resumes conversion, protects history and media, and sup
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
   expect(authProvider.exchanges()).toBe(1);
   const conversionId = new URL(page.url()).pathname.split("/").at(-1);
-  const mediaUrl = `${origin}/api/files/audiobooks/${conversionId}/audio.mp3`;
+  const mediaUrl = `${origin}/api/files/audiobooks/${conversionId}/segments/0/audio.mp3`;
+  await waitForAudiobook(page);
+  if (!conversionId) throw new Error("Conversion missing");
+  await generateUnit(page, conversionId, 0, await readAccessToken(page));
   const remainingAllowance = (await readAccount(page, origin)).balance.available;
   expect(remainingAllowance).toBeLessThan(30 * 60 * 1_000);
   await page.reload();
-  expect((await page.request.get(mediaUrl)).status()).toBe(200);
+  await waitForAudiobook(page);
+  await expect
+    .poll(() => page.evaluate(async (url) => (await fetch(url)).status, mediaUrl))
+    .toBe(200);
   expect(
     (
       await page.request.get(mediaUrl, {
@@ -97,6 +103,9 @@ test("signup keeps trial conversions separate from the new account and its histo
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
   const originalUrl = page.url();
   const originalId = new URL(originalUrl).pathname.split("/").at(-1);
+  await waitForAudiobook(page);
+  if (!originalId) throw new Error("Conversion missing");
+  await generateUnit(page, originalId);
   let importRequests = 0;
   page.on("request", (request) => {
     if (new URL(request.url()).pathname.startsWith("/api/account/imports")) importRequests += 1;
@@ -106,20 +115,11 @@ test("signup keeps trial conversions separate from the new account and its histo
   await page.getByRole("button", { name: "Load & listen" }).click();
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
-  const epubUrl = await page.getByRole("link", { name: "Download EPUB" }).getAttribute("href");
-  if (epubUrl === null) throw new Error("EPUB download URL missing");
-  const epubResponse = await page.request.get(new URL(epubUrl, page.url()).href);
-  expect(epubResponse.status()).toBe(200);
-  const archive = unzipSync(new Uint8Array(await epubResponse.body()));
-  const audioSegments = Object.entries(archive).filter(([name]) =>
-    /^EPUB\/audio\/\d+\.mp3$/u.test(name),
-  );
-  expect(audioSegments.length).toBeGreaterThan(0);
-  const billedMilliseconds = audioSegments.reduce(
-    (sum, [, audio]) => sum + Math.ceil(analyzeMp3(audio).durationMilliseconds),
-    0,
-  );
-  const expectedAllowance = 30 * 60 * 1_000 - billedMilliseconds;
+  await waitForAudiobook(page);
+  const accountConversionId = new URL(page.url()).pathname.split("/").at(-1);
+  if (!accountConversionId) throw new Error("Conversion missing");
+  const segment = await generateUnit(page, accountConversionId, 0, await readAccessToken(page));
+  const expectedAllowance = 30 * 60 * 1_000 - Math.ceil(segment.durationMilliseconds);
   expect((await readAccount(page, origin)).balance.available).toBe(expectedAllowance);
   const privateUrl = page.url();
   const privateId = new URL(privateUrl).pathname.split("/").at(-1);
@@ -143,11 +143,15 @@ test("signup keeps trial conversions separate from the new account and its histo
   await page.getByRole("button", { name: "Schedule deletion", exact: true }).click();
   await expect
     .poll(async () =>
-      (await page.request.get(`${origin}/api/files/audiobooks/${privateId}/audio.mp3`)).status(),
+      (
+        await page.request.get(`${origin}/api/files/audiobooks/${privateId}/segments/0/audio.mp3`)
+      ).status(),
     )
     .toBe(401);
   expect(
-    (await page.request.get(`${origin}/api/files/audiobooks/${originalId}/audio.mp3`)).status(),
+    (
+      await page.request.get(`${origin}/api/files/audiobooks/${originalId}/segments/0/audio.mp3`)
+    ).status(),
   ).toBe(200);
 });
 
@@ -224,7 +228,7 @@ test("root auth handles signup and session restoration without account navigatio
   const privateUrl = page.url();
   await page.reload();
   await expect(page).toHaveURL(privateUrl);
-  await expect(page.locator("audio")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeEnabled();
 
   await page.goto(`${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
@@ -264,7 +268,7 @@ test("failed sign-in leaves anonymous trial access available", async ({
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
   await page.getByRole("button", { name: "Load & listen" }).click();
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
-  await expect(page.locator("audio")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeEnabled();
 });
 
 async function readAccount(page: Page, origin: string) {
@@ -324,3 +328,70 @@ async function readAccessToken(page: Page) {
     return session.access_token;
   });
 }
+
+test("account positions restore once and use last-write-wins across players", async ({
+  page,
+  workerEnvironment,
+}) => {
+  const { origin } = workerEnvironment;
+  await page.goto(origin + "/app/");
+  await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
+  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60000 });
+  await waitForAudiobook(page);
+  const url = page.url();
+  const id = new URL(url).pathname.split("/").at(-1)!;
+  const token = await readAccessToken(page);
+  const document = audiobookSchema.parse(
+    await (
+      await page.request.get(origin + "/api/audiobooks/" + id, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    ).json(),
+  );
+  if (document.status !== "ready") throw new Error("Article not prepared");
+  const unitId = document.narrationDocument.synchronizationUnits[1]!.id;
+  const save = await page.evaluate(
+    async (input) => {
+      return (
+        await fetch(`/api/audiobooks/${input.id}/position`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Create-Audiobook-From-URL-Request": "1",
+            Authorization: `Bearer ${input.token}`,
+          },
+          body: JSON.stringify({ synchronizationUnitId: input.unitId, offsetMilliseconds: 1200 }),
+        })
+      ).status;
+    },
+    { id, token, unitId },
+  );
+  expect(save).toBe(204);
+  await page.reload();
+  await waitForAudiobook(page);
+  await expect(page.getByRole("combobox", { name: "Start at passage" })).toHaveValue("1");
+  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+  const second = await page.context().newPage();
+  await second.goto(url);
+  await waitForAudiobook(second);
+  await expect(second.getByRole("combobox", { name: "Start at passage" })).toHaveValue("1");
+  await second.getByRole("combobox", { name: "Start at passage" }).selectOption("2");
+  await expect
+    .poll(async () => {
+      const result = await page.request.get(origin + "/api/audiobooks/" + id, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return (await result.json()).playbackPosition?.synchronizationUnitId;
+    })
+    .toBe(document.narrationDocument.synchronizationUnits[2]!.id);
+  await expect(page.getByRole("combobox", { name: "Start at passage" })).toHaveValue("1");
+  await page.reload();
+  await waitForAudiobook(page);
+  await expect(page.getByRole("combobox", { name: "Start at passage" })).toHaveValue("2");
+  await expect
+    .poll(async () => (await (await fetch(origin + "/__qa/speech-calls")).json()).length)
+    .toBe(3);
+  await second.close();
+});

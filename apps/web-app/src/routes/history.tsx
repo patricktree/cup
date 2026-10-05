@@ -41,10 +41,7 @@ function HistoryPage(): React.ReactNode {
                     Open audiobook
                   </Link>
                 ) : item.status === "pending" ? (
-                  <Link
-                    to="/conversions/$conversionId"
-                    params={{ conversionId: item.conversionId }}
-                  >
+                  <Link to="/audiobooks/$conversionId" params={{ conversionId: item.conversionId }}>
                     Processing
                   </Link>
                 ) : (

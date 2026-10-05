@@ -10,6 +10,7 @@ Start with the [domain context](CONTEXT.md) for Cup's vocabulary and the [system
 | [System overview](architecture/README.md)                          | Runtime components, API definitions, storage ownership, external services, and development boundaries    |
 | [Authentication and authorization](architecture/authentication.md) | Google and Supabase sign-in, Cup account provisioning, media access, trials, and operator authentication |
 | [Durable Object schemas](architecture/durable-object-storage.md)   | SQLite tables, columns, keys, and relationships for all three Durable Object stores                      |
+| [R2 objects and key layout](architecture/r2-storage.md)            | Account and trial prefixes, stored objects, metadata, access, and cleanup                                |
 | [Conversion](architecture/conversion.md)                           | Source preparation through delivery, duration accounting, retries, and failure boundaries                |
 | [Account deletion](architecture/account-deletion.md)               | Fresh authentication, recovery, write fencing, cleanup, and notification retries                         |
 

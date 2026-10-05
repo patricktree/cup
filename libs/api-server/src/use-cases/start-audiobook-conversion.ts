@@ -1,3 +1,4 @@
+import type { TrialWorkflowParams } from "@cup/conversion-contracts";
 import type { GrantRegistrySnapshot, StartGrantConversionResult } from "@cup/conversion-grants";
 
 export type StartAudiobookConversionInput = {
@@ -21,10 +22,7 @@ export type StartAudiobookConversionDependencies = {
       grantSnapshot: GrantRegistrySnapshot,
     ): Promise<"applied" | "replayed" | "stale">;
   };
-  createWorkflow(
-    conversionId: string,
-    input: { sourceUrl: string; grantId: string },
-  ): Promise<void>;
+  createWorkflow(conversionId: string, input: TrialWorkflowParams): Promise<void>;
 };
 
 /** Records an accepted conversion and starts its durable workflow when needed. */

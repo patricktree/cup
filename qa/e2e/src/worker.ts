@@ -1,13 +1,16 @@
 import { WorkflowEntrypoint } from "cloudflare:workers";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
+import { NonRetryableError } from "cloudflare:workflows";
 
 import { AccountDurableObject } from "@cup/accounts";
 import { createApiServer } from "@cup/api-server";
+import { type SegmentWorkflowParams } from "@cup/conversion-contracts";
 import { ConversionGrantDurableObject } from "@cup/conversion-grants";
 import {
-  runCreateAudiobookFromUrlWorkflow,
+  runPrepareAudiobookWorkflow,
   type ConversionParams,
 } from "@cup/create-audiobook-from-url-workflow/runner";
+import { runAudioSegmentWorkflow } from "@cup/create-audiobook-from-url-workflow/segment-runner";
 import { createFakeNarrationContentSelector } from "@cup/narration-content-selection/fake";
 import { createControlledSourceMaterialPreparer } from "@cup/prepare-source-material/fake";
 import { RegistryDurableObject } from "@cup/registry";
@@ -19,24 +22,43 @@ const CONTROLLED_SOURCE_URL = "https://source.example.test/fixture";
 
 export { RegistryDurableObject, AccountDurableObject, ConversionGrantDurableObject };
 
-/** Runs the production Workflow pipeline with deterministic local provider adapters. */
-export class CreateAudiobookFromUrlQaWorkflow extends WorkflowEntrypoint<Env, ConversionParams> {
+/** Runs preparation with deterministic local provider adapters. */
+export class PrepareAudiobookQaWorkflow extends WorkflowEntrypoint<Env, ConversionParams> {
   override run(event: WorkflowEvent<ConversionParams>, step: WorkflowStep) {
     assertNoPaidAiBindings(this.env);
     const scenario = parseQaScenario(this.env.QA_SCENARIO);
 
-    return runCreateAudiobookFromUrlWorkflow({
+    return runPrepareAudiobookWorkflow({
       env: this.env,
-      event,
+      event: { ...event, payload: event.payload },
       step,
       services: {
         prepareSourceMaterial: createControlledSourceMaterialPreparer({
           url: CONTROLLED_SOURCE_URL,
           html: sourceHtml,
         }),
-        selectNarrationContent: createFakeNarrationContentSelector(),
-        speechSynthesisAi: createTrackedSpeechProvider(this.env.AUDIO_BUCKET, scenario),
+        selectNarrationContent: createFakeNarrationContentSelector(
+          scenario === "preparation-failure"
+            ? { failure: new NonRetryableError("Selection failed.") }
+            : {},
+        ),
       },
+    });
+  }
+}
+
+/** Runs segment synthesis with a tracked local speech provider. */
+export class SynthesizeAudioSegmentQaWorkflow extends WorkflowEntrypoint<
+  Env,
+  SegmentWorkflowParams
+> {
+  override run(event: WorkflowEvent<SegmentWorkflowParams>, step: WorkflowStep) {
+    assertNoPaidAiBindings(this.env);
+    return runAudioSegmentWorkflow({
+      env: this.env,
+      event,
+      step,
+      ai: createTrackedSpeechProvider(this.env.AUDIO_BUCKET, parseQaScenario(this.env.QA_SCENARIO)),
     });
   }
 }
@@ -53,10 +75,15 @@ export default {
   },
 } satisfies ExportedHandler<Env>;
 
-type QaScenario = "success" | "tts-failure" | "speech-gated";
+type QaScenario = "success" | "tts-failure" | "speech-gated" | "preparation-failure";
 
 function parseQaScenario(value: string): QaScenario {
-  if (value === "success" || value === "tts-failure" || value === "speech-gated") {
+  if (
+    value === "success" ||
+    value === "tts-failure" ||
+    value === "speech-gated" ||
+    value === "preparation-failure"
+  ) {
     return value;
   }
 

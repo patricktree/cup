@@ -13,7 +13,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as AudiobooksConversionIdRouteImport } from './routes/audiobooks.$conversionId'
-import { Route as ConversionsConversionIdRouteImport } from './routes/conversions.$conversionId'
 import { Route as TrialsGrantIdRouteImport } from './routes/trials.$grantId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -36,11 +35,6 @@ const AudiobooksConversionIdRoute = AudiobooksConversionIdRouteImport.update({
   path: '/audiobooks/$conversionId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ConversionsConversionIdRoute = ConversionsConversionIdRouteImport.update({
-  id: '/conversions/$conversionId',
-  path: '/conversions/$conversionId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TrialsGrantIdRoute = TrialsGrantIdRouteImport.update({
   id: '/trials/$grantId',
   path: '/trials/$grantId',
@@ -52,7 +46,6 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRoute
   '/history': typeof HistoryRoute
   '/audiobooks/$conversionId': typeof AudiobooksConversionIdRoute
-  '/conversions/$conversionId': typeof ConversionsConversionIdRoute
   '/trials/$grantId': typeof TrialsGrantIdRoute
 }
 export interface FileRoutesByTo {
@@ -60,7 +53,6 @@ export interface FileRoutesByTo {
   '/account': typeof AccountRoute
   '/history': typeof HistoryRoute
   '/audiobooks/$conversionId': typeof AudiobooksConversionIdRoute
-  '/conversions/$conversionId': typeof ConversionsConversionIdRoute
   '/trials/$grantId': typeof TrialsGrantIdRoute
 }
 export interface FileRoutesById {
@@ -69,7 +61,6 @@ export interface FileRoutesById {
   '/account': typeof AccountRoute
   '/history': typeof HistoryRoute
   '/audiobooks/$conversionId': typeof AudiobooksConversionIdRoute
-  '/conversions/$conversionId': typeof ConversionsConversionIdRoute
   '/trials/$grantId': typeof TrialsGrantIdRoute
 }
 export interface FileRouteTypes {
@@ -79,7 +70,6 @@ export interface FileRouteTypes {
     | '/account'
     | '/history'
     | '/audiobooks/$conversionId'
-    | '/conversions/$conversionId'
     | '/trials/$grantId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -87,7 +77,6 @@ export interface FileRouteTypes {
     | '/account'
     | '/history'
     | '/audiobooks/$conversionId'
-    | '/conversions/$conversionId'
     | '/trials/$grantId'
   id:
     | '__root__'
@@ -95,7 +84,6 @@ export interface FileRouteTypes {
     | '/account'
     | '/history'
     | '/audiobooks/$conversionId'
-    | '/conversions/$conversionId'
     | '/trials/$grantId'
   fileRoutesById: FileRoutesById
 }
@@ -104,7 +92,6 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   HistoryRoute: typeof HistoryRoute
   AudiobooksConversionIdRoute: typeof AudiobooksConversionIdRoute
-  ConversionsConversionIdRoute: typeof ConversionsConversionIdRoute
   TrialsGrantIdRoute: typeof TrialsGrantIdRoute
 }
 
@@ -138,13 +125,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AudiobooksConversionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/conversions/$conversionId': {
-      id: '/conversions/$conversionId'
-      path: '/conversions/$conversionId'
-      fullPath: '/conversions/$conversionId'
-      preLoaderRoute: typeof ConversionsConversionIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/trials/$grantId': {
       id: '/trials/$grantId'
       path: '/trials/$grantId'
@@ -160,7 +140,6 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRoute,
   HistoryRoute: HistoryRoute,
   AudiobooksConversionIdRoute: AudiobooksConversionIdRoute,
-  ConversionsConversionIdRoute: ConversionsConversionIdRoute,
   TrialsGrantIdRoute: TrialsGrantIdRoute,
 }
 export const routeTree = rootRouteImport

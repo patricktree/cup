@@ -1,15 +1,13 @@
 import { z } from "zod";
 
 export type SupabaseAdminEnvironment = {
-  SUPABASE_URL?: string;
-  SUPABASE_SECRET_KEY?: string;
+  SUPABASE_URL: string;
+  SUPABASE_SECRET_KEY: string;
 };
 
 /** Authoritative existence checks prevent expired/deleted identities from allocating accounts. */
 export async function verifySupabaseIdentity(env: SupabaseAdminEnvironment, subject: string) {
   z.uuid().parse(subject);
-  if (!env.SUPABASE_URL || !env.SUPABASE_SECRET_KEY)
-    throw new Error("Supabase administration is not configured");
   const response = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${subject}`, {
     signal: AbortSignal.timeout(10_000),
     headers: {

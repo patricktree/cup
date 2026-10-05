@@ -3,6 +3,9 @@ import type { RouteHandler } from "@hono/zod-openapi";
 
 import {
   audiobookSchema,
+  audioSegmentSchema,
+  segmentParamsSchema,
+  playbackPositionSchema,
   authConfigResponseSchema,
   accountSnapshotSchema,
   accountHistorySchema,
@@ -311,64 +314,81 @@ const audiobookRoute = createRoute({
   },
 });
 
+const segmentResponses = {
+  200: {
+    content: { "application/json": { schema: audioSegmentSchema } },
+    description: "Unit audio availability.",
+  },
+  401: errorResponse("Synthesis authorization required."),
+  403: errorResponse("Synthesis blocked."),
+  404: errorResponse("Unit not found."),
+  409: errorResponse("Narration not prepared."),
+  500: errorResponse("Unavailable."),
+};
+const getSegmentRoute = createRoute({
+  method: "get",
+  path: "/api/audiobooks/{conversionId}/segments/{sequence}",
+  request: { params: segmentParamsSchema },
+  responses: segmentResponses,
+});
+const generateSegmentRoute = createRoute({
+  method: "post",
+  path: "/api/audiobooks/{conversionId}/segments/{sequence}",
+  request: {
+    params: segmentParamsSchema,
+    headers: routeBrowserMutationHeadersSchema,
+    body: {
+      required: true,
+      content: { "application/json": { schema: z.object({ retry: z.boolean() }).strict() } },
+    },
+  },
+  responses: segmentResponses,
+});
+const retryPreparationRoute = createRoute({
+  method: "post",
+  path: "/api/audiobooks/{conversionId}/retry",
+  request: {
+    params: conversionParamsSchema,
+    headers: routeBrowserMutationHeadersSchema,
+    body: { required: true, content: { "application/json": { schema: z.object({}).strict() } } },
+  },
+  responses: {
+    204: { description: "Preparation restarted." },
+    401: errorResponse("Authorization required."),
+    403: errorResponse("Blocked."),
+    404: errorResponse("Not found."),
+    500: errorResponse("Unavailable."),
+  },
+});
+const savePositionRoute = createRoute({
+  method: "put",
+  path: "/api/audiobooks/{conversionId}/position",
+  request: {
+    params: conversionParamsSchema,
+    headers: routeBrowserMutationHeadersSchema,
+    body: { required: true, content: { "application/json": { schema: playbackPositionSchema } } },
+  },
+  responses: {
+    204: { description: "Position saved with last write wins." },
+    401: errorResponse("Sign in required."),
+    404: errorResponse("Not found."),
+    400: errorResponse("Invalid unit."),
+    500: errorResponse("Unavailable."),
+  },
+});
 const audioRoute = createRoute({
   method: "get",
-  path: "/api/files/audiobooks/{conversionId}/audio.mp3",
-  request: { params: conversionParamsSchema },
+  path: "/api/files/audiobooks/{conversionId}/segments/{sequence}/audio.mp3",
+  request: { params: segmentParamsSchema },
   responses: {
-    200: { content: { "audio/mpeg": { schema: binarySchema } }, description: "Complete MP3." },
-    206: { content: { "audio/mpeg": { schema: binarySchema } }, description: "MP3 byte range." },
+    200: { content: { "audio/mpeg": { schema: binarySchema } }, description: "Unit audio." },
+    206: { content: { "audio/mpeg": { schema: binarySchema } }, description: "Unit byte range." },
     304: { description: "Not modified." },
-    404: errorResponse("Audiobook not found."),
+    404: errorResponse("Unit unavailable."),
     416: errorResponse("Invalid range."),
   },
 });
-
-const audioHeadRoute = createRoute({
-  method: "head",
-  path: "/api/files/audiobooks/{conversionId}/audio.mp3",
-  request: { params: conversionParamsSchema },
-  responses: {
-    200: { description: "MP3 headers." },
-    304: { description: "Not modified." },
-    404: errorResponse("Audiobook not found."),
-  },
-});
-
-const captionsRoute = createRoute({
-  method: "get",
-  path: "/api/files/audiobooks/{conversionId}/captions.vtt",
-  request: { params: conversionParamsSchema },
-  responses: {
-    200: { content: { "text/vtt": { schema: z.string() } }, description: "Timed narration text." },
-    404: errorResponse("Audiobook not found."),
-  },
-});
-
-const epubRoute = createRoute({
-  method: "get",
-  path: "/api/files/audiobooks/{conversionId}/book.epub",
-  request: { params: conversionParamsSchema },
-  responses: {
-    200: {
-      content: { "application/epub+zip": { schema: binarySchema } },
-      description: "Complete EPUB.",
-    },
-    304: { description: "Not modified." },
-    404: errorResponse("Audiobook not found."),
-  },
-});
-
-const epubHeadRoute = createRoute({
-  method: "head",
-  path: "/api/files/audiobooks/{conversionId}/book.epub",
-  request: { params: conversionParamsSchema },
-  responses: {
-    200: { description: "EPUB headers." },
-    304: { description: "Not modified." },
-    404: errorResponse("Audiobook not found."),
-  },
-});
+const audioHeadRoute = createRoute({ ...audioRoute, method: "head" });
 
 type WebAppApiEnvironment<Bindings extends object> = {
   Bindings: Bindings;
@@ -398,11 +418,12 @@ export type WebAppApiHandlers<Bindings extends object> = {
   getConversion: WebAppApiRouteHandler<typeof getConversionRoute, Bindings>;
   startTrialConversion: WebAppApiRouteHandler<typeof startTrialConversionRoute, Bindings>;
   getAudiobook: WebAppApiRouteHandler<typeof audiobookRoute, Bindings>;
+  getSegment: WebAppApiRouteHandler<typeof getSegmentRoute, Bindings>;
+  generateSegment: WebAppApiRouteHandler<typeof generateSegmentRoute, Bindings>;
+  retryPreparation: WebAppApiRouteHandler<typeof retryPreparationRoute, Bindings>;
+  savePosition: WebAppApiRouteHandler<typeof savePositionRoute, Bindings>;
   getAudio: WebAppApiRouteHandler<typeof audioRoute, Bindings>;
   headAudio: WebAppApiRouteHandler<typeof audioHeadRoute, Bindings>;
-  getCaptions: WebAppApiRouteHandler<typeof captionsRoute, Bindings>;
-  getEpub: WebAppApiRouteHandler<typeof epubRoute, Bindings>;
-  headEpub: WebAppApiRouteHandler<typeof epubHeadRoute, Bindings>;
 };
 
 /** Creates the typed HTTP interface used by the web application. */
@@ -422,11 +443,12 @@ export function createWebAppApi<Bindings extends object>(handlers: WebAppApiHand
     .openapi(getConversionRoute, handlers.getConversion)
     .openapi(startTrialConversionRoute, handlers.startTrialConversion)
     .openapi(audiobookRoute, handlers.getAudiobook)
+    .openapi(getSegmentRoute, handlers.getSegment)
+    .openapi(generateSegmentRoute, handlers.generateSegment)
+    .openapi(retryPreparationRoute, handlers.retryPreparation)
+    .openapi(savePositionRoute, handlers.savePosition)
     .openapi(audioRoute, handlers.getAudio)
-    .openapi(audioHeadRoute, handlers.headAudio)
-    .openapi(captionsRoute, handlers.getCaptions)
-    .openapi(epubRoute, handlers.getEpub)
-    .openapi(epubHeadRoute, handlers.headEpub);
+    .openapi(audioHeadRoute, handlers.headAudio);
 }
 
 const unavailable = (): never => {
@@ -452,9 +474,10 @@ export function createWebAppContractApp() {
     getAudiobook: unavailable,
     getAudio: unavailable,
     headAudio: unavailable,
-    getCaptions: unavailable,
-    getEpub: unavailable,
-    headEpub: unavailable,
+    getSegment: unavailable,
+    generateSegment: unavailable,
+    retryPreparation: unavailable,
+    savePosition: unavailable,
   });
 }
 

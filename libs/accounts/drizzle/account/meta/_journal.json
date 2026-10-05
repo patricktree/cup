@@ -8,6 +8,27 @@
       "when": 1790937417405,
       "tag": "0000_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1791025209466,
+      "tag": "0001_playback_positions",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791026307662,
+      "tag": "0002_unlisted_playback_positions",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791104851927,
+      "tag": "0003_remove_artifact_writer_purpose",
+      "breakpoints": true
     }
   ]
 }

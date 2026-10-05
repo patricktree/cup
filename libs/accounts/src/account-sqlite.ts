@@ -1,8 +1,13 @@
 import { and, desc, eq, lt, or } from "drizzle-orm";
 import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
+import { Temporal } from "temporal-polyfill";
 import { z } from "zod";
 
-import { createConversionArtifactPrefix } from "@cup/conversion-contracts";
+import {
+  playbackPositionSchema,
+  type PlaybackPosition,
+  createConversionArtifactPrefix,
+} from "@cup/conversion-contracts";
 
 import {
   accountIdentitySchema,
@@ -17,6 +22,7 @@ import type {
 } from "#src/account-contracts.ts";
 import { AccountDurationLedger } from "#src/account-duration-ledger.ts";
 import {
+  accountPlaybackPositions,
   accounts,
   accountConversions,
   pendingJobs,
@@ -60,6 +66,7 @@ export class AccountSqlite {
   erase(): void {
     this.database.transaction(() => {
       for (const table of [
+        accountPlaybackPositions,
         artifactWriters,
         pendingJobs,
         accountAudioSegments,
@@ -147,7 +154,6 @@ export class AccountSqlite {
         const { fingerprint: _fingerprint, ...conversion } = existing;
         return { result: "replayed", conversion };
       }
-      if (account.balance.available < 1) return { result: "exhausted" };
       const retryAfter = this.limits.consume("account-conversion", startLimit, 60_000, nowMs);
       if (retryAfter) return { result: "rate-limited", retryAfter };
       const conversionId = crypto.randomUUID();
@@ -189,6 +195,60 @@ export class AccountSqlite {
     nowMs: number,
   ) {
     return this.duration.complete(conversionId, sequence, durationMilliseconds, nowMs);
+  }
+
+  retryPreparation(conversionId: string) {
+    this.requireActive();
+    this.database
+      .update(accountConversions)
+      .set({ status: "pending", outcomeJson: null, completedAtMs: null })
+      .where(
+        and(
+          eq(accountConversions.conversionId, conversionId),
+          eq(accountConversions.status, "failed"),
+        ),
+      )
+      .run();
+  }
+
+  releaseAudioSegment(conversionId: string, sequence: number) {
+    this.duration.releaseReservations(
+      conversionId,
+      Temporal.Now.instant().epochMilliseconds,
+      sequence,
+    );
+  }
+
+  getPlaybackPosition(conversionId: string): PlaybackPosition | null {
+    this.requireActive();
+    const row = this.database
+      .select()
+      .from(accountPlaybackPositions)
+      .where(eq(accountPlaybackPositions.conversionId, conversionId))
+      .get();
+    return row
+      ? {
+          synchronizationUnitId: row.synchronizationUnitId,
+          offsetMilliseconds: row.offsetMilliseconds,
+        }
+      : null;
+  }
+
+  savePlaybackPosition(conversionId: string, position: PlaybackPosition) {
+    this.requireActive();
+    const parsed = playbackPositionSchema.parse(position);
+    this.database
+      .insert(accountPlaybackPositions)
+      .values({
+        conversionId,
+        ...parsed,
+        offsetMilliseconds: Math.round(parsed.offsetMilliseconds),
+      })
+      .onConflictDoUpdate({
+        target: accountPlaybackPositions.conversionId,
+        set: { ...parsed, offsetMilliseconds: Math.round(parsed.offsetMilliseconds) },
+      })
+      .run();
   }
 
   listAudioSegments(conversionId: string) {

@@ -1,5 +1,7 @@
 # Registry
 
+Registry account provisioning and deletion require `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and `RESEND_API_KEY`. Provisioning always checks the provider identity before activation; integration tests supply a local identity provider.
+
 This library owns the singleton `RegistryDurableObject`: provider identity mapping, account provisioning, grant inventory and projections, conversion ownership, ingress rate limits, and durable account deletion coordination and notifications. Account and grant objects keep their owner-specific conversion state and accounting. Integration tests here exercise all three Durable Object classes together.
 
 The shared `REGISTRY` binding resolves the existing singleton name `registry`. `conversion_owners` is the sole mapping from each conversion ID to an account or trial grant, with a check constraint requiring exactly the matching owner identifier. The undeployed unified baseline contains no `conversion_grants` table or compatibility lookup; the legacy table is dropped during the transition.

@@ -1,29 +1,44 @@
 import { DurableObject } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 
-import { AccountDurableObject } from "@cup/accounts";
+import { AccountDurableObject as BaseAccountDurableObject } from "@cup/accounts";
 
 import { DeletionCoordinator } from "#src/deletion-coordinator.ts";
 import type { RegistryDurableObject } from "#src/registry-durable-object.ts";
 import { migrateRegistry } from "#src/sqlite-migrations.ts";
 
 /** Simulates a launch acknowledgement loss followed by exhausted terminal RPC retries. */
-export class AccountDispatchTestDurableObject extends AccountDurableObject {
+export class AccountDispatchTestDurableObject extends BaseAccountDurableObject {
   constructor(
     context: DurableObjectState,
     env: {
       CONVERSION_OWNER_LIMIT: string;
       REGISTRY: DurableObjectNamespace<RegistryDurableObject>;
+      AUDIO_BUCKET: R2Bucket;
     },
   ) {
     super(context, {
       CONVERSION_OWNER_LIMIT: env.CONVERSION_OWNER_LIMIT,
       REGISTRY: env.REGISTRY,
-      CREATE_AUDIOBOOK_FROM_URL_WORKFLOW: {
+      AUDIO_BUCKET: env.AUDIO_BUCKET,
+      SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW: {
+        create: async () => {
+          throw new Error("Synthesis is controlled by the test");
+        },
+        get: async () => {
+          throw new Error("Synthesis is controlled by the test");
+        },
+      },
+      PREPARE_AUDIOBOOK_WORKFLOW: {
         create: async () => {
           throw new Error("Lost acknowledgement");
         },
-        get: async () => ({ status: async () => ({ status: "errored" }) }),
+        get: async () => ({
+          status: async () => ({ status: "errored" }),
+          restart: async () => {
+            throw new Error("Restart is outside this dispatch test");
+          },
+        }),
       },
     });
   }
@@ -36,7 +51,37 @@ export class AccountDispatchTestDurableObject extends AccountDurableObject {
   }
 }
 
-export { AccountDurableObject };
+/** Ledger and lifecycle tests settle conversions directly without running preparation. */
+export class AccountDurableObject extends BaseAccountDurableObject {
+  constructor(
+    context: DurableObjectState,
+    env: {
+      CONVERSION_OWNER_LIMIT: string;
+      REGISTRY: DurableObjectNamespace<RegistryDurableObject>;
+      AUDIO_BUCKET: R2Bucket;
+    },
+  ) {
+    super(context, {
+      ...env,
+      SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW: {
+        create: async () => {
+          throw new Error("Synthesis is controlled by the test");
+        },
+        get: async () => {
+          throw new Error("Synthesis is controlled by the test");
+        },
+      },
+      PREPARE_AUDIOBOOK_WORKFLOW: {
+        create: async () => {
+          throw new Error("Preparation is controlled by the test");
+        },
+        get: async () => {
+          throw new Error("Preparation is controlled by the test");
+        },
+      },
+    });
+  }
+}
 export { RegistryDurableObject } from "#src/index.ts";
 
 export { ConversionGrantDurableObject } from "@cup/conversion-grants";

@@ -31,7 +31,7 @@ export function StartConversionForm(props: StartConversionFormProps): React.Reac
 function AccountConversionForm(): React.ReactNode {
   const navigate = useNavigate();
   const submission = useAccountConversionSubmission(async (conversionId) => {
-    await navigate({ to: "/conversions/$conversionId", params: { conversionId } });
+    await navigate({ to: "/audiobooks/$conversionId", params: { conversionId } });
   });
   const signInButton = React.useRef<HTMLButtonElement>(null);
   const formElement = React.useRef<HTMLFormElement>(null);
@@ -113,7 +113,7 @@ function AccountConversionForm(): React.ReactNode {
 function TrialConversionForm({ grant }: { grant: GrantSnapshot }): React.ReactNode {
   const navigate = useNavigate();
   const start = useStartTrialConversionMutation(grant.grantId, async (conversionId) => {
-    await navigate({ to: "/conversions/$conversionId", params: { conversionId } });
+    await navigate({ to: "/audiobooks/$conversionId", params: { conversionId } });
   });
   const retryIn = useRateLimitCountdown(start.error);
   return (

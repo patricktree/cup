@@ -1,75 +1,140 @@
-import { validateAudiobookArtifacts } from "#test-e2e/artifacts.ts";
+import { validateAudioSegment } from "#test-e2e/artifacts.ts";
 import { expect, test } from "#test-e2e/fixtures.ts";
 import { openNewTrial, startConversion, waitForAudiobook } from "#test-e2e/journey.ts";
+import { generateUnit } from "#test-e2e/synthesis.ts";
 
-test("converts controlled source content into downloadable MP3 and EPUB artifacts", async ({
+test("generates the selected unit while paused, then Play requests audio ahead and plays", async ({
   page,
   workerEnvironment,
 }) => {
   await openNewTrial(page, workerEnvironment);
   await startConversion(page);
   await waitForAudiobook(page);
-  const audioLink = page.getByRole("link", { name: "Download MP3" });
-  const epubLink = page.getByRole("link", { name: "Download EPUB" });
-  const audioUrl = await audioLink.getAttribute("href");
-  const epubUrl = await epubLink.getAttribute("href");
-  if (audioUrl === null || epubUrl === null) throw new Error("Audiobook download URL is missing");
-
-  const [audioDownload] = await Promise.all([page.waitForEvent("download"), audioLink.click()]);
-  expect(audioDownload.suggestedFilename()).toBe("audiobook.mp3");
-  const [epubDownload] = await Promise.all([page.waitForEvent("download"), epubLink.click()]);
-  expect(epubDownload.suggestedFilename()).toBe("audiobook.epub");
-
-  await validateAudiobookArtifacts({
-    audioUrl: new URL(audioUrl, page.url()).href,
-    epubUrl: new URL(epubUrl, page.url()).href,
-  });
+  await expect
+    .poll(
+      async () =>
+        (await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json()).length,
+    )
+    .toBe(1);
+  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+  await expect
+    .poll(() =>
+      page.locator("audio").evaluate((audio) => audio instanceof HTMLAudioElement && audio.paused),
+    )
+    .toBe(true);
+  await expect(page.getByRole("link", { name: /Download/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  await expect
+    .poll(
+      () =>
+        page
+          .locator("audio")
+          .evaluate(
+            (element) =>
+              element instanceof HTMLAudioElement && !element.paused && element.currentTime > 0,
+          ),
+      { timeout: 60_000 },
+    )
+    .toBe(true);
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+  const url = await page.locator("audio").getAttribute("src");
+  if (!url) throw new Error("Segment URL missing");
+  await validateAudioSegment({ audioUrl: url });
+  const before = await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json();
+  await page.reload();
+  await waitForAudiobook(page);
+  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+  expect(await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json()).toEqual(
+    before,
+  );
 });
 
-test("loads audiobook audio from another origin", async ({ page, workerEnvironment }) => {
+test("unlisted article links allow reading and replay but cannot spend the grant", async ({
+  page,
+  workerEnvironment,
+}) => {
   await openNewTrial(page, workerEnvironment);
   await startConversion(page);
   await waitForAudiobook(page);
-
-  const playerHtml = await page.locator("audio").evaluate((element) => element.outerHTML);
-  const crossOriginPage = await page.context().newPage();
-  await crossOriginPage.setContent(playerHtml);
-  await expect
-    .poll(() =>
-      crossOriginPage
-        .locator("audio")
-        .evaluate(
-          (element) =>
-            element instanceof HTMLAudioElement && element.readyState >= 1 && element.duration > 0,
-        ),
-    )
-    .toBe(true);
-  await crossOriginPage.close();
+  const id = new URL(page.url()).pathname.split("/").at(-1)!;
+  const segment = await generateUnit(page, id);
+  const beforeAnonymous = await (
+    await fetch(workerEnvironment.origin + "/__qa/speech-calls")
+  ).json();
+  const anonymous = await page.context().browser()!.newContext();
+  const reader = await anonymous.newPage();
+  await reader.goto(page.url());
+  await waitForAudiobook(reader);
+  expect((await anonymous.request.get(segment.url)).status()).toBe(200);
+  const response = await anonymous.request.post(
+    workerEnvironment.origin + `/api/audiobooks/${id}/segments/1`,
+    {
+      headers: { "Content-Type": "application/json", "X-Create-Audiobook-From-URL-Request": "1" },
+      data: { retry: false },
+    },
+  );
+  expect(response.status()).toBe(401);
+  await reader.getByRole("combobox", { name: "Start at passage" }).selectOption("1");
+  expect(await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json()).toEqual(
+    beforeAnonymous,
+  );
+  await anonymous.close();
 });
 
-test.describe("provider failure and recovery", () => {
+test.describe("unit failure and recovery", () => {
   test.use({ qaScenario: "tts-failure" });
-
-  test("shows the failed conversion and succeeds after a local provider restart", async ({
+  test("keeps prepared text after synthesis failure and retries the same unit", async ({
     page,
     workerEnvironment,
   }) => {
     test.setTimeout(120_000);
-
-    const { grantId } = await openNewTrial(page, workerEnvironment);
+    await openNewTrial(page, workerEnvironment);
     await startConversion(page);
-    await expect(
-      page.getByRole("heading", { name: "Conversion failed.", exact: true }),
-    ).toBeVisible({
+    await waitForAudiobook(page);
+    await expect(page.getByRole("button", { name: "Retry passage" })).toBeVisible({
       timeout: 90_000,
     });
-
+    await waitForAudiobook(page);
+    await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
     await workerEnvironment.restart("success");
-    await page.goto(`${workerEnvironment.origin}/app/trials/${grantId}`);
-    await expect(page.getByRole("heading", { name: "Just Listen." })).toBeVisible();
+    await page.getByRole("button", { name: "Retry passage" }).click();
+    await expect
+      .poll(
+        () =>
+          page
+            .locator("audio")
+            .evaluate(
+              (element) =>
+                element instanceof HTMLAudioElement && !element.paused && element.currentTime > 0,
+            ),
+        { timeout: 60_000 },
+      )
+      .toBe(true);
+  });
+});
+
+test.describe("preparation recovery", () => {
+  test.use({ qaScenario: "preparation-failure" });
+  test("retries preparation on the same article and prepares its selected unit while paused", async ({
+    page,
+    workerEnvironment,
+  }) => {
+    await openNewTrial(page, workerEnvironment);
     await startConversion(page);
+    const url = page.url();
     await expect(
-      page.getByRole("heading", { name: "A deterministic document about careful testing" }),
-    ).toBeVisible({ timeout: 90_000 });
+      page.getByRole("heading", { name: "The article could not be prepared." }),
+    ).toBeVisible({ timeout: 90000 });
+    await workerEnvironment.restart("success");
+    await page.getByRole("button", { name: "Retry", exact: true }).click();
+    await waitForAudiobook(page);
+    await expect(page).toHaveURL(url);
+    await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+    await expect
+      .poll(
+        async () =>
+          (await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json()).length,
+      )
+      .toBe(1);
   });
 });

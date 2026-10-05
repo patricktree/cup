@@ -1,9 +1,7 @@
-/** MIME type shared by synthesized segments and assembled audiobook audio. */
+/** MIME type of synthesized narration segments. */
 export const AUDIOBOOK_CONTENT_TYPE = "audio/mpeg";
 /** MIME type of the canonical audiobook manifest. */
 export const AUDIOBOOK_MANIFEST_CONTENT_TYPE = "application/json";
-/** MIME type of the synchronized EPUB export. */
-export const EPUB_CONTENT_TYPE = "application/epub+zip";
 
 /** Audio format required from every synthesized narration segment. */
 export const AUDIO_FORMAT = {

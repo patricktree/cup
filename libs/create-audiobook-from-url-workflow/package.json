@@ -15,8 +15,12 @@
       "default": "./src/workflow.ts"
     },
     "./runner": {
-      "types": "./dist/types/run-create-audiobook-from-url-workflow.d.ts",
-      "default": "./src/run-create-audiobook-from-url-workflow.ts"
+      "types": "./dist/types/run-prepare-audiobook-workflow.d.ts",
+      "default": "./src/run-prepare-audiobook-workflow.ts"
+    },
+    "./segment-runner": {
+      "types": "./dist/types/run-audio-segment-workflow.d.ts",
+      "default": "./src/run-audio-segment-workflow.ts"
     },
     "./conversion-params": {
       "types": "./dist/types/conversion-params.d.ts",
@@ -46,7 +50,6 @@
     "@cup/narration-document-creation": "workspace:*",
     "@cup/prepare-source-material": "workspace:*",
     "@cup/registry": "workspace:*",
-    "p-map": "^7.0.8",
     "temporal-polyfill": "^1.0.5",
     "zod": "^4.6.5"
   },

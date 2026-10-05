@@ -23,7 +23,7 @@ export type WorkerEnvironment = {
   restart(scenario: QaScenario): Promise<void>;
 };
 
-type QaScenario = "success" | "tts-failure" | "speech-gated";
+type QaScenario = "success" | "tts-failure" | "speech-gated" | "preparation-failure";
 
 type Fixtures = {
   expectConsoleError: ((message: string | RegExp) => void) & { messages: Array<string | RegExp> };

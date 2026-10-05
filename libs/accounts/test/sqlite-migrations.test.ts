@@ -1,5 +1,6 @@
 import { generateSQLiteDrizzleJson } from "drizzle-kit/api";
 import fs from "node:fs/promises";
+import sqlite from "node:sqlite";
 import { expect, test } from "vitest";
 import { z } from "zod";
 
@@ -39,3 +40,28 @@ for (const { name, schema, bundle } of stores) {
     expect(current.views).toEqual(snapshot.views);
   });
 }
+
+test("removing writer purpose preserves outstanding storage effects", () => {
+  const database = new sqlite.DatabaseSync(":memory:");
+  try {
+    for (const [key, migration] of Object.entries(accountMigrations.migrations)) {
+      if (key === "m0003") break;
+      database.exec(migration);
+    }
+    database.exec(
+      "INSERT INTO artifact_writers (writer_id, execution_epoch, prefix, state, unresolved_effect, purpose) VALUES ('writer', 1, 'accounts/account/conversions/conversion/', 'running', 'put:accounts/account/conversions/conversion/audio-segments/0.mp3', 'production')",
+    );
+    database.exec(accountMigrations.migrations.m0003);
+    expect(database.prepare("SELECT * FROM artifact_writers").all()).toEqual([
+      {
+        writer_id: "writer",
+        execution_epoch: 1,
+        prefix: "accounts/account/conversions/conversion/",
+        state: "running",
+        unresolved_effect: "put:accounts/account/conversions/conversion/audio-segments/0.mp3",
+      },
+    ]);
+  } finally {
+    database.close();
+  }
+});

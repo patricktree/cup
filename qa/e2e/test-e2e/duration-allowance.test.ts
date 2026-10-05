@@ -1,83 +1,55 @@
 import type { Page } from "@playwright/test";
-import { unzipSync } from "fflate";
 
 import { analyzeMp3 } from "@cup/audiobook-production";
 import { grantSnapshotSchema } from "@cup/conversion-grants/contracts";
-import { conversionDetailSchema, startConversionResponseSchema } from "@cup/web-app-api.routes";
+import {
+  conversionDetailSchema,
+  startConversionResponseSchema,
+  audioSegmentSchema,
+  audiobookSchema,
+} from "@cup/web-app-api.routes";
 
 import { expect, test, type WorkerEnvironment } from "#test-e2e/fixtures.ts";
 import { openNewTrial, startConversion, waitForAudiobook } from "#test-e2e/journey.ts";
-
+import { generateUnit } from "#test-e2e/synthesis.ts";
 const DEFAULT_ALLOWANCE_MILLISECONDS = 7_200_000;
 
-test("deducts actual encoded audio duration once across reloads and downloads", async ({
+test("charges one unit by encoded duration and reuses it across reloads and duplicate requests", async ({
   page,
   workerEnvironment,
 }) => {
   const { grantId } = await openNewTrial(page, workerEnvironment);
-  expect((await readGrant(page, grantId)).duration).toEqual({
-    availableMilliseconds: DEFAULT_ALLOWANCE_MILLISECONDS,
-    reservedMilliseconds: 0,
-    spentMilliseconds: 0,
-  });
   await startConversion(page);
   await waitForAudiobook(page);
-  const epubUrl = await page.getByRole("link", { name: "Download EPUB" }).getAttribute("href");
-  if (epubUrl === null) throw new Error("EPUB download URL missing");
-  const epubResponse = await fetch(new URL(epubUrl, page.url()));
-  expect(epubResponse.status).toBe(200);
-  const archive = unzipSync(new Uint8Array(await epubResponse.arrayBuffer()));
-  const audioSegments = Object.entries(archive).filter(([name]) =>
-    /^EPUB\/audio\/\d+\.mp3$/u.test(name),
-  );
-  expect(audioSegments.length).toBeGreaterThan(0);
-  // Each stored segment is billed using its encoded duration, rounded up independently.
-  const actualMilliseconds = audioSegments.reduce(
-    (sum, [, audio]) => sum + Math.ceil(analyzeMp3(audio).durationMilliseconds),
-    0,
-  );
+  const id = new URL(page.url()).pathname.split("/").at(-1)!;
+  const segment = await generateUnit(page, id);
+  const audio = new Uint8Array(await (await fetch(segment.url)).arrayBuffer());
+  const actual = Math.ceil(analyzeMp3(audio).durationMilliseconds);
   const before = await readGrant(page, grantId);
   expect(before.duration).toEqual({
-    availableMilliseconds: DEFAULT_ALLOWANCE_MILLISECONDS - actualMilliseconds,
+    availableMilliseconds: DEFAULT_ALLOWANCE_MILLISECONDS - actual,
     reservedMilliseconds: 0,
-    spentMilliseconds: actualMilliseconds,
+    spentMilliseconds: actual,
   });
-  const providerCalls = await readSpeechCalls(workerEnvironment);
-  expect(providerCalls).toHaveLength(audioSegments.length);
+  const calls = await readSpeechCalls(workerEnvironment);
+  expect(calls).toHaveLength(1);
   await page.reload();
   await waitForAudiobook(page);
-  await page.locator("audio").evaluate(async (element) => {
-    if (!(element instanceof HTMLAudioElement)) throw new Error("Audio player missing");
-    await element.play();
-  });
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const [download] = await Promise.all([
-      page.waitForEvent("download"),
-      page.getByRole("link", { name: "Download MP3" }).click(),
-    ]);
-    expect(download.suggestedFilename()).toBe("audiobook.mp3");
-    expect(await download.failure()).toBeNull();
-  }
+  await Promise.all([generateUnit(page, id), generateUnit(page, id)]);
   expect((await readGrant(page, grantId)).duration).toEqual(before.duration);
-  expect(await readSpeechCalls(workerEnvironment)).toEqual(providerCalls);
+  expect(await readSpeechCalls(workerEnvironment)).toEqual(calls);
 });
 
-test("blocks oversized synthesis without calling the provider or deducting allowance", async ({
+test("insufficient allowance leaves the article readable and blocks synthesis without provider expense", async ({
   page,
   workerEnvironment,
 }) => {
   const { grantId } = await openNewTrial(page, workerEnvironment);
   await setAllowance(workerEnvironment, grantId, 1_000);
   await startConversion(page);
-  await expect(page.getByRole("heading", { name: "Conversion failed.", exact: true })).toBeVisible({
-    timeout: 30_000,
-  });
-  const conversionId = new URL(page.url()).pathname.split("/").at(-1);
-  if (conversionId === undefined) throw new Error("Conversion ID missing");
-  expect(await readConversion(page, conversionId)).toMatchObject({
-    status: "failed",
-    failure: { category: "narration-synthesis" },
-  });
+  await waitForAudiobook(page);
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("not enough available audio duration");
   expect(await readSpeechCalls(workerEnvironment)).toEqual([]);
   expect((await readGrant(page, grantId)).duration).toEqual({
     availableMilliseconds: 1_000,
@@ -86,93 +58,146 @@ test("blocks oversized synthesis without calling the provider or deducting allow
   });
 });
 
-test.describe("concurrent duration reservations", () => {
+test.describe("in-flight reservations", () => {
   test.use({ qaScenario: "speech-gated" });
-
-  test("shares reservations across conversions and caps aggregate overruns at the allowance", async ({
+  test("Pause stops speech synthesis lookahead while duplicate requests reuse in-flight generation", async ({
     page,
     workerEnvironment,
   }) => {
-    test.setTimeout(60_000);
     const { grantId } = await openNewTrial(page, workerEnvironment);
-    const allowance = 10_000;
-    await setAllowance(workerEnvironment, grantId, allowance);
-    const responses = await page.evaluate(
-      async (id) =>
-        Promise.all(
-          [0, 1].map(async () => {
-            const response = await fetch(`/api/grants/${id}/conversions`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Create-Audiobook-From-URL-Request": "1",
-                "Idempotency-Key": crypto.randomUUID(),
-              },
-              body: JSON.stringify({ sourceUrl: "https://source.example.test/fixture" }),
-            });
-            return { status: response.status, body: await response.json() };
-          }),
-        ),
-      grantId,
+    await startConversion(page);
+    await waitForAudiobook(page);
+    const id = new URL(page.url()).pathname.split("/").at(-1)!;
+    const articleResponse = await page.request.get(
+      workerEnvironment.origin + "/api/audiobooks/" + id,
     );
-    const conversionIds = responses.map((response) => {
-      expect(response.status).toBe(202);
-      return startConversionResponseSchema.parse(response.body).conversion.conversionId;
-    });
+    const article = audiobookSchema.parse(await articleResponse.json());
+    if (article.status !== "ready") throw new Error("Article not prepared");
+    const unitCount = article.narrationDocument.synchronizationUnits.length;
+    expect(unitCount).toBeGreaterThan(1);
+    await page.getByRole("button", { name: "Play", exact: true }).click();
     await expect
-      .poll(
-        async () => {
-          const calls = await readSpeechCalls(workerEnvironment);
-          const reserved = calls.reduce(
-            (sum, call) => sum + Math.max(1_000, call.characters * 80),
-            0,
-          );
-          const grant = await readGrant(page, grantId);
-          return (
-            calls.length >= 2 &&
-            reserved <= allowance &&
-            grant.duration.reservedMilliseconds === reserved &&
-            grant.duration.availableMilliseconds === allowance - reserved &&
-            grant.duration.spentMilliseconds === 0
-          );
-        },
-        { timeout: 15_000 },
-      )
-      .toBe(true);
-    const heldCalls = await readSpeechCalls(workerEnvironment);
-    // Either conversion may win reservations; both draw from the same allowance.
-    expect(heldCalls.every((call) => conversionIds.includes(call.conversionId))).toBe(true);
-    const release = await fetch(`${workerEnvironment.origin}/__qa/release-speech`, {
-      method: "POST",
-    });
-    expect(release.status).toBe(204);
+      .poll(async () => (await readSpeechCalls(workerEnvironment)).length)
+      .toBe(unitCount);
+    await page.getByRole("button", { name: "Pause", exact: true }).click();
+    const duplicate = await browserPost(
+      page,
+      workerEnvironment.origin + "/api/audiobooks/" + id + "/segments/0",
+      { headers: mutationHeaders(), data: { retry: false } },
+    );
+    expect(duplicate.status()).toBe(200);
+    expect((await readGrant(page, grantId)).duration.reservedMilliseconds).toBeGreaterThan(0);
+    await fetch(workerEnvironment.origin + "/__qa/release-speech", { method: "POST" });
     await expect
-      .poll(
-        async () => {
-          const conversions = await Promise.all(
-            conversionIds.map((id) => readConversion(page, id)),
-          );
-          return conversions.every((conversion) => conversion.status !== "pending");
+      .poll(async () => (await readGrant(page, grantId)).duration.reservedMilliseconds)
+      .toBe(0);
+    expect(await readSpeechCalls(workerEnvironment)).toHaveLength(unitCount);
+    await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+  });
+  test("seeking within in-flight speech synthesis lookahead prioritizes the destination without duplicate synthesis", async ({
+    page,
+    workerEnvironment,
+  }) => {
+    await openNewTrial(page, workerEnvironment);
+    await startConversion(page);
+    await waitForAudiobook(page);
+    const id = new URL(page.url()).pathname.split("/").at(-1)!;
+    const articleResponse = await page.request.get(
+      workerEnvironment.origin + "/api/audiobooks/" + id,
+    );
+    const article = audiobookSchema.parse(await articleResponse.json());
+    if (article.status !== "ready") throw new Error("Article not prepared");
+    const unitCount = article.narrationDocument.synchronizationUnits.length;
+    expect(unitCount).toBeGreaterThan(1);
+    await page.getByRole("button", { name: "Play", exact: true }).click();
+    await expect
+      .poll(async () => (await readSpeechCalls(workerEnvironment)).length)
+      .toBe(unitCount);
+    await page.getByRole("combobox", { name: "Start at passage" }).selectOption("3");
+    await expect
+      .poll(async () => (await readSpeechCalls(workerEnvironment)).length)
+      .toBe(unitCount);
+    await fetch(workerEnvironment.origin + "/__qa/release-speech", { method: "POST" });
+    await expect
+      .poll(() => page.locator("audio").getAttribute("src"))
+      .toContain("/segments/3/audio.mp3");
+    await page.getByRole("button", { name: "Pause", exact: true }).click();
+    await page.getByRole("combobox", { name: "Start at passage" }).selectOption("1");
+    expect(await readSpeechCalls(workerEnvironment)).toHaveLength(unitCount);
+    await expect
+      .poll(async () => {
+        const result = await page.request.get(workerEnvironment.origin + "/api/audiobooks/" + id);
+        const updatedArticle = audiobookSchema.parse(await result.json());
+        if (updatedArticle.status !== "ready") throw new Error("Article not prepared");
+        return updatedArticle.segments
+          .map((segment) => segment.sequence)
+          .sort((left, right) => left - right);
+      })
+      .toEqual(article.narrationDocument.synchronizationUnits.map((_, sequence) => sequence));
+  });
+  test("concurrent conversions share allowance and retain both segments after capped overruns", async ({
+    page,
+    workerEnvironment,
+  }) => {
+    const { grantId } = await openNewTrial(page, workerEnvironment);
+    await setAllowance(workerEnvironment, grantId, 10_000);
+    const ids: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      const response = await browserPost(
+        page,
+        workerEnvironment.origin + "/api/grants/" + grantId + "/conversions",
+        {
+          headers: { ...mutationHeaders(), "Idempotency-Key": crypto.randomUUID() },
+          data: { sourceUrl: "https://source.example.test/fixture" },
         },
-        { timeout: 30_000 },
-      )
-      .toBe(true);
-    const conversions = await Promise.all(conversionIds.map((id) => readConversion(page, id)));
-    expect(
-      conversions.some(
-        (conversion) =>
-          conversion.status === "failed" && conversion.failure.category === "narration-synthesis",
+      );
+      ids.push(startConversionResponseSchema.parse(await response.json()).conversion.conversionId);
+    }
+    for (const id of ids)
+      await expect.poll(async () => (await readConversion(page, id)).status).toBe("ready");
+    await Promise.all(
+      ids.map((id) =>
+        browserPost(page, workerEnvironment.origin + "/api/audiobooks/" + id + "/segments/0", {
+          headers: mutationHeaders(),
+          data: { retry: false },
+        }),
       ),
-    ).toBe(true);
-    // The gated provider delivers eight seconds per accepted request, exceeding the shared ten-second allowance.
+    );
+    await expect.poll(async () => (await readSpeechCalls(workerEnvironment)).length).toBe(2);
+    expect((await readGrant(page, grantId)).duration.spentMilliseconds).toBe(0);
+    await fetch(workerEnvironment.origin + "/__qa/release-speech", { method: "POST" });
+    await expect
+      .poll(async () => (await readGrant(page, grantId)).duration.reservedMilliseconds)
+      .toBe(0);
     expect((await readGrant(page, grantId)).duration).toEqual({
       availableMilliseconds: 0,
       reservedMilliseconds: 0,
-      spentMilliseconds: allowance,
+      spentMilliseconds: 10_000,
     });
-    expect(await readSpeechCalls(workerEnvironment)).toEqual(heldCalls);
+    for (const id of ids)
+      expect(
+        audioSegmentSchema.parse(
+          await (
+            await page.request.get(
+              workerEnvironment.origin + "/api/audiobooks/" + id + "/segments/0",
+            )
+          ).json(),
+        ).status,
+      ).toBe("ready");
+    const response = await browserPost(
+      page,
+      workerEnvironment.origin + "/api/grants/" + grantId + "/conversions",
+      {
+        headers: { ...mutationHeaders(), "Idempotency-Key": crypto.randomUUID() },
+        data: { sourceUrl: "https://source.example.test/fixture" },
+      },
+    );
+    expect(response.status()).toBe(202);
   });
 });
+function mutationHeaders() {
+  return { "Content-Type": "application/json", "X-Create-Audiobook-From-URL-Request": "1" };
+}
 
 async function readGrant(page: Page, grantId: string) {
   return grantSnapshotSchema.parse(
@@ -221,4 +246,23 @@ function isSpeechCall(value: unknown): value is SpeechCall {
     Number.isSafeInteger(value.characters) &&
     value.characters > 0
   );
+}
+
+async function browserPost(
+  page: Page,
+  url: string,
+  options: { headers: Record<string, string>; data: unknown },
+) {
+  const response = await page.evaluate(
+    async (input) => {
+      const r = await fetch(input.url, {
+        method: "POST",
+        headers: input.options.headers,
+        body: JSON.stringify(input.options.data),
+      });
+      return { status: r.status, body: await r.json() };
+    },
+    { url, options },
+  );
+  return { status: () => response.status, json: async () => response.body };
 }

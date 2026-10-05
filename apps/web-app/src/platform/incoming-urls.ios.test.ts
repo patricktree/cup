@@ -116,7 +116,7 @@ test("opens cold-start and repeat Universal Links only for Cup app routes", asyn
       },
     );
     for (const url of [
-      "https://cup-audio.com/app/conversions/next",
+      "https://cup-audio.com/app/audiobooks/next",
       "https://cup-audio.com/app",
       "https://cup-audio.com/app/",
       "https://cup-audio.com/app/trials/next#credential=v1.a+b",
@@ -136,7 +136,7 @@ test("opens cold-start and repeat Universal Links only for Cup app routes", asyn
   expect(result).toEqual({
     paths: [
       "/app/trials/test?from=keep#credential=v1.test",
-      "/app/conversions/next",
+      "/app/audiobooks/next",
       "/app",
       "/app/",
       "/app/trials/next#credential=v1.a+b",

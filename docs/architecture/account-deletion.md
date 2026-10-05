@@ -1,6 +1,6 @@
 # Account deletion and recovery
 
-Deletion spans account state, conversion execution, object storage, and Supabase identity. Scheduling blocks ordinary access immediately and allows explicitly confirmed recovery for seven days. The registry coordinates durable cleanup independently of the account being erased.
+[Account deletion](../CONTEXT.md#account-deletion) is the full lifecycle spanning account state, conversion execution, object storage, Supabase identity, and notifications. [Account erasure](../CONTEXT.md#account-erasure) is its internal step for removing Cup-owned content and records. User-facing copy uses account deletion. Scheduling blocks ordinary access immediately and allows explicitly confirmed recovery for seven days. The registry coordinates durable cleanup independently of the account being erased.
 
 ```mermaid
 flowchart TD
@@ -30,7 +30,7 @@ Sources: [client confirmation](../../apps/web-app/src/data-fetching/account-conf
 
 The account persists lifecycle changes and delivery intent together, then delivers that intent to the registry through a replayable outbox. At cleanup, changing the execution epoch prevents old workflow activity from writing. Registered artifact writers must drain and uncertain storage effects must be reconciled before erasure; a lost acknowledgement does not prove a writer stopped.
 
-Erasure removes the account's R2 prefix, conversion-owner routes, and account records, retaining a constant erasure marker to reject late execution. The registry deletes the exact old Supabase identity and removes its mapping only after both identity and account cleanup succeed. Original trial conversions and other accounts remain separate.
+Account erasure removes the account's R2 prefix, conversion-owner routes, and account records, retaining a constant erasure marker to reject late execution. The registry deletes the exact old Supabase identity and removes its mapping only after both identity and account cleanup succeed. Original trial conversions and other accounts remain separate.
 
 Failures retain durable progress and retry with backoff. Operators can inspect overdue cleanup through [signup operations](../social-signup-operations.md); there is no force-complete action that discards uncertain writers.
 

@@ -14,9 +14,14 @@
   },
   "workflows": [
     {
-      "name": "create-audiobook-from-url-e2e",
-      "binding": "CREATE_AUDIOBOOK_FROM_URL_WORKFLOW",
-      "class_name": "CreateAudiobookFromUrlQaWorkflow",
+      "name": "prepare-audiobook-e2e",
+      "binding": "PREPARE_AUDIOBOOK_WORKFLOW",
+      "class_name": "PrepareAudiobookQaWorkflow",
+    },
+    {
+      "name": "synthesize-audio-segment-e2e",
+      "binding": "SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW",
+      "class_name": "SynthesizeAudioSegmentQaWorkflow",
     },
   ],
   "durable_objects": {

@@ -17,7 +17,7 @@ import type { SupabaseAdminEnvironment } from "#src/supabase-identity.ts";
 
 export type DeletionEnvironment = SupabaseAdminEnvironment & {
   ACCOUNTS: DurableObjectNamespace<AccountDurableObject>;
-  RESEND_API_KEY?: string;
+  RESEND_API_KEY: string;
 };
 const DAY = 86_400_000;
 const jobSchema = deletionAttemptSchema.extend({
@@ -367,7 +367,6 @@ export class DeletionCoordinator {
       this.saveNotification(notification); // Intent and window precede an ambiguous HTTP call.
       let retryAfterMs = 0;
       try {
-        if (!this.env.RESEND_API_KEY) throw new Error("Email provider unavailable");
         const response = await this.request("https://api.resend.com/emails", {
           method: "POST",
           signal: AbortSignal.timeout(10_000),
@@ -452,8 +451,6 @@ export class DeletionCoordinator {
     });
   }
   private async deleteIdentity(subject: string) {
-    if (!this.env.SUPABASE_URL || !this.env.SUPABASE_SECRET_KEY)
-      throw new Error("Identity administration unavailable");
     const response = await this.request(`${this.env.SUPABASE_URL}/auth/v1/admin/users/${subject}`, {
       method: "DELETE",
       signal: AbortSignal.timeout(10_000),

@@ -85,7 +85,6 @@ export const operatorGrantSnapshotSchema = grantSnapshotSchema
               .object({
                 narrationTextCharacters: z.number().int().nonnegative(),
                 narrationChunks: z.number().int().nonnegative(),
-                audioDurationMilliseconds: z.number().finite().nonnegative(),
               })
               .strict()
               .optional(),

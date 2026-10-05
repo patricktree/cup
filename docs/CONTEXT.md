@@ -36,6 +36,18 @@ A person’s persistent identity in Cup that owns their conversions and conversi
 
 _Avoid_: trial grant, sign-in method
 
+## account deletion
+
+The complete lifecycle for removing an account: scheduling, possible recovery, removing its sign-in identity and Cup-owned data, and issuing deletion notices. Use this term in user-facing copy.
+
+_Avoid_: account erasure for the overall process
+
+## account erasure
+
+The internal cleanup step within account deletion that removes the account’s Cup-owned content and records. Use this term only when referring to that specific step.
+
+_Avoid_: account deletion for the cleanup step alone
+
 ## account conversion allowance
 
 The duration allowance issued to an account. Its spent duration remains spent when completed conversions are deleted.
@@ -86,13 +98,13 @@ _Avoid_: trial link, user identity
 
 ## grant session
 
-Browser or native-app authorization derived from a grant credential. A grant session does not expire independently. It may inspect its conversion grant and, while the grant remains open, start conversions. A grant session does not authorize listing the grant’s conversions. Individual trial audiobook links provide unlisted access independently of grant expiry or revocation.
+Browser or native-app authorization derived from a grant credential. A grant session does not expire independently. It may inspect its conversion grant and, while the grant remains unexpired and unrevoked, prepare articles, including when its duration allowance is exhausted. New speech synthesis additionally requires sufficient available duration. A grant session does not authorize listing the grant’s conversions. Individual trial audiobook links provide unlisted access independently of grant expiry or revocation.
 
 _Avoid_: grant credential, user session
 
 ## conversion status
 
-The lifecycle state of a conversion: pending while work remains, ready when the audiobook is available, or failed when no audiobook will be produced.
+The preparation state of a conversion: pending while its narration document is being prepared, ready when the document is available, or failed when preparation could not finish. A ready conversion may have no generated audio; availability and failure are tracked independently for each audio segment.
 
 _Avoid_: workflow status
 
@@ -170,21 +182,27 @@ _Avoid_: sentence, paragraph, narration chunk
 
 ## synchronization cue
 
-A relationship between one synchronization unit and its corresponding interval in the narration audio.
+A relationship between one synchronization unit and its corresponding interval in narration audio. Current playback uses a separate audio segment per unit and a local offset within that segment.
 
 _Avoid_: timestamp, subtitle, caption
 
 ## audiobook
 
-The user-ready adaptation produced from source content, comprising structured narration text, narration audio, and synchronization cues.
+The adaptation produced from source content, comprising a prepared narration document and independently available narration audio segments. Its text can be read before any speech is generated; playback progressively supplies the audio for its synchronization units.
 
 _Avoid_: audio file, audio output, workflow output
 
-## audiobook export
+## speech synthesis lookahead
 
-A portable rendition of a ready audiobook. An export has its own lifecycle, and its failure does not make the audiobook unavailable.
+The portion of narration at and ahead of a player’s listening position for which it requests audio in advance to support uninterrupted playback.
 
-_Avoid_: audiobook, conversion output
+_Avoid_: buffer, playback buffer
+
+## listening position
+
+A user's remembered synchronization unit and offset within that unit's audio. It is restored only when a player initially loads; later saves replace the remembered position without moving other loaded players.
+
+_Avoid_: bookmark, complete-track timestamp, shared grant progress
 
 ## unlisted audiobook
 

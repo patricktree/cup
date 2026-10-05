@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-import { conversionPhaseSchema, durationBalanceSchema } from "@cup/conversion-contracts";
+import {
+  playbackPositionSchema,
+  conversionPhaseSchema,
+  durationBalanceSchema,
+} from "@cup/conversion-contracts";
+import { sourceUrlSchema } from "@cup/conversion-contracts";
 import {
   grantConversionSnapshotSchema,
   grantConversionsSchema,
@@ -10,7 +15,6 @@ import {
   type GrantSnapshot,
   type GrantState,
 } from "@cup/conversion-grants/contracts";
-import { sourceUrlSchema } from "@cup/create-audiobook-from-url-workflow/conversion-params";
 import { SYNCHRONIZATION_UNIT_SCHEMA } from "@cup/narration-document-creation";
 
 const LOWERCASE_UUID_V4_PATTERN =
@@ -83,32 +87,43 @@ export const startConversionResponseSchema = z
   .strict();
 export type StartConversionResponse = z.infer<typeof startConversionResponseSchema>;
 
-export const audiobookSchema = z
-  .object({
-    title: z.string().min(1),
-    originalUrl: sourceUrlSchema,
-    narrationDocument: z
-      .object({
-        html: z.string().min(1),
-        synchronizationUnits: z.array(SYNCHRONIZATION_UNIT_SCHEMA).min(1),
-      })
-      .strict(),
-    synchronizationCues: z
-      .array(
-        z
-          .object({
-            synchronizationUnitId: z.string().min(1),
-            startMilliseconds: z.number().finite().nonnegative(),
-            endMilliseconds: z.number().finite().positive(),
-          })
-          .strict(),
-      )
-      .min(1),
-    audio: z.object({ contentType: z.literal("audio/mpeg"), url: z.url() }).strict(),
-    captions: z.object({ contentType: z.literal("text/vtt"), url: z.url() }).strict(),
-    epub: z.object({ contentType: z.literal("application/epub+zip"), url: z.url() }).strict(),
-  })
-  .strict();
+export { playbackPositionSchema };
+export type { PlaybackPosition } from "@cup/conversion-contracts";
+export const segmentParamsSchema = conversionParamsSchema.extend({
+  sequence: z.coerce.number().int().min(0).max(199),
+});
+const audioSegmentBaseSchema = z.object({ sequence: z.number().int().nonnegative() }).strict();
+export const audioSegmentSchema = z.discriminatedUnion("status", [
+  audioSegmentBaseSchema.extend({ status: z.literal("absent") }),
+  audioSegmentBaseSchema.extend({ status: z.literal("generating") }),
+  audioSegmentBaseSchema.extend({
+    status: z.literal("ready"),
+    durationMilliseconds: z.number().positive(),
+    url: z.url(),
+  }),
+  audioSegmentBaseSchema.extend({ status: z.literal("failed"), explanation: z.string() }),
+]);
+export type AudioSegment = z.infer<typeof audioSegmentSchema>;
+const readerBase = { originalUrl: sourceUrlSchema, canGenerate: z.boolean() };
+export const audiobookSchema = z.discriminatedUnion("status", [
+  z.object({ ...readerBase, status: z.literal("pending") }).strict(),
+  z.object({ ...readerBase, status: z.literal("failed"), explanation: z.string() }).strict(),
+  z
+    .object({
+      ...readerBase,
+      status: z.literal("ready"),
+      title: z.string().min(1),
+      narrationDocument: z
+        .object({
+          html: z.string().min(1),
+          synchronizationUnits: z.array(SYNCHRONIZATION_UNIT_SCHEMA).min(1),
+        })
+        .strict(),
+      segments: z.array(audioSegmentSchema),
+      playbackPosition: playbackPositionSchema.nullable(),
+    })
+    .strict(),
+]);
 export type Audiobook = z.infer<typeof audiobookSchema>;
 
 export const errorResponseSchema = z

@@ -2,7 +2,7 @@
 
 This library owns private account conversion history, duration accounting, lifecycle transitions, and artifact-write fencing. `AccountDurableObject` keeps its existing class name and binding. The [shared registry](../registry/README.md) owns account identity mapping, provisioning, and deletion coordination.
 
-Account dispatch and cleanup use a [narrow registry RPC interface](src/account-registry.ts) for conversion ownership and deletion intent. Integration tests in [registry](../registry/README.md) exercise account behavior against the real registry and trial grant objects.
+`AccountDurableObject` requires the `PREPARE_AUDIOBOOK_WORKFLOW` binding for preparation dispatch and retries, and the `SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW` binding for player-requested speech synthesis. The required `REGISTRY` binding uses a [narrow registry RPC interface](src/account-registry.ts) for conversion ownership and deletion intent; the required `AUDIO_BUCKET` binding supports artifact reconciliation and account erasure. Integration tests in [registry](../registry/README.md) exercise account behavior against the real registry and trial grant objects.
 
 Shared conversion schemas and duration calculations live in [conversion-contracts](../conversion-contracts/README.md). Account ledgers, lifecycle transitions, and writer reconciliation stay together here because they enforce account invariants. See [account deletion](../../docs/architecture/account-deletion.md) for the cross-object protocol.
 

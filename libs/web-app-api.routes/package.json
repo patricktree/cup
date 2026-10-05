@@ -34,7 +34,6 @@
   "dependencies": {
     "@cup/conversion-contracts": "workspace:*",
     "@cup/conversion-grants": "workspace:*",
-    "@cup/create-audiobook-from-url-workflow": "workspace:*",
     "@cup/narration-document-creation": "workspace:*",
     "@hono/zod-openapi": "catalog:hono",
     "hono": "catalog:hono",

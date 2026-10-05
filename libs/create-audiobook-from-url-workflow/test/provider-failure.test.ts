@@ -25,10 +25,8 @@ import { createFakeSpeechSynthesisAi } from "@cup/audiobook-production/fake";
 import { createFakeNarrationContentSelector } from "@cup/narration-content-selection/fake";
 import { createControlledSourceMaterialPreparer } from "@cup/prepare-source-material/fake";
 
-import {
-  runCreateAudiobookFromUrlWorkflow,
-  type CreateAudiobookFromUrlWorkflowEnvironment,
-} from "#src/run-create-audiobook-from-url-workflow.ts";
+import { runPrepareAudiobookWorkflow } from "#src/run-prepare-audiobook-workflow.ts";
+import type { AudiobookWorkflowEnvironment } from "#src/workflow-environment.ts";
 
 const SOURCE_URL = "https://example.com/provider-failure";
 const ALLOWANCE = 7_200_000;
@@ -36,8 +34,8 @@ const harness = createTestHarness({
   root: path.resolve(import.meta.dirname, ".."),
   workers: [{ configPath: "./wrangler.test.jsonc" }],
 });
-const worker = harness.getWorker<CreateAudiobookFromUrlWorkflowEnvironment>();
-let environment: CreateAudiobookFromUrlWorkflowEnvironment;
+const worker = harness.getWorker<AudiobookWorkflowEnvironment>();
+let environment: AudiobookWorkflowEnvironment;
 
 beforeAll(async () => {
   await harness.listen();
@@ -45,92 +43,104 @@ beforeAll(async () => {
 }, 30_000);
 afterAll(() => harness.close());
 
+import { runAudioSegmentWorkflow } from "#src/run-audio-segment-workflow.ts";
+
+test("preparation publishes the document without invoking speech or reserving allowance", async () => {
+  const { grant, grantId, conversionId, now } = await createConversion();
+  await runConversion(grantId, conversionId);
+  expect((await grant.getConversion(conversionId))?.status).toBe("ready");
+  expect((await grant.inspect(now)).duration.reservedMilliseconds).toBe(0);
+  const artifacts = await environment.AUDIO_BUCKET.list({
+    prefix: "conversions/" + conversionId + "/",
+  });
+  expect(artifacts.objects.map((object) => object.key)).toEqual([
+    "conversions/" + conversionId + "/audiobook.json",
+  ]);
+});
+
 test.each([400, 503])(
-  "provider status %i releases reservations without charging failed audio",
+  "failed unit synthesis (%i) leaves prepared text and releases only its reservation",
   async (status) => {
-    const { grant, conversionId, grantId, now } = await createConversion();
-    const reservedBalances: number[] = [];
-    let calls = 0;
-    const failingProvider = createFakeSpeechSynthesisAi({ failureStatus: status });
-    const ai: SpeechSynthesisAi = {
-      gateway: () => ({
-        run: async (request, options) => {
-          calls++;
-          reservedBalances.push((await grant.inspect(now)).duration.reservedMilliseconds);
-          return failingProvider.gateway("default").run(request, options);
-        },
-      }),
-    };
-    await expect(runConversion(grantId, conversionId, ai)).rejects.toMatchObject({
-      errors: expect.arrayContaining([
-        expect.objectContaining({
-          message: expect.stringContaining("Configured deterministic speech failure"),
-        }),
-      ]),
-    });
-    expect(calls).toBe(status === 400 ? 2 : 6);
-    expect(reservedBalances.every((balance) => balance > 0)).toBe(true);
-    expect(Math.max(...reservedBalances)).toBe(
-      1_000 + "A short paragraph for narration.".length * 80,
-    );
+    const { grant, grantId, conversionId, now } = await createConversion();
+    await runConversion(grantId, conversionId);
+    await expect(
+      runSegment(
+        conversionId,
+        { kind: "trial", grantId },
+        0,
+        createFakeSpeechSynthesisAi({ failureStatus: status }),
+      ),
+    ).rejects.toThrow("Configured deterministic speech failure");
+    expect((await grant.getConversion(conversionId))?.status).toBe("ready");
     expect((await grant.inspect(now)).duration).toEqual({
       availableMilliseconds: ALLOWANCE,
       reservedMilliseconds: 0,
       spentMilliseconds: 0,
     });
-    expect(await grant.getConversion(conversionId)).toMatchObject({
-      status: "failed",
-      failureCategory: "narration-synthesis",
-    });
-    expect(await grant.listAudioSegments(conversionId)).toEqual([]);
-    expect(
-      (await environment.AUDIO_BUCKET.list({ prefix: `conversions/${conversionId}/` })).objects,
-    ).toEqual([]);
+    // Explicit retry can reuse a released reservation and produce accessible audio once.
+    await runSegment(conversionId, { kind: "trial", grantId }, 0, createFakeSpeechSynthesisAi());
+    const before = (await grant.inspect(now)).duration;
+    await runSegment(
+      conversionId,
+      { kind: "trial", grantId },
+      0,
+      createFakeSpeechSynthesisAi({ failureStatus: 503 }),
+    );
+    expect((await grant.inspect(now)).duration).toEqual(before);
   },
 );
 
-test("later provider failure releases unfinished reservations and retains completed audio charges", async () => {
-  const { grant, conversionId, grantId, now } = await createConversion();
-  const successfulProvider = createFakeSpeechSynthesisAi();
-  const failingProvider = createFakeSpeechSynthesisAi({ failureStatus: 503 });
-  let successfulCalls = 0;
-  let failedCalls = 0;
-  const ai: SpeechSynthesisAi = {
-    gateway: () => ({
-      run: async (request, options) => {
-        if (options?.gateway?.metadata?.["narrationSegmentSequence"] === 0) {
-          successfulCalls++;
-          return successfulProvider.gateway("default").run(request, options);
-        }
-        failedCalls++;
-        return failingProvider.gateway("default").run(request, options);
-      },
-    }),
-  };
-  await expect(runConversion(grantId, conversionId, ai)).rejects.toMatchObject({
-    errors: expect.arrayContaining([
-      expect.objectContaining({
-        message: expect.stringContaining("Configured deterministic speech failure"),
-      }),
-    ]),
+test("account segment retry preserves its ledger and earlier successful audio", async () => {
+  const accountId = crypto.randomUUID();
+  const account = environment.ACCOUNTS.get(environment.ACCOUNTS.idFromName(accountId));
+  await account.initialize({
+    accountId,
+    subject: crypto.randomUUID(),
+    createdAtMs: Temporal.Now.instant().epochMilliseconds,
   });
-  expect(successfulCalls).toBe(1);
-  expect(failedCalls).toBe(3);
-  const segments = await grant.listAudioSegments(conversionId);
-  expect(segments).toHaveLength(1);
-  const completed = segments[0];
-  if (completed === undefined) throw new Error("Completed audio missing");
-  expect(completed.sequence).toBe(0);
-  expect(completed.chargedMilliseconds).toBeGreaterThan(0);
-  expect((await grant.inspect(now)).duration).toEqual({
-    availableMilliseconds: ALLOWANCE - completed.chargedMilliseconds,
-    reservedMilliseconds: 0,
-    spentMilliseconds: completed.chargedMilliseconds,
+  const started = await account.startConversion({
+    sourceUrl: SOURCE_URL,
+    idempotencyKey: crypto.randomUUID(),
   });
+  if (!started.conversion) throw new Error("Expected conversion");
+  const conversionId = started.conversion.conversionId;
+  await runConversion(accountId, conversionId, accountId);
+  await runSegment(conversionId, { kind: "account", accountId }, 0, createFakeSpeechSynthesisAi());
+  const balance = (await account.inspect()).balance;
+  await expect(
+    runSegment(
+      conversionId,
+      { kind: "account", accountId },
+      1,
+      createFakeSpeechSynthesisAi({ failureStatus: 503 }),
+    ),
+  ).rejects.toThrow("Configured deterministic speech failure");
+  expect((await account.inspect()).balance).toEqual(balance);
+  await runSegment(conversionId, { kind: "account", accountId }, 1, createFakeSpeechSynthesisAi());
   expect(
-    (await environment.AUDIO_BUCKET.list({ prefix: `conversions/${conversionId}/` })).objects,
-  ).toHaveLength(1);
+    (await account.listAudioSegments(conversionId)).filter((item) => item.state === "settled"),
+  ).toHaveLength(2);
+  await expect(account.inspectAccounting()).resolves.toBeDefined();
 });
+
+function runSegment(
+  conversionId: string,
+  owner: { kind: "trial"; grantId: string } | { kind: "account"; accountId: string },
+  sequence: number,
+  ai: SpeechSynthesisAi,
+) {
+  return runAudioSegmentWorkflow({
+    env: environment,
+    ai,
+    step: createImmediateRetryStep(),
+    event: {
+      workflowName: "segment-test",
+      instanceId: "segment-" + conversionId + "-" + sequence,
+      timestamp: new globalThis.Date(),
+      payload: { v: 3, owner, conversionId, sequence, executionEpoch: 1 },
+    },
+  });
+}
 
 async function createConversion() {
   const grantId = crypto.randomUUID();
@@ -144,13 +154,8 @@ async function createConversion() {
   return { grant, grantId, conversionId: accepted.conversion.conversionId, now };
 }
 
-function runConversion(
-  grantId: string,
-  conversionId: string,
-  ai: SpeechSynthesisAi,
-  accountId?: string,
-) {
-  return runCreateAudiobookFromUrlWorkflow({
+function runConversion(grantId: string, conversionId: string, accountId?: string) {
+  return runPrepareAudiobookWorkflow({
     env: environment,
     event: {
       workflowName: "provider-failure-test",
@@ -173,7 +178,6 @@ function runConversion(
         html: "<article><h1>Failure test</h1><p>A short paragraph for narration.</p></article>",
       }),
       selectNarrationContent: createFakeNarrationContentSelector(),
-      speechSynthesisAi: ai,
     },
   });
 }
@@ -213,79 +217,3 @@ async function doStep<T>(
     }
   }
 }
-
-test.each([400, 503])(
-  "account provider status %i releases estimated duration without spending minutes",
-  async (status) => {
-    const accountId = crypto.randomUUID();
-    const account = environment.ACCOUNTS.get(environment.ACCOUNTS.idFromName(accountId));
-    const now = Temporal.Now.instant().epochMilliseconds;
-    await account.initialize({ accountId, subject: crypto.randomUUID(), createdAtMs: now });
-    const started = await account.startConversion(
-      { sourceUrl: SOURCE_URL, idempotencyKey: crypto.randomUUID() },
-      now,
-    );
-    if (!started.conversion) throw new Error("Expected conversion");
-    const failing = createFakeSpeechSynthesisAi({ failureStatus: status });
-    const reserved: number[] = [];
-    const ai: SpeechSynthesisAi = {
-      gateway: () => ({
-        run: async (request, options) => {
-          reserved.push((await account.inspect()).balance.reserved);
-          return failing.gateway("default").run(request, options);
-        },
-      }),
-    };
-    await expect(
-      runConversion(accountId, started.conversion.conversionId, ai, accountId),
-    ).rejects.toBeDefined();
-    expect(reserved.every((amount) => amount > 0)).toBe(true);
-    expect((await account.inspect()).balance).toEqual({
-      unit: "audio-millisecond",
-      available: 1_800_000,
-      reserved: 0,
-    });
-    expect((await account.getConversion(started.conversion.conversionId))?.status).toBe("failed");
-    expect((await account.inspectAccounting()).reconstructed).toEqual({
-      available: 1_800_000,
-      reserved: 0,
-    });
-  },
-);
-
-test("account provider failure after a completed segment retains that encoded duration charge", async () => {
-  const accountId = crypto.randomUUID();
-  const account = environment.ACCOUNTS.get(environment.ACCOUNTS.idFromName(accountId));
-  const now = Temporal.Now.instant().epochMilliseconds;
-  await account.initialize({ accountId, subject: crypto.randomUUID(), createdAtMs: now });
-  const started = await account.startConversion(
-    { sourceUrl: SOURCE_URL, idempotencyKey: crypto.randomUUID() },
-    now,
-  );
-  if (!started.conversion) throw new Error("Expected conversion");
-  const successful = createFakeSpeechSynthesisAi();
-  const failing = createFakeSpeechSynthesisAi({ failureStatus: 503 });
-  const ai: SpeechSynthesisAi = {
-    gateway: () => ({
-      run: (request, options) =>
-        (options?.gateway?.metadata?.["narrationSegmentSequence"] === 0 ? successful : failing)
-          .gateway("default")
-          .run(request, options),
-    }),
-  };
-  const conversionId = started.conversion.conversionId;
-  await expect(runConversion(accountId, conversionId, ai, accountId)).rejects.toBeDefined();
-  const segments = await account.listAudioSegments(conversionId);
-  expect(segments.filter((item) => item.state === "settled")).toHaveLength(1);
-  const spent = segments.reduce((sum, item) => sum + item.chargedMilliseconds, 0);
-  expect(spent).toBeGreaterThan(0);
-  expect((await account.inspect()).balance).toEqual({
-    unit: "audio-millisecond",
-    available: 1_800_000 - spent,
-    reserved: 0,
-  });
-  expect((await account.inspectAccounting()).reconstructed).toEqual({
-    available: 1_800_000 - spent,
-    reserved: 0,
-  });
-});

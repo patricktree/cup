@@ -1,6 +1,6 @@
 # End-to-end tests
 
-This package tests the complete local conversion path through the web app, Worker, Durable Objects, Workflow, and R2. It produces and validates a real MP3 and EPUB without calling a paid AI service or a public website.
+This package tests the complete local conversion path through the web app, Worker, Durable Objects, Workflow, and R2. It prepares text without speech, then progressively produces and validates real MP3 segments without calling a paid AI service or a public website.
 
 The test-only Worker supplies deterministic fakes for source-material preparation, narration selection, and speech synthesis. Each fake belongs to the production library whose boundary it implements. The remaining application code is the production code.
 

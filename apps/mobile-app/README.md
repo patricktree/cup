@@ -73,7 +73,7 @@ See [Android's App Links verification guide](https://developer.android.com/train
 
 Mobile API requests use ordinary `fetch` calls patched by `CapacitorHttp` to use native networking. The backend origin is `https://cup-audio.com`. Browser requests continue using the browser's same-origin fetch.
 
-Both clients exchange trial credentials for persistent Secure, HttpOnly cookies. Capacitor's native cookie manager stores the server-issued cookies and sends them on later requests. The app does not store session tokens in localStorage or add Authorization headers. The `CapacitorCookies` document.cookie patch (<https://capacitorjs.com/docs/apis/cookies>) is not enabled.
+Both clients exchange trial credentials for persistent Secure, HttpOnly cookies. Capacitor's native cookie manager stores the server-issued cookies and sends them on later requests. Trial requests use those cookies; private account requests additionally carry the signed-in user's bearer token. The `CapacitorCookies` document.cookie patch (<https://capacitorjs.com/docs/apis/cookies>) is not enabled.
 
 Native mutations omit Origin and must include the existing custom request header and JSON content type. Browser mutations must have a matching Origin; cross-site Fetch Metadata is rejected. No cross-origin browser CORS access is enabled.
 
@@ -104,3 +104,15 @@ See [Apple's Universal Links troubleshooting](https://developer.apple.com/docume
 ## Brand assets
 
 Edit the canonical artwork in `tooling/brand-assets/assets/` at the repository root. Run `pnpm brand-assets:sync` to regenerate native icons, splash images, and web assets, then review the generated changes. Native sync uses the checked-in brand assets without regenerating them. See [the brand asset guide](../../tooling/brand-assets/README.md) for sources, sizing, and validation.
+
+## Progressive playback
+
+Preparation produces text without generating speech. Loading the prepared article requests audio for its selected unit while playback remains paused. Each platform's `NarrationPlaybackCoordinator` owns playback intent, passage selection, and bounded speech synthesis lookahead independently of the WebView. Pause stops speech synthesis lookahead; selecting a unit while paused requests only its audio. Leaving the player stops new scheduling; in-flight workflows can finish and charge. Anonymous positions stay on the device; signed-in positions use the account API and restore only when the player initially loads.
+
+Both platforms separate native playback into the same responsibilities. `NarrationApiClient` owns authentication headers, HTTP, and segment polling; `NarrationPositionStore` restores listening positions and serializes account saves; `NarrationAudioAdapter` owns platform audio, interruptions, lock-screen controls, and buffering background resources. Android's [service](android/app/src/main/java/com/cup_audio/app/NarrationPlaybackService.java) hosts their lifetime, while the [plugin](android/app/src/main/java/com/cup_audio/app/NarrationPlayerPlugin.java) translates Capacitor commands. iOS's [bridge](ios/App/App/NarrationPlayer.swift) constructs the components; the [coordinator](ios/App/App/NarrationPlaybackCoordinator.swift) depends on [protocols](ios/App/App/NarrationPlaybackDependencies.swift) so its scheduling can be tested without AVPlayer or a simulator.
+
+Run `pnpm --filter @cup/mobile-app test:native` on macOS with Xcode's command-line tools to compile and run the native Swift behavior tests. They exercise pause with in-flight synthesis, destination-first seeking, bounded speech synthesis lookahead, initial-only position restoration, explicit retry, stale article responses, and ordered account writes with captured authorization. These tests do not verify operating-system background playback.
+
+Android declares a media playback foreground service and uses Media3 with audio focus and network wake mode. iOS configures a spoken-audio playback session and the audio background mode; a finite background task covers initial buffering and gaps. Operating-system suspension and interruptions can still stop playback. Native bearer-token expiry stops new private requests until playback is reauthorized; dedicated iOS account sign-in remains deferred.
+
+Build checks do not verify physical-device background behavior. On each platform, test starting playback, locking the device through several unit boundaries, using lock-screen Pause and Play, seeking while generation is in flight, unplugging headphones, closing the player, and resuming the saved position on another device. Also test long sessions through authorization expiry. Use the local backend only with the development networking setup; this change does not deploy the backend.

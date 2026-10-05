@@ -1,4 +1,5 @@
 import type { AccountDurableObject } from "@cup/accounts";
+import type { SegmentWorkflowParams } from "@cup/conversion-contracts";
 import type { ConversionGrantDurableObject } from "@cup/conversion-grants";
 import type { ConversionParams } from "@cup/create-audiobook-from-url-workflow/runner";
 import type { RegistryDurableObject } from "@cup/registry";
@@ -11,7 +12,8 @@ export type ApiServerEnvironment = {
   SUPABASE_SECRET_KEY: string;
   ACCOUNTS: DurableObjectNamespace<AccountDurableObject>;
   REGISTRY: DurableObjectNamespace<RegistryDurableObject>;
-  CREATE_AUDIOBOOK_FROM_URL_WORKFLOW: Workflow<ConversionParams>;
+  PREPARE_AUDIOBOOK_WORKFLOW: Workflow<ConversionParams>;
+  SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW: Workflow<SegmentWorkflowParams>;
   ASSETS: Fetcher;
   AUDIO_BUCKET: R2Bucket;
   CONVERSION_GRANTS: DurableObjectNamespace<ConversionGrantDurableObject>;

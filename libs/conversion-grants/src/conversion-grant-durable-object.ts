@@ -1,7 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
 import { Temporal } from "temporal-polyfill";
 
-import { createConversionArtifactPrefix } from "@cup/conversion-contracts";
+import {
+  dispatchSegmentWorkflow,
+  type SegmentWorkflowParams,
+  type TrialWorkflowParams,
+  createConversionArtifactPrefix,
+} from "@cup/conversion-contracts";
 import {
   ConversionPhase,
   type ConversionFailureCategory,
@@ -48,7 +53,8 @@ const CLEANUP_RETRY_CUTOFF_MS = 7 * 24 * 60 * 60 * 1_000;
 
 type ConversionGrantEnvironment = {
   CONVERSION_OWNER_LIMIT: string;
-  CREATE_AUDIOBOOK_FROM_URL_WORKFLOW: Workflow<{ sourceUrl: string; grantId: string }>;
+  PREPARE_AUDIOBOOK_WORKFLOW: Workflow<TrialWorkflowParams>;
+  SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW: Workflow<SegmentWorkflowParams>;
   AUDIO_BUCKET: R2Bucket;
   REGISTRY: GrantRegistry;
 };
@@ -200,7 +206,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
 
       record.startAttempts.push(nowMs);
       const state = deriveGrantState(record, nowMs);
-      if (state !== "open") {
+      if (state === "expired" || state === "revoked") {
         await this.sqlite.save(record);
         return { result: state };
       }
@@ -222,6 +228,69 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
         duration: deriveDurationBalance(record),
         registrySnapshot: createGrantRegistrySnapshot(record),
       };
+    });
+  }
+
+  requestAudioSegment(params: SegmentWorkflowParams, retry: boolean) {
+    return this.ctx.blockConcurrencyWhile(async () => {
+      const conversion = await this.getConversion(params.conversionId);
+      if (conversion?.status !== "ready") throw new Error("Narration is not prepared");
+      return dispatchSegmentWorkflow(this.env.SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW, params, retry);
+    });
+  }
+
+  async releaseAudioSegment(conversionId: string, sequence: number) {
+    await this.ctx.storage.transaction(async () => {
+      const record = await this.sqlite.requireRecord();
+      const segment = record.segmentUsage.find(
+        (item) => item.conversionId === conversionId && item.sequence === sequence,
+      );
+      if (segment?.state !== "reserved") return;
+      segment.state = "released";
+      record.registrySnapshotRevision += 1;
+      await this.sqlite.save(record);
+      await this.ctx.storage.setAlarm(
+        Temporal.Now.instant().epochMilliseconds + RECONCILIATION_RETRY_MS,
+      );
+    });
+  }
+
+  retryPreparation(conversionId: string) {
+    return this.ctx.blockConcurrencyWhile(async () => {
+      const previous = await this.getConversion(conversionId);
+      if (previous?.status !== "failed") return;
+      const grantId = await this.ctx.storage.transaction(async () => {
+        const record = await this.sqlite.requireRecord();
+        if (
+          record.revokedAtMs !== undefined ||
+          record.expiresAtMs <= Temporal.Now.instant().epochMilliseconds
+        )
+          throw new Error("Trial preparation is blocked");
+        const index = record.conversions.findIndex((item) => item.conversionId === conversionId);
+        record.conversions[index] = {
+          conversionId,
+          idempotencyKey: previous.idempotencyKey,
+          sourceUrl: previous.sourceUrl,
+          acceptedAtMs: previous.acceptedAtMs,
+          status: "pending",
+          lastStartedPhase: ConversionPhase.CONVERSION_START,
+        };
+        await this.sqlite.save(record);
+        return record.grantId;
+      });
+      try {
+        try {
+          await this.env.PREPARE_AUDIOBOOK_WORKFLOW.create({
+            id: conversionId,
+            params: { sourceUrl: previous.sourceUrl, grantId },
+          });
+        } catch {
+          await (await this.env.PREPARE_AUDIOBOOK_WORKFLOW.get(conversionId)).restart();
+        }
+      } catch (error) {
+        await this.recordFailed(conversionId, previous);
+        throw error;
+      }
     });
   }
 
@@ -547,14 +616,12 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
         continue;
       }
       try {
-        const instance = await this.env.CREATE_AUDIOBOOK_FROM_URL_WORKFLOW.get(
-          conversion.conversionId,
-        );
+        const instance = await this.env.PREPARE_AUDIOBOOK_WORKFLOW.get(conversion.conversionId);
         await instance.status();
         await this.markWorkflowStarted(conversion.conversionId);
       } catch {
         try {
-          await this.env.CREATE_AUDIOBOOK_FROM_URL_WORKFLOW.create({
+          await this.env.PREPARE_AUDIOBOOK_WORKFLOW.create({
             id: conversion.conversionId,
             params: { sourceUrl: conversion.sourceUrl, grantId: record.grantId },
           });
@@ -603,9 +670,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
     for (const conversion of record.conversions) {
       if (conversion.status !== "pending") continue;
       try {
-        const instance = await this.env.CREATE_AUDIOBOOK_FROM_URL_WORKFLOW.get(
-          conversion.conversionId,
-        );
+        const instance = await this.env.PREPARE_AUDIOBOOK_WORKFLOW.get(conversion.conversionId);
         const status = await instance.status();
         if (status.status === "errored" || status.status === "terminated") {
           await this.recordFailed(conversion.conversionId, {

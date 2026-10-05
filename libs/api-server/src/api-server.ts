@@ -22,17 +22,13 @@ import { audiobookSchema, createWebAppApi, type WebAppApiHandlers } from "@cup/w
 
 import { authenticateAccountRequest, mediaCookie, mediaRequest } from "#src/account-auth.ts";
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
+import { getAudioSegmentStateFromEnvironment } from "#src/audio-segment-state.ts";
 import { routeApplicationDomain } from "#src/domain-routing.ts";
 import { revokeVerifiedGoogleToken } from "#src/google-token-revocation.ts";
 import { accountAuthError, jsonError } from "#src/http-errors.ts";
 import { ingressIdentity } from "#src/ingress-identity.ts";
 import { isDevelopmentOperatorRequest } from "#src/operator-access.ts";
-import {
-  loadReadyAudiobookFromEnvironment,
-  serveAudio,
-  serveCaptions,
-  serveEpub,
-} from "#src/serve-audiobook.ts";
+import { loadReadyAudiobookFromEnvironment, serveAudio } from "#src/serve-audiobook.ts";
 import { createConversionGrant } from "#src/use-cases/create-conversion-grant.ts";
 import { getGrantConversion as loadGrantConversion } from "#src/use-cases/get-grant-conversion.ts";
 import { startAudiobookConversion } from "#src/use-cases/start-audiobook-conversion.ts";
@@ -499,7 +495,7 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
         grant,
         registry: getRegistryStub(context.env),
         createWorkflow: async (conversionId, params) => {
-          await context.env.CREATE_AUDIOBOOK_FROM_URL_WORKFLOW.create({ id: conversionId, params });
+          await context.env.PREPARE_AUDIOBOOK_WORKFLOW.create({ id: conversionId, params });
         },
       },
     );
@@ -581,91 +577,229 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
   },
 
   async getAudiobook(context) {
-    const conversionId = context.req.valid("param").conversionId;
-    try {
-      const audiobook = await loadReadyAudiobookFromEnvironment(context.env, conversionId);
-      if (audiobook === undefined)
-        return jsonError(
-          context.get("requestId"),
-          "audiobook-not-found",
-          "Audiobook not found.",
-          404,
-        );
-      const origin = new URL(context.req.url).origin;
+    const { conversionId } = context.req.valid("param");
+    const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
+    if (!owner)
+      return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
+    const account =
+      owner.kind === "account"
+        ? context.env.ACCOUNTS.get(context.env.ACCOUNTS.idFromName(owner.accountId))
+        : undefined;
+    const conversion = account
+      ? await account.getConversion(conversionId)
+      : owner.kind === "trial"
+        ? await getGrantStub(context.env, owner.grantId).getConversion(conversionId)
+        : undefined;
+    if (!conversion)
+      return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
+    const canGenerate =
+      owner.kind === "account" ||
+      (owner.kind === "trial" &&
+        (await authenticateGrant(context.env, owner.grantId, context.req.header("Cookie")))
+          .result === "valid");
+    const base = { originalUrl: conversion.sourceUrl, canGenerate };
+    if (conversion.status === "pending") return context.json({ ...base, status: "pending" }, 200);
+    if (conversion.status === "failed")
       return context.json(
-        audiobookSchema.parse({
-          title: audiobook.title,
-          originalUrl: audiobook.originalUrl,
-          narrationDocument: audiobook.narrationDocument,
-          synchronizationCues: audiobook.synchronizationCues,
-          audio: {
-            contentType: "audio/mpeg",
-            url: `${origin}/api/files/audiobooks/${conversionId}/audio.mp3`,
-          },
-          captions: {
-            contentType: "text/vtt",
-            url: `${origin}/api/files/audiobooks/${conversionId}/captions.vtt`,
-          },
-          epub: {
-            contentType: "application/epub+zip",
-            url: `${origin}/api/files/audiobooks/${conversionId}/book.epub`,
-          },
-        }),
+        {
+          ...base,
+          status: "failed",
+          explanation: "Preparation failed. Retry to load this article.",
+        },
         200,
       );
-    } catch {
-      return jsonError(
-        context.get("requestId"),
-        "operational-error",
-        "The audiobook could not be loaded.",
-        500,
+    const audiobook = await loadReadyAudiobookFromEnvironment(context.env, conversionId);
+    if (!audiobook)
+      return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
+    const usage = account
+      ? await account.listAudioSegments(conversionId)
+      : owner.kind === "trial"
+        ? await getGrantStub(context.env, owner.grantId).listAudioSegments(conversionId)
+        : [];
+    const origin = new URL(context.req.url).origin;
+    const segments = usage
+      .filter((item) => item.state === "settled")
+      .map((item) => ({
+        sequence: item.sequence,
+        status: "ready" as const,
+        durationMilliseconds: item.actualMilliseconds,
+        url:
+          origin +
+          "/api/files/audiobooks/" +
+          conversionId +
+          "/segments/" +
+          item.sequence +
+          "/audio.mp3",
+      }));
+    const listener = account
+      ? account
+      : context.req.header("Authorization")
+        ? await authenticateAccountRequest(context.req.raw, context.env).then((auth) =>
+            auth.result === "authenticated" && auth.snapshot.state === "active"
+              ? auth.account
+              : undefined,
+          )
+        : undefined;
+    const playbackPosition = listener ? await listener.getPlaybackPosition(conversionId) : null;
+    return context.json(
+      audiobookSchema.parse({
+        ...base,
+        status: "ready",
+        title: audiobook.title,
+        narrationDocument: audiobook.narrationDocument,
+        segments,
+        playbackPosition,
+      }),
+      200,
+    );
+  },
+
+  async getSegment(context) {
+    const { conversionId, sequence } = context.req.valid("param");
+    const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
+    const audiobook = await loadReadyAudiobookFromEnvironment(context.env, conversionId);
+    if (!owner || !audiobook?.narrationDocument.synchronizationUnits[sequence])
+      return jsonError(context.get("requestId"), "audiobook-not-found", "Passage not found.", 404);
+    return context.json(
+      await getAudioSegmentStateFromEnvironment(
+        context.env,
+        conversionId,
+        owner,
+        sequence,
+        new URL(context.req.url).origin,
+      ),
+      200,
+    );
+  },
+
+  async generateSegment(context) {
+    const { conversionId, sequence } = context.req.valid("param");
+    const denied = requireBrowserMutation(context.req.raw, context.get("requestId"));
+    if (denied) return denied;
+    const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
+    if (!owner)
+      return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
+    if (owner.kind === "trial") {
+      const auth = await authenticateGrant(
+        context.env,
+        owner.grantId,
+        context.req.header("Cookie"),
       );
+      if (auth.result !== "valid")
+        return jsonError(
+          context.get("requestId"),
+          "grant-session-required",
+          "Open the original trial link to generate more audio.",
+          401,
+        );
     }
+    const audiobook = await loadReadyAudiobookFromEnvironment(context.env, conversionId);
+    if (!audiobook?.narrationDocument.synchronizationUnits[sequence])
+      return jsonError(context.get("requestId"), "audiobook-not-found", "Passage not found.", 404);
+    const origin = new URL(context.req.url).origin;
+    const current = await getAudioSegmentStateFromEnvironment(
+      context.env,
+      conversionId,
+      owner,
+      sequence,
+      origin,
+    );
+    if (
+      current.status === "ready" ||
+      (current.status === "failed" && !context.req.valid("json").retry)
+    )
+      return context.json(current, 200);
+    const account =
+      owner.kind === "account"
+        ? context.env.ACCOUNTS.get(context.env.ACCOUNTS.idFromName(owner.accountId))
+        : undefined;
+    const executionEpoch = account ? (await account.inspect()).executionEpoch : 1;
+    const params = { v: 3 as const, conversionId, owner, executionEpoch, sequence };
+    const result = account
+      ? await account.requestAudioSegment(params, context.req.valid("json").retry)
+      : owner.kind === "trial"
+        ? await getGrantStub(context.env, owner.grantId).requestAudioSegment(
+            params,
+            context.req.valid("json").retry,
+          )
+        : undefined;
+    return context.json(
+      {
+        sequence,
+        status:
+          result?.status === "errored" || result?.status === "terminated" ? "failed" : "generating",
+        explanation: result?.error?.message,
+      },
+      200,
+    );
+  },
+
+  async retryPreparation(context) {
+    const { conversionId } = context.req.valid("param");
+    const denied = requireBrowserMutation(context.req.raw, context.get("requestId"));
+    if (denied) return denied;
+    const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
+    if (!owner)
+      return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
+    if (owner.kind === "account")
+      await context.env.ACCOUNTS.get(
+        context.env.ACCOUNTS.idFromName(owner.accountId),
+      ).retryPreparation(conversionId);
+    else {
+      if (
+        (await authenticateGrant(context.env, owner.grantId, context.req.header("Cookie")))
+          .result !== "valid"
+      )
+        return jsonError(
+          context.get("requestId"),
+          "grant-session-required",
+          "Open the original trial link to retry preparation.",
+          401,
+        );
+      await getGrantStub(context.env, owner.grantId).retryPreparation(conversionId);
+    }
+    return context.body(null, 204);
+  },
+
+  async savePosition(context) {
+    const { conversionId } = context.req.valid("param");
+    const denied = requireBrowserMutation(context.req.raw, context.get("requestId"));
+    if (denied) return denied;
+    const auth = await authenticateAccountRequest(context.req.raw, context.env);
+    if (auth.result !== "authenticated")
+      return accountAuthError(auth.result, context.get("requestId"));
+    if (auth.snapshot.state !== "active")
+      return accountAuthError("blocked", context.get("requestId"));
+    const position = context.req.valid("json");
+    const audiobook = await loadReadyAudiobookFromEnvironment(context.env, conversionId);
+    if (
+      !audiobook?.narrationDocument.synchronizationUnits.some(
+        (unit) => unit.id === position.synchronizationUnitId,
+      )
+    )
+      return jsonError(context.get("requestId"), "invalid-input", "Passage not found.", 400);
+    await auth.account.savePlaybackPosition(conversionId, position);
+    return context.body(null, 204);
   },
 
   async getAudio(context) {
+    const { conversionId, sequence } = context.req.valid("param");
     return serveAudio(
       context.env,
       context.req.raw,
-      context.req.valid("param").conversionId,
+      conversionId,
+      sequence,
       false,
       context.get("requestId"),
     );
   },
-
   async headAudio(context) {
+    const { conversionId, sequence } = context.req.valid("param");
     return serveAudio(
       context.env,
       context.req.raw,
-      context.req.valid("param").conversionId,
-      true,
-      context.get("requestId"),
-    );
-  },
-
-  async getCaptions(context) {
-    return serveCaptions(
-      context.env,
-      context.req.valid("param").conversionId,
-      context.get("requestId"),
-    );
-  },
-
-  async getEpub(context) {
-    return serveEpub(
-      context.env,
-      context.req.raw,
-      context.req.valid("param").conversionId,
-      false,
-      context.get("requestId"),
-    );
-  },
-
-  async headEpub(context) {
-    return serveEpub(
-      context.env,
-      context.req.raw,
-      context.req.valid("param").conversionId,
+      conversionId,
+      sequence,
       true,
       context.get("requestId"),
     );
@@ -1172,6 +1306,18 @@ async function authenticateGrant(
   }
 }
 
+function requireBrowserMutation(request: Request, requestId: string): Response | undefined {
+  const origin = request.headers.get("Origin");
+  if (
+    request.headers.get("X-Create-Audiobook-From-URL-Request") !== "1" ||
+    request.headers.get("Content-Type") !== "application/json" ||
+    (origin &&
+      ![new URL(request.url).origin, "https://localhost", "https://cup-audio.com"].includes(origin))
+  )
+    return jsonError(requestId, "origin-blocked", "The request origin is not allowed.", 403);
+  return undefined;
+}
+
 type SessionMutationRequestValidation =
   | { result: "valid" }
   | { result: "invalid"; response: Response };
@@ -1225,9 +1371,10 @@ function allowedMethodsForApiPath(pathname: string): string[] | undefined {
     [/^\/api\/grants\/[^/]+\/conversions$/, ["POST"]],
     [/^\/api\/conversions\/[^/]+$/, ["GET"]],
     [/^\/api\/audiobooks\/[^/]+$/, ["GET"]],
-    [/^\/api\/files\/audiobooks\/[^/]+\/audio\.mp3$/, ["GET", "HEAD"]],
-    [/^\/api\/files\/audiobooks\/[^/]+\/captions\.vtt$/, ["GET"]],
-    [/^\/api\/files\/audiobooks\/[^/]+\/book\.epub$/, ["GET", "HEAD"]],
+    [/^\/api\/audiobooks\/[^/]+\/segments\/[^/]+$/, ["GET", "POST"]],
+    [/^\/api\/audiobooks\/[^/]+\/retry$/, ["POST"]],
+    [/^\/api\/audiobooks\/[^/]+\/position$/, ["PUT"]],
+    [/^\/api\/files\/audiobooks\/[^/]+\/segments\/[^/]+\/audio\.mp3$/, ["GET", "HEAD"]],
     [/^\/api\/operator\/grants$/, ["GET", "POST"]],
     [/^\/api\/operator\/grants\/[^/]+$/, ["GET"]],
     [/^\/api\/operator\/grants\/[^/]+\/allowance$/, ["PUT"]],

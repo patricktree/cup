@@ -8,12 +8,21 @@ When a schema changes, update its diagram alongside the generated migration. The
 
 ## Account object
 
-`AccountDurableObject`. Each account has an isolated database for identity and lifecycle state, conversion history, dispatch, duration accounting, artifact writers, and deletion confirmation. The account owns the rows through its Durable Object identity; most tables therefore have no foreign key to the singleton account row.
+`AccountDurableObject`. Each account has an isolated database for identity and lifecycle state, conversion history, listening positions, dispatch, duration accounting, artifact writers, and deletion confirmation. The account owns the rows through its Durable Object identity; most tables therefore have no foreign key to the singleton account row.
+
+`account_playback_positions` stores one listening position per conversion in the listener's account object. It has no foreign key to `account_conversions` because signed-in listeners can save listening positions for unlisted trial articles that they do not own. See [position restoration and saves](conversion.md#delivery-positions-and-lifecycle) for player behavior.
+
+Writers may target pending or ready conversions; account lifecycle and execution epochs fence their storage effects.
 
 Sources: [account-sqlite-schema.ts](../../libs/accounts/src/account-sqlite-schema.ts), [sqlite-schema-shared.ts](../../libs/accounts/src/sqlite-schema-shared.ts); [migrations](../../libs/accounts/drizzle/account/).
 
 ```mermaid
 erDiagram
+    account_playback_positions {
+        text conversion_id PK "NOT NULL; own or unlisted conversion"
+        text synchronization_unit_id "NOT NULL"
+        integer offset_milliseconds "NOT NULL; >= 0"
+    }
     account_audio_segments {
         text conversion_id PK, FK "NOT NULL"
         integer sequence PK "NOT NULL"
@@ -53,7 +62,6 @@ erDiagram
         text prefix "NOT NULL"
         text state "NOT NULL"
         text unresolved_effect "nullable"
-        text purpose "NOT NULL"
     }
     credit_balances {
         text unit PK "NOT NULL"

@@ -1,8 +1,10 @@
 ---
-status: partially superseded by ADR 0004
+status: partially superseded by ADRs 0004 and 0006
 ---
 
 # Charge for accessible generated narration
+
+[ADR 0006](0006-synthesize-the-selected-unit-while-paused.md) allows synthesis of the selected unit while paused; pause still stops synthesis ahead. Duration accounting below remains unchanged.
 
 [ADR 0004](0004-preserve-only-grants-during-drizzle-transition.md) supersedes historical audiobook retention only for the one-time transition to Drizzle. The duration-accounting policy below remains accepted for subsequent conversions; the original rationale and retention decision are preserved here.
 
@@ -33,4 +35,4 @@ Use generated audio duration as the common usage unit for account allowances, tr
 
 Duration accounting applies to new synthesis; historical audio remains available without retrospective deductions.
 
-The current conversion UI exposes complete audiobooks. Per-segment playback, generation cancellation, and an allowance balance display are deferred to the player rework; their proposed UI and API scaffolding are omitted from this implementation.
+[ADR 0005](0005-prepare-narration-before-player-controlled-synthesis.md) resolves progressive generation and per-segment delivery. The current reader displays prepared text, requests audio within a bounded speech synthesis lookahead only while playing, and preserves completed audio after unit failures. A separate explicit generation-cancellation control remains deferred.

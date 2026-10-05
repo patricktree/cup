@@ -46,9 +46,14 @@
   },
   "workflows": [
     {
-      "name": "create-audiobook-from-url",
-      "binding": "CREATE_AUDIOBOOK_FROM_URL_WORKFLOW",
-      "class_name": "CreateAudiobookFromUrlWorkflow",
+      "name": "prepare-audiobook",
+      "binding": "PREPARE_AUDIOBOOK_WORKFLOW",
+      "class_name": "PrepareAudiobookWorkflow",
+    },
+    {
+      "name": "synthesize-audio-segment",
+      "binding": "SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW",
+      "class_name": "SynthesizeAudioSegmentWorkflow",
     },
   ],
   "durable_objects": {

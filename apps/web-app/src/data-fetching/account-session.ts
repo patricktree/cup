@@ -13,6 +13,8 @@ import {
   setNativeMediaSession,
   clearNativeAuthSession,
 } from "#src/platform/account-auth.js";
+import { stopNativePlayback } from "#src/platform/native-player.js";
+import { STOP_PLAYBACK_EVENT_NAME } from "#src/playback-events.js";
 import { trialBrowserState } from "#src/trial-browser-state.js";
 
 type AccountAuthState =
@@ -136,7 +138,9 @@ export async function signInGoogle(fresh = false) {
   await signInWithGoogle(client, googleClientId, fresh);
 }
 
-export function stopPlayback() {
+function stopPlayback() {
+  stopNativePlayback();
+  window.dispatchEvent(new Event(STOP_PLAYBACK_EVENT_NAME));
   for (const audio of document.querySelectorAll("audio")) audio.pause();
 }
 

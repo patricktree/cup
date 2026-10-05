@@ -1,5 +1,6 @@
 import type {
   AccountConfirmationRequest,
+  PlaybackPosition,
   ConversionParams,
   ExchangeCredentialRequest,
   GrantParams,
@@ -71,6 +72,35 @@ export class WebAppApiClient {
     return this.#honoClient.api.audiobooks[":conversionId"].$get(
       { param: params },
       signal === undefined ? undefined : { init: { signal } },
+    );
+  }
+
+  async getSegment(params: ConversionParams, sequence: number) {
+    return this.#honoClient.api.audiobooks[":conversionId"].segments[":sequence"].$get(
+      { param: { ...params, sequence: String(sequence) } },
+      { init: { credentials: "include" } },
+    );
+  }
+  async generateSegment(params: ConversionParams, sequence: number, retry = false) {
+    return this.#honoClient.api.audiobooks[":conversionId"].segments[":sequence"].$post(
+      {
+        param: { ...params, sequence: String(sequence) },
+        json: { retry },
+        header: browserHeaders(),
+      },
+      { init: { credentials: "include" } },
+    );
+  }
+  async retryPreparation(params: ConversionParams) {
+    return this.#honoClient.api.audiobooks[":conversionId"].retry.$post(
+      { param: params, json: {}, header: browserHeaders() },
+      { init: { credentials: "include" } },
+    );
+  }
+  async savePosition(params: ConversionParams, position: PlaybackPosition) {
+    return this.#honoClient.api.audiobooks[":conversionId"].position.$put(
+      { param: params, json: position, header: browserHeaders() },
+      { init: { credentials: "include" } },
     );
   }
 
@@ -148,6 +178,35 @@ export class AuthenticatedRpcClient {
     return this.#honoClient.api.audiobooks[":conversionId"].$get(
       { param: params },
       this.#options(signal),
+    );
+  }
+
+  async getSegment(params: ConversionParams, sequence: number) {
+    return this.#honoClient.api.audiobooks[":conversionId"].segments[":sequence"].$get(
+      { param: { ...params, sequence: String(sequence) } },
+      this.#options(),
+    );
+  }
+  async generateSegment(params: ConversionParams, sequence: number, retry = false) {
+    return this.#honoClient.api.audiobooks[":conversionId"].segments[":sequence"].$post(
+      {
+        param: { ...params, sequence: String(sequence) },
+        json: { retry },
+        header: browserHeaders(),
+      },
+      this.#options(),
+    );
+  }
+  async retryPreparation(params: ConversionParams) {
+    return this.#honoClient.api.audiobooks[":conversionId"].retry.$post(
+      { param: params, json: {}, header: browserHeaders() },
+      this.#options(),
+    );
+  }
+  async savePosition(params: ConversionParams, position: PlaybackPosition) {
+    return this.#honoClient.api.audiobooks[":conversionId"].position.$put(
+      { param: params, json: position, header: browserHeaders() },
+      this.#options(),
     );
   }
 

@@ -158,27 +158,23 @@ test("disables duplicate submission while a conversion start is pending", async 
   await expect(page.getByLabel("URL")).toHaveValue(SOURCE_URL);
 
   finishStart?.();
-  await expect(page).toHaveURL(`${workerEnvironment.origin}/app/conversions/${CONVERSION_ID}`);
-  await expect(
-    page.getByRole("status").filter({ hasText: "Selecting narration content..." }),
-  ).toBeVisible();
+  await expect(page).toHaveURL(`${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
+  await expect(page.getByRole("status").filter({ hasText: "Preparing article…" })).toBeVisible();
 });
 
 test("shows a deterministic pending conversion", async ({ page, workerEnvironment }) => {
   await mockConversion(page, workerEnvironment.origin, createPendingConversion());
-  await gotoPage(page, `${workerEnvironment.origin}/app/conversions/${CONVERSION_ID}`);
+  await gotoPage(page, `${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
 
-  await expect(
-    page.getByRole("status").filter({ hasText: "Selecting narration content..." }),
-  ).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Preparing article…" })).toBeVisible();
 });
 
 test("shows a deterministic failed conversion", async ({ page, workerEnvironment }) => {
   await mockConversion(page, workerEnvironment.origin, createFailedConversion());
-  await gotoPage(page, `${workerEnvironment.origin}/app/conversions/${CONVERSION_ID}`);
+  await gotoPage(page, `${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
 
   await expect(
-    page.getByRole("heading", { name: "Conversion failed.", exact: true }),
+    page.getByRole("heading", { name: "The article could not be prepared.", exact: true }),
   ).toBeVisible();
 });
 
@@ -188,46 +184,39 @@ test("retries a conversion loading failure", async ({
   workerEnvironment,
 }) => {
   let attempts = 0;
-  await page.route(
-    `${workerEnvironment.origin}/api/conversions/${CONVERSION_ID}`,
-    async (route) => {
-      attempts += 1;
-      if (attempts === 1) {
-        await fulfillError(route, 500, "operational-error", "The conversion could not be loaded.");
-        return;
-      }
-      await fulfillJson(route, 200, createPendingConversion());
-    },
-  );
+  await page.route(`${workerEnvironment.origin}/api/audiobooks/${CONVERSION_ID}`, async (route) => {
+    attempts += 1;
+    if (attempts === 1) {
+      await fulfillError(route, 500, "operational-error", "The conversion could not be loaded.");
+      return;
+    }
+    await fulfillJson(route, 200, createPendingConversion());
+  });
   expectConsoleError(CONSOLE_ERRORS.serverError);
   expectConsoleError(/^ApiError: The conversion could not be loaded\./);
 
-  await gotoPage(page, `${workerEnvironment.origin}/app/conversions/${CONVERSION_ID}`);
+  await gotoPage(page, `${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
   await expect(
-    page.getByRole("heading", { name: "The conversion could not be opened." }),
+    page.getByRole("heading", { name: "The article could not be loaded." }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Try again" }).click();
-  await expect(
-    page.getByRole("status").filter({ hasText: "Selecting narration content..." }),
-  ).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Preparing article…" })).toBeVisible();
   expect(attempts).toBeGreaterThanOrEqual(2);
 });
 
-test("redirects a ready conversion to its audiobook", async ({ page, workerEnvironment }) => {
+test("shows a ready article with its player", async ({ page, workerEnvironment }) => {
   await mockConversion(page, workerEnvironment.origin, createReadyConversion());
   await mockAudiobook(page, workerEnvironment.origin);
 
-  await gotoPage(page, `${workerEnvironment.origin}/app/conversions/${CONVERSION_ID}`);
+  await gotoPage(page, `${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
   await expect(
     page.getByRole("heading", { name: "A deterministic document about careful testing" }),
   ).toBeVisible({ timeout: 5_000 });
-  await expect(
-    page.getByLabel("Play A deterministic document about careful testing"),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
   await expect(page).toHaveURL(`${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
 });
 
-test("shows an audiobook not-found state without a retry action", async ({
+test("shows an article not-found state", async ({
   expectConsoleError,
   page,
   workerEnvironment,
@@ -239,8 +228,10 @@ test("shows an audiobook not-found state without a retry action", async ({
   expectConsoleError(/^ApiError: The audiobook was not found\./);
 
   await gotoPage(page, `${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
-  await expect(page.getByRole("heading", { name: "Audiobook not found." })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "The article could not be loaded." }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
 });
 
 test("retries an audiobook loading failure", async ({
@@ -249,21 +240,20 @@ test("retries an audiobook loading failure", async ({
   workerEnvironment,
 }) => {
   let attempts = 0;
-  await mockAudiobookMedia(page, workerEnvironment.origin);
   await page.route(`${workerEnvironment.origin}/api/audiobooks/${CONVERSION_ID}`, async (route) => {
     attempts += 1;
     if (attempts === 1) {
-      await fulfillError(route, 500, "operational-error", "The audiobook could not be loaded.");
+      await fulfillError(route, 500, "operational-error", "The article could not be loaded.");
       return;
     }
     await fulfillJson(route, 200, createAudiobook(workerEnvironment.origin));
   });
   expectConsoleError(CONSOLE_ERRORS.serverError);
-  expectConsoleError(/^ApiError: The audiobook could not be loaded\./);
+  expectConsoleError(/^ApiError: The article could not be loaded\./);
 
   await gotoPage(page, `${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
   await expect(
-    page.getByRole("heading", { name: "The audiobook could not be loaded." }),
+    page.getByRole("heading", { name: "The article could not be loaded." }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(
@@ -286,40 +276,22 @@ function createGrant(): Record<string, unknown> {
 }
 
 function createPendingConversion(): Record<string, unknown> {
-  return {
-    ...createConversionBase(),
-    status: "pending",
-    lastStartedPhase: "narration-content-selection",
-  };
+  return { status: "pending", originalUrl: SOURCE_URL, canGenerate: true };
 }
-
-function createConversionBase(): Record<string, unknown> {
-  return {
-    conversionId: CONVERSION_ID,
-    sourceUrl: SOURCE_URL,
-    acceptedAt: "2026-08-28T10:05:00Z",
-  };
-}
-
 function createFailedConversion(): Record<string, unknown> {
   return {
-    ...createConversionBase(),
     status: "failed",
-    completedAt: "2026-08-28T10:08:00Z",
-    failure: { category: "narration-synthesis", explanation: "Speech synthesis failed." },
+    originalUrl: SOURCE_URL,
+    canGenerate: true,
+    explanation: "Preparation failed.",
   };
 }
-
 function createReadyConversion(): Record<string, unknown> {
-  return {
-    ...createConversionBase(),
-    title: "A deterministic document about careful testing",
-    status: "ready",
-    completedAt: "2026-08-28T10:08:00Z",
-    audiobookUrl: `/app/audiobooks/${CONVERSION_ID}`,
-  };
+  return createAudiobook("");
 }
-
+function createConversionBase(): Record<string, unknown> {
+  return { conversionId: CONVERSION_ID, sourceUrl: SOURCE_URL, acceptedAt: "2026-08-28T10:05:00Z" };
+}
 function createStartResponse(): Record<string, unknown> {
   return {
     result: "created",
@@ -335,34 +307,22 @@ function createStartResponse(): Record<string, unknown> {
   };
 }
 
-function createAudiobook(origin: string): Record<string, unknown> {
+function createAudiobook(_origin: string): Record<string, unknown> {
   return {
+    status: "ready",
+    canGenerate: true,
+    playbackPosition: null,
+    segments: [],
     title: "A deterministic document about careful testing",
     originalUrl: SOURCE_URL,
     narrationDocument: {
-      html: "<p>Keep the important boundaries real.</p>",
+      html: '<h1 id="unit-1">A deterministic document about careful testing</h1>',
       synchronizationUnits: [
-        { id: "unit-1", narrationText: "Keep the important boundaries real." },
+        { id: "unit-1", narrationText: "A deterministic document about careful testing" },
       ],
-    },
-    synchronizationCues: [
-      { synchronizationUnitId: "unit-1", startMilliseconds: 0, endMilliseconds: 1_000 },
-    ],
-    audio: {
-      contentType: "audio/mpeg",
-      url: `${origin}/api/files/audiobooks/${CONVERSION_ID}/audio.mp3`,
-    },
-    captions: {
-      contentType: "text/vtt",
-      url: `${origin}/api/files/audiobooks/${CONVERSION_ID}/captions.vtt`,
-    },
-    epub: {
-      contentType: "application/epub+zip",
-      url: `${origin}/api/files/audiobooks/${CONVERSION_ID}/book.epub`,
     },
   };
 }
-
 async function mockCredentialExchange(page: Page, origin: string): Promise<void> {
   await page.route(`${origin}/api/grants/${GRANT_ID}/sessions`, async (route) => {
     await fulfillJson(route, 201, createGrant());
@@ -381,32 +341,15 @@ async function mockConversion(
   origin: string,
   conversion: Record<string, unknown>,
 ): Promise<void> {
-  await page.route(`${origin}/api/conversions/${CONVERSION_ID}`, async (route) => {
+  await page.route(`${origin}/api/audiobooks/${CONVERSION_ID}`, async (route) => {
     await fulfillJson(route, 200, conversion);
   });
 }
 
 async function mockAudiobook(page: Page, origin: string): Promise<void> {
-  await mockAudiobookMedia(page, origin);
   await page.route(`${origin}/api/audiobooks/${CONVERSION_ID}`, async (route) => {
     await fulfillJson(route, 200, createAudiobook(origin));
   });
-}
-
-async function mockAudiobookMedia(page: Page, origin: string): Promise<void> {
-  await page.route(`${origin}/api/files/audiobooks/${CONVERSION_ID}/audio.mp3`, async (route) => {
-    await route.fulfill({ status: 200, contentType: "audio/mpeg", body: "" });
-  });
-  await page.route(
-    `${origin}/api/files/audiobooks/${CONVERSION_ID}/captions.vtt`,
-    async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "text/vtt",
-        body: "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nKeep the important boundaries real.\n",
-      });
-    },
-  );
 }
 
 async function fulfillJson(route: Route, status: number, body: unknown): Promise<void> {

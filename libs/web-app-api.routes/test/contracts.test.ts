@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   audiobookSchema,
+  audioSegmentSchema,
   conversionParamsSchema,
   errorResponseSchema,
   exchangeCredentialRequestSchema,
@@ -84,22 +85,67 @@ describe("web application transport contracts", () => {
     ).toBe(false);
   });
 
-  test("fixes web audiobook media content types", () => {
-    const result = audiobookSchema.safeParse({
+  test("accepts prepared narration before audio exists", () => {
+    const prepared = {
+      status: "ready",
+      canGenerate: true,
       title: "Document",
       originalUrl: "https://example.com/source",
       narrationDocument: {
         html: "<article>Document</article>",
         synchronizationUnits: [{ id: "one", narrationText: "Document" }],
       },
-      synchronizationCues: [
-        { synchronizationUnitId: "one", startMilliseconds: 0, endMilliseconds: 1 },
-      ],
-      audio: { contentType: "audio/wav", url: "https://example.com/audio" },
-      captions: { contentType: "text/vtt", url: "https://example.com/captions" },
-      epub: { contentType: "application/epub+zip", url: "https://example.com/book" },
-    });
-    expect(result.success).toBe(false);
+      segments: [{ sequence: 0, status: "absent" }],
+      playbackPosition: { synchronizationUnitId: "one", offsetMilliseconds: 1500 },
+    };
+    expect(audiobookSchema.safeParse(prepared).success).toBe(true);
+    expect(
+      audiobookSchema.safeParse({ ...prepared, audio: { url: "https://example.com/audio" } })
+        .success,
+    ).toBe(false);
+    expect(
+      audiobookSchema.safeParse({
+        ...prepared,
+        playbackPosition: { synchronizationUnitId: "one", offsetMilliseconds: -1 },
+      }).success,
+    ).toBe(false);
+  });
+
+  test.each([
+    { sequence: 0, status: "absent" },
+    { sequence: 0, status: "generating" },
+    {
+      sequence: 0,
+      status: "ready",
+      durationMilliseconds: 1500,
+      url: "https://example.com/audio.mp3",
+    },
+    { sequence: 0, status: "failed", explanation: "Speech generation failed." },
+  ])("accepts a complete audio segment state: $status", (segment) => {
+    expect(audioSegmentSchema.safeParse(segment).success).toBe(true);
+  });
+
+  test.each([
+    { sequence: 0, status: "failed" },
+    { sequence: 0, status: "ready", url: "https://example.com/audio.mp3" },
+    { sequence: 0, status: "ready", durationMilliseconds: 1500 },
+    { sequence: 0, status: "absent", explanation: "Unexpected failure" },
+    { sequence: 0, status: "generating", explanation: "Unexpected failure" },
+    {
+      sequence: 0,
+      status: "ready",
+      durationMilliseconds: 1500,
+      url: "https://example.com/audio.mp3",
+      explanation: "Unexpected failure",
+    },
+    {
+      sequence: 0,
+      status: "failed",
+      explanation: "Speech failed",
+      url: "https://example.com/audio.mp3",
+    },
+  ])("rejects incomplete or contradictory audio segment states", (segment) => {
+    expect(audioSegmentSchema.safeParse(segment).success).toBe(false);
   });
 
   test("keeps conversions separate from the grant snapshot", () => {

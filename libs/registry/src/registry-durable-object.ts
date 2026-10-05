@@ -86,7 +86,7 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
     nowMs = Temporal.Now.instant().epochMilliseconds,
   ): Promise<AccountSnapshot> {
     const existing = this.findIdentity(subject);
-    if (!existing && this.env.SUPABASE_URL && !(await verifySupabaseIdentity(this.env, subject)))
+    if (!existing && !(await verifySupabaseIdentity(this.env, subject)))
       throw new Error("Supabase identity no longer exists");
     await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
     const identity = this.reserveVerifiedIdentity(subject, nowMs);
@@ -105,7 +105,7 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
       accountId: identity.accountId,
       createdAtMs: identity.createdAtMs,
     });
-    if (this.env.SUPABASE_URL && !(await verifySupabaseIdentity(this.env, subject)))
+    if (!(await verifySupabaseIdentity(this.env, subject)))
       throw new Error("Supabase identity no longer exists");
     this.database.transaction(() => {
       const current = this.findIdentity(subject);
@@ -204,11 +204,7 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
     z.string()
       .regex(/^[a-f0-9]{64}$/)
       .parse(key);
-    if (
-      !this.findIdentity(subject) &&
-      this.env.SUPABASE_URL &&
-      !(await verifySupabaseIdentity(this.env, subject))
-    )
+    if (!this.findIdentity(subject) && !(await verifySupabaseIdentity(this.env, subject)))
       throw new Error("Identity unavailable");
     await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
     const retryAfter = this.database.transaction(() => {

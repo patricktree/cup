@@ -1,8 +1,10 @@
 ---
-status: accepted
+status: superseded
 ---
 
 # Use a canonical synchronized audiobook independent of exports
+
+Superseded by [ADR 0005](0005-prepare-narration-before-player-controlled-synthesis.md). The original rationale follows; current playback uses prepared text and independent audio segments, and exports have been removed.
 
 A conversion produces a canonical audiobook comprising a simple narration document, one MP3 playback track, and synchronization cues that map existing narration chunks to intervals in that track. The controlled reader consumes this model directly; a standalone MP3 and an EPUB 3 publication with Media Overlays are derived representations. This separates the guaranteed reading experience from uneven third-party reader behavior and allows export failures to remain independent of audiobook readiness.
 

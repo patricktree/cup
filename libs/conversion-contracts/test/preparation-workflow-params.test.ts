@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { conversionParamsSchema } from "#src/conversion-params.ts";
+import { conversionParamsSchema } from "#src/preparation-workflow-params.ts";
 
 test("accepts a valid source URL", () => {
   expect(

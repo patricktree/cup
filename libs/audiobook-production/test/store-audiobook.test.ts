@@ -1,176 +1,51 @@
 import { expect, test } from "vitest";
 
-import { loadAudiobook, storeAudiobook, type StoreOptions } from "#src/audiobook-production.ts";
+import {
+  loadAudiobook,
+  storeAudiobook,
+  SPEECH_CONFIG,
+  type StoreOptions,
+} from "#src/audiobook-production.ts";
 
-test("stores a canonical audiobook with cues derived from its ordered audio segments", async () => {
+const document = {
+  html: '<h1 id="unit-1">Title</h1><p id="unit-2">Body</p>',
+  synchronizationUnits: [
+    { id: "unit-1", narrationText: "Title" },
+    { id: "unit-2", narrationText: "Body" },
+  ],
+};
+test("publishes prepared narration without requiring any audio and fixes the speech configuration", async () => {
   const { bucket, storedObjects } = createTestBucket();
-
-  const audiobookReference = await storeAudiobook({
+  const reference = await storeAudiobook({
     bucket,
     conversionId: "conversion-id",
-    title: "A document",
-    originalUrl: "https://example.com/source",
-    narrationDocument: {
-      html: '<h1 id="synchronization-unit-1">A document</h1><p id="synchronization-unit-2">Body text.</p>',
-      synchronizationUnits: [
-        { id: "synchronization-unit-1", narrationText: "A document" },
-        { id: "synchronization-unit-2", narrationText: "Body text." },
-      ],
-    },
-    audio: {
-      key: "conversions/conversion-id/audiobook.mp3",
-      contentType: "audio/mpeg",
-      byteLength: 72_000,
-      durationMilliseconds: 1_500,
-      etag: "audio-etag",
-    },
-    audioSegments: [
-      {
-        conversionId: "conversion-id",
-        sequence: 0,
-        key: "conversions/conversion-id/audio-segments/0.mp3",
-        byteLength: 48_000,
-        durationMilliseconds: 1_000,
-        crc32: 0,
-      },
-      {
-        conversionId: "conversion-id",
-        sequence: 1,
-        key: "conversions/conversion-id/audio-segments/1.mp3",
-        byteLength: 24_000,
-        durationMilliseconds: 500,
-        crc32: 0,
-      },
-    ],
+    title: "Title",
+    originalUrl: "https://example.com",
+    narrationDocument: document,
   });
-
-  const storedObject = storedObjects.get("conversions/conversion-id/audiobook.json");
-
-  expect(storedObject?.httpMetadata).toEqual({ contentType: "application/json" });
-  expect(JSON.parse(storedObject?.body ?? "")).toEqual({
-    title: "A document",
-    originalUrl: "https://example.com/source",
-    narrationDocument: {
-      html: '<h1 id="synchronization-unit-1">A document</h1><p id="synchronization-unit-2">Body text.</p>',
-      synchronizationUnits: [
-        { id: "synchronization-unit-1", narrationText: "A document" },
-        { id: "synchronization-unit-2", narrationText: "Body text." },
-      ],
-    },
-    audio: {
-      key: "conversions/conversion-id/audiobook.mp3",
-      contentType: "audio/mpeg",
-      byteLength: 72_000,
-      durationMilliseconds: 1_500,
-      etag: "audio-etag",
-    },
-    synchronizationCues: [
-      {
-        synchronizationUnitId: "synchronization-unit-1",
-        startMilliseconds: 0,
-        endMilliseconds: 1_000,
-      },
-      {
-        synchronizationUnitId: "synchronization-unit-2",
-        startMilliseconds: 1_000,
-        endMilliseconds: 1_500,
-      },
-    ],
+  expect([...storedObjects.keys()]).toEqual(["conversions/conversion-id/audiobook.json"]);
+  const audiobook = await loadAudiobook({ bucket, audiobookReference: reference });
+  expect(audiobook).toEqual({
+    title: "Title",
+    originalUrl: "https://example.com",
+    narrationDocument: document,
+    speechConfig: SPEECH_CONFIG,
   });
-  expect(audiobookReference).toEqual({
-    key: "conversions/conversion-id/audiobook.json",
-    contentType: "application/json",
-    byteLength: new TextEncoder().encode(storedObject?.body).byteLength,
-    etag: "manifest-etag",
-  });
-  await expect(loadAudiobook({ bucket, audiobookReference })).resolves.toEqual(
-    JSON.parse(storedObject?.body ?? ""),
-  );
-
-  const incompleteManifestBody = storedObject?.body.replace(
-    '"endMilliseconds":1500',
-    '"endMilliseconds":1400',
-  );
-
-  expect(incompleteManifestBody).not.toBe(storedObject?.body);
-  storedObjects.set("conversions/conversion-id/audiobook.json", {
-    body: incompleteManifestBody ?? "",
-    httpMetadata: { contentType: "application/json" },
-  });
-  await expect(loadAudiobook({ bucket, audiobookReference })).rejects.toThrow(
-    "Audiobook synchronization cues must span its playback audio",
-  );
+  expect(audiobook).not.toHaveProperty("audio");
 });
-
-test("rejects playback audio that does not exactly contain the referenced segments", async () => {
-  const { bucket } = createTestBucket();
-
-  await expect(
-    storeAudiobook({
-      bucket,
-      conversionId: "conversion-id",
-      title: "A document",
-      originalUrl: "https://example.com/source",
-      narrationDocument: {
-        html: '<h1 id="synchronization-unit-1">A document</h1>',
-        synchronizationUnits: [{ id: "synchronization-unit-1", narrationText: "A document" }],
-      },
-      audio: {
-        key: "conversions/conversion-id/audiobook.mp3",
-        contentType: "audio/mpeg",
-        byteLength: 48_001,
-        durationMilliseconds: 1_000,
-        etag: "audio-etag",
-      },
-      audioSegments: [
-        {
-          conversionId: "conversion-id",
-          sequence: 0,
-          key: "conversions/conversion-id/audio-segments/0.mp3",
-          byteLength: 48_000,
-          durationMilliseconds: 1_000,
-          crc32: 0,
-        },
-      ],
-    }),
-  ).rejects.toThrow("Audiobook audio byte length does not match its audio segments");
-});
-
-test("rejects an audiobook with invalid source metadata before storing it", async () => {
+test("rejects invalid narration before publishing a prepared artifact", async () => {
   const { bucket, storedObjects } = createTestBucket();
-
   await expect(
     storeAudiobook({
       bucket,
       conversionId: "conversion-id",
-      title: "A document",
+      title: "Title",
       originalUrl: "not a URL",
-      narrationDocument: {
-        html: '<h1 id="synchronization-unit-1">A document</h1>',
-        synchronizationUnits: [{ id: "synchronization-unit-1", narrationText: "A document" }],
-      },
-      audio: {
-        key: "conversions/conversion-id/audiobook.mp3",
-        contentType: "audio/mpeg",
-        byteLength: 48_000,
-        durationMilliseconds: 1_000,
-        etag: "audio-etag",
-      },
-      audioSegments: [
-        {
-          conversionId: "conversion-id",
-          sequence: 0,
-          key: "conversions/conversion-id/audio-segments/0.mp3",
-          byteLength: 48_000,
-          durationMilliseconds: 1_000,
-          crc32: 0,
-        },
-      ],
+      narrationDocument: document,
     }),
   ).rejects.toThrow("Invalid URL");
-  expect(storedObjects).toHaveLength(0);
+  expect(storedObjects.size).toBe(0);
 });
-
 type StoredTestObject = {
   body: string;
   httpMetadata: { contentType?: string };

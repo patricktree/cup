@@ -16,17 +16,13 @@ export const ReadyAudiobook = {
   component: () => <GlobalProviders router={router} />,
   handlers: [
     http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(createAudiobook())),
-    http.get(
-      `/api/files/audiobooks/${CONVERSION_ID}/audio.mp3`,
-      () => new HttpResponse(null, { headers: { "Content-Type": "audio/mpeg" } }),
-    ),
-    http.get(
-      `/api/files/audiobooks/${CONVERSION_ID}/captions.vtt`,
-      () =>
-        new HttpResponse(
-          "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nKeep the important boundaries real.\n",
-          { headers: { "Content-Type": "text/vtt" } },
-        ),
+    http.post(`/api/audiobooks/${CONVERSION_ID}/segments/0`, () =>
+      HttpResponse.json({
+        sequence: 0,
+        status: "ready",
+        durationMilliseconds: 5000,
+        url: `https://example.com/segments/0/audio.mp3`,
+      }),
     ),
   ],
 } satisfies Story;
@@ -69,28 +65,43 @@ export const AudiobookLoadError = {
 
 function createAudiobook(): Audiobook {
   return {
+    status: "ready",
+    canGenerate: true,
+    playbackPosition: null,
+    segments: [],
     title: "A deterministic document about careful testing",
     originalUrl: SOURCE_URL,
     narrationDocument: {
-      html: "<p>Keep the important boundaries real.</p>",
+      html: '<h1>A deterministic document about careful testing</h1><p id="unit-1">Keep the important boundaries real.</p>',
       synchronizationUnits: [
         { id: "unit-1", narrationText: "Keep the important boundaries real." },
       ],
     },
-    synchronizationCues: [
-      { synchronizationUnitId: "unit-1", startMilliseconds: 0, endMilliseconds: 1_000 },
-    ],
-    audio: {
-      contentType: "audio/mpeg",
-      url: `${window.location.origin}/api/files/audiobooks/${CONVERSION_ID}/audio.mp3`,
-    },
-    captions: {
-      contentType: "text/vtt",
-      url: `${window.location.origin}/api/files/audiobooks/${CONVERSION_ID}/captions.vtt`,
-    },
-    epub: {
-      contentType: "application/epub+zip",
-      url: `${window.location.origin}/api/files/audiobooks/${CONVERSION_ID}/book.epub`,
-    },
   };
 }
+
+export const PendingConversion = {
+  component: () => <GlobalProviders router={router} />,
+  handlers: [
+    http.get("/api/audiobooks/" + CONVERSION_ID, () =>
+      HttpResponse.json({
+        status: "pending",
+        originalUrl: "https://example.com/article",
+        canGenerate: true,
+      }),
+    ),
+  ],
+} satisfies Story;
+export const FailedConversion = {
+  component: () => <GlobalProviders router={router} />,
+  handlers: [
+    http.get("/api/audiobooks/" + CONVERSION_ID, () =>
+      HttpResponse.json({
+        status: "failed",
+        originalUrl: "https://example.com/article",
+        canGenerate: true,
+        explanation: "Preparation failed.",
+      }),
+    ),
+  ],
+} satisfies Story;

@@ -576,9 +576,6 @@ importers:
       '@capawesome/capacitor-google-sign-in':
         specifier: 0.1.4
         version: 0.1.4(@capacitor/core@8.5.2)
-      '@cup/conversion-contracts':
-        specifier: workspace:*
-        version: link:../../libs/conversion-contracts
       '@cup/web-app-api.client':
         specifier: workspace:*
         version: link:../../libs/web-app-api.client
@@ -844,9 +841,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.11(vitest@4.1.11)
-      fflate:
-        specifier: 0.8.3
-        version: 0.8.3
       oxlint:
         specifier: 'catalog:'
         version: 1.86.0(oxlint-tsgolint@7.0.2003)
@@ -981,9 +975,6 @@ importers:
       '@cup/registry':
         specifier: workspace:*
         version: link:../registry
-      p-map:
-        specifier: ^7.0.8
-        version: 7.0.8
       temporal-polyfill:
         specifier: ^1.0.5
         version: 1.0.5
@@ -1403,9 +1394,6 @@ importers:
       '@cup/conversion-grants':
         specifier: workspace:*
         version: link:../conversion-grants
-      '@cup/create-audiobook-from-url-workflow':
-        specifier: workspace:*
-        version: link:../create-audiobook-from-url-workflow
       '@cup/narration-document-creation':
         specifier: workspace:*
         version: link:../narration-document-creation
@@ -1467,6 +1455,9 @@ importers:
       '@cup/cloudflare-worker':
         specifier: workspace:*
         version: link:../../apps/cloudflare-worker
+      '@cup/conversion-contracts':
+        specifier: workspace:*
+        version: link:../../libs/conversion-contracts
       '@cup/conversion-grants':
         specifier: workspace:*
         version: link:../../libs/conversion-grants
@@ -1507,9 +1498,6 @@ importers:
       '@typescript/native':
         specifier: 'catalog:'
         version: typescript@7.0.2
-      fflate:
-        specifier: 0.8.3
-        version: 0.8.3
       oxlint:
         specifier: 'catalog:'
         version: 1.86.0(oxlint-tsgolint@7.0.2003)
@@ -4975,9 +4963,6 @@ packages:
     peerDependenciesMeta:
       picomatch:
         optional: true
-
-  fflate@0.8.3:
-    resolution: {integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==}
 
   file-entry-cache@11.1.5:
     resolution: {integrity: sha512-+PFTHITI08JIGhnNpGNI8T8inUpgZfk3GNEqfT9R2zZV2iFXg3CvqzSl/uEhs7TSGujYRELEANyDvS8Fj7+S7Q==}
@@ -9336,8 +9321,6 @@ snapshots:
   fdir@6.5.0(picomatch@4.0.7):
     optionalDependencies:
       picomatch: 4.0.7
-
-  fflate@0.8.3: {}
 
   file-entry-cache@11.1.5:
     dependencies:

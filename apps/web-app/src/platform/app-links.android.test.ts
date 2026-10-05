@@ -33,7 +33,7 @@ test("opens cold-start and repeat App Links while rejecting other origins", asyn
     const { initializeAndroidAppLinks } = await import(modulePath);
     await initializeAndroidAppLinks((href: string) => paths.push(href));
     for (const url of [
-      "https://cup-audio.com/app/conversions/next",
+      "https://cup-audio.com/app/audiobooks/next",
       "https://create-audiobook-from-url.patricktree.me/app/trials/old",
       "https://example.com/trials/untrusted",
       "http://cup-audio.com/",
@@ -53,7 +53,7 @@ test("opens cold-start and repeat App Links while rejecting other origins", asyn
   });
   expect(receivedPaths).toEqual([
     "/app/trials/test?from=link#credential=v1.test",
-    "/app/conversions/next",
+    "/app/audiobooks/next",
     "/app/audiobooks/test",
     "/app/",
     "/app",

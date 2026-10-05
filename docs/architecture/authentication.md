@@ -47,7 +47,7 @@ Sources: [session lifecycle](../../apps/web-app/src/data-fetching/account-sessio
 
 ## Private media access
 
-Audio elements and downloads need an authorization path beyond ordinary JSON requests. The client obtains a media session using its bearer token. The Worker issues an HTTP-only, same-site cookie scoped to `/api/files` for current and future file downloads and bounded by the token's expiry. Android also installs the session through its [native media bridge](../../apps/mobile-app/android/app/src/main/java/com/cup_audio/app/AccountMediaPlugin.java).
+Browser audio elements need an authorization path beyond ordinary JSON requests. The client obtains a media session using its bearer token. The Worker issues an HTTP-only, same-site cookie scoped to `/api/files` for audio segment delivery and bounded by the token's expiry. Android also installs the session through its [native media bridge](../../apps/mobile-app/android/app/src/main/java/com/cup_audio/app/AccountMediaPlugin.java).
 
 ```mermaid
 sequenceDiagram
@@ -66,7 +66,7 @@ sequenceDiagram
     R2-->>Client: Artifact through Worker
 ```
 
-Audiobook JSON lives at `/api/audiobooks/{conversionId}` and requires bearer identity for private audiobooks. Audio, captions, and EPUB delivery routes live under `/api/files/audiobooks/{conversionId}` and accept bearer identity or the cookie fallback. Media-session creation at `/api/files/session` and account API operations require bearer identity. Private delivery checks the conversion's owner and current account state on requests. Scheduling deletion therefore blocks subsequent private requests even while a previously issued JWT remains unexpired. This is not a promise to retract bytes already downloaded by another client.
+Audiobook JSON lives at `/api/audiobooks/{conversionId}` and requires bearer identity for private audiobooks. Individual MP3 segments live under `/api/files/audiobooks/{conversionId}/segments/{sequence}/audio.mp3` and accept bearer identity or the cookie fallback. There are no assembled-track, captions-file, or EPUB routes. Native players send the bearer token directly. Media-session creation at `/api/files/session` and account API operations require bearer identity. Private delivery checks the conversion's owner and current account state on requests. Scheduling deletion therefore blocks subsequent private requests even while a previously issued JWT remains unexpired. This is not a promise to retract bytes already downloaded by another client.
 
 The client refreshes media authorization and pauses playback when authorization fails. Sign-out clears local identity and cached account data, stops and unloads media, and waits for outstanding cookie issuance before clearing media sessions so a late response cannot silently reestablish playback. Local sign-out is not an immediate global revocation mechanism for every existing JWT.
 
@@ -74,9 +74,9 @@ Sources: [media cookie and token handling](../../libs/api-server/src/account-aut
 
 ## Trial access
 
-A trial link carries a grant credential that is exchanged for a grant session. That session authorizes inspecting the grant and starting conversions while the grant permits it; it does not establish a personal account or authorize listing all grant conversions. Individual trial audiobook links provide unlisted access independently of the grant's expiry or revocation.
+A trial link carries a grant credential that is exchanged for a grant session. That session authorizes inspecting the grant and starting conversions while the grant permits it; it does not establish a personal account or authorize listing all grant conversions. Individual trial article links permit reading prepared text and replaying completed audio independently of the grant's expiry or revocation. Generating new audio or retrying preparation requires a session for the owning grant. Preparation can proceed with exhausted duration; synthesis requires a reservation.
 
-Account history contains conversions started by that account, and the client clears its remembered trial when switching into an account.
+Listening positions belong to the signed-in listener, including positions on unlisted trial articles. Anonymous listeners keep positions locally on their browser or native device. Account history contains conversions started by that account, and the client clears its remembered trial when switching into an account.
 
 Sources: [grant-session handlers](../../libs/api-server/src/api-server.ts), [grant object](../../libs/conversion-grants/src/conversion-grant-durable-object.ts), and [client trial-link flow](../../apps/web-app/src/data-fetching/trial-link.ts).
 

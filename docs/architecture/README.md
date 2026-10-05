@@ -15,24 +15,32 @@ flowchart TD
     Web --> Auth[Supabase Auth]
     Native --> Auth
     Auth --> Google[Google identity]
-    Worker --> Workflow[Conversion Workflow]
+    Worker --> Preparation[Preparation Workflow]
     Worker --> Accounts[Account DOs]
     Worker --> Trials[Grant DOs]
     Worker --> Registry[Registry DO]
     Registry --> Accounts
-    Workflow --> Browser[Cloudflare Browser Run]
+    Accounts --> Preparation
+    Trials --> Preparation
+    Accounts --> Synthesis[Audio Segment Synthesis Workflow]
+    Trials --> Synthesis
+    Preparation --> Browser[Cloudflare Browser Run]
     Browser --> Source[External source pages]
-    Workflow --> Gateway[Cloudflare AI Gateway]
+    Preparation --> Gateway[Cloudflare AI Gateway]
+    Synthesis --> Gateway
     Gateway --> AI[Google AI Studio]
-    Workflow --> Accounts
-    Workflow --> Trials
-    Workflow --> R2[R2 audiobook artifacts]
+    Preparation --> Accounts
+    Preparation --> Trials
+    Preparation --> R2[R2 audiobook artifacts]
+    Synthesis --> Accounts
+    Synthesis --> Trials
+    Synthesis --> R2
     Worker --> R2
     Accounts --> R2
     Registry --> Email[Resend deletion notifications]
 ```
 
-The Worker is the HTTP boundary. The workflow performs long-running conversion work; account and trial objects control ownership, allowance, and lifecycle. The shared registry also coordinates cleanup across R2 and Supabase and sends lifecycle notifications. The diagram groups resources by responsibility; a Durable Object class creates multiple isolated objects where required.
+The Worker is the HTTP boundary. Separate preparation and audio segment synthesis workflows perform durable conversion work inside the same Worker; account and trial objects control ownership, allowance, and lifecycle. The shared registry also coordinates cleanup across R2 and Supabase and sends lifecycle notifications. The diagram groups resources by responsibility; a Durable Object class creates multiple isolated objects where required.
 
 ## Responsibilities and code boundaries
 
@@ -42,11 +50,12 @@ The Worker is the HTTP boundary. The workflow performs long-running conversion w
 | Native shells                             | Package the shared UI and supply platform sign-in, sharing, links, and media integration       | [Mobile guide](../../apps/mobile-app/README.md), [platform adapters source](../../apps/web-app/src/platform/)                       |
 | Operator CLI                              | Administrative requests authenticated through Cloudflare Access                                | [Operator guide](../../apps/operator/README.md)                                                                                     |
 | Worker and API server                     | Assets, domain routing, authentication, request validation, conversion admission, and delivery | [Worker entry source](../../apps/cloudflare-worker/src/index.ts), [API composition source](../../libs/api-server/src/api-server.ts) |
-| Conversion Workflow                       | Durable conversion steps and terminal outcomes                                                 | [Workflow source](../../libs/create-audiobook-from-url-workflow/)                                                                   |
+| Preparation Workflow                      | Source rendering, narration selection, document storage, and preparation outcomes              | [Preparation entry point](../../libs/create-audiobook-from-url-workflow/src/prepare-audiobook-workflow.ts)                          |
+| Audio segment synthesis Workflow          | One unit's speech generation, artifact storage, and duration settlement                        | [Synthesis entry point](../../libs/create-audiobook-from-url-workflow/src/synthesize-audio-segment-workflow.ts)                     |
 | Account and trial state                   | Ownership, history, duration accounting, lifecycle, and routing to the owning object           | [Storage ownership](#storage-ownership)                                                                                             |
 | Source preparation                        | Render source pages and prepare audiobook source material                                      | [Preparation library](../../libs/prepare-source-material/)                                                                          |
 | Narration selection and document creation | Select source material and structure narration text and synchronization units                  | [Selection library](../../libs/narration-content-selection/), [document creation library](../../libs/narration-document-creation/)  |
-| Audiobook production                      | Synthesize segments, assemble audio, store the canonical audiobook, and generate exports       | [Audiobook production library](../../libs/audiobook-production/)                                                                    |
+| Audiobook production                      | Store prepared narration and synthesize independently playable audio segments                  | [Audiobook production library](../../libs/audiobook-production/)                                                                    |
 
 The libraries are code boundaries inside the deployed system, not separate network services. [Accounts](../../libs/accounts/README.md) owns account conversion state, duration accounting, lifecycle transitions, and artifact fencing. [Conversion grants](../../libs/conversion-grants/README.md) owns trial grants. [Registry](../../libs/registry/README.md) owns account identity mapping and provisioning, grant inventory, conversion ownership for both accounts and trials, ingress limits, and account deletion coordination. Owner objects consume narrow registry RPC interfaces; integration tests in the registry library exercise the three objects together. [Conversion contracts](../../libs/conversion-contracts/README.md) owns runtime-independent shared schemas, types, and duration calculations.
 
@@ -81,9 +90,9 @@ The one-time transition from handwritten trial schemas preserves grant identitie
 | Conversion grant object | One per trial grant; shared allowance, credentials, sessions, and conversions                                         | [Grant object](../../libs/conversion-grants/src/conversion-grant-durable-object.ts) |
 | Registry                | Singleton identity-to-account mapping, grant inventory, conversion ownership, provisioning, and deletion coordination | [Registry](../../libs/registry/src/registry-durable-object.ts)                      |
 | Supabase Auth           | Identity-provider data; Cup application state remains in Durable Objects                                              | [Auth configuration](../../supabase/config.toml)                                    |
-| R2 audiobook bucket     | Conversion artifacts: audio segments, assembled audio, canonical manifests, and cached exports                        | [Artifact storage](../../libs/audiobook-production/src/audio-segment-storage.ts)    |
+| R2 audiobook bucket     | Conversion artifacts: prepared manifests, audio segments, and unit failure details                                    | [Artifact storage](../../libs/audiobook-production/src/audio-segment-storage.ts)    |
 
-Cloudflare Workflows owns execution state; the account or grant object owns the application-visible conversion outcome. See [conversion](conversion.md) for artifact production and delivery, and [account deletion](account-deletion.md) for cleanup and write fencing. Infrastructure state is covered by the [Terraform guide](../../terraform/README.md).
+Cloudflare Workflows owns execution state; the account or grant object owns the application-visible conversion outcome. See [R2 objects and key layout](r2-storage.md) for prefixes, object contents, and metadata, [conversion](conversion.md) for artifact production and delivery, and [account deletion](account-deletion.md) for cleanup and write fencing. Infrastructure state is covered by the [Terraform guide](../../terraform/README.md).
 
 ## External services
 

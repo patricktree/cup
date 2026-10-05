@@ -1,70 +1,69 @@
 # Conversion from source URL to audiobook
 
-Conversion crosses three ownership boundaries: the API admits work, an account or grant owns its allowance and outcome, and Cloudflare Workflows runs durable processing steps. R2 holds the resulting artifacts. The [domain context](../CONTEXT.md) defines the intermediate representations.
+The API admits preparation, an account or trial grant owns allowance and outcomes, and Cloudflare Workflows runs durable processing steps. R2 stores the prepared narration document and independently generated audio segments. [ADR 0005](../adr/0005-prepare-narration-before-player-controlled-synthesis.md) records the player-controlled flow; [domain context](../CONTEXT.md) defines the representations.
+
+Two typed workflow entry points run in the same Worker and library: [PrepareAudiobookWorkflow](../../libs/create-audiobook-from-url-workflow/src/prepare-audiobook-workflow.ts) prepares the document, and [SynthesizeAudioSegmentWorkflow](../../libs/create-audiobook-from-url-workflow/src/synthesize-audio-segment-workflow.ts) generates one segment. Their bindings are `PREPARE_AUDIOBOOK_WORKFLOW` and `SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW`. Preparation dispatch, recovery, and retries use the first; segment dispatch, polling, and retries use the second. Preparation uses the workflow name `prepare-audiobook` and uses the conversion ID as its instance ID. Synthesis uses the separate workflow name `synthesize-audio-segment` and instance IDs `segment-{conversionId}-{sequence}`. Existing preparation and segment runs in the former combined workflow `create-audiobook-from-url` are not moved into the new workflows; settled audio remains reusable through the owner's ledger and stored artifacts.
 
 ```mermaid
 sequenceDiagram
-    participant Client
+    participant Client as Reader
     participant API as Worker API
-    participant Workflow as Conversion Workflow
     participant Owner as Account or Grant DO
-    participant Browser as CF Browser Run
-    participant AI as Google AI Studio via CF AI Gateway
+    participant Preparation as Preparation Workflow
+    participant Unit as Unit Workflow
+    participant AI as AI Gateway
     participant R2
-    Client->>API: Submit source URL
-    API->>Owner: Authorize and admit conversion
-    alt Account conversion
-        Owner->>Workflow: Dispatch persisted work
-    else Trial conversion
-        API->>Workflow: Dispatch admitted work
-    end
+    Client->>API: Submit URL
+    API->>Owner: Authorize and admit preparation
+    Owner->>Preparation: Dispatch preparation
     API-->>Client: Conversion identity
-    Workflow->>Browser: Prepare audiobook source material
-    Browser-->>Workflow: Source material
-    Workflow->>AI: Select narration content
-    Workflow->>Workflow: Create narration document
-    loop Narration segments with bounded concurrency
-        Workflow->>Owner: Reserve estimated duration
-        Workflow->>AI: Synthesize narration
-        Workflow->>R2: Store immutable audio segment
-        Workflow->>Owner: Settle actual encoded duration
+    Client->>Client: Navigate to article skeletons
+    Preparation->>Preparation: Prepare source material
+    Preparation->>AI: Select narration content
+    Preparation->>R2: Store document and speech configuration
+    Preparation->>Owner: Set ready preparation outcome
+    Client->>API: Poll article
+    API-->>Client: Title, document, available segments, initial position
+    Client->>Client: Remain paused
+    Client->>API: Request audio for the selected unit
+    Note over Client,Unit: Request the current unit first, then missing speech synthesis lookahead units immediately in parallel
+    loop Active playback with bounded speech synthesis lookahead
+        Client->>API: Request destination or next unit
+        API->>Owner: Authorize and deduplicate dispatch
+        Owner->>Unit: Start stable unit workflow
+        Unit->>Owner: Reserve estimated duration
+        Unit->>AI: Synthesize narration unit
+        Unit->>R2: Store immutable MP3 segment
+        Unit->>Owner: Settle encoded duration
+        Client->>API: Poll unit and request audio
+        API-->>Client: Settled audio segment
     end
-    Workflow->>R2: Assemble audio and store canonical audiobook
-    Workflow->>Owner: Record ready outcome
-    Client->>API: Request status and audiobook
-    API->>Owner: Check outcome and access
-    API->>R2: Load canonical audiobook or export
-    R2-->>Client: Authorized delivery through API
 ```
 
-The diagram shows the logical sequence; account and trial admission have separate implementations, and segment work runs concurrently. The [workflow runner](../../libs/create-audiobook-from-url-workflow/src/run-create-audiobook-from-url-workflow.ts) is authoritative for step boundaries, concurrency, timeouts, retry policies, and content limits.
+## Preparation
 
-## Preparation and narration
+After the server accepts the request and returns a conversion ID, the app navigates to the article view. The reader shows title and paragraph skeletons until preparation finishes; Play remains disabled. Preparation uses [source material](../../libs/prepare-source-material/), [narration selection](../../libs/narration-content-selection/), and [document creation](../../libs/narration-document-creation/). It stores the title, safe structured HTML, synchronization units, source URL, and speech configuration, then finishes without requesting speech or reserving duration. The conversion status `ready` means preparation is complete, including when no audio exists.
 
-[Source preparation](../../libs/prepare-source-material/) renders external pages through Browser Run, including JavaScript-dependent content. [Narration selection](../../libs/narration-content-selection/) chooses the material to narrate. [Document creation](../../libs/narration-document-creation/) turns the selection into structured narration text and synchronization units. [Production](../../libs/audiobook-production/) synthesizes and encodes audio segments and assembles the canonical audiobook.
+Active accounts and open, unexpired trial grants may prepare articles without available duration. Existing per-owner admission limits still apply. If preparation fails, the article view shows an error and a Retry button. Retry restarts preparation for the same conversion. Speech configuration is stored with the document so later generation and retries use the same choice (model, voice, ...).
 
-The workflow persists its speech configuration choice and can retain a previous choice when resuming already-started conversions. Provider retries therefore do not intentionally mix a newly configured provider into existing stored segments. Exact provider and model choices live in [speech configuration](../../libs/audiobook-production/src/speech-synthesis-config.ts).
+Preparation outcomes record narration text size, chunk count, and content-selection provider usage. Generated audio duration is recorded separately per segment by the owner's duration accounting; preparation outcomes do not contain audio duration or speech-provider usage totals.
 
-## Ownership and duration accounting
+## Progressive generation and accounting
 
-Each conversion belongs to an account or a trial grant. Its workflow parameters carry ownership; account work also carries an execution epoch. The [shared artifact-prefix implementation](../../libs/conversion-contracts/src/artifact-prefix.ts) derives storage prefixes from ownership and conversion identity for the workflow, production defaults, delivery, settlement validation, and cleanup. Account-writer validation recognizes prefixes through the same implementation. Account lifecycle checks and registered artifact writes prevent old work from publishing after deletion has fenced it. The shared registry stores `conversion_owners`, mapping each conversion ID to either an account ID or a grant ID for delivery. Account and trial dispatch register ownership with the same singleton registry.
+Each synchronization unit maps to one narration chunk and one independently playable MP3 segment. Once prepared text loads, the player requests audio for the selected unit even while paused, including a unit restored from the saved listening position. It keeps playback paused and does not request units ahead until Play. The player targets a speech synthesis lookahead of roughly 60 seconds of estimated audio, using whole units. On Play, it requests the current unit first, then immediately requests missing units within the speech synthesis lookahead in parallel while the current unit is still generating. In-flight requests are reused when speech synthesis lookahead is recalculated. A failed unit blocks new requests beyond it until explicit retry or seeking past it; requests already in flight can finish. Seeking while playing starts at the destination and requests speech synthesis lookahead from there; seeking while paused requests only the destination unit without starting playback. Pause stops synthesis ahead; selecting a unit while paused still requests its audio. Closing the player stops new scheduling while requested workflows finish normally. Players keep independent playback positions and speech synthesis lookahead. Signed-in users share a saved listening position across devices, restored only when a player initially loads the article. Completed audio is shared across players.
 
-Workers hosting account or grant objects must supply `CONVERSION_OWNER_LIMIT` as a positive integer string. It controls the number of conversion starts each owner can admit within a rolling minute; production and test Workers configure it explicitly. See the [Worker configuration](../../apps/cloudflare-worker/wrangler.jsonc) for the configured value.
+The owner serializes dispatch using one stable workflow identity per conversion and sequence. Concurrent requests join that workflow. Explicit retry restarts a failed instance; stored immutable audio is reused if a previous attempt already published it. Before calling the provider, the owner reserves the full estimated duration. Settlement uses actual encoded duration and records each segment once. Failed attempts release only the failed unit's reservation; completed audio remains playable and charged. [ADR 0003](../adr/0003-charge-for-accessible-generated-narration.md) defines capped overruns, free reuse, and expiry policy.
 
-Before synthesis, the owner reserves estimated duration from its shared available balance. Successful segments settle against actual encoded audio duration, with idempotent accounting for replays. Terminal conversion settlement releases unfinished reservations; charges for completed segments survive a later failure. Account schema migration preserves history and archives the earlier conversion-unit ledger. The [account ledger](../../libs/accounts/src/account-duration-ledger.ts) and [grant implementation](../../libs/conversion-grants/src/conversion-grant-durable-object.ts) own accounting details.
+The API derives each unit’s playback state from settled duration, workflow progress, and stored failure details in the [segment-state use case](../../libs/api-server/src/use-cases/get-audio-segment-state.ts), with Cloudflare dependencies wired by its [environment adapter](../../libs/api-server/src/audio-segment-state.ts). Unit workflows retry transient provider errors automatically. Exhausted retries stop playback at that unit and offer Retry; listeners may explicitly seek past it. Allowance errors preserve the prepared document and completed audio. All-unit audio availability does not assemble a full track. EPUB exports and full-track downloads have been removed.
 
-[ADR 0003](../adr/0003-charge-for-accessible-generated-narration.md) specifies charging for accessible generated narration. There is an implementation gap: the workflow records completed-segment charges, while the current delivery UI exposes complete audiobooks rather than partial segment playback after failure. Progressive playback and generation cancellation remain deferred. Do not infer those features from the accepted ADR or from the existence of stored segments.
+Sources: [preparation runner](../../libs/create-audiobook-from-url-workflow/src/run-prepare-audiobook-workflow.ts), [unit runner](../../libs/create-audiobook-from-url-workflow/src/run-audio-segment-workflow.ts), [account ledger](../../libs/accounts/src/account-duration-ledger.ts), [grant ownership](../../libs/conversion-grants/src/conversion-grant-durable-object.ts), and [segment reuse](../../libs/audiobook-production/src/produce-audio-segment.ts).
 
-## Retries and failures
+## Delivery, positions, and lifecycle
 
-Workflow steps have explicit retry and timeout policies. Existing segment objects can be reused on replay; permanent synthesis errors are classified as non-retryable. Segment processing waits for concurrent work to settle before terminal failure handling. The workflow records a failure category and settles the owner's conversion state on its normal failure path.
+The reader receives prepared text independently of unit status. Only settled segments are delivered, with range, HEAD, and ETag support. Trial article links permit reading and replay; new synthesis requires the owning grant session. Private articles require an active owning account. [Authentication](authentication.md) describes bearer and media-cookie authorization.
 
-Retries do not make every boundary atomic. Workflow scheduling, object storage, owner state, and external provider requests can fail independently. Pending jobs and artifact-write checks help recover work when it’s unclear whether an operation succeeded. When account deletion begins cleanup, running conversions lose permission to continue and must stop before publishing results. See [account deletion](account-deletion.md).
+Each signed-in listener has one saved position per conversion: synchronization unit ID and offset within that unit's audio. The server replaces it on every save. Initial player load restores it and remains paused; subsequent query refreshes and other devices' saves never move a loaded player. Local writes are serialized to retain their order. Anonymous positions are stored on the browser or native device. Positions are saved periodically and on pause or seek, so device switches resume from the last successful write.
 
-Sources: [account admission and pending jobs](../../libs/accounts/src/account-durable-object.ts), [trial admission](../../libs/api-server/src/use-cases/start-audiobook-conversion.ts), [workflow runner](../../libs/create-audiobook-from-url-workflow/src/run-create-audiobook-from-url-workflow.ts), [segment reuse](../../libs/audiobook-production/src/produce-audio-segment.ts), and [account artifact writes](../../libs/accounts/src/artifact-writer.ts).
+Browser playback uses an audio element and Media Session actions. Native Android and iOS playback coordinators own passage selection and speech synthesis lookahead while their WebViews are suspended. They delegate authenticated requests and polling to API clients, serialized listening positions to position stores, and playback, media controls, and background resources to platform audio adapters. Capacitor bridges translate commands and state; the Android service hosts the components for its lifetime. See [native playback components](../../apps/mobile-app/README.md#progressive-playback). Android uses a media playback foreground service; iOS uses a playback audio session and background audio mode. Both stop scheduling on pause, interruptions, or player closure. Operating systems may suspend browsers, and native device lock-screen continuity still needs physical-device verification; native builds alone do not verify it. A native authorization expiry stops new requests with an error and requires renewed authorization before retry.
 
-## Delivery and exports
-
-Ready status points to a canonical audiobook manifest containing the narration document, audio reference, and synchronization cues. The Worker serves audio with range support, derives WebVTT captions, and generates/caches EPUB exports on demand. An export failure does not change the canonical audiobook's ready state. [ADR 0001](../adr/0001-use-a-canonical-synchronized-audiobook.md) records that separation.
-
-Trial results are unlisted; account results require the active owner. See [authentication](authentication.md) for media sessions and [delivery source](../../libs/api-server/src/serve-audiobook.ts) for the serving behavior.
+Ownership parameters and account execution epochs fence unit generation and artifact writes. The shared [artifact prefix](../../libs/conversion-contracts/src/artifact-prefix.ts) covers preparation, audio, delivery, and deletion. Account lifecycle state is checked on new private requests; deletion fences late writes. Retries do not make provider requests, R2 publication, owner settlement, and workflow dispatch atomic. See [account deletion](account-deletion.md) for cleanup responsibilities. A separate explicit generation-cancellation control remains deferred.

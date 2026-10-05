@@ -1,3 +1,4 @@
+import http from "node:http";
 import nodeUrl from "node:url";
 import { Temporal } from "temporal-polyfill";
 import { afterAll, beforeAll, expect, test } from "vitest";
@@ -26,7 +27,31 @@ let bindings: AccountEnvironment;
 // Wrangler masks rejected RPC error messages; rejection checks are paired with persisted-state assertions.
 const nowMs = 2_000_000_000_000;
 
+const missingIdentities = new Set<string>();
+const identityProvider = http.createServer((request, response) => {
+  const subject = request.url?.match(/^\/auth\/v1\/admin\/users\/([0-9a-f-]{36})$/)?.[1];
+  if (!subject || missingIdentities.has(subject)) {
+    response.writeHead(404).end();
+    return;
+  }
+  response.writeHead(200, { "Content-Type": "application/json" });
+  response.end(JSON.stringify({ id: subject }));
+});
+
 beforeAll(async () => {
+  await new Promise<void>((resolve) => identityProvider.listen(0, "127.0.0.1", resolve));
+  const address = identityProvider.address();
+  if (!address || typeof address === "string") throw new Error("Identity provider did not start");
+  await harness.update({
+    root: nodeUrl.fileURLToPath(new URL("..", import.meta.url)),
+    workers: [
+      {
+        configPath: "./wrangler.test.jsonc",
+        vars: { SUPABASE_URL: `http://127.0.0.1:${address.port}` },
+        secrets: { SUPABASE_SECRET_KEY: "test-admin", RESEND_API_KEY: "test-resend" },
+      },
+    ],
+  });
   await harness.listen();
   const environment: unknown = await worker.getEnv();
   if (!isAccountEnvironment(environment)) throw new Error("Account bindings unavailable");
@@ -35,6 +60,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await harness.close();
+  await new Promise<void>((resolve, reject) =>
+    identityProvider.close((error) => (error ? reject(error) : resolve())),
+  );
 });
 
 async function createAccount() {
@@ -58,6 +86,14 @@ test("concurrent verified logins allocate one account and one welcome grant", as
   const account = bindings.ACCOUNTS.get(bindings.ACCOUNTS.idFromName(accountId));
   expect((await account.inspectAccounting()).entries).toBe(1);
   expect((await registry.findIdentity(subject))?.phase).toBe("active");
+});
+
+test("a missing provider identity cannot allocate an account", async () => {
+  const registry = bindings.REGISTRY.get(bindings.REGISTRY.idFromName("missing-identity"));
+  const subject = crypto.randomUUID();
+  missingIdentities.add(subject);
+  await expectWorkerRpcRejection(registry.provisionVerifiedIdentity(subject, nowMs));
+  expect(await registry.findIdentity(subject)).toBeUndefined();
 });
 
 test("interrupted provisioning resumes the allocated account without granting twice", async () => {
@@ -413,7 +449,7 @@ test("account history pages ties deterministically without crossing owners", asy
   expect((await other.history()).items).toHaveLength(0);
 });
 
-test("unresolved storage effects block production writer drain", async () => {
+test("unresolved storage effects block artifact writer drain", async () => {
   const { account, accountId } = await createAccount();
   const started = await account.startConversion(
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/book" },
@@ -421,12 +457,42 @@ test("unresolved storage effects block production writer drain", async () => {
   );
   if (!started.conversion) throw new Error("Expected conversion");
   const prefix = `accounts/${accountId}/conversions/${started.conversion.conversionId}/`;
-  await account.registerArtifactWriter("production", 1, prefix, "production");
-  await account.beginArtifactEffect("production", "put:" + prefix + "audiobook.mp3");
-  await expect(account.drainArtifactWriter("production")).rejects.toThrow(/.+/);
+  await account.registerArtifactWriter("writer", 1, prefix);
+  await account.beginArtifactEffect("writer", "put:" + prefix + "audiobook.mp3");
+  await expect(account.drainArtifactWriter("writer")).rejects.toThrow(/.+/);
   expect(await account.inspectArtifactWriters()).toHaveLength(1);
-  await account.acknowledgeArtifactEffect("production");
-  await account.drainArtifactWriter("production");
+  await account.acknowledgeArtifactEffect("writer");
+  await account.drainArtifactWriter("writer");
+  expect(await account.inspectArtifactWriters()).toHaveLength(0);
+});
+
+test("ready conversions accept artifact writes", async () => {
+  const { account, accountId } = await createAccount();
+  const started = await account.startConversion(
+    { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/book" },
+    nowMs,
+  );
+  if (!started.conversion) throw new Error("Expected conversion");
+  const conversionId = started.conversion.conversionId;
+  const prefix = `accounts/${accountId}/conversions/${conversionId}/executions/1/`;
+  await account.settleConversion(
+    conversionId,
+    {
+      status: "ready",
+      title: "Book",
+      audiobookReference: {
+        key: prefix + "audiobook.json",
+        contentType: "application/json",
+        byteLength: 123,
+        etag: "fixture",
+      },
+    },
+    nowMs,
+  );
+  await account.registerArtifactWriter("speech", 1, prefix);
+  await account.beginArtifactEffect("speech", "put:" + prefix + "segment-0.mp3");
+  await account.acknowledgeArtifactEffect("speech");
+  await account.drainArtifactWriter("speech");
   expect(await account.inspectArtifactWriters()).toHaveLength(0);
 });
 
@@ -438,15 +504,13 @@ test("writer fences deny new effects after a deadline while allowing outstanding
   );
   if (!started.conversion) throw new Error("Expected conversion");
   const prefix = `accounts/${accountId}/conversions/${started.conversion.conversionId}/`;
-  await account.registerArtifactWriter("pending", 1, prefix, "production");
+  await account.registerArtifactWriter("pending", 1, prefix);
   await account.beginArtifactEffect("pending", "put:audio");
   const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
   await storage.exec(
     "UPDATE account SET state = 'deletion_scheduled', recovery_deadline_ms = 0 WHERE id = 1",
   );
-  await expect(account.registerArtifactWriter("late", 1, prefix, "production")).rejects.toThrow(
-    /.+/,
-  );
+  await expect(account.registerArtifactWriter("late", 1, prefix)).rejects.toThrow(/.+/);
   await account.acknowledgeArtifactEffect("pending");
   await expect(account.beginArtifactEffect("pending", "put:manifest")).rejects.toThrow(/.+/);
   await account.drainArtifactWriter("pending");
@@ -549,7 +613,7 @@ test("confirmed ordinary storage effects reconcile after lost acknowledgment, in
   const prefix = "accounts/" + accountId + "/conversions/" + started.conversion.conversionId + "/";
   const writerId = crypto.randomUUID();
   const key = prefix + "audio.mp3";
-  await account.registerArtifactWriter(writerId, 1, prefix, "production");
+  await account.registerArtifactWriter(writerId, 1, prefix);
   await account.beginArtifactEffect(writerId, "put:" + key);
   expect(await account.reconcileArtifactWriter(writerId)).toBe(false);
   await bindings.AUDIO_BUCKET.put(key, "audio", { customMetadata: { "cup-writer-id": writerId } });
@@ -560,7 +624,7 @@ test("confirmed ordinary storage effects reconcile after lost acknowledgment, in
   expect(await account.reconcileArtifactWriter(writerId)).toBe(true);
 });
 
-test("streamed production replay drains the producer after a lost write acknowledgment", async () => {
+test("streamed artifact replay drains the producer after a lost write acknowledgment", async () => {
   const { account, accountId } = await createAccount();
   const started = await account.startConversion(
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/book" },
@@ -570,10 +634,10 @@ test("streamed production replay drains the producer after a lost write acknowle
   const prefix = "accounts/" + accountId + "/conversions/" + started.conversion.conversionId + "/";
   const key = prefix + "audiobook.mp3";
   const digest = new Uint8Array(
-    await crypto.subtle.digest("SHA-256", new TextEncoder().encode("1:production:" + key)),
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode("1:" + key)),
   );
   const writerId = Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
-  await account.prepareArtifactWrite(writerId, 1, prefix, "production", key);
+  await account.prepareArtifactWrite(writerId, 1, prefix, key);
   expect((await account.inspectArtifactWriters())[0]?.effect).toBe("put:" + key);
   await bindings.AUDIO_BUCKET.put(key, "stored", { customMetadata: { "cup-writer-id": writerId } });
   const bucket = accountArtifactBucket(bindings.AUDIO_BUCKET, account, 1, prefix);
@@ -596,10 +660,10 @@ test("a rejected concurrent streamed write cancels its producer instead of hangi
   const prefix = `accounts/${accountId}/conversions/${started.conversion.conversionId}/`;
   const key = prefix + "audiobook.mp3";
   const digest = new Uint8Array(
-    await crypto.subtle.digest("SHA-256", new TextEncoder().encode("1:production:" + key)),
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode("1:" + key)),
   );
   const writerId = Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
-  await account.prepareArtifactWrite(writerId, 1, prefix, "production", key);
+  await account.prepareArtifactWrite(writerId, 1, prefix, key);
   const bucket = accountArtifactBucket(bindings.AUDIO_BUCKET, account, 1, prefix);
   const stream = new TransformStream<Uint8Array, Uint8Array>();
   const producer = stream.writable.getWriter();
@@ -626,7 +690,7 @@ test("final erasure waits for an in-flight upload and preserves original trials 
   const prefix = `accounts/${accountId}/conversions/${started.conversion.conversionId}/`;
   const writerId = crypto.randomUUID();
   const key = prefix + "audiobook.mp3";
-  await account.prepareArtifactWrite(writerId, 1, prefix, "production", key);
+  await account.prepareArtifactWrite(writerId, 1, prefix, key);
 
   const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
   const attemptId = crypto.randomUUID();
@@ -808,7 +872,7 @@ test("segment overruns cap charges at the allowance without invalidating other r
         nowMs,
       )
     ).result,
-  ).toBe("exhausted");
+  ).toBe("created");
 });
 
 test("failed generation retains completed duration charges and releases only unfinished segments", async () => {
@@ -884,7 +948,7 @@ test("replaying the account baseline preserves history and grants the welcome al
   expect(await account.initialize(identity)).toEqual(first.snapshot);
 });
 
-test("migration replay preserves existing production effects and account data", async () => {
+test("migration replay preserves existing artifact effects and account data", async () => {
   const accountId = crypto.randomUUID();
   const account = bindings.ACCOUNT_DISPATCH_TEST.get(
     bindings.ACCOUNT_DISPATCH_TEST.idFromName(accountId),
@@ -896,13 +960,7 @@ test("migration replay preserves existing production effects and account data", 
   );
   if (!started.conversion) throw new Error("Expected conversion");
   const prefix = `accounts/${accountId}/conversions/${started.conversion.conversionId}/`;
-  await account.prepareArtifactWrite(
-    "existing-writer",
-    1,
-    prefix,
-    "production",
-    prefix + "audiobook.mp3",
-  );
+  await account.prepareArtifactWrite("existing-writer", 1, prefix, prefix + "audiobook.mp3");
   const storage = await worker.getDurableObjectStorage("ACCOUNT_DISPATCH_TEST", {
     name: accountId,
   });

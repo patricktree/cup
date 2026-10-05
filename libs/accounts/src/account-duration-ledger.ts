@@ -69,17 +69,15 @@ export class AccountDurationLedger {
     const estimate = estimateAudioDuration(characters);
     return this.database.transaction(() => {
       const existing = this.segments(conversionId).find((item) => item.sequence === sequence);
-      if (existing) {
+      if (existing && existing.state !== "released") {
         if (existing.narrationTextCharacters !== characters)
           throw new Error("Segment reservation conflicts with synthesis identity");
-        if (existing.state === "released")
-          throw new Error("Audio segment reservation was released");
         return {
           result: existing.state === "settled" ? ("settled" as const) : ("reserved" as const),
         };
       }
       if (estimate > this.balance().available) return { result: "insufficient-duration" as const };
-      const operationId = `segment:${conversionId}:${sequence}`;
+      const operationId = `segment:${conversionId}:${sequence}:${crypto.randomUUID()}`;
       this.database
         .insert(creditOperations)
         .values({
@@ -102,6 +100,16 @@ export class AccountDurationLedger {
           state: "reserved",
           operationId,
         })
+        .onConflictDoUpdate({
+          target: [accountAudioSegments.conversionId, accountAudioSegments.sequence],
+          set: {
+            operationId,
+            state: "reserved",
+            estimatedMilliseconds: estimate,
+            actualMilliseconds: 0,
+            chargedMilliseconds: 0,
+          },
+        })
         .run();
       this.appendEntry(operationId, "reserve", estimate, -estimate, estimate, nowMs, conversionId);
       return { result: "reserved" as const };
@@ -122,7 +130,18 @@ export class AccountDurationLedger {
       if (segment.state !== "reserved") throw new Error("Audio segment reservation was released");
       const balance = this.rawBalance();
       const charged = Math.min(actual, balance.available + balance.reserved);
-      const operationId = `segment:${conversionId}:${sequence}`;
+      const operationId = requireRow(
+        this.database
+          .select({ operationId: accountAudioSegments.operationId })
+          .from(accountAudioSegments)
+          .where(
+            and(
+              eq(accountAudioSegments.conversionId, conversionId),
+              eq(accountAudioSegments.sequence, sequence),
+            ),
+          )
+          .get(),
+      ).operationId;
       this.database
         .update(accountAudioSegments)
         .set({ state: "settled", actualMilliseconds: actual, chargedMilliseconds: charged })
@@ -153,10 +172,22 @@ export class AccountDurationLedger {
     });
   }
 
-  releaseReservations(conversionId: string, nowMs: number): void {
+  releaseReservations(conversionId: string, nowMs: number, sequence?: number): void {
     for (const segment of this.segments(conversionId)) {
-      if (segment.state !== "reserved") continue;
-      const operationId = `segment:${conversionId}:${segment.sequence}`;
+      if (segment.state !== "reserved" || (sequence !== undefined && segment.sequence !== sequence))
+        continue;
+      const operationId = requireRow(
+        this.database
+          .select({ operationId: accountAudioSegments.operationId })
+          .from(accountAudioSegments)
+          .where(
+            and(
+              eq(accountAudioSegments.conversionId, conversionId),
+              eq(accountAudioSegments.sequence, segment.sequence),
+            ),
+          )
+          .get(),
+      ).operationId;
       this.database
         .update(accountAudioSegments)
         .set({ state: "released" })

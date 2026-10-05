@@ -1,0 +1,1 @@
+ALTER TABLE `artifact_writers` DROP COLUMN `purpose`;
