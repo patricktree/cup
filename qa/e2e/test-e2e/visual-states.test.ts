@@ -307,12 +307,19 @@ function createStartResponse(): Record<string, unknown> {
   };
 }
 
-function createAudiobook(_origin: string): Record<string, unknown> {
+function createAudiobook(origin: string): Record<string, unknown> {
   return {
     status: "ready",
     canGenerate: true,
     playbackPosition: null,
-    segments: [],
+    segments: [
+      {
+        sequence: 0,
+        status: "ready",
+        durationMilliseconds: 5_000,
+        url: `${origin}/api/files/audiobooks/${CONVERSION_ID}/segments/0/audio.mp3`,
+      },
+    ],
     title: "A deterministic document about careful testing",
     originalUrl: SOURCE_URL,
     narrationDocument: {
