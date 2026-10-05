@@ -40,3 +40,14 @@ export async function waitForAudiobook(page: Page): Promise<void> {
     page.getByRole("heading", { name: "A deterministic document about careful testing" }),
   ).toBeVisible({ timeout: 90_000 });
 }
+
+/** Node-side requests omit Secure cookies on the local HTTP server; forward the browser session. */
+export async function getTrialSessionHeaders(page: Page): Promise<{ Cookie: string }> {
+  const cookies = await page.context().cookies();
+  return {
+    Cookie: cookies
+      .filter((cookie) => cookie.name.startsWith("__Secure-grant-session-"))
+      .map((cookie) => `${cookie.name}=${cookie.value}`)
+      .join("; "),
+  };
+}

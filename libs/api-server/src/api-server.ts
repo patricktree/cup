@@ -1164,13 +1164,24 @@ export function createApiServer(dependencies: ApiServerDependencies = production
       }
       const registry = getRegistryStub(context.env);
       const owner = await registry.findConversionOwner(conversionId);
-      if (owner?.kind !== "account") {
+      if (owner?.kind === "trial") {
+        const denied = await requireActiveTrialAudiobookSession(
+          context.env,
+          owner.grantId,
+          context.req.header("Cookie"),
+          context.get("requestId"),
+        );
+        if (denied) return denied;
         await next();
-        if (origin !== "https://localhost" && origin !== "https://cup-audio.com")
-          context.header("Access-Control-Allow-Origin", "*");
-        context.header("Cross-Origin-Resource-Policy", "cross-origin");
+        if (origin === "https://localhost" || origin === "https://cup-audio.com") {
+          context.header("Access-Control-Allow-Origin", origin);
+          context.header("Access-Control-Allow-Credentials", "true");
+          context.header("Vary", "Origin");
+        }
+        context.header("Cross-Origin-Resource-Policy", "same-origin");
         return;
       }
+      if (!owner) return next();
       const auth = await authenticateAccountRequest(
         isFile ? mediaRequest(context.req.raw) : context.req.raw,
         context.env,
@@ -1304,6 +1315,34 @@ async function authenticateGrant(
   } catch {
     return { result: "operational-error" as const };
   }
+}
+
+async function requireActiveTrialAudiobookSession(
+  env: ApiServerEnvironment,
+  grantId: string,
+  cookieHeader: string | undefined,
+  requestId: string,
+): Promise<Response | undefined> {
+  const auth = await authenticateGrant(env, grantId, cookieHeader);
+  if (auth.result === "operational-error")
+    return jsonError(requestId, "operational-error", "The grant could not be loaded.", 500);
+  if (auth.result !== "valid")
+    return jsonError(
+      requestId,
+      "grant-session-required",
+      "Open the original trial link to access this audiobook.",
+      401,
+    );
+  if (auth.snapshot.state === "expired" || auth.snapshot.state === "revoked")
+    return jsonError(
+      requestId,
+      `grant-${auth.snapshot.state}`,
+      auth.snapshot.state === "expired"
+        ? "This trial has expired. Its audiobooks are no longer accessible."
+        : "This trial has been revoked. Its audiobooks are no longer accessible.",
+      403,
+    );
+  return undefined;
 }
 
 function requireBrowserMutation(request: Request, requestId: string): Response | undefined {

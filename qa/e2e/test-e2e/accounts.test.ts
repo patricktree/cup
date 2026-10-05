@@ -125,7 +125,7 @@ test("signup keeps trial conversions separate from the new account and its histo
   const privateId = new URL(privateUrl).pathname.split("/").at(-1);
   expect(privateId).not.toBe(originalId);
   const accessToken = await readAccessToken(page);
-  // Account authentication does not confer trial progress access; trial audiobook links stay public.
+  // Account authentication does not confer access to another grant's conversions.
   expect(
     (
       await page.request.get(`${origin}/api/conversions/${originalId}`, {
@@ -152,7 +152,7 @@ test("signup keeps trial conversions separate from the new account and its histo
     (
       await page.request.get(`${origin}/api/files/audiobooks/${originalId}/segments/0/audio.mp3`)
     ).status(),
-  ).toBe(200);
+  ).toBe(401);
 });
 
 test("signed-in accounts skip trial credentials and signed-out users can reopen trial links", async ({

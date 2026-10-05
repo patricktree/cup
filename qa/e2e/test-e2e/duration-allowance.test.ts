@@ -10,7 +10,12 @@ import {
 } from "@cup/web-app-api.routes";
 
 import { expect, test, type WorkerEnvironment } from "#test-e2e/fixtures.ts";
-import { openNewTrial, startConversion, waitForAudiobook } from "#test-e2e/journey.ts";
+import {
+  getTrialSessionHeaders,
+  openNewTrial,
+  startConversion,
+  waitForAudiobook,
+} from "#test-e2e/journey.ts";
 import { generateUnit } from "#test-e2e/synthesis.ts";
 const DEFAULT_ALLOWANCE_MILLISECONDS = 7_200_000;
 
@@ -23,7 +28,11 @@ test("charges one unit by encoded duration and reuses it across reloads and dupl
   await waitForAudiobook(page);
   const id = new URL(page.url()).pathname.split("/").at(-1)!;
   const segment = await generateUnit(page, id);
-  const audio = new Uint8Array(await (await fetch(segment.url)).arrayBuffer());
+  const audio = new Uint8Array(
+    await (
+      await page.request.get(segment.url, { headers: await getTrialSessionHeaders(page) })
+    ).body(),
+  );
   const actual = Math.ceil(analyzeMp3(audio).durationMilliseconds);
   const before = await readGrant(page, grantId);
   expect(before.duration).toEqual({
@@ -70,6 +79,7 @@ test.describe("in-flight reservations", () => {
     const id = new URL(page.url()).pathname.split("/").at(-1)!;
     const articleResponse = await page.request.get(
       workerEnvironment.origin + "/api/audiobooks/" + id,
+      { headers: await getTrialSessionHeaders(page) },
     );
     const article = audiobookSchema.parse(await articleResponse.json());
     if (article.status !== "ready") throw new Error("Article not prepared");
@@ -104,6 +114,7 @@ test.describe("in-flight reservations", () => {
     const id = new URL(page.url()).pathname.split("/").at(-1)!;
     const articleResponse = await page.request.get(
       workerEnvironment.origin + "/api/audiobooks/" + id,
+      { headers: await getTrialSessionHeaders(page) },
     );
     const article = audiobookSchema.parse(await articleResponse.json());
     if (article.status !== "ready") throw new Error("Article not prepared");
@@ -126,7 +137,9 @@ test.describe("in-flight reservations", () => {
     expect(await readSpeechCalls(workerEnvironment)).toHaveLength(unitCount);
     await expect
       .poll(async () => {
-        const result = await page.request.get(workerEnvironment.origin + "/api/audiobooks/" + id);
+        const result = await page.request.get(workerEnvironment.origin + "/api/audiobooks/" + id, {
+          headers: await getTrialSessionHeaders(page),
+        });
         const updatedArticle = audiobookSchema.parse(await result.json());
         if (updatedArticle.status !== "ready") throw new Error("Article not prepared");
         return updatedArticle.segments
@@ -180,6 +193,7 @@ test.describe("in-flight reservations", () => {
           await (
             await page.request.get(
               workerEnvironment.origin + "/api/audiobooks/" + id + "/segments/0",
+              { headers: await getTrialSessionHeaders(page) },
             )
           ).json(),
         ).status,

@@ -10,7 +10,7 @@ When a schema changes, update its diagram alongside the generated migration. The
 
 `AccountDurableObject`. Each account has an isolated database for identity and lifecycle state, conversion history, listening positions, dispatch, duration accounting, artifact writers, and deletion confirmation. The account owns the rows through its Durable Object identity; most tables therefore have no foreign key to the singleton account row.
 
-`account_playback_positions` stores one listening position per conversion in the listener's account object. It has no foreign key to `account_conversions` because signed-in listeners can save listening positions for unlisted trial articles that they do not own. See [position restoration and saves](conversion.md#delivery-positions-and-lifecycle) for player behavior.
+`account_playback_positions` stores one listening position per conversion in the listener's account object. It has no foreign key to `account_conversions` because signed-in listeners can save listening positions for trial articles that they do not own but are authorized to access through the owning grant. See [position restoration and saves](conversion.md#delivery-positions-and-lifecycle) for player behavior.
 
 Writers may target pending or ready conversions; account lifecycle and execution epochs fence their storage effects.
 
@@ -19,7 +19,7 @@ Sources: [account-sqlite-schema.ts](../../libs/accounts/src/account-sqlite-schem
 ```mermaid
 erDiagram
     account_playback_positions {
-        text conversion_id PK "NOT NULL; own or unlisted conversion"
+        text conversion_id PK "NOT NULL; own or authorized trial conversion"
         text synchronization_unit_id "NOT NULL"
         integer offset_milliseconds "NOT NULL; >= 0"
     }

@@ -98,7 +98,7 @@ _Avoid_: trial link, user identity
 
 ## grant session
 
-Browser or native-app authorization derived from a grant credential. A grant session does not expire independently. It may inspect its conversion grant and, while the grant remains unexpired and unrevoked, prepare articles, including when its duration allowance is exhausted. New speech synthesis additionally requires sufficient available duration. A grant session does not authorize listing the grant’s conversions. Individual trial audiobook links provide unlisted access independently of grant expiry or revocation.
+Browser or native-app authorization derived from a grant credential. Session validity and grant availability are checked separately. It may inspect its conversion grant and, while the grant remains unexpired and unrevoked, prepare articles, including when its duration allowance is exhausted. New speech synthesis additionally requires sufficient available duration. A grant session does not authorize listing the grant’s conversions. Reading prepared trial text and replaying completed audio require a session for the owning grant while it remains unexpired and unrevoked, including when its duration allowance is exhausted. An audiobook link alone does not authorize access.
 
 _Avoid_: grant credential, user session
 

@@ -224,7 +224,7 @@ function PreparedReader({
       <audio
         ref={audioElement}
         preload="auto"
-        crossOrigin={session ? "use-credentials" : "anonymous"}
+        crossOrigin="use-credentials"
         onPause={() => {
           if (player instanceof ProgressivePlayer) player.onPause();
         }}

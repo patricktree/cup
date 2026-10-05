@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 import { audioSegmentSchema } from "@cup/web-app-api.routes";
 
 import { expect } from "#test-e2e/fixtures.ts";
+import { getTrialSessionHeaders } from "#test-e2e/journey.ts";
 
 /** Request one unit explicitly without advancing the player or speculating ahead. */
 export async function generateUnit(page: Page, conversionId: string, sequence = 0, token?: string) {
@@ -24,10 +25,13 @@ export async function generateUnit(page: Page, conversionId: string, sequence = 
     { path, headers },
   );
   expect(response.status).toBe(200);
+  const requestHeaders = { ...headers, ...(await getTrialSessionHeaders(page)) };
   await expect
     .poll(
       async () => {
-        const statusResponse = await page.request.get(new URL(path, page.url()).href, { headers });
+        const statusResponse = await page.request.get(new URL(path, page.url()).href, {
+          headers: requestHeaders,
+        });
         const segment = audioSegmentSchema.parse(await statusResponse.json());
         if (segment.status === "failed") throw new Error(segment.explanation);
         return segment.status;
@@ -36,7 +40,9 @@ export async function generateUnit(page: Page, conversionId: string, sequence = 
     )
     .toBe("ready");
   const segment = audioSegmentSchema.parse(
-    await (await page.request.get(new URL(path, page.url()).href, { headers })).json(),
+    await (
+      await page.request.get(new URL(path, page.url()).href, { headers: requestHeaders })
+    ).json(),
   );
   if (segment.status !== "ready") throw new Error("Expected generated audio to remain ready.");
   return segment;

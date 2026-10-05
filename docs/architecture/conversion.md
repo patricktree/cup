@@ -23,6 +23,7 @@ sequenceDiagram
     Preparation->>R2: Store document and speech configuration
     Preparation->>Owner: Set ready preparation outcome
     Client->>API: Poll article
+    API->>Owner: Check current account or grant authorization
     API-->>Client: Title, document, available segments, initial position
     Client->>Client: Remain paused
     Client->>API: Request audio for the selected unit
@@ -36,6 +37,7 @@ sequenceDiagram
         Unit->>R2: Store immutable MP3 segment
         Unit->>Owner: Settle encoded duration
         Client->>API: Poll unit and request audio
+        API->>Owner: Check current account or grant authorization
         API-->>Client: Settled audio segment
     end
 ```
@@ -52,7 +54,7 @@ Preparation outcomes record narration text size, chunk count, and content-select
 
 Each synchronization unit maps to one narration chunk and one independently playable MP3 segment. Once prepared text loads, the player requests audio for the selected unit even while paused, including a unit restored from the saved listening position. It keeps playback paused and does not request units ahead until Play. The player targets a speech synthesis lookahead of roughly 60 seconds of estimated audio, using whole units. On Play, it requests the current unit first, then immediately requests missing units within the speech synthesis lookahead in parallel while the current unit is still generating. In-flight requests are reused when speech synthesis lookahead is recalculated. A failed unit blocks new requests beyond it until explicit retry or seeking past it; requests already in flight can finish. Seeking while playing starts at the destination and requests speech synthesis lookahead from there; seeking while paused requests only the destination unit without starting playback. Pause stops synthesis ahead; selecting a unit while paused still requests its audio. Closing the player stops new scheduling while requested workflows finish normally. Players keep independent playback positions and speech synthesis lookahead. Signed-in users share a saved listening position across devices, restored only when a player initially loads the article. Completed audio is shared across players.
 
-The owner serializes dispatch using one stable workflow identity per conversion and sequence. Concurrent requests join that workflow. Explicit retry restarts a failed instance; stored immutable audio is reused if a previous attempt already published it. Before calling the provider, the owner reserves the full estimated duration. Settlement uses actual encoded duration and records each segment once. Failed attempts release only the failed unit's reservation; completed audio remains playable and charged. [ADR 0003](../adr/0003-charge-for-accessible-generated-narration.md) defines capped overruns, free reuse, and expiry policy.
+The owner serializes dispatch using one stable workflow identity per conversion and sequence. Concurrent requests join that workflow. Explicit retry restarts a failed instance; stored immutable audio is reused if a previous attempt already published it. Before calling the provider, the owner reserves the full estimated duration. Settlement uses actual encoded duration and records each segment once. Failed attempts release only the failed unit's reservation; completed audio remains stored and charged, with playback subject to current account or grant authorization. [ADR 0003](../adr/0003-charge-for-accessible-generated-narration.md) defines capped overruns and free reuse; [ADR 0007](../adr/0007-require-active-grant-access-for-trial-audiobooks.md) defines current trial access after expiry and revocation.
 
 The API derives each unit’s playback state from settled duration, workflow progress, and stored failure details in the [segment-state use case](../../libs/api-server/src/use-cases/get-audio-segment-state.ts), with Cloudflare dependencies wired by its [environment adapter](../../libs/api-server/src/audio-segment-state.ts). Unit workflows retry transient provider errors automatically. Exhausted retries stop playback at that unit and offer Retry; listeners may explicitly seek past it. Allowance errors preserve the prepared document and completed audio. All-unit audio availability does not assemble a full track. EPUB exports and full-track downloads have been removed.
 
@@ -60,7 +62,7 @@ Sources: [preparation runner](../../libs/create-audiobook-from-url-workflow/src/
 
 ## Delivery, positions, and lifecycle
 
-The reader receives prepared text independently of unit status. Only settled segments are delivered, with range, HEAD, and ETag support. Trial article links permit reading and replay; new synthesis requires the owning grant session. Private articles require an active owning account. [Authentication](authentication.md) describes bearer and media-cookie authorization.
+The reader receives prepared text independently of unit status. Only settled segments are delivered, with range, HEAD, and ETag support. Trial reading, segment polling, replay, and new synthesis require the owning grant session, and expiry or revocation blocks subsequent audiobook and media requests. Exhausted duration does not block reading or replay. Private articles require an active owning account. [Authentication](authentication.md) describes bearer and media-cookie authorization.
 
 Each signed-in listener has one saved position per conversion: synchronization unit ID and offset within that unit's audio. The server replaces it on every save. Initial player load restores it and remains paused; subsequent query refreshes and other devices' saves never move a loaded player. Local writes are serialized to retain their order. Anonymous positions are stored on the browser or native device. Positions are saved periodically and on pause or seek, so device switches resume from the last successful write.
 

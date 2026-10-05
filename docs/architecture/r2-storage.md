@@ -28,10 +28,10 @@ create-audiobook-from-url-audio
         └── segment-<sequence>-failure.json
 ```
 
-| Owner                  | Conversion prefix                                  | Ownership boundary                                                            |
-| ---------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Account                | `accounts/<accountId>/conversions/<conversionId>/` | Private artifacts grouped under the owning account for erasure                |
-| Trial conversion grant | `conversions/<conversionId>/`                      | Unlisted artifacts grouped by conversion; the grant ID is not part of the key |
+| Owner                  | Conversion prefix                                  | Ownership boundary                                                                    |
+| ---------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Account                | `accounts/<accountId>/conversions/<conversionId>/` | Private artifacts grouped under the owning account for erasure                        |
+| Trial conversion grant | `conversions/<conversionId>/`                      | Grant-authorized artifacts grouped by conversion; the grant ID is not part of the key |
 
 `<sequence>` is the zero-based index of a synchronization unit in the prepared narration document. Segment names use plain decimal numbers without zero padding. A conversion can have a manifest before any MP3 objects exist, and later have only some sequences generated. Failure objects exist only for units whose workflow records a failure.
 
@@ -74,7 +74,7 @@ Account-owned writes additionally carry `cup-writer-id` on manifests, audio segm
 
 ## Access and lifecycle
 
-The Worker loads manifests and serves audio through the application API. Audio delivery requires a ready manifest, a valid synchronization-unit sequence, and a settled segment in the owner's duration ledger; an MP3 object's existence alone does not make it playable. The [audio delivery handler](../../libs/api-server/src/serve-audiobook.ts) supports HEAD requests, byte ranges, and conditional ETag requests. Private artifacts require the active owning account; unlisted trial audiobook links permit reading and replay under the [access rules](authentication.md).
+The Worker loads manifests and serves audio through the application API. Audio delivery requires a ready manifest, a valid synchronization-unit sequence, and a settled segment in the owner's duration ledger; an MP3 object's existence alone does not make it playable. The [audio delivery handler](../../libs/api-server/src/serve-audiobook.ts) supports HEAD requests, byte ranges, and conditional ETag requests. Private artifacts require the active owning account; trial artifacts require a session for the active owning grant under the [access rules](authentication.md).
 
 Account erasure deletes every object under `accounts/<accountId>/` after execution is fenced and artifact writers have drained. It leaves trial conversion prefixes and other accounts separate. See [account deletion](account-deletion.md) and the [erasure implementation](../../libs/accounts/src/account-durable-object.ts).
 

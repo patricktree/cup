@@ -1,8 +1,10 @@
 ---
-status: partially superseded by ADR 0006
+status: partially superseded by ADRs 0006 and 0007
 ---
 
 # Prepare narration before player-controlled synthesis
+
+[ADR 0007](0007-require-active-grant-access-for-trial-audiobooks.md) supersedes trial link-only reading and replay and continued trial access after grant expiry or revocation. Trial audiobook requests now require a session for the owning unexpired, unrevoked grant; allowance exhaustion still permits reading and replay. The original decisions below are preserved as historical rationale.
 
 [ADR 0006](0006-synthesize-the-selected-unit-while-paused.md) supersedes the requirement to wait for Play before synthesizing the selected unit and the no-generation rule for paused seeking. The preparation boundary, synthesis lookahead, accounting, authorization, and other choices below remain accepted.
 

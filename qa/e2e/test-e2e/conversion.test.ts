@@ -1,6 +1,11 @@
 import { validateAudioSegment } from "#test-e2e/artifacts.ts";
 import { expect, test } from "#test-e2e/fixtures.ts";
-import { openNewTrial, startConversion, waitForAudiobook } from "#test-e2e/journey.ts";
+import {
+  getTrialSessionHeaders,
+  openNewTrial,
+  startConversion,
+  waitForAudiobook,
+} from "#test-e2e/journey.ts";
 import { generateUnit } from "#test-e2e/synthesis.ts";
 
 test("generates the selected unit while paused, then Play requests audio ahead and plays", async ({
@@ -39,7 +44,7 @@ test("generates the selected unit while paused, then Play requests audio ahead a
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   const url = await page.locator("audio").getAttribute("src");
   if (!url) throw new Error("Segment URL missing");
-  await validateAudioSegment({ audioUrl: url });
+  await validateAudioSegment({ audioUrl: url, page });
   const before = await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json();
   await page.reload();
   await waitForAudiobook(page);
@@ -49,7 +54,7 @@ test("generates the selected unit while paused, then Play requests audio ahead a
   );
 });
 
-test("unlisted article links allow reading and replay but cannot spend the grant", async ({
+test("trial article links require the owning grant session for reading and replay", async ({
   page,
   workerEnvironment,
 }) => {
@@ -64,8 +69,13 @@ test("unlisted article links allow reading and replay but cannot spend the grant
   const anonymous = await page.context().browser()!.newContext();
   const reader = await anonymous.newPage();
   await reader.goto(page.url());
-  await waitForAudiobook(reader);
-  expect((await anonymous.request.get(segment.url)).status()).toBe(200);
+  await expect(
+    reader.getByRole("heading", { name: "The article could not be loaded." }),
+  ).toBeVisible();
+  expect(
+    (await anonymous.request.get(workerEnvironment.origin + `/api/audiobooks/${id}`)).status(),
+  ).toBe(401);
+  expect((await anonymous.request.get(segment.url)).status()).toBe(401);
   const response = await anonymous.request.post(
     workerEnvironment.origin + `/api/audiobooks/${id}/segments/1`,
     {
@@ -74,7 +84,23 @@ test("unlisted article links allow reading and replay but cannot spend the grant
     },
   );
   expect(response.status()).toBe(401);
-  await reader.getByRole("combobox", { name: "Start at passage" }).selectOption("1");
+  const otherGrant = await workerEnvironment.createGrant();
+  await reader.goto(otherGrant.trialLink);
+  await expect(reader).toHaveURL(`${workerEnvironment.origin}/app/trials/${otherGrant.grantId}`);
+  const otherGrantHeaders = await getTrialSessionHeaders(reader);
+  expect(
+    (
+      await anonymous.request.get(`${workerEnvironment.origin}/api/grants/${otherGrant.grantId}`, {
+        headers: otherGrantHeaders,
+      })
+    ).status(),
+  ).toBe(200);
+  expect((await anonymous.request.get(segment.url, { headers: otherGrantHeaders })).status()).toBe(
+    401,
+  );
+  expect(
+    (await page.request.get(segment.url, { headers: await getTrialSessionHeaders(page) })).status(),
+  ).toBe(200);
   expect(await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json()).toEqual(
     beforeAnonymous,
   );
