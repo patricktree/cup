@@ -1,6 +1,7 @@
 import type { ConversionOwner } from "@cup/conversion-contracts";
 
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
+import { resolveConversionReader } from "#src/conversion-reader.ts";
 import { getAudioSegmentState } from "#src/use-cases/get-audio-segment-state.ts";
 
 export function getAudioSegmentStateFromEnvironment(
@@ -10,15 +11,12 @@ export function getAudioSegmentStateFromEnvironment(
   sequence: number,
   origin: string,
 ) {
-  const ledger =
-    owner.kind === "account"
-      ? env.ACCOUNTS.get(env.ACCOUNTS.idFromName(owner.accountId))
-      : env.CONVERSION_GRANTS.get(env.CONVERSION_GRANTS.idFromName(owner.grantId));
+  const reader = resolveConversionReader(env, conversionId, owner);
 
   return getAudioSegmentState(
     { conversionId, owner, sequence, origin },
     {
-      listAudioSegments: (id) => ledger.listAudioSegments(id),
+      listAudioSegments: () => reader.listAudioSegments(),
       getWorkflowStatus: async (id) =>
         (await env.SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW.get(id)).status(),
       getFailureExplanation: async (key) => {

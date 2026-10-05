@@ -1,19 +1,15 @@
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
 
-import { accountArtifactBucket } from "@cup/accounts/artifact-writer";
 import {
   loadAudiobook,
   produceAudioSegment,
   PermanentNarrationSynthesisError,
   type SpeechSynthesisAi,
 } from "@cup/audiobook-production";
-import {
-  createConversionArtifactPrefix,
-  segmentWorkflowParamsSchema,
-  type SegmentWorkflowParams,
-} from "@cup/conversion-contracts";
+import { segmentWorkflowParamsSchema, type SegmentWorkflowParams } from "@cup/conversion-contracts";
 
+import { resolveConversionExecution } from "#src/conversion-execution.ts";
 import type { AudiobookWorkflowEnvironment } from "#src/workflow-environment.ts";
 
 /** One stable Workflow identity serializes synthesis and retries for a unit across all players. */
@@ -29,28 +25,14 @@ export async function runAudioSegmentWorkflow({
   ai: SpeechSynthesisAi;
 }) {
   const params = segmentWorkflowParamsSchema.parse(event.payload);
-  const { conversionId, owner, sequence, executionEpoch } = params;
+  const { conversionId, sequence } = params;
   if (event.instanceId !== `segment-${conversionId}-${sequence}`)
     throw new NonRetryableError("Segment Workflow identity mismatch");
 
-  const account =
-    owner.kind === "account"
-      ? env.ACCOUNTS.get(env.ACCOUNTS.idFromName(owner.accountId))
-      : undefined;
-  const grant =
-    owner.kind === "trial"
-      ? env.CONVERSION_GRANTS.get(env.CONVERSION_GRANTS.idFromName(owner.grantId))
-      : undefined;
-  const prefix = createConversionArtifactPrefix(conversionId, owner);
-  const bucket = account
-    ? accountArtifactBucket(env.AUDIO_BUCKET, account, executionEpoch, prefix)
-    : env.AUDIO_BUCKET;
+  const execution = resolveConversionExecution(env, params);
+  const { artifactPrefix: prefix, artifactBucket: bucket } = execution;
   const audiobook = await step.do("load prepared narration", async () => {
-    const reference = account ? (await account.getConversion(conversionId))?.outcome : undefined;
-    const manifest =
-      reference?.status === "ready"
-        ? reference.audiobookReference
-        : await grant?.getReadyAudiobookReference(conversionId);
+    const manifest = await execution.getReadyAudiobookReference();
     if (!manifest || manifest.key !== `${prefix}audiobook.json`)
       throw new NonRetryableError("Prepared narration is unavailable");
     return loadAudiobook({ bucket, audiobookReference: manifest });
@@ -66,14 +48,10 @@ export async function runAudioSegmentWorkflow({
         timeout: "2 minutes",
       },
       async ({ attempt }) => {
-        const reservation = account
-          ? await account.reserveAudioSegment(
-              conversionId,
-              sequence,
-              unit.narrationText.length,
-              executionEpoch,
-            )
-          : await grant!.reserveAudioSegment(conversionId, sequence, unit.narrationText.length);
+        const reservation = await execution.reserveAudioSegment(
+          sequence,
+          unit.narrationText.length,
+        );
         if (reservation.result !== "reserved" && reservation.result !== "settled")
           throw new NonRetryableError(
             "There is not enough available audio duration, or the trial no longer permits new speech generation.",
@@ -90,15 +68,7 @@ export async function runAudioSegmentWorkflow({
             synthesisAttempt: attempt,
             synthesisResponseMode: attempt === 1 ? "streaming" : "non-streaming",
           });
-          if (account)
-            await account.completeAudioSegment(
-              conversionId,
-              sequence,
-              segment.durationMilliseconds,
-              executionEpoch,
-            );
-          else
-            await grant!.completeAudioSegment(conversionId, sequence, segment.durationMilliseconds);
+          await execution.completeAudioSegment(sequence, segment.durationMilliseconds);
           return segment;
         } catch (error) {
           if (error instanceof PermanentNarrationSynthesisError)
@@ -109,8 +79,7 @@ export async function runAudioSegmentWorkflow({
     );
   } catch (error) {
     await step.do("release failed segment reservation", async () => {
-      if (account) await account.releaseAudioSegment(conversionId, sequence, executionEpoch);
-      else await grant!.releaseAudioSegment(conversionId, sequence);
+      await execution.releaseAudioSegment(sequence);
       await bucket.put(
         `${prefix}segment-${sequence}-failure.json`,
         JSON.stringify({

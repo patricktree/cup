@@ -23,6 +23,8 @@ import { audiobookSchema, createWebAppApi, type WebAppApiHandlers } from "@cup/w
 import { authenticateAccountRequest, mediaCookie, mediaRequest } from "#src/account-auth.ts";
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
 import { getAudioSegmentStateFromEnvironment } from "#src/audio-segment-state.ts";
+import { resolveConversionDispatch } from "#src/conversion-dispatch.ts";
+import { resolveConversionReader } from "#src/conversion-reader.ts";
 import { routeApplicationDomain } from "#src/domain-routing.ts";
 import { revokeVerifiedGoogleToken } from "#src/google-token-revocation.ts";
 import { accountAuthError, jsonError } from "#src/http-errors.ts";
@@ -581,15 +583,8 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
     const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
     if (!owner)
       return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
-    const account =
-      owner.kind === "account"
-        ? context.env.ACCOUNTS.get(context.env.ACCOUNTS.idFromName(owner.accountId))
-        : undefined;
-    const conversion = account
-      ? await account.getConversion(conversionId)
-      : owner.kind === "trial"
-        ? await getGrantStub(context.env, owner.grantId).getConversion(conversionId)
-        : undefined;
+    const reader = resolveConversionReader(context.env, conversionId, owner);
+    const conversion = await reader.getConversion();
     if (!conversion)
       return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
     const canGenerate =
@@ -608,14 +603,10 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
         },
         200,
       );
-    const audiobook = await loadReadyAudiobookFromEnvironment(context.env, conversionId);
+    const audiobook = await loadReadyAudiobookFromEnvironment(context.env, conversionId, reader);
     if (!audiobook)
       return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
-    const usage = account
-      ? await account.listAudioSegments(conversionId)
-      : owner.kind === "trial"
-        ? await getGrantStub(context.env, owner.grantId).listAudioSegments(conversionId)
-        : [];
+    const usage = await reader.listAudioSegments();
     const origin = new URL(context.req.url).origin;
     const segments = usage
       .filter((item) => item.state === "settled")
@@ -631,6 +622,10 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
           item.sequence +
           "/audio.mp3",
       }));
+    const account =
+      owner.kind === "account"
+        ? context.env.ACCOUNTS.get(context.env.ACCOUNTS.idFromName(owner.accountId))
+        : undefined;
     const listener = account
       ? account
       : context.req.header("Authorization")
@@ -709,20 +704,8 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
       (current.status === "failed" && !context.req.valid("json").retry)
     )
       return context.json(current, 200);
-    const account =
-      owner.kind === "account"
-        ? context.env.ACCOUNTS.get(context.env.ACCOUNTS.idFromName(owner.accountId))
-        : undefined;
-    const executionEpoch = account ? (await account.inspect()).executionEpoch : 1;
-    const params = { v: 3 as const, conversionId, owner, executionEpoch, sequence };
-    const result = account
-      ? await account.requestAudioSegment(params, context.req.valid("json").retry)
-      : owner.kind === "trial"
-        ? await getGrantStub(context.env, owner.grantId).requestAudioSegment(
-            params,
-            context.req.valid("json").retry,
-          )
-        : undefined;
+    const dispatch = resolveConversionDispatch(context.env, conversionId, owner);
+    const result = await dispatch.requestAudioSegment(sequence, context.req.valid("json").retry);
     return context.json(
       {
         sequence,
@@ -741,11 +724,7 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
     const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
     if (!owner)
       return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
-    if (owner.kind === "account")
-      await context.env.ACCOUNTS.get(
-        context.env.ACCOUNTS.idFromName(owner.accountId),
-      ).retryPreparation(conversionId);
-    else {
+    if (owner.kind === "trial") {
       if (
         (await authenticateGrant(context.env, owner.grantId, context.req.header("Cookie")))
           .result !== "valid"
@@ -756,8 +735,8 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
           "Open the original trial link to retry preparation.",
           401,
         );
-      await getGrantStub(context.env, owner.grantId).retryPreparation(conversionId);
     }
+    await resolveConversionDispatch(context.env, conversionId, owner).retryPreparation();
     return context.body(null, 204);
   },
 

@@ -2,9 +2,7 @@ import type { WorkflowEvent, WorkflowStep, WorkflowStepConfig } from "cloudflare
 import { NonRetryableError } from "cloudflare:workflows";
 import { Temporal } from "temporal-polyfill";
 
-import { accountArtifactBucket } from "@cup/accounts/artifact-writer";
 import { SPEECH_CONFIG, storeAudiobook } from "@cup/audiobook-production";
-import { createConversionArtifactPrefix } from "@cup/conversion-contracts";
 import { ConversionPhase, type ConversionFailureCategory } from "@cup/conversion-contracts";
 import { conversionParamsSchema, type ConversionParams } from "@cup/conversion-contracts";
 import type {
@@ -14,6 +12,7 @@ import type {
 import { createNarrationDocument } from "@cup/narration-document-creation";
 import type { SourceMaterialPreparer } from "@cup/prepare-source-material";
 
+import { resolveConversionExecution } from "#src/conversion-execution.ts";
 import type { AudiobookWorkflowEnvironment } from "#src/workflow-environment.ts";
 
 const PREPARE_STEP_CONFIG = {
@@ -81,21 +80,13 @@ export async function runPrepareAudiobookWorkflow({
   if ("v" in params && params.conversionId !== event.instanceId)
     throw new NonRetryableError("Workflow conversion identity mismatch");
   const owner = "v" in params ? params.owner : { kind: "trial" as const, grantId: params.grantId };
-  const artifactPrefix = createConversionArtifactPrefix(event.instanceId, owner);
-  const executionEpoch = "v" in params ? params.executionEpoch : 1;
-  const account =
-    owner.kind === "account"
-      ? env.ACCOUNTS.get(env.ACCOUNTS.idFromName(owner.accountId))
-      : undefined;
-  const bucket = account
-    ? accountArtifactBucket(env.AUDIO_BUCKET, account, executionEpoch, artifactPrefix)
-    : env.AUDIO_BUCKET;
-  const phaseStarted = async (phase: ConversionPhase) => {
-    if (account) await account.assertExecution(event.instanceId, executionEpoch);
-    else if (owner.kind === "trial")
-      await recordPhaseStarted(env, owner.grantId, event.instanceId, phase);
-  };
   const conversionId = event.instanceId;
+  const execution = resolveConversionExecution(env, {
+    conversionId,
+    owner,
+    executionEpoch: "v" in params ? params.executionEpoch : 1,
+  });
+  const { artifactPrefix, artifactBucket: bucket } = execution;
   let stage: ConversionFailureCategory = "source-preparation";
 
   const result = await (async () => {
@@ -104,14 +95,14 @@ export async function runPrepareAudiobookWorkflow({
         "prepare audiobook source material",
         PREPARE_STEP_CONFIG,
         async () => {
-          await phaseStarted(ConversionPhase.SOURCE_MATERIAL_PREPARATION);
+          await execution.phaseStarted(ConversionPhase.SOURCE_MATERIAL_PREPARATION);
           return services.prepareSourceMaterial(sourceUrl);
         },
       );
 
       stage = "content-selection";
       await step.do("start narration content selection", PROCESSING_STEP_CONFIG, () =>
-        phaseStarted(ConversionPhase.NARRATION_CONTENT_SELECTION),
+        execution.phaseStarted(ConversionPhase.NARRATION_CONTENT_SELECTION),
       );
       const { selectedSourceMaterialHtml, usage: contentSelectionUsage } =
         await services.selectNarrationContent(sourceMaterial.html, {
@@ -124,7 +115,7 @@ export async function runPrepareAudiobookWorkflow({
         "create narration document",
         PROCESSING_STEP_CONFIG,
         async () => {
-          await phaseStarted(ConversionPhase.NARRATION_DOCUMENT_CREATION);
+          await execution.phaseStarted(ConversionPhase.NARRATION_DOCUMENT_CREATION);
           return createNarrationDocument({
             sourceTitle: sourceMaterial.title,
             sourceMaterialHtml: selectedSourceMaterialHtml,
@@ -148,7 +139,7 @@ export async function runPrepareAudiobookWorkflow({
         "store audiobook",
         PROCESSING_STEP_CONFIG,
         async () => {
-          await phaseStarted(ConversionPhase.AUDIOBOOK_STORAGE);
+          await execution.phaseStarted(ConversionPhase.AUDIOBOOK_STORAGE);
           return storeAudiobook({
             bucket,
             conversionId,
@@ -180,7 +171,7 @@ export async function runPrepareAudiobookWorkflow({
         "create failed conversion outcome",
         PROCESSING_STEP_CONFIG,
         async () => {
-          await phaseStarted(ConversionPhase.FINALIZATION);
+          await execution.phaseStarted(ConversionPhase.FINALIZATION);
           return {
             failureCategory: stage,
             explanation:
@@ -195,19 +186,7 @@ export async function runPrepareAudiobookWorkflow({
       );
 
       await step.do("record conversion failure", TERMINAL_STATE_STEP_CONFIG, async () => {
-        if (account)
-          await account.settleConversion(
-            conversionId,
-            {
-              status: "failed",
-              failureCategory: failedOutcome.failureCategory,
-              explanation: failedOutcome.explanation,
-            },
-            undefined,
-            executionEpoch,
-          );
-        else if (owner.kind === "trial")
-          await getGrantStub(env, owner.grantId).recordFailed(conversionId, failedOutcome);
+        await execution.recordFailed(failedOutcome);
       });
       throw error;
     }
@@ -217,7 +196,7 @@ export async function runPrepareAudiobookWorkflow({
     "create ready conversion outcome",
     PROCESSING_STEP_CONFIG,
     async () => {
-      await phaseStarted(ConversionPhase.FINALIZATION);
+      await execution.phaseStarted(ConversionPhase.FINALIZATION);
       return {
         ...result.readyOutcome,
         completedAtMs: Temporal.Now.instant().epochMilliseconds,
@@ -226,19 +205,7 @@ export async function runPrepareAudiobookWorkflow({
   );
 
   await step.do("record conversion ready", TERMINAL_STATE_STEP_CONFIG, async () => {
-    if (account)
-      await account.settleConversion(
-        conversionId,
-        {
-          status: "ready",
-          title: readyOutcome.title,
-          audiobookReference: readyOutcome.audiobookReference,
-        },
-        undefined,
-        executionEpoch,
-      );
-    else if (owner.kind === "trial")
-      await getGrantStub(env, owner.grantId).recordReady(conversionId, readyOutcome);
+    await execution.recordReady(readyOutcome);
   });
 
   return result.audiobookReference;
@@ -249,17 +216,4 @@ class ContentLimitError extends Error {
     super("Narration exceeds the conversion content ceiling");
     this.name = "ContentLimitError";
   }
-}
-
-function getGrantStub(env: AudiobookWorkflowEnvironment, grantId: string) {
-  return env.CONVERSION_GRANTS.get(env.CONVERSION_GRANTS.idFromName(grantId));
-}
-
-async function recordPhaseStarted(
-  env: AudiobookWorkflowEnvironment,
-  grantId: string,
-  conversionId: string,
-  phase: ConversionPhase,
-): Promise<void> {
-  await getGrantStub(env, grantId).recordPhaseStarted(conversionId, phase);
 }

@@ -18,12 +18,8 @@ const AUDIOBOOK: Audiobook = {
 test("loads the canonical audiobook for a ready conversion", async () => {
   const calls: string[] = [];
   const dependencies: LoadReadyAudiobookDependencies = {
-    findGrantIdForConversion: async (conversionId) => {
-      calls.push(`find-grant:${conversionId}`);
-      return "grant-id";
-    },
-    getReadyAudiobookReference: async (grantId, conversionId) => {
-      calls.push(`get-reference:${grantId}:${conversionId}`);
+    getReadyAudiobookReference: async () => {
+      calls.push("get-reference");
       return {
         key: "conversions/conversion-id/audiobook.json",
         contentType: "application/json",
@@ -37,24 +33,20 @@ test("loads the canonical audiobook for a ready conversion", async () => {
     },
   };
 
-  await expect(loadReadyAudiobook("conversion-id", dependencies)).resolves.toBe(AUDIOBOOK);
+  await expect(loadReadyAudiobook(dependencies)).resolves.toBe(AUDIOBOOK);
   expect(calls).toEqual([
-    "find-grant:conversion-id",
-    "get-reference:grant-id:conversion-id",
+    "get-reference",
     "load-audiobook:conversions/conversion-id/audiobook.json",
   ]);
 });
 
-test("does not load an audiobook for an unknown conversion", async () => {
+test("does not read storage when the conversion has no accessible ready manifest", async () => {
   const dependencies: LoadReadyAudiobookDependencies = {
-    findGrantIdForConversion: async () => undefined,
-    getReadyAudiobookReference: async () => {
-      throw new Error("getReadyAudiobookReference must not be called");
-    },
+    getReadyAudiobookReference: async () => undefined,
     loadAudiobook: async () => {
       throw new Error("loadAudiobook must not be called");
     },
   };
 
-  await expect(loadReadyAudiobook("conversion-id", dependencies)).resolves.toBeUndefined();
+  await expect(loadReadyAudiobook(dependencies)).resolves.toBeUndefined();
 });

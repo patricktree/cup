@@ -1,38 +1,26 @@
 import { createAudioSegmentKey, loadAudiobook, type Audiobook } from "@cup/audiobook-production";
-import { createConversionArtifactPrefix } from "@cup/conversion-contracts";
-import type { ConversionGrantDurableObject } from "@cup/conversion-grants";
 import type { RegistryDurableObject } from "@cup/registry";
 import type { ErrorResponse } from "@cup/web-app-api.routes";
 
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
+import { resolveConversionReader, type ConversionReader } from "#src/conversion-reader.ts";
 import { loadReadyAudiobook } from "#src/use-cases/load-ready-audiobook.ts";
 
-type GrantStub = DurableObjectStub<ConversionGrantDurableObject>;
 type RegistryStub = DurableObjectStub<RegistryDurableObject>;
 
 export async function loadReadyAudiobookFromEnvironment(
   env: ApiServerEnvironment,
   conversionId: string,
+  reader?: ConversionReader,
 ): Promise<Audiobook | undefined> {
-  const owner = await getRegistryStub(env).findConversionOwner(conversionId);
-  if (owner?.kind === "account") {
-    const account = env.ACCOUNTS.get(env.ACCOUNTS.idFromName(owner.accountId));
-    if ((await account.inspect()).state !== "active") return undefined;
-    const conversion = await account.getConversion(conversionId);
-    if (conversion?.outcome?.status !== "ready") return undefined;
-    const prefix = createConversionArtifactPrefix(conversionId, owner);
-    if (conversion.outcome.audiobookReference.key !== `${prefix}audiobook.json`)
-      throw new Error("Private manifest ownership mismatch");
-    const audiobook = await loadAudiobook({
-      bucket: env.AUDIO_BUCKET,
-      audiobookReference: conversion.outcome.audiobookReference,
-    });
-    return audiobook;
+  if (!reader) {
+    const owner = await getRegistryStub(env).findConversionOwner(conversionId);
+    if (!owner) return undefined;
+    reader = resolveConversionReader(env, conversionId, owner);
   }
-  return loadReadyAudiobook(conversionId, {
-    findGrantIdForConversion: (id) => getRegistryStub(env).findGrantIdForConversion(id),
-    getReadyAudiobookReference: (grantId, id) =>
-      getGrantStub(env, grantId).getReadyAudiobookReference(id),
+  const conversionReader = reader;
+  return loadReadyAudiobook({
+    getReadyAudiobookReference: () => conversionReader.getReadyAudiobookReference(),
     loadAudiobook: (reference) =>
       loadAudiobook({ bucket: env.AUDIO_BUCKET, audiobookReference: reference }),
   });
@@ -46,26 +34,18 @@ export async function serveAudio(
   isHead: boolean,
   requestId: string,
 ): Promise<Response> {
-  const audiobook = await loadReadyAudiobookFromEnvironment(env, conversionId);
+  const owner = await getRegistryStub(env).findConversionOwner(conversionId);
+  if (!owner) return audiobookNotFound(requestId);
+  const reader = resolveConversionReader(env, conversionId, owner);
+  const audiobook = await loadReadyAudiobookFromEnvironment(env, conversionId, reader);
   if (audiobook === undefined) return audiobookNotFound(requestId);
 
   if (!audiobook.narrationDocument.synchronizationUnits[sequence])
     return audiobookNotFound(requestId);
-  const owner = await getRegistryStub(env).findConversionOwner(conversionId);
-  if (!owner) return audiobookNotFound(requestId);
-  const usage =
-    owner.kind === "account"
-      ? await env.ACCOUNTS.get(env.ACCOUNTS.idFromName(owner.accountId)).listAudioSegments(
-          conversionId,
-        )
-      : await getGrantStub(env, owner.grantId).listAudioSegments(conversionId);
+  const usage = await reader.listAudioSegments();
   if (!usage.some((item) => item.sequence === sequence && item.state === "settled"))
     return audiobookNotFound(requestId);
-  const key = createAudioSegmentKey(
-    conversionId,
-    sequence,
-    createConversionArtifactPrefix(conversionId, owner),
-  );
+  const key = createAudioSegmentKey(conversionId, sequence, reader.artifactPrefix);
   const object = await env.AUDIO_BUCKET.get(key);
   if (object === null) return audiobookNotFound(requestId);
 
@@ -108,10 +88,6 @@ export async function serveAudio(
   headers.set("Content-Range", `bytes ${parsed.start}-${parsed.end}/${object.size}`);
 
   return new Response(isHead ? null : ranged.body, { status: 206, headers });
-}
-
-function getGrantStub(env: ApiServerEnvironment, grantId: string): GrantStub {
-  return env.CONVERSION_GRANTS.get(env.CONVERSION_GRANTS.idFromName(grantId));
 }
 
 function getRegistryStub(env: ApiServerEnvironment): RegistryStub {

@@ -120,14 +120,100 @@ test("account segment retry preserves its ledger and earlier successful audio", 
   expect(
     (await account.listAudioSegments(conversionId)).filter((item) => item.state === "settled"),
   ).toHaveLength(2);
+  const manifest = await environment.AUDIO_BUCKET.head(
+    `accounts/${accountId}/conversions/${conversionId}/audiobook.json`,
+  );
+  const audio = await environment.AUDIO_BUCKET.head(
+    `accounts/${accountId}/conversions/${conversionId}/audio-segments/0.mp3`,
+  );
+  const failure = await environment.AUDIO_BUCKET.head(
+    `accounts/${accountId}/conversions/${conversionId}/segment-1-failure.json`,
+  );
+  for (const artifact of [manifest, audio, failure])
+    expect(artifact?.customMetadata?.["cup-writer-id"]).toMatch(/^[a-f0-9]{64}$/);
   await expect(account.inspectAccounting()).resolves.toBeDefined();
 });
+
+test("a stale account execution epoch cannot reserve duration or publish segment artifacts", async () => {
+  const accountId = crypto.randomUUID();
+  const account = environment.ACCOUNTS.get(environment.ACCOUNTS.idFromName(accountId));
+  await account.initialize({
+    accountId,
+    subject: crypto.randomUUID(),
+    createdAtMs: Temporal.Now.instant().epochMilliseconds,
+  });
+  const started = await account.startConversion({
+    sourceUrl: SOURCE_URL,
+    idempotencyKey: crypto.randomUUID(),
+  });
+  if (!started.conversion) throw new Error("Expected conversion");
+  const conversionId = started.conversion.conversionId;
+  await runConversion(accountId, conversionId, accountId);
+  const balance = (await account.inspect()).balance;
+  const ai = createFakeSpeechSynthesisAi();
+  const gateway = vi.spyOn(ai, "gateway");
+
+  // Wrangler's RPC transport can hide the original rejection; verify the storage effects below.
+  await expect(
+    runSegment(conversionId, { kind: "account", accountId }, 0, ai, 2),
+  ).rejects.toBeInstanceOf(Error);
+
+  expect(gateway).not.toHaveBeenCalled();
+  expect((await account.inspect()).balance).toEqual(balance);
+  expect(await account.listAudioSegments(conversionId)).toEqual([]);
+  const artifacts = await environment.AUDIO_BUCKET.list({
+    prefix: `accounts/${accountId}/conversions/${conversionId}/`,
+  });
+  expect(artifacts.objects.map((object) => object.key)).toEqual([
+    `accounts/${accountId}/conversions/${conversionId}/audiobook.json`,
+  ]);
+});
+
+test.each(["trial", "account"] as const)(
+  "%s preparation failures record the owning conversion's failure without reserving duration",
+  async (kind) => {
+    const { grant, grantId, conversionId: trialConversionId } = await createConversion();
+    const accountId = crypto.randomUUID();
+    const account = environment.ACCOUNTS.get(environment.ACCOUNTS.idFromName(accountId));
+    await account.initialize({
+      accountId,
+      subject: crypto.randomUUID(),
+      createdAtMs: Temporal.Now.instant().epochMilliseconds,
+    });
+    const started = await account.startConversion({
+      sourceUrl: SOURCE_URL,
+      idempotencyKey: crypto.randomUUID(),
+    });
+    if (!started.conversion) throw new Error("Expected conversion");
+    const conversionId = kind === "account" ? started.conversion.conversionId : trialConversionId;
+
+    await expect(
+      runConversion(grantId, conversionId, kind === "account" ? accountId : undefined, true),
+    ).rejects.toThrow("Configured preparation failure");
+
+    const conversion =
+      kind === "account"
+        ? (await account.getConversion(conversionId))?.outcome
+        : await grant.getConversion(conversionId);
+    expect(conversion).toMatchObject({
+      status: "failed",
+      failureCategory: "source-preparation",
+      explanation: "Preparation failed. Try again to prepare this article.",
+    });
+    const segments =
+      kind === "account"
+        ? await account.listAudioSegments(conversionId)
+        : await grant.listAudioSegments(conversionId);
+    expect(segments).toEqual([]);
+  },
+);
 
 function runSegment(
   conversionId: string,
   owner: { kind: "trial"; grantId: string } | { kind: "account"; accountId: string },
   sequence: number,
   ai: SpeechSynthesisAi,
+  executionEpoch = 1,
 ) {
   return runAudioSegmentWorkflow({
     env: environment,
@@ -137,7 +223,7 @@ function runSegment(
       workflowName: "segment-test",
       instanceId: "segment-" + conversionId + "-" + sequence,
       timestamp: new globalThis.Date(),
-      payload: { v: 3, owner, conversionId, sequence, executionEpoch: 1 },
+      payload: { v: 3, owner, conversionId, sequence, executionEpoch },
     },
   });
 }
@@ -154,7 +240,12 @@ async function createConversion() {
   return { grant, grantId, conversionId: accepted.conversion.conversionId, now };
 }
 
-function runConversion(grantId: string, conversionId: string, accountId?: string) {
+function runConversion(
+  grantId: string,
+  conversionId: string,
+  accountId?: string,
+  shouldFailPreparation = false,
+) {
   return runPrepareAudiobookWorkflow({
     env: environment,
     event: {
@@ -173,10 +264,14 @@ function runConversion(grantId: string, conversionId: string, accountId?: string
     },
     step: createImmediateRetryStep(),
     services: {
-      prepareSourceMaterial: createControlledSourceMaterialPreparer({
-        url: SOURCE_URL,
-        html: "<article><h1>Failure test</h1><p>A short paragraph for narration.</p></article>",
-      }),
+      prepareSourceMaterial: shouldFailPreparation
+        ? async () => {
+            throw new Error("Configured preparation failure");
+          }
+        : createControlledSourceMaterialPreparer({
+            url: SOURCE_URL,
+            html: "<article><h1>Failure test</h1><p>A short paragraph for narration.</p></article>",
+          }),
       selectNarrationContent: createFakeNarrationContentSelector(),
     },
   });
