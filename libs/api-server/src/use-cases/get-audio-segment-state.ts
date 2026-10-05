@@ -48,7 +48,7 @@ export async function getAudioSegmentState(
       sequence,
       status: "failed",
       explanation:
-        explanation ?? status.error?.message ?? "Speech generation failed. Retry this passage.",
+        explanation ?? status.error?.message ?? "Speech generation failed. Retry this segment.",
     };
   }
   if (status.status === "complete")

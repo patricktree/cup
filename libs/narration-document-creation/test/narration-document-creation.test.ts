@@ -68,11 +68,11 @@ test("retains only safe document structure, attributes, and links", () => {
   });
 
   expect(narrationDocument.html).toBe(
-    '<article><h1 id="narration-unit-0001">Safe document</h1><blockquote><p id="narration-unit-0002" lang="en">Quote with <a href="https://example.com/source">a link</a>,<br><a href="/related">a relative link</a>,<br><a>an unsafe link</a>, and an image<br>.</p></blockquote><ol><li><section id="narration-unit-0003"><h2>A list</h2><p>First <code>item</code>.</p></section></li><li><p id="narration-unit-0004">Second item.</p></li></ol></article>',
+    '<article><h1 id="narration-unit-0001">Safe document</h1><blockquote><p id="narration-unit-0002" lang="en">Quote with <a href="https://example.com/source">a link</a>, <a href="/related">a relative link</a>, <a>an unsafe link</a>, and an image .</p></blockquote><ol><li><section id="narration-unit-0003"><h2>A list</h2><p>First <code>item</code>.</p></section></li><li><p id="narration-unit-0004">Second item.</p></li></ol></article>',
   );
   expect(narrationDocument.synchronizationUnits.map(({ narrationText }) => narrationText)).toEqual([
     "Safe document",
-    "Quote with a link,\na relative link,\nan unsafe link, and an image\n.",
+    "Quote with a link, a relative link, an unsafe link, and an image .",
     "A list\n\nFirst item.",
     "Second item.",
   ]);
@@ -187,4 +187,27 @@ test("preserves headings and inline markup across oversized synchronization unit
       .map(({ narrationText }) => narrationText)
       .join(" "),
   ).toBe(`A long section\n\n${paragraphText}`);
+});
+
+test("ignores HTML formatting whitespace while preserving explicit breaks", () => {
+  const sourceTitle = "Whitespace";
+  const compactHtml =
+    "<p>During my life I played a role in <em>developing software</em>.<br>After the break.</p>";
+  const formattedHtml = `<p>
+    During my life I played a role in
+    <em>developing
+    software</em>.<br>
+    After the break.
+  </p>`;
+  const compactDocument = createNarrationDocument({ sourceTitle, sourceMaterialHtml: compactHtml });
+
+  expect(createNarrationDocument({ sourceTitle, sourceMaterialHtml: formattedHtml })).toEqual(
+    compactDocument,
+  );
+  expect(compactDocument.html).toBe(
+    '<article><h1 id="narration-unit-0001">Whitespace</h1><p id="narration-unit-0002">During my life I played a role in <em>developing software</em>.<br>After the break.</p></article>',
+  );
+  expect(compactDocument.synchronizationUnits[1]?.narrationText).toBe(
+    "During my life I played a role in developing software.\nAfter the break.",
+  );
 });

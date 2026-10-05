@@ -51,7 +51,7 @@ final class NarrationApiClient {
             }
             if (!result.getString("status").equals("ready"))
               throw new Exception(
-                  result.optString("explanation", "Speech generation failed. Retry this passage."));
+                  result.optString("explanation", "Speech generation failed. Retry this segment."));
           } catch (Exception failure) {
             message = failure.getMessage();
           }

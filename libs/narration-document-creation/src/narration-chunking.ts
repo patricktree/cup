@@ -104,7 +104,7 @@ function visitNarrationElements(
 
   for (const childNode of parentNode.childNodes) {
     if ("value" in childNode) {
-      textParts.push(childNode.value);
+      textParts.push(childNode.value.replace(/[\t\n\f\r ]+/gu, " "));
       continue;
     }
 
@@ -152,7 +152,7 @@ function extractText(parentNode: DefaultTreeAdapterMap["parentNode"]): string {
 
   for (const childNode of parentNode.childNodes) {
     if ("value" in childNode) {
-      textParts.push(childNode.value);
+      textParts.push(childNode.value.replace(/[\t\n\f\r ]+/gu, " "));
       continue;
     }
 
@@ -171,7 +171,7 @@ function extractText(parentNode: DefaultTreeAdapterMap["parentNode"]): string {
   return textParts.join("");
 }
 
-// Keep source and `<br>` newlines while normalizing other presentation whitespace.
+// Text-node whitespace is already collapsed; remaining newlines represent explicit breaks.
 function normalizeNarrationText(text: string): string {
   return text
     .replace(/\u00a0/gu, " ")

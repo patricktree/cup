@@ -9,7 +9,7 @@ import java.util.Set;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-/** Owns playback intent, passage selection, and bounded generation independently of the service. */
+/** Owns playback intent, segment selection, and bounded generation independently of the service. */
 final class NarrationPlaybackCoordinator implements NarrationAudioAdapter.Listener {
   interface StateListener {
     void publish(int currentUnitIndex, boolean playing, boolean buffering, String error);

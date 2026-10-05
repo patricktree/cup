@@ -173,7 +173,7 @@ export class ProgressivePlayer {
 
   onMediaError = () => {
     this.pause();
-    this.update({ error: "Audio could not be played. Retry this passage." });
+    this.update({ error: "Audio could not be played. Retry this segment." });
   };
 
   private async ensureSegment(unitIndex: number, retry = false): Promise<AudioSegment> {
@@ -238,7 +238,7 @@ export class ProgressivePlayer {
       if (!this.isCurrent(revision)) return;
       if (segment.status === "failed") throw new Error(segment.explanation);
       if (segment.status !== "ready")
-        throw new Error("Speech generation failed. Retry this passage.");
+        throw new Error("Speech generation failed. Retry this segment.");
       await this.services.authorize();
       if (!this.isCurrent(revision)) return;
       const audio = this.audio;
@@ -306,7 +306,7 @@ export class ProgressivePlayer {
           return segment;
         })
         .catch((error: unknown) => {
-          // Retain speculative failures so ticks do not retry them before explicit passage retry.
+          // Retain speculative failures so ticks do not retry them before explicit segment retry.
           this.segments.set(unitIndex, {
             sequence: unitIndex,
             status: "failed",

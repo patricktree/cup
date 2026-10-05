@@ -654,7 +654,7 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
     const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
     const audiobook = await loadReadyAudiobookFromEnvironment(context.env, conversionId);
     if (!owner || !audiobook?.narrationDocument.synchronizationUnits[sequence])
-      return jsonError(context.get("requestId"), "audiobook-not-found", "Passage not found.", 404);
+      return jsonError(context.get("requestId"), "audiobook-not-found", "Segment not found.", 404);
     return context.json(
       await getAudioSegmentStateFromEnvironment(
         context.env,
@@ -690,7 +690,7 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
     }
     const audiobook = await loadReadyAudiobookFromEnvironment(context.env, conversionId);
     if (!audiobook?.narrationDocument.synchronizationUnits[sequence])
-      return jsonError(context.get("requestId"), "audiobook-not-found", "Passage not found.", 404);
+      return jsonError(context.get("requestId"), "audiobook-not-found", "Segment not found.", 404);
     const origin = new URL(context.req.url).origin;
     const current = await getAudioSegmentStateFromEnvironment(
       context.env,
@@ -756,7 +756,7 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
         (unit) => unit.id === position.synchronizationUnitId,
       )
     )
-      return jsonError(context.get("requestId"), "invalid-input", "Passage not found.", 400);
+      return jsonError(context.get("requestId"), "invalid-input", "Segment not found.", 400);
     await auth.account.savePlaybackPosition(conversionId, position);
     return context.body(null, 204);
   },

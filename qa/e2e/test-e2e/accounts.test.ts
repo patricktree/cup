@@ -371,13 +371,14 @@ test("account positions restore once and use last-write-wins across players", as
   expect(save).toBe(204);
   await page.reload();
   await waitForAudiobook(page);
-  await expect(page.getByRole("combobox", { name: "Start at passage" })).toHaveValue("1");
+  await expect(page.locator(`[id="${unitId}"]`)).toHaveAttribute("aria-current", "true");
   await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
   const second = await page.context().newPage();
   await second.goto(url);
   await waitForAudiobook(second);
-  await expect(second.getByRole("combobox", { name: "Start at passage" })).toHaveValue("1");
-  await second.getByRole("combobox", { name: "Start at passage" }).selectOption("2");
+  await expect(second.locator(`[id="${unitId}"]`)).toHaveAttribute("aria-current", "true");
+  await second.getByRole("button", { name: "Play segment 3", exact: true }).click();
+  await second.getByRole("button", { name: "Pause", exact: true }).click();
   await expect
     .poll(async () => {
       const result = await page.request.get(origin + "/api/audiobooks/" + id, {
@@ -386,12 +387,14 @@ test("account positions restore once and use last-write-wins across players", as
       return (await result.json()).playbackPosition?.synchronizationUnitId;
     })
     .toBe(document.narrationDocument.synchronizationUnits[2]!.id);
-  await expect(page.getByRole("combobox", { name: "Start at passage" })).toHaveValue("1");
+  await expect(page.locator(`[id="${unitId}"]`)).toHaveAttribute("aria-current", "true");
   await page.reload();
   await waitForAudiobook(page);
-  await expect(page.getByRole("combobox", { name: "Start at passage" })).toHaveValue("2");
+  await expect(
+    page.locator(`[id="${document.narrationDocument.synchronizationUnits[2]!.id}"]`),
+  ).toHaveAttribute("aria-current", "true");
   await expect
     .poll(async () => (await (await fetch(origin + "/__qa/speech-calls")).json()).length)
-    .toBe(3);
+    .toBe(document.narrationDocument.synchronizationUnits.length);
   await second.close();
 });

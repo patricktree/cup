@@ -124,7 +124,7 @@ test.describe("in-flight reservations", () => {
     await expect
       .poll(async () => (await readSpeechCalls(workerEnvironment)).length)
       .toBe(unitCount);
-    await page.getByRole("combobox", { name: "Start at passage" }).selectOption("3");
+    await page.getByRole("button", { name: "Play segment 4", exact: true }).click();
     await expect
       .poll(async () => (await readSpeechCalls(workerEnvironment)).length)
       .toBe(unitCount);
@@ -133,7 +133,8 @@ test.describe("in-flight reservations", () => {
       .poll(() => page.locator("audio").getAttribute("src"))
       .toContain("/segments/3/audio.mp3");
     await page.getByRole("button", { name: "Pause", exact: true }).click();
-    await page.getByRole("combobox", { name: "Start at passage" }).selectOption("1");
+    await page.getByRole("button", { name: "Play segment 2", exact: true }).click();
+    await page.getByRole("button", { name: "Pause", exact: true }).click();
     expect(await readSpeechCalls(workerEnvironment)).toHaveLength(unitCount);
     await expect
       .poll(async () => {

@@ -86,7 +86,7 @@ export async function runAudioSegmentWorkflow({
           explanation:
             error instanceof Error
               ? error.message
-              : "Speech generation failed. Retry this passage.",
+              : "Speech generation failed. Retry this segment.",
         }),
         { httpMetadata: { contentType: "application/json" } },
       );

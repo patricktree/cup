@@ -213,10 +213,10 @@ test("returns no narration chunks when the source material has no visible text",
   expect(createNarrationChunks(html)).toEqual([]);
 });
 
-test("normalizes presentation whitespace while preserving source line breaks", () => {
+test("collapses presentation whitespace in HTML text", () => {
   const html = "<p> First\tsecond\fthird\r\nfourth\n\n fifth </p>";
 
-  expect(createNarrationChunks(html)).toEqual([{ text: "First second third\nfourth\nfifth" }]);
+  expect(createNarrationChunks(html)).toEqual([{ text: "First second third fourth fifth" }]);
 });
 
 test("preserves text surrounding nested block elements", () => {
@@ -257,4 +257,17 @@ test("preserves text surrounding nested block elements", () => {
       },
     ]
   `);
+});
+
+test("collapses HTML text-node whitespace without losing explicit breaks", () => {
+  const compactHtml = "<div>Before <em>inline text</em>.<br>After.</div>";
+  const formattedHtml = `<div>
+    Before
+    <em>inline
+    text</em>.<br>
+    After.
+  </div>`;
+
+  expect(createNarrationChunks(formattedHtml)).toEqual(createNarrationChunks(compactHtml));
+  expect(createNarrationChunks(formattedHtml)).toEqual([{ text: "Before inline text.\nAfter." }]);
 });

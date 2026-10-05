@@ -259,10 +259,7 @@ test("retries an audiobook loading failure", async ({
   await expect(
     page.getByRole("heading", { name: "A deterministic document about careful testing" }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Open original source" })).toHaveAttribute(
-    "href",
-    SOURCE_URL,
-  );
+  await expect(page.getByRole("link", { name: "Back to home" })).toHaveAttribute("href", "/app/");
 });
 
 function createGrant(): Record<string, unknown> {

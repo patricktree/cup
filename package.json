@@ -41,6 +41,7 @@
     "validate:evals": "pnpm --filter '@cup/narration-content-selection' eval",
     "validate:extended": "pnpm run declutter && pnpm run brand-assets:check && pnpm run zizmor && pnpm run test:e2e",
     "validate:fast": "pnpm run env:check && pnpm run format:check && pnpm run docs:check && turbo run turbo:build turbo:lint turbo:test",
+    "validate:update-snapshots": "pnpm run env:check && pnpm run format:check && pnpm run docs:check && turbo run turbo:build turbo:lint && turbo run turbo:test --filter='!@cup/web-app' && pnpm --filter '@cup/web-app' test:components:update && pnpm run declutter && pnpm run brand-assets:check && pnpm run zizmor && pnpm run test:e2e:update && pnpm run test:e2e:source-material",
     "zizmor": "uvx zizmor@1.29.0 --gh-token \"$(gh auth token)\" ."
   },
   "devDependencies": {

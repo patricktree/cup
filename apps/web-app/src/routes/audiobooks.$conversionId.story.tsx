@@ -7,6 +7,7 @@ import type { Audiobook, ErrorResponse } from "@cup/web-app-api.routes";
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
 import { queryClient } from "#src/data-fetching/query-client.js";
 import { createAudiobookQuery } from "#src/data-fetching/trial-link.js";
+import gatesNotesAudiobook from "#src/ui-gallery/gates-notes-audiobook.json" with { type: "json" };
 import type { Story } from "#src/ui-gallery/story.js";
 
 const CONVERSION_ID = "693af4c4-9fa8-430d-9dc5-c00e88fb38a7";
@@ -31,6 +32,38 @@ export const ReadyAudiobook = {
         url: `https://example.com/segments/0/audio.mp3`,
       }),
     ),
+  ],
+} satisfies Story;
+
+const GATES_NOTES_CONVERSION_ID = "7b1736db-31f7-46ba-b6b5-d965770b355b";
+// The local fixture uses createNarrationDocument on the Gates Notes E2E article's subtitle and body.
+const gatesNotesRouter = createAppRouter(
+  createMemoryHistory({ initialEntries: [`/app/audiobooks/${GATES_NOTES_CONVERSION_ID}`] }),
+);
+
+export const GatesNotesArticle = {
+  beforeMount: async () => {
+    await queryClient.fetchQuery({
+      ...createAudiobookQuery(GATES_NOTES_CONVERSION_ID),
+      gcTime: Infinity,
+    });
+    await gatesNotesRouter.load();
+  },
+  component: () => <GlobalProviders router={gatesNotesRouter} />,
+  handlers: [
+    http.get(`/api/audiobooks/${GATES_NOTES_CONVERSION_ID}`, () =>
+      HttpResponse.json({ ...gatesNotesAudiobook, status: "ready" } satisfies Audiobook),
+    ),
+    http.post(`/api/audiobooks/${GATES_NOTES_CONVERSION_ID}/segments/:sequence`, ({ params }) => {
+      const sequence = Number(params["sequence"]);
+
+      return HttpResponse.json({
+        sequence,
+        status: "ready",
+        durationMilliseconds: 5000,
+        url: `https://example.com/segments/${sequence}/audio.mp3`,
+      });
+    }),
   ],
 } satisfies Story;
 

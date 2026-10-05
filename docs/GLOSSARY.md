@@ -180,6 +180,12 @@ The smallest independently navigable portion of a narration document associated 
 
 _Avoid_: sentence, paragraph, narration chunk
 
+## segment
+
+The user-facing name for a synchronization unit: an independently selectable part of an audiobook's narration document and its corresponding audio. It can include headings or multiple paragraphs, and its text can be available before the corresponding audio segment is generated.
+
+_Avoid_: passage, paragraph, section
+
 ## synchronization cue
 
 A relationship between one synchronization unit and its corresponding interval in narration audio. Current playback uses a separate audio segment per unit and a local offset within that segment.

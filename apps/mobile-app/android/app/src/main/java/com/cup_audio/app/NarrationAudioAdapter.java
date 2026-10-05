@@ -111,7 +111,7 @@ final class NarrationAudioAdapter {
 
           @Override
           public void onPlayerError(PlaybackException failure) {
-            listener.onFailure("Audio could not be played. Retry this passage.");
+            listener.onFailure("Audio could not be played. Retry this segment.");
           }
         });
   }

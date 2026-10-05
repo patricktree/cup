@@ -46,11 +46,11 @@ export function SpeechSynthesisLookahead() {
   const snapshot = React.useSyncExternalStore(player.subscribe, player.getSnapshot);
   const complete = (unitIndex: number, failed = false) => {
     const resolve = pending.get(unitIndex);
-    if (!resolve) throw new Error("Passage has no pending request.");
+    if (!resolve) throw new Error("Segment has no pending request.");
     pending.delete(unitIndex);
     resolve(
       failed
-        ? { sequence: unitIndex, status: "failed", explanation: "Passage failed." }
+        ? { sequence: unitIndex, status: "failed", explanation: "Segment failed." }
         : {
             sequence: unitIndex,
             status: "ready",

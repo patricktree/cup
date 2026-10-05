@@ -378,7 +378,7 @@ function sanitizeChildren(
 
   for (const childNode of parentNode.childNodes) {
     if ("value" in childNode) {
-      safeNodes.push({ type: "text", value: childNode.value });
+      safeNodes.push({ type: "text", value: childNode.value.replace(/[\t\n\f\r ]+/gu, " ") });
       continue;
     }
 

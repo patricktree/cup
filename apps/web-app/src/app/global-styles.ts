@@ -62,14 +62,6 @@ export const cssReset = css`
     p {
       text-wrap: pretty;
     }
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6 {
-      text-wrap: balance;
-    }
 
     /*
       10. Create a root stacking context
@@ -113,6 +105,9 @@ export const cssBase = css`
       --font-size-sm: 14px;
       --font-size-md: 16px;
       --font-size-lg: 18px;
+      --font-size-xl: 22px;
+      --font-size-xxl: 26px;
+      --font-size-xxxl: 30px;
       --font-size-display: 36px;
       --font-weight-inter-figma-medium: 500;
       --line-height-display: 55px;
@@ -121,6 +116,7 @@ export const cssBase = css`
       --app-padding-block: var(--spacing-base);
       --app-padding-inline: calc(2 * var(--spacing-base));
       --app-max-width: 800px;
+      --player-controls-height: 150px;
 
       --border-radius-sm: 4px;
       --border-radius-lg: 24px;

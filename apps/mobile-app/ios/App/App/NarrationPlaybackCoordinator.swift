@@ -1,6 +1,6 @@
 import Foundation
 
-/// Owns passage selection, playback intent, and bounded generation independently of WebKit.
+/// Owns segment selection, playback intent, and bounded generation independently of WebKit.
 final class NarrationPlaybackCoordinator {
   var playerId = ""
   var publish: (([String: Any]) -> Void)?
@@ -215,7 +215,7 @@ final class NarrationPlaybackCoordinator {
           self.segments[unitIndex] = segment
         } else {
           self.failures[unitIndex] =
-            segment["explanation"] as? String ?? "Speech generation failed. Retry this passage."
+            segment["explanation"] as? String ?? "Speech generation failed. Retry this segment."
         }
       case .failure(let failure): self.failures[unitIndex] = failure.localizedDescription
       }

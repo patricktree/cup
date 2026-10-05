@@ -101,7 +101,7 @@ test("a failed workflow falls back to its platform error, then the retry explana
   expect(await getAudioSegmentState(input, services)).toEqual({
     sequence: 2,
     status: "failed",
-    explanation: "Speech generation failed. Retry this passage.",
+    explanation: "Speech generation failed. Retry this segment.",
   });
 });
 

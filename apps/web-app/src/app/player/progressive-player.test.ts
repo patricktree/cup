@@ -23,7 +23,7 @@ test("requests speech synthesis lookahead immediately in parallel, deduplicates 
   await expect(requested).toHaveText("0,1,2,4,5,6");
 });
 
-test("a speculative failure surfaces at its passage and needs explicit retry", async ({
+test("a speculative failure surfaces at its segment and needs explicit retry", async ({
   mount,
 }) => {
   const component = await mount("app/player/progressive-player/SpeechSynthesisLookahead");
@@ -37,7 +37,7 @@ test("a speculative failure surfaces at its passage and needs explicit retry", a
   await expect(requested).toHaveText("0,1,2");
   await component.getByRole("button", { name: "Seek 1", exact: true }).click();
   await expect(component.getByRole("status", { name: "Playing" })).toHaveText("false");
-  await expect(component.getByRole("status", { name: "Error" })).toHaveText("Passage failed.");
+  await expect(component.getByRole("status", { name: "Error" })).toHaveText("Segment failed.");
   await component.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(requested).toHaveText("0,1,2,1,3");
 });

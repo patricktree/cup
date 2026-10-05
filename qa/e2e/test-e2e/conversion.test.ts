@@ -117,13 +117,13 @@ test.describe("unit failure and recovery", () => {
     await openNewTrial(page, workerEnvironment);
     await startConversion(page);
     await waitForAudiobook(page);
-    await expect(page.getByRole("button", { name: "Retry passage" })).toBeVisible({
+    await expect(page.getByRole("button", { name: "Retry segment" })).toBeVisible({
       timeout: 90_000,
     });
     await waitForAudiobook(page);
     await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
     await workerEnvironment.restart("success");
-    await page.getByRole("button", { name: "Retry passage" }).click();
+    await page.getByRole("button", { name: "Retry segment" }).click();
     await expect
       .poll(
         () =>
