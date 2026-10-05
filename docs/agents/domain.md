@@ -1,8 +1,10 @@
 # Domain and architecture maintenance
 
+Cup has one domain context. Its canonical glossary lives at `docs/GLOSSARY.md`, and its architectural decisions live in `docs/adr/`. Engineering skills should use these paths when reading or updating domain documentation.
+
 ## Before design or implementation
 
-Read [the domain context](../CONTEXT.md), then consult the [documentation index](../README.md) for relevant architecture pages and ADRs. Surface missing required documents. Use canonical terms in issues, specifications, tests, and implementation; resolve a missing concept's meaning and necessity before adding it to the domain context, the sole vocabulary authority.
+Read [the glossary](../GLOSSARY.md), then consult the [documentation index](../README.md) for relevant architecture pages and ADRs. Surface missing required documents. Use canonical terms in issues, specifications, tests, and implementation; resolve a missing concept's meaning and necessity before adding it to the glossary, the sole vocabulary authority.
 
 ## Find supporting documentation
 

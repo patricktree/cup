@@ -1,4 +1,4 @@
-# Cup domain context
+# Cup glossary
 
 This is the authoritative vocabulary for Cup design, documentation, and implementation. See the [system overview](architecture/README.md) for component relationships and flows. A defined concept does not by itself establish that a feature is implemented.
 

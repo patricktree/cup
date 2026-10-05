@@ -2,7 +2,7 @@
 
 ## Documentation
 
-Before working on the project, read [the domain context](docs/CONTEXT.md) and [documentation maintenance instructions](docs/agents/domain.md), then consult relevant architecture pages and ADRs from [the documentation index](docs/README.md). Update affected documentation and diagrams in the same change as the implementation.
+Before working on the project, read [the glossary](docs/GLOSSARY.md) and [documentation maintenance instructions](docs/agents/domain.md), then consult relevant architecture pages and ADRs from [the documentation index](docs/README.md). Update affected documentation and diagrams in the same change as the implementation.
 
 Before changing, renaming, or removing a domain concept or cross-component behavior, run `pnpm docs:search query "question" --json` and review relevant results, even when the exact phrase or affected page is already known. Follow the [documentation search procedure](docs/agents/domain.md#find-supporting-documentation) to find related descriptions and verify removals.
 

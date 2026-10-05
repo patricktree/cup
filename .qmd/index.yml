@@ -7,7 +7,7 @@ collections:
       - "adr/**"
       - "research/**"
     context:
-      /: Cup domain context, documentation navigation, and maintenance guidance for this checkout.
+      /: Cup glossary, documentation navigation, and maintenance guidance for this checkout.
       /architecture: Current Cup architecture and cross-component flows. Describes this checkout, not verified production deployment.
   cup-decisions:
     path: ./docs/adr

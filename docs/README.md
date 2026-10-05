@@ -1,12 +1,12 @@
 # Cup documentation
 
-Start with the [domain context](CONTEXT.md) for Cup's vocabulary and the [system overview](architecture/README.md) for the components and their relationships. These pages describe the current checkout; they do not establish what is deployed in production.
+Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system overview](architecture/README.md) for the components and their relationships. These pages describe the current checkout; they do not establish what is deployed in production.
 
 ## Understand the system
 
 | Page                                                               | What it explains                                                                                         |
 | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| [Domain context](CONTEXT.md)                                       | Canonical concepts, terminology, and rejected synonyms                                                   |
+| [Glossary](GLOSSARY.md)                                            | Canonical concepts, terminology, and rejected synonyms                                                   |
 | [System overview](architecture/README.md)                          | Runtime components, API definitions, storage ownership, external services, and development boundaries    |
 | [Authentication and authorization](architecture/authentication.md) | Google and Supabase sign-in, Cup account provisioning, media access, trials, and operator authentication |
 | [Durable Object schemas](architecture/durable-object-storage.md)   | SQLite tables, columns, keys, and relationships for all three Durable Object stores                      |
@@ -42,7 +42,7 @@ Use [local documentation search](../tooling/docs-search/README.md) to discover r
 
 For Cloudflare runtime, configuration, and design decisions, follow the [Cloudflare documentation guidance](agents/cloudflare.md), including product references and the AI Gateway binding requirement.
 
-Before design or implementation, read the domain context and relevant architecture pages and ADRs. Update affected explanations, diagrams, and source links in the same change as the implementation. Follow the [documentation maintenance instructions](agents/domain.md).
+Before design or implementation, read the glossary and relevant architecture pages and ADRs. Update affected explanations, diagrams, and source links in the same change as the implementation. Follow the [documentation maintenance instructions](agents/domain.md).
 
 Keep implementation detail in code: link to route contracts, schemas, and configuration instead of copying their contents. Document responsibilities, relationships, guarantees, and behavior that requires reading across components. Extend existing pages before adding another explanation of the same subject.
 

@@ -18,7 +18,7 @@ This product
 
 ## Documentation
 
-Start with the [Cup documentation](docs/README.md) for the domain context, system diagrams, APIs and storage, authentication, conversion, and account deletion. It also links to operational guides, decisions, and research.
+Start with the [Cup documentation](docs/README.md) for the glossary, system diagrams, APIs and storage, authentication, conversion, and account deletion. It also links to operational guides, decisions, and research.
 
 ## Development
 
