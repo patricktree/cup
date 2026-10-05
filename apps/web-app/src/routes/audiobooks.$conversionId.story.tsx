@@ -5,6 +5,8 @@ import React from "react";
 import type { Audiobook, ErrorResponse } from "@cup/web-app-api.routes";
 
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
+import { queryClient } from "#src/data-fetching/query-client.js";
+import { createAudiobookQuery } from "#src/data-fetching/trial-link.js";
 import type { Story } from "#src/ui-gallery/story.js";
 
 const CONVERSION_ID = "693af4c4-9fa8-430d-9dc5-c00e88fb38a7";
@@ -13,6 +15,11 @@ const memoryHistory = createMemoryHistory({ initialEntries: [`/app/audiobooks/${
 const router = createAppRouter(memoryHistory);
 
 export const ReadyAudiobook = {
+  beforeMount: async () => {
+    // Keep preloaded data until the story mounts; the app normally collects unused queries immediately.
+    await queryClient.fetchQuery({ ...createAudiobookQuery(CONVERSION_ID), gcTime: Infinity });
+    await router.load();
+  },
   component: () => <GlobalProviders router={router} />,
   handlers: [
     http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(createAudiobook())),

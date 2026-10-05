@@ -6,4 +6,6 @@ export type StoryComponent = (props: Record<string, unknown>) => React.ReactNode
 export type Story = {
   component: StoryComponent;
   handlers?: RequestHandler[];
+  beforeMount?: () => Promise<void>;
+  play?: (context: { canvasElement: HTMLElement }) => Promise<void>;
 };

@@ -3,10 +3,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 
 import { DSButton } from "#src/app/design-system/button.js";
+import { useAccountSession, useAccountAuthState } from "#src/auth/hooks.js";
 import { createAccountHistoryQuery } from "#src/data-fetching/account-history.js";
-import { useAccountSession, useAccountAuthState } from "#src/data-fetching/account.js";
 
-export const Route = createFileRoute("/history")({ component: HistoryPage });
+export const Route = createFileRoute("/history")({
+  component: HistoryPage,
+});
 
 function HistoryPage(): React.ReactNode {
   const session = useAccountSession();

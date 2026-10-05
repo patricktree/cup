@@ -17,16 +17,16 @@ export function SpeechSynthesisLookahead() {
       originalUrl: "https://example.com/article",
       narrationDocument: {
         html: "<p>Speech synthesis lookahead</p>",
-        synchronizationUnits: Array.from({ length: 8 }, (_, sequence) => ({
-          id: `unit-${sequence}`,
+        synchronizationUnits: Array.from({ length: 8 }, (_, unitIndex) => ({
+          id: `unit-${unitIndex}`,
           narrationText: "a".repeat(250),
         })),
       },
     };
     return new ProgressivePlayer(audiobook, null, {
-      request: (sequence) => {
-        setRequested((previous) => [...previous, sequence]);
-        return new Promise<AudioSegment>((resolve) => pending.set(sequence, resolve));
+      request: (unitIndex) => {
+        setRequested((previous) => [...previous, unitIndex]);
+        return new Promise<AudioSegment>((resolve) => pending.set(unitIndex, resolve));
       },
       poll: () => {
         throw new Error("Requests remain pending until completed by the test.");
@@ -44,18 +44,18 @@ export function SpeechSynthesisLookahead() {
     return () => player.attach(null);
   }, [player]);
   const snapshot = React.useSyncExternalStore(player.subscribe, player.getSnapshot);
-  const complete = (sequence: number, failed = false) => {
-    const resolve = pending.get(sequence);
+  const complete = (unitIndex: number, failed = false) => {
+    const resolve = pending.get(unitIndex);
     if (!resolve) throw new Error("Passage has no pending request.");
-    pending.delete(sequence);
+    pending.delete(unitIndex);
     resolve(
       failed
-        ? { sequence, status: "failed", explanation: "Passage failed." }
+        ? { sequence: unitIndex, status: "failed", explanation: "Passage failed." }
         : {
-            sequence,
+            sequence: unitIndex,
             status: "ready",
             durationMilliseconds: 20_000,
-            url: `https://example.com/audio/${sequence}.mp3`,
+            url: `https://example.com/audio/${unitIndex}.mp3`,
           },
     );
   };
@@ -68,11 +68,11 @@ export function SpeechSynthesisLookahead() {
       <button onClick={player.pause}>Pause</button>
       <button onClick={player.retry}>Retry</button>
       <button onClick={player.onTimeUpdate}>Tick</button>
-      {Array.from({ length: 8 }, (_, sequence) => (
-        <section key={sequence}>
-          <button onClick={() => complete(sequence)}>Complete {sequence}</button>
-          <button onClick={() => complete(sequence, true)}>Fail {sequence}</button>
-          <button onClick={() => player.seek(sequence)}>Seek {sequence}</button>
+      {Array.from({ length: 8 }, (_, unitIndex) => (
+        <section key={unitIndex}>
+          <button onClick={() => complete(unitIndex)}>Complete {unitIndex}</button>
+          <button onClick={() => complete(unitIndex, true)}>Fail {unitIndex}</button>
+          <button onClick={() => player.seek(unitIndex)}>Seek {unitIndex}</button>
         </section>
       ))}
     </main>

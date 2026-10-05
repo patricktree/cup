@@ -14,8 +14,8 @@ final class NarrationPlaybackCoordinator {
   private var failures: [Int: String] = [:]
   private var canGenerate = false
   private var isSignedIn = false
-  private var sequence = 0
-  private var sourceSequence = -1
+  private var currentUnitIndex = 0
+  private var sourceUnitIndex = -1
   private var offset = 0.0
   private var isPlaying = false
   private var isBuffering = false
@@ -29,12 +29,12 @@ final class NarrationPlaybackCoordinator {
     self.positions = positions
     audio.onTick = { [weak self] in self?.tick() }
     audio.onEnded = { [weak self] in
-      if let self, self.isPlaying { self.seek(self.sequence + 1) }
+      if let self, self.isPlaying { self.seek(self.currentUnitIndex + 1) }
     }
     audio.onPause = { [weak self] in self?.pause() }
     audio.onPlay = { [weak self] in self?.play() }
-    audio.onNext = { [weak self] in if let self { self.seek(self.sequence + 1) } }
-    audio.onPrevious = { [weak self] in if let self { self.seek(self.sequence - 1) } }
+    audio.onNext = { [weak self] in if let self { self.seek(self.currentUnitIndex + 1) } }
+    audio.onPrevious = { [weak self] in if let self { self.seek(self.currentUnitIndex - 1) } }
     positions.onFailure = { [weak self] message in
       self?.error = message
       self?.emit()
@@ -62,11 +62,11 @@ final class NarrationPlaybackCoordinator {
     isSignedIn = config["isSignedIn"] as? Bool ?? false
     api.configure(token: config["token"] as? String, cookies: cookies)
     let position = positions.restore(config, conversionId: id, isSignedIn: isSignedIn)
-    sequence =
+    currentUnitIndex =
       units.firstIndex { ($0["id"] as? String) == (position?["synchronizationUnitId"] as? String) }
       ?? 0
     offset = position?["offsetMilliseconds"] as? Double ?? 0
-    sourceSequence = -1
+    sourceUnitIndex = -1
     for segment in audiobook["segments"] as? [[String: Any]] ?? [] {
       if segment["status"] as? String == "ready", let index = segment["sequence"] as? Int {
         segments[index] = segment
@@ -79,7 +79,7 @@ final class NarrationPlaybackCoordinator {
 
   func snapshot() -> [String: Any] {
     [
-      "sequence": sequence, "isPlaying": isPlaying, "isBuffering": isBuffering,
+      "currentUnitIndex": currentUnitIndex, "isPlaying": isPlaying, "isBuffering": isBuffering,
       "error": error as Any? ?? NSNull(),
     ]
   }
@@ -96,9 +96,9 @@ final class NarrationPlaybackCoordinator {
       return
     }
     if retry {
-      sourceSequence = -1
-      failures.removeValue(forKey: sequence)
-      segments.removeValue(forKey: sequence)
+      sourceUnitIndex = -1
+      failures.removeValue(forKey: currentUnitIndex)
+      segments.removeValue(forKey: currentUnitIndex)
     }
     isPlaying = true
     isBuffering = true
@@ -108,10 +108,10 @@ final class NarrationPlaybackCoordinator {
     advance(retry: retry)
   }
   func pause() {
-    if sourceSequence == sequence && !isBuffering, let position = audio.positionMilliseconds {
+    if sourceUnitIndex == currentUnitIndex && !isBuffering, let position = audio.positionMilliseconds {
       offset = position
     }
-    if isBuffering { sourceSequence = -1 }
+    if isBuffering { sourceUnitIndex = -1 }
     isPlaying = false
     isBuffering = false
     audio.pause()
@@ -119,18 +119,18 @@ final class NarrationPlaybackCoordinator {
     audio.endBufferingTask()
     emit()
   }
-  func seek(_ target: Int) {
-    guard target >= 0 else { return }
-    if target >= units.count {
-      sourceSequence = -1
-      sequence = 0
+  func seek(_ unitIndex: Int) {
+    guard unitIndex >= 0 else { return }
+    if unitIndex >= units.count {
+      sourceUnitIndex = -1
+      currentUnitIndex = 0
       offset = 0
       pause()
       return
     }
     audio.pause()
-    sourceSequence = -1
-    sequence = target
+    sourceUnitIndex = -1
+    currentUnitIndex = unitIndex
     error = nil
     offset = 0
     isBuffering = isPlaying
@@ -141,19 +141,19 @@ final class NarrationPlaybackCoordinator {
   private func advance(retry: Bool = false) {
     guard isPlaying else { return }
     audio.beginBufferingTask()
-    guard let segment = segments[sequence], let urlString = segment["url"] as? String,
+    guard let segment = segments[currentUnitIndex], let urlString = segment["url"] as? String,
       let url = URL(string: urlString)
     else {
-      if let message = failures[sequence], !retry {
+      if let message = failures[currentUnitIndex], !retry {
         stop(message)
         return
       }
-      request(sequence, retry: retry)
+      request(currentUnitIndex, retry: retry)
       requestAudioAhead()
       return
     }
-    if sourceSequence != sequence {
-      sourceSequence = sequence
+    if sourceUnitIndex != currentUnitIndex {
+      sourceUnitIndex = currentUnitIndex
       audio.load(url, headers: api.headers, offset: offset) { [weak self] message in
         guard let self else { return }
         if let message {
@@ -176,19 +176,19 @@ final class NarrationPlaybackCoordinator {
   }
   private func requestActiveSegment() {
     guard canGenerate else { return }
-    if let message = failures[sequence] {
+    if let message = failures[currentUnitIndex] {
       error = message
       emit()
       return
     }
-    guard segments[sequence] == nil else { return }
-    request(sequence)
+    guard segments[currentUnitIndex] == nil else { return }
+    request(currentUnitIndex)
   }
 
   private func requestAudioAhead() {
     guard isPlaying && canGenerate else { return }
     var duration = -offset
-    for index in sequence..<units.count {
+    for index in currentUnitIndex..<units.count {
       if duration >= 60000 { return }
       let segment = segments[index]
       duration +=
@@ -198,11 +198,11 @@ final class NarrationPlaybackCoordinator {
       if segment == nil { request(index) }
     }
   }
-  private func request(_ target: Int, retry: Bool = false) {
+  private func request(_ unitIndex: Int, retry: Bool = false) {
     let id = conversionId
-    let requestId = "\(id):\(target)"
+    let requestId = "\(id):\(unitIndex)"
     guard requests.insert(requestId).inserted else { return }
-    api.requestSegment(id, sequence: target, retry: retry) { [weak self] result in
+    api.requestSegment(id, sequence: unitIndex, retry: retry) { [weak self] result in
       guard let self else { return }
       self.requests.remove(requestId)
       guard id == self.conversionId else {
@@ -212,17 +212,17 @@ final class NarrationPlaybackCoordinator {
       switch result {
       case .success(let segment):
         if segment["status"] as? String == "ready" {
-          self.segments[target] = segment
+          self.segments[unitIndex] = segment
         } else {
-          self.failures[target] =
+          self.failures[unitIndex] =
             segment["explanation"] as? String ?? "Speech generation failed. Retry this passage."
         }
-      case .failure(let failure): self.failures[target] = failure.localizedDescription
+      case .failure(let failure): self.failures[unitIndex] = failure.localizedDescription
       }
-      if self.isPlaying && target == self.sequence {
+      if self.isPlaying && unitIndex == self.currentUnitIndex {
         self.advance()
       } else {
-        if target == self.sequence, let message = self.failures[target] {
+        if unitIndex == self.currentUnitIndex, let message = self.failures[unitIndex] {
           self.error = message
           self.emit()
         }
@@ -233,7 +233,7 @@ final class NarrationPlaybackCoordinator {
 
   private func tick() {
     guard isPlaying else { return }
-    if sourceSequence == sequence, let position = audio.positionMilliseconds { offset = position }
+    if sourceUnitIndex == currentUnitIndex, let position = audio.positionMilliseconds { offset = position }
     if Date().timeIntervalSince(lastSaved) >= 5 { save() }
     requestAudioAhead()
     emit()
@@ -243,7 +243,7 @@ final class NarrationPlaybackCoordinator {
     guard !units.isEmpty else { return }
     lastSaved = Date()
     positions.save(
-      conversionId: conversionId, unitId: units[sequence]["id"] as! String,
+      conversionId: conversionId, unitId: units[currentUnitIndex]["id"] as! String,
       offset: offset, isSignedIn: isSignedIn)
   }
   private func stop(_ message: String) {

@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 
 import { AppStyles } from "#src/app/app-styles.js";
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
-import { sessionSnapshot } from "#src/data-fetching/account-session.js";
+import { sessionSnapshot } from "#src/auth/account-session.js";
 import { initializeAndroidAppLinks } from "#src/platform/app-links.android.js";
 import { initializeAndroidBackButton } from "#src/platform/back-button.android.js";
 import { initializeIosIncomingUrls } from "#src/platform/incoming-urls.ios.js";

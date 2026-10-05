@@ -5,17 +5,17 @@ import { parseOkResponse } from "@cup/web-app-api.client";
 import { deletionChallengeSchema } from "@cup/web-app-api.routes";
 
 import {
-  readPendingAccountChallenge,
-  storeAccountChallenge,
-  clearAccountChallenge,
-} from "#src/data-fetching/account-confirmation-storage.js";
-import {
   getAuthenticatedRpcClient,
   getFreshAccountSession,
   sessionSnapshot,
   signInGoogle,
   signOut,
-} from "#src/data-fetching/account-session.js";
+} from "#src/auth/account-session.js";
+import {
+  readPendingAccountChallenge,
+  storeAccountChallenge,
+  clearAccountChallenge,
+} from "#src/data-fetching/account-confirmation-storage.js";
 import { invalidateAccountQueries } from "#src/data-fetching/account.js";
 
 export function useAccountConfirmation(subject: string) {

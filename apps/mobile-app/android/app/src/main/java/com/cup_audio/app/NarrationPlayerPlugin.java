@@ -33,13 +33,14 @@ public class NarrationPlayerPlugin extends Plugin {
                 return;
               }
               JSObject state = new JSObject();
-              state.put("sequence", 0);
+              state.put("currentUnitIndex", 0);
               state.put("isPlaying", false);
               state.put("isBuffering", false);
               state.put("error", org.json.JSONObject.NULL);
               try {
                 org.json.JSONObject config = new org.json.JSONObject(configuration);
-                state.put("sequence", NarrationPositionStore.initialSequence(config, getContext()));
+                state.put(
+                    "currentUnitIndex", NarrationPositionStore.initialUnitIndex(config, getContext()));
               } catch (Exception error) {
                 call.reject(error.getMessage());
                 return;
@@ -83,12 +84,12 @@ public class NarrationPlayerPlugin extends Plugin {
                 intent.putExtra("playerId", call.getString("playerId"));
                 intent.putExtra("action", action);
                 ContextCompat.startForegroundService(getContext(), intent);
-              } else if (service != null) service.command(action, call.getInt("sequence", 0));
+              } else if (service != null) service.command(action, call.getInt("unitIndex", 0));
               else if (action.equals("seek") && configuration != null) {
                 Intent intent = new Intent(getContext(), NarrationPlaybackService.class);
                 intent.putExtra("playerId", call.getString("playerId"));
                 intent.putExtra("action", "seek");
-                intent.putExtra("sequence", call.getInt("sequence", 0));
+                intent.putExtra("unitIndex", call.getInt("unitIndex", 0));
                 getContext().startService(intent);
               }
               call.resolve();

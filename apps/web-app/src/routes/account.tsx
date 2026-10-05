@@ -5,14 +5,13 @@ import { Temporal } from "temporal-polyfill";
 
 import { AccountQueryBoundary } from "#src/app/components/account-query-boundary.js";
 import { DSButton } from "#src/app/design-system/button.js";
+import { useAccountSession, useAccountAuthState } from "#src/auth/hooks.js";
 import { useAccountConfirmation } from "#src/data-fetching/account-confirmation.js";
-import {
-  accountQuery,
-  useAccountSession,
-  useAccountAuthState,
-} from "#src/data-fetching/account.js";
+import { accountQuery } from "#src/data-fetching/account.js";
 
-export const Route = createFileRoute("/account")({ component: AccountPage });
+export const Route = createFileRoute("/account")({
+  component: AccountPage,
+});
 function AccountPage(): React.ReactNode {
   const session = useAccountSession();
   const authState = useAccountAuthState();

@@ -12,7 +12,7 @@ import {
 } from "@cup/web-app-api.routes";
 
 import { createAppApiClient } from "#src/api-client.js";
-import { getResourceAccountSession } from "#src/data-fetching/account-session.js";
+import { getResourceAccountSession } from "#src/auth/account-session.js";
 
 const POLL_INTERVAL_MS = 2_000;
 const rpcClient = createAppApiClient();
@@ -28,7 +28,7 @@ export function createGrantQuery(grantId: string) {
 
 export function useStartTrialConversionMutation(
   grantId: string,
-  onStarted: (conversionId: string) => Promise<void>,
+  { onStarted }: { onStarted: (conversionId: string) => Promise<void> },
 ) {
   const pending = React.useRef<{
     grantId: string;

@@ -3,7 +3,7 @@ import { infiniteQueryOptions } from "@tanstack/react-query";
 import { parseOkResponse } from "@cup/web-app-api.client";
 import { accountHistorySchema } from "@cup/web-app-api.routes";
 
-import { getAuthenticatedRpcClient } from "#src/data-fetching/account-session.js";
+import { getAuthenticatedRpcClient } from "#src/auth/account-session.js";
 import { queryClient } from "#src/data-fetching/query-client.js";
 
 export function createAccountHistoryQuery(subject?: string) {

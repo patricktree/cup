@@ -12,7 +12,7 @@ import org.json.JSONObject;
 /** Owns playback intent, passage selection, and bounded generation independently of the service. */
 final class NarrationPlaybackCoordinator implements NarrationAudioAdapter.Listener {
   interface StateListener {
-    void publish(int sequence, boolean playing, boolean buffering, String error);
+    void publish(int currentUnitIndex, boolean playing, boolean buffering, String error);
   }
 
   private final Context context;
@@ -27,7 +27,7 @@ final class NarrationPlaybackCoordinator implements NarrationAudioAdapter.Listen
   private JSONObject config;
   private JSONArray units;
   private String conversionId;
-  private int sequence, sourceSequence = -1;
+  private int currentUnitIndex, sourceUnitIndex = -1;
   private long offset;
   private boolean active, buffering, canGenerate;
   private String error;
@@ -70,7 +70,7 @@ final class NarrationPlaybackCoordinator implements NarrationAudioAdapter.Listen
             .getJSONObject("audiobook")
             .getJSONObject("narrationDocument")
             .getJSONArray("synchronizationUnits");
-    sequence = NarrationPositionStore.initialSequence(config, context);
+    currentUnitIndex = NarrationPositionStore.initialUnitIndex(config, context);
     JSONObject position = NarrationPositionStore.initialPosition(config, context);
     offset = position == null ? 0 : position.getLong("offsetMilliseconds");
     api.configure(config);
@@ -78,7 +78,7 @@ final class NarrationPlaybackCoordinator implements NarrationAudioAdapter.Listen
     audio.reset();
     segments.clear();
     failures.clear();
-    sourceSequence = -1;
+    sourceUnitIndex = -1;
     JSONArray known = config.getJSONObject("audiobook").getJSONArray("segments");
     for (int i = 0; i < known.length(); i++) {
       JSONObject segment = known.getJSONObject(i);
@@ -89,18 +89,18 @@ final class NarrationPlaybackCoordinator implements NarrationAudioAdapter.Listen
     requestActiveSegment();
   }
 
-  void command(String action, int target) {
+  void command(String action, int unitIndex) {
     if (action.equals("pause")) pauseNarration();
-    else if (action.equals("seek")) seek(target);
+    else if (action.equals("seek")) seek(unitIndex);
     else playNarration(action.equals("retry"));
   }
 
   private void playNarration(boolean retry) {
     if (config == null) return;
     if (retry) {
-      sourceSequence = -1;
-      failures.remove(sequence);
-      segments.remove(sequence);
+      sourceUnitIndex = -1;
+      failures.remove(currentUnitIndex);
+      segments.remove(currentUnitIndex);
     }
     audio.beginBuffering();
     active = true;
@@ -115,29 +115,29 @@ final class NarrationPlaybackCoordinator implements NarrationAudioAdapter.Listen
     active = false;
     buffering = false;
     if (audio != null) {
-      if (sourceSequence == sequence) offset = audio.positionMilliseconds();
+      if (sourceUnitIndex == currentUnitIndex) offset = audio.positionMilliseconds();
       audio.pause();
     }
     save();
     publish();
   }
 
-  private void seek(int target) {
-    if (target >= units.length()) {
-      sequence = 0;
+  private void seek(int unitIndex) {
+    if (unitIndex >= units.length()) {
+      currentUnitIndex = 0;
       offset = 0;
-      sourceSequence = -1;
+      sourceUnitIndex = -1;
       pauseNarration();
       return;
     }
-    if (target < 0) return;
+    if (unitIndex < 0) return;
     if (active) audio.beginBuffering();
     buffering = active;
     audio.pause();
-    sequence = target;
+    currentUnitIndex = unitIndex;
     error = null;
     offset = 0;
-    sourceSequence = -1;
+    sourceUnitIndex = -1;
     buffering = active;
     save();
     publish();
@@ -147,23 +147,23 @@ final class NarrationPlaybackCoordinator implements NarrationAudioAdapter.Listen
 
   private void advance(boolean retry) {
     if (!active) return;
-    JSONObject segment = segments.get(sequence);
+    JSONObject segment = segments.get(currentUnitIndex);
     if (segment == null) {
-      if (failures.containsKey(sequence) && !retry) {
-        fail(failures.get(sequence));
+      if (failures.containsKey(currentUnitIndex) && !retry) {
+        fail(failures.get(currentUnitIndex));
         return;
       }
-      request(sequence, retry);
+      request(currentUnitIndex, retry);
       requestAudioAhead();
       return;
     }
     try {
-      if (sourceSequence != sequence) {
-        sourceSequence = sequence;
+      if (sourceUnitIndex != currentUnitIndex) {
+        sourceUnitIndex = currentUnitIndex;
         offset = Math.min(offset, Math.max(0, segment.getLong("durationMilliseconds") - 10));
         audio.load(
             segment,
-            units.getJSONObject(sequence).getString("id"),
+            units.getJSONObject(currentUnitIndex).getString("id"),
             config.getJSONObject("audiobook").getString("title"),
             offset);
       } else audio.resume();
@@ -177,19 +177,19 @@ final class NarrationPlaybackCoordinator implements NarrationAudioAdapter.Listen
 
   private void requestActiveSegment() {
     if (closed || !canGenerate) return;
-    if (failures.containsKey(sequence)) {
-      error = failures.get(sequence);
+    if (failures.containsKey(currentUnitIndex)) {
+      error = failures.get(currentUnitIndex);
       publish();
       return;
     }
-    if (!segments.containsKey(sequence)) request(sequence, false);
+    if (!segments.containsKey(currentUnitIndex)) request(currentUnitIndex, false);
   }
 
   private void requestAudioAhead() {
     if (!active || !canGenerate) return;
     double duration = -offset;
     try {
-      for (int next = sequence; next < units.length() && duration < 60000; next++) {
+      for (int next = currentUnitIndex; next < units.length() && duration < 60000; next++) {
         JSONObject segment = segments.get(next);
         duration +=
             segment == null
@@ -203,13 +203,13 @@ final class NarrationPlaybackCoordinator implements NarrationAudioAdapter.Listen
     }
   }
 
-  private void request(int target, boolean retry) {
+  private void request(int unitIndex, boolean retry) {
     String id = conversionId;
-    String requestId = id + ":" + target;
+    String requestId = id + ":" + unitIndex;
     if (!requests.add(requestId)) return;
     api.requestSegment(
         id,
-        target,
+        unitIndex,
         retry,
         (completed, failure) -> {
           requests.remove(requestId);
@@ -218,13 +218,13 @@ final class NarrationPlaybackCoordinator implements NarrationAudioAdapter.Listen
             if (active) advance(false);
             return;
           }
-          if (failure != null) failures.put(target, failure);
-          else segments.put(target, completed);
-          if (active && target == sequence) {
+          if (failure != null) failures.put(unitIndex, failure);
+          else segments.put(unitIndex, completed);
+          if (active && unitIndex == currentUnitIndex) {
             if (failure != null) fail(failure);
             else advance(false);
           } else {
-            if (target == sequence && failure != null) {
+            if (unitIndex == currentUnitIndex && failure != null) {
               error = failure;
               publish();
             }
@@ -238,7 +238,7 @@ final class NarrationPlaybackCoordinator implements NarrationAudioAdapter.Listen
     try {
       positions.save(
           conversionId,
-          units.getJSONObject(sequence).getString("id"),
+          units.getJSONObject(currentUnitIndex).getString("id"),
           offset,
           config.optBoolean("isSignedIn"),
           message -> {
@@ -258,7 +258,7 @@ final class NarrationPlaybackCoordinator implements NarrationAudioAdapter.Listen
         @Override
         public void run() {
           if (active) {
-            if (sourceSequence == sequence) offset = audio.positionMilliseconds();
+            if (sourceUnitIndex == currentUnitIndex) offset = audio.positionMilliseconds();
             if (++count % 5 == 0) save();
             requestAudioAhead();
             publish();
@@ -274,22 +274,22 @@ final class NarrationPlaybackCoordinator implements NarrationAudioAdapter.Listen
   }
 
   private void publish() {
-    if (!closed) listener.publish(sequence, active, buffering, error);
+    if (!closed) listener.publish(currentUnitIndex, active, buffering, error);
   }
 
   @Override
   public void onEnded() {
-    if (active) seek(sequence + 1);
+    if (active) seek(currentUnitIndex + 1);
   }
 
   @Override
   public void onNext() {
-    seek(sequence + 1);
+    seek(currentUnitIndex + 1);
   }
 
   @Override
   public void onPrevious() {
-    seek(sequence - 1);
+    seek(currentUnitIndex - 1);
   }
 
   @Override

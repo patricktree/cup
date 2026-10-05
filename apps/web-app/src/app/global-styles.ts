@@ -124,6 +124,8 @@ export const cssBase = css`
 
       --border-radius-sm: 4px;
       --border-radius-lg: 24px;
+
+      --background-dialog-backdrop: hsl(var(--color-black-hsl) / 35%);
     }
 
     ::selection {

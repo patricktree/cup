@@ -45,7 +45,7 @@ class NarrationPlayerPlugin: CAPPlugin, CAPBridgedPlugin {
       switch call.getString("action") {
       case "play": self.engine.play()
       case "retry": self.engine.play(retry: true)
-      case "seek": self.engine.seek(call.getInt("sequence") ?? 0)
+      case "seek": self.engine.seek(call.getInt("unitIndex") ?? 0)
       default: self.engine.pause()
       }
       call.resolve()

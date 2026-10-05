@@ -173,7 +173,7 @@ struct PlaybackCoordinatorTests {
     let player = NarrationPlaybackCoordinator(audio: audio, api: api, positions: positions)
     try player.configure(config(), cookies: [])
     precondition(
-      player.snapshot()["sequence"] as? Int == 2 && player.snapshot()["isPlaying"] as? Bool == false
+      player.snapshot()["currentUnitIndex"] as? Int == 2 && player.snapshot()["isPlaying"] as? Bool == false
     )
     positions.position = ["synchronizationUnitId": "unit-4", "offsetMilliseconds": 0.0]
     player.play()

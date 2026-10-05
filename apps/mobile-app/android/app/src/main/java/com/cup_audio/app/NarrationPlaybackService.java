@@ -47,11 +47,11 @@ public class NarrationPlaybackService extends MediaSessionService {
             main,
             api,
             positions,
-            (sequence, playing, buffering, error) -> {
+            (currentUnitIndex, playing, buffering, error) -> {
               if (instance != this) return;
               NarrationPlayerPlugin.wantsPlayback = playing;
               JSObject state = new JSObject();
-              state.put("sequence", sequence);
+              state.put("currentUnitIndex", currentUnitIndex);
               state.put("isPlaying", playing);
               state.put("isBuffering", buffering);
               state.put("error", error == null ? JSONObject.NULL : error);
@@ -82,7 +82,7 @@ public class NarrationPlaybackService extends MediaSessionService {
       if (!coordinator.hasConversion(incoming.getString("conversionId"))) configure(incoming);
       coordinator.authorize(incoming);
       if ("seek".equals(intent.getStringExtra("action")))
-        coordinator.command("seek", intent.getIntExtra("sequence", 0));
+        coordinator.command("seek", intent.getIntExtra("unitIndex", 0));
       else if (shouldPlay)
         coordinator.command("retry".equals(intent.getStringExtra("action")) ? "retry" : "play", 0);
       else pauseNarration();
@@ -102,8 +102,8 @@ public class NarrationPlaybackService extends MediaSessionService {
     coordinator.configure(input);
   }
 
-  void command(String action, int target) {
-    coordinator.command(action, target);
+  void command(String action, int unitIndex) {
+    coordinator.command(action, unitIndex);
   }
 
   void pauseNarration() {

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { ACCOUNT_SESSION_STORAGE_KEY } from "#src/data-fetching/account-session-storage.ts";
+import { ACCOUNT_SESSION_STORAGE_KEY } from "#src/auth/account-session-storage.ts";
 
 test.use({ serviceWorkers: "block" });
 
@@ -60,14 +60,14 @@ test("logout clears a cookie issued by an earlier pending media request", async 
         user: { id: "f355f913-ba12-45d6-a7d2-4df95f7cf11f" },
       }),
     );
-    const modulePath = "/src/data-fetching/account-session.ts";
+    const modulePath = "/src/auth/account-session.ts";
     const sessions = await import(modulePath);
     await sessions.ensureAuthInitialized();
     Object.assign(window, { pendingIssuance: sessions.refreshPlaybackAuthorization() });
   }, ACCOUNT_SESSION_STORAGE_KEY);
   await issuanceStarted;
   await page.evaluate(async () => {
-    const modulePath = "/src/data-fetching/account-session.ts";
+    const modulePath = "/src/auth/account-session.ts";
     const sessions = await import(modulePath);
     Object.assign(window, { pendingLogout: sessions.signOut() });
   });
@@ -81,7 +81,7 @@ test("logout clears a cookie issued by an earlier pending media request", async 
   );
   expect(
     await page.evaluate(async (storageKey) => {
-      const modulePath = "/src/data-fetching/account-session.ts";
+      const modulePath = "/src/auth/account-session.ts";
       const sessions = await import(modulePath);
       return {
         session: sessions.sessionSnapshot(),
@@ -98,7 +98,7 @@ test("auth distinguishes loading, failure, and successful signed-out initializat
   await page.goto("/ui-gallery/index.html");
   expect(
     await page.evaluate(async () => {
-      const modulePath = "/src/data-fetching/account-session.ts";
+      const modulePath = "/src/auth/account-session.ts";
       const sessions = await import(modulePath);
       const initial = sessions.authStateSnapshot().status;
       await sessions.ensureAuthInitialized().catch(() => undefined);
@@ -116,7 +116,7 @@ test("auth distinguishes loading, failure, and successful signed-out initializat
   );
   expect(
     await page.evaluate(async () => {
-      const modulePath = "/src/data-fetching/account-session.ts";
+      const modulePath = "/src/auth/account-session.ts";
       const sessions = await import(modulePath);
       await sessions.ensureAuthInitialized();
       let notifications = 0;
@@ -176,7 +176,7 @@ test("concurrent session reads share an SDK refresh and cannot restore a signed-
   await page.evaluate(
     async ({ storageKey, stored }) => {
       localStorage.setItem(storageKey, JSON.stringify(stored));
-      const modulePath = "/src/data-fetching/account-session.ts";
+      const modulePath = "/src/auth/account-session.ts";
       const sessions = await import(modulePath);
       const client = await sessions.ensureAuthInitialized();
       await client.auth.stopAutoRefresh();
@@ -192,7 +192,7 @@ test("concurrent session reads share an SDK refresh and cannot restore a signed-
   );
   await refreshStarted;
   await page.evaluate(async () => {
-    const modulePath = "/src/data-fetching/account-session.ts";
+    const modulePath = "/src/auth/account-session.ts";
     const sessions = await import(modulePath);
     Object.assign(window, { pendingLogout: sessions.signOut() });
   });
@@ -203,7 +203,7 @@ test("concurrent session reads share an SDK refresh and cannot restore a signed-
         throw new Error("Missing pending auth operations");
       await window.pendingLogout;
       const reads = await window.pendingReads;
-      const modulePath = "/src/data-fetching/account-session.ts";
+      const modulePath = "/src/auth/account-session.ts";
       const sessions = await import(modulePath);
       return {
         reads,

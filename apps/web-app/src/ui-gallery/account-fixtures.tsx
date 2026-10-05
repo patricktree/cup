@@ -3,9 +3,9 @@ import { http, HttpResponse } from "msw";
 import React from "react";
 
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
+import { ACCOUNT_SESSION_STORAGE_KEY } from "#src/auth/account-session-storage.js";
+import { ensureAuthInitialized } from "#src/auth/account-session.js";
 import { ACCOUNT_CONFIRMATION_STORAGE_KEY } from "#src/data-fetching/account-confirmation-storage.js";
-import { ACCOUNT_SESSION_STORAGE_KEY } from "#src/data-fetching/account-session-storage.js";
-import { ensureAuthInitialized } from "#src/data-fetching/account-session.js";
 import type { Story } from "#src/ui-gallery/story.js";
 
 const SUBJECT = "880ce5b5-6542-40fd-8f2d-380f3066e98a";

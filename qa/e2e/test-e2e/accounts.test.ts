@@ -17,7 +17,7 @@ test("Google PKCE signup resumes conversion, protects history and media, and sup
   await page.goto(`${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
   await page.getByRole("button", { name: "Load & listen" }).click();
-  const signup = page.getByRole("dialog", { name: "Sign in to convert" });
+  const signup = page.getByRole("dialog", { name: "Sign in", exact: true });
   await expect(signup).toBeVisible();
   await expect(page).toHaveScreenshot("signup-prompt.png");
   await signup.getByRole("button", { name: "Continue with Google" }).click();

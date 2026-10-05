@@ -36,6 +36,7 @@ async function mount({ props = {}, story }: MountParams): Promise<void> {
   }
 
   worker.resetHandlers(...(definition.handlers ?? []));
+  await definition.beforeMount?.();
   const StoryComponent = definition.component;
   const currentRoot = (root ??= createRoot(rootElement));
   flushSync(() => {
@@ -46,6 +47,7 @@ async function mount({ props = {}, story }: MountParams): Promise<void> {
       </React.StrictMode>,
     );
   });
+  await definition.play?.({ canvasElement: rootElement });
 }
 
 async function unmount(): Promise<void> {
@@ -165,12 +167,33 @@ function readStory(value: unknown): Story | undefined {
   if (isStoryComponent(value)) return { component: value };
   if (!isUnknownRecord(value) || !isStoryComponent(value["component"])) return undefined;
   const handlers = value["handlers"];
-  if (handlers === undefined) return { component: value["component"] };
+  const beforeMount = value["beforeMount"];
+  const play = value["play"];
+  if (beforeMount !== undefined && !isStoryBeforeMount(beforeMount)) {
+    throw new TypeError("Story beforeMount must be a function");
+  }
+  if (play !== undefined && !isStoryPlay(play)) {
+    throw new TypeError("Story play must be a function");
+  }
   if (
-    !Array.isArray(handlers) ||
-    !handlers.every((handler): handler is RequestHandler => handler instanceof RequestHandler)
+    handlers !== undefined &&
+    (!Array.isArray(handlers) ||
+      !handlers.every((handler): handler is RequestHandler => handler instanceof RequestHandler))
   ) {
     throw new TypeError("Story handlers must be an array of MSW request handlers");
   }
-  return { component: value["component"], handlers };
+  return {
+    component: value["component"],
+    ...(handlers === undefined ? {} : { handlers }),
+    ...(beforeMount === undefined ? {} : { beforeMount }),
+    ...(play === undefined ? {} : { play }),
+  };
+}
+
+function isStoryPlay(value: unknown): value is NonNullable<Story["play"]> {
+  return typeof value === "function";
+}
+
+function isStoryBeforeMount(value: unknown): value is NonNullable<Story["beforeMount"]> {
+  return typeof value === "function";
 }

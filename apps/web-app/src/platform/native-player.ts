@@ -3,7 +3,7 @@ import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor
 import type { PlaybackPosition } from "@cup/web-app-api.routes";
 
 import type { PreparedAudiobook, PlayerSnapshot } from "#src/app/player/progressive-player.js";
-import { getResourceAccountSession } from "#src/data-fetching/account-session.js";
+import { getResourceAccountSession } from "#src/auth/account-session.js";
 
 const native = registerPlugin<{
   configure(input: {
@@ -18,7 +18,7 @@ const native = registerPlugin<{
     action: "play" | "pause" | "seek" | "retry";
     playerId?: string;
     token?: string | null;
-    sequence?: number;
+    unitIndex?: number;
   }): Promise<void>;
   addListener(
     event: "state",
@@ -51,13 +51,13 @@ export class NativePlayer {
     this.audiobook = audiobook;
     this.position = position;
     this.isSignedIn = isSignedIn;
-    const sequence = position
+    const unitIndex = position
       ? audiobook.narrationDocument.synchronizationUnits.findIndex(
           (unit) => unit.id === position.synchronizationUnitId,
         )
       : 0;
     this.snapshot = {
-      sequence: Math.max(0, sequence),
+      currentUnitIndex: Math.max(0, unitIndex),
       isPlaying: false,
       isBuffering: false,
       error: null,
@@ -98,7 +98,7 @@ export class NativePlayer {
     await native.command({ action: "pause", playerId: this.playerId });
     await this.listener?.remove();
   }
-  private command(action: "play" | "pause" | "seek" | "retry", sequence?: number) {
+  private command(action: "play" | "pause" | "seek" | "retry", unitIndex?: number) {
     void this.initialization
       ?.then(async () => {
         const session =
@@ -106,7 +106,7 @@ export class NativePlayer {
         return native.command({
           action,
           playerId: this.playerId,
-          ...(sequence === undefined ? {} : { sequence }),
+          ...(unitIndex === undefined ? {} : { unitIndex }),
           ...(session === undefined ? {} : { token: session?.access_token ?? null }),
         });
       })
@@ -121,6 +121,6 @@ export class NativePlayer {
   }
   play = () => this.command("play");
   pause = () => this.command("pause");
-  seek = (sequence: number) => this.command("seek", sequence);
+  seek = (unitIndex: number) => this.command("seek", unitIndex);
   retry = () => this.command("retry");
 }

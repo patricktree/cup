@@ -3,7 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import React from "react";
 
-import { ensureAuthInitialized } from "#src/data-fetching/account-session.js";
+import { ensureAuthInitialized } from "#src/auth/account-session.js";
 
 type RouterContext = {
   queryClient: QueryClient;
@@ -37,12 +37,6 @@ function RootLayout(): React.JSX.Element {
 
         /* stacking context to put it above the background gradient */
         isolation: isolate;
-
-        & > *:nth-child(1) {
-          margin-block-start: /* pull vertically-centered content a little bit up*/ calc(
-            -1 * 14 * var(--spacing-base)
-          );
-        }
       `}
     >
       <Outlet />

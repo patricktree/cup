@@ -7,7 +7,7 @@ import {
 } from "@cup/web-app-api.routes";
 
 import { createAppApiClient } from "#src/api-client.js";
-import { getResourceAccountSession } from "#src/data-fetching/account-session.js";
+import { getResourceAccountSession } from "#src/auth/account-session.js";
 import { createAudiobookQuery } from "#src/data-fetching/trial-link.js";
 import { parseResponse } from "#src/data-fetching/trial-link.js";
 
@@ -16,15 +16,15 @@ async function readerClient() {
   const session = await getResourceAccountSession();
   return session ? client.createAuthenticatedRpcClient(session.access_token) : client;
 }
-export async function requestAudioSegment(conversionId: string, sequence: number, retry: boolean) {
+export async function requestAudioSegment(conversionId: string, unitIndex: number, retry: boolean) {
   return parseResponse(
-    await (await readerClient()).generateSegment({ conversionId }, sequence, retry),
+    await (await readerClient()).generateSegment({ conversionId }, unitIndex, retry),
     (body) => audioSegmentSchema.parse(body),
   );
 }
-export async function getAudioSegment(conversionId: string, sequence: number) {
+export async function getAudioSegment(conversionId: string, unitIndex: number) {
   return parseResponse(
-    await (await readerClient()).getSegment({ conversionId }, sequence),
+    await (await readerClient()).getSegment({ conversionId }, unitIndex),
     (body) => audioSegmentSchema.parse(body),
   );
 }

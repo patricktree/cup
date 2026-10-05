@@ -6,7 +6,7 @@ import { Temporal } from "temporal-polyfill";
 import {
   ACCOUNT_SESSION_STORAGE_KEY,
   ACCOUNT_SESSION_CODE_VERIFIER_STORAGE_KEY,
-} from "#src/data-fetching/account-session-storage.js";
+} from "#src/auth/account-session-storage.js";
 
 const nativeMedia = registerPlugin<{
   setSession(input: { token: string; maxAge: number }): Promise<void>;

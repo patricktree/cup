@@ -3,7 +3,7 @@ import type { AudioSegment, Audiobook, PlaybackPosition } from "@cup/web-app-api
 import {
   getResourceAccountSession,
   refreshPlaybackAuthorization,
-} from "#src/data-fetching/account-session.js";
+} from "#src/auth/account-session.js";
 import {
   getAudioSegment,
   requestAudioSegment,
@@ -12,15 +12,15 @@ import {
 
 export type PreparedAudiobook = Extract<Audiobook, { status: "ready" }>;
 export type PlayerSnapshot = {
-  sequence: number;
+  currentUnitIndex: number;
   durationMilliseconds?: number;
   isPlaying: boolean;
   isBuffering: boolean;
   error: string | null;
 };
 export type PlayerServices = {
-  request(sequence: number, retry: boolean): Promise<AudioSegment>;
-  poll(sequence: number): Promise<AudioSegment>;
+  request(unitIndex: number, retry: boolean): Promise<AudioSegment>;
+  poll(unitIndex: number): Promise<AudioSegment>;
   save(position: PlaybackPosition): Promise<void>;
   authorize(): Promise<void>;
 };
@@ -39,7 +39,7 @@ export class ProgressivePlayer {
   private audio: HTMLAudioElement | null = null;
   private offsetMilliseconds: number;
   private lastSavedAt = 0;
-  private sourceSequence = -1;
+  private sourceUnitIndex = -1;
   private revision = 0;
   private isDisposed = false;
   private saveChain: Promise<void> = Promise.resolve();
@@ -52,18 +52,18 @@ export class ProgressivePlayer {
     this.audiobook = audiobook;
     this.services = services;
     for (const segment of audiobook.segments) this.segments.set(segment.sequence, segment);
-    const sequence = position
+    const unitIndex = position
       ? audiobook.narrationDocument.synchronizationUnits.findIndex(
           (unit) => unit.id === position.synchronizationUnitId,
         )
       : 0;
     this.snapshot = {
-      sequence: Math.max(0, sequence),
+      currentUnitIndex: Math.max(0, unitIndex),
       isPlaying: false,
       isBuffering: false,
       error: null,
     };
-    this.offsetMilliseconds = sequence >= 0 ? (position?.offsetMilliseconds ?? 0) : 0;
+    this.offsetMilliseconds = unitIndex >= 0 ? (position?.offsetMilliseconds ?? 0) : 0;
   }
 
   static forConversion(
@@ -74,8 +74,8 @@ export class ProgressivePlayer {
     subject: string | null,
   ) {
     return new ProgressivePlayer(audiobook, position, {
-      request: (sequence, retry) => requestAudioSegment(conversionId, sequence, retry),
-      poll: (sequence) => getAudioSegment(conversionId, sequence),
+      request: (unitIndex, retry) => requestAudioSegment(conversionId, unitIndex, retry),
+      poll: (unitIndex) => getAudioSegment(conversionId, unitIndex),
       save: (value) => savePlaybackPosition(conversionId, value, subject),
       authorize: async () => {
         const session = await getResourceAccountSession();
@@ -116,38 +116,38 @@ export class ProgressivePlayer {
 
   pause = () => {
     this.revision += 1;
-    if (this.snapshot.isBuffering) this.sourceSequence = -1;
+    if (this.snapshot.isBuffering) this.sourceUnitIndex = -1;
     this.update({ isPlaying: false, isBuffering: false });
     this.audio?.pause();
     this.save();
   };
 
-  seek = (sequence: number) => {
-    if (!this.audiobook.narrationDocument.synchronizationUnits[sequence]) return;
+  seek = (unitIndex: number) => {
+    if (!this.audiobook.narrationDocument.synchronizationUnits[unitIndex]) return;
     const wasPlaying = this.snapshot.isPlaying;
     this.revision += 1;
     this.audio?.pause();
-    this.sourceSequence = -1;
+    this.sourceUnitIndex = -1;
     this.offsetMilliseconds = 0;
-    this.update({ sequence, error: null, isBuffering: false });
+    this.update({ currentUnitIndex: unitIndex, error: null, isBuffering: false });
     this.save();
     if (wasPlaying) void this.advance(this.revision);
     else this.requestActiveSegment();
   };
 
   retry = () => {
-    this.sourceSequence = -1;
-    this.segments.delete(this.snapshot.sequence);
+    this.sourceUnitIndex = -1;
+    this.segments.delete(this.snapshot.currentUnitIndex);
     this.update({ isPlaying: true, error: null });
     void this.advance(this.revision, true);
   };
 
   onEnded = () => {
     if (!this.snapshot.isPlaying) return;
-    const next = this.snapshot.sequence + 1;
+    const next = this.snapshot.currentUnitIndex + 1;
     if (next >= this.audiobook.narrationDocument.synchronizationUnits.length) {
       this.offsetMilliseconds = 0;
-      this.update({ sequence: 0 });
+      this.update({ currentUnitIndex: 0 });
       this.pause();
       return;
     }
@@ -155,7 +155,7 @@ export class ProgressivePlayer {
   };
 
   onTimeUpdate = () => {
-    if (!this.audio || this.sourceSequence !== this.snapshot.sequence) return;
+    if (!this.audio || this.sourceUnitIndex !== this.snapshot.currentUnitIndex) return;
     this.offsetMilliseconds = this.audio.currentTime * 1_000;
     if (performance.now() - this.lastSavedAt >= 5_000) this.save();
     if (this.snapshot.isPlaying) this.requestAudioAhead(this.revision);
@@ -176,38 +176,38 @@ export class ProgressivePlayer {
     this.update({ error: "Audio could not be played. Retry this passage." });
   };
 
-  private async ensureSegment(sequence: number, retry = false): Promise<AudioSegment> {
-    const existing = this.segments.get(sequence);
+  private async ensureSegment(unitIndex: number, retry = false): Promise<AudioSegment> {
+    const existing = this.segments.get(unitIndex);
     if (existing?.status === "ready" || (existing?.status === "failed" && !retry)) return existing;
-    const pending = this.requests.get(sequence);
+    const pending = this.requests.get(unitIndex);
     if (pending) return pending;
     const request = (async () => {
-      let segment = await this.services.request(sequence, retry);
-      this.segments.set(sequence, segment);
+      let segment = await this.services.request(unitIndex, retry);
+      this.segments.set(unitIndex, segment);
       while (segment.status === "generating" && !this.isDisposed) {
         await new Promise<void>((resolve) => setTimeout(resolve, 1_000));
         if (this.isDisposed) break;
-        segment = await this.services.poll(sequence);
-        this.segments.set(sequence, segment);
+        segment = await this.services.poll(unitIndex);
+        this.segments.set(unitIndex, segment);
       }
       return segment;
     })();
-    this.requests.set(sequence, request);
+    this.requests.set(unitIndex, request);
     try {
       return await request;
     } finally {
-      this.requests.delete(sequence);
+      this.requests.delete(unitIndex);
     }
   }
 
   private requestActiveSegment() {
     if (this.isDisposed || !this.audiobook.canGenerate) return;
-    const sequence = this.snapshot.sequence;
-    void this.ensureSegment(sequence)
+    const unitIndex = this.snapshot.currentUnitIndex;
+    void this.ensureSegment(unitIndex)
       .then((segment) => {
         if (
           !this.isDisposed &&
-          this.snapshot.sequence === sequence &&
+          this.snapshot.currentUnitIndex === unitIndex &&
           !this.snapshot.isPlaying &&
           segment.status === "failed"
         )
@@ -216,19 +216,23 @@ export class ProgressivePlayer {
       })
       .catch((error: unknown) => {
         const explanation = error instanceof Error ? error.message : "Speech generation failed.";
-        this.segments.set(sequence, { sequence, status: "failed", explanation });
-        if (!this.isDisposed && this.snapshot.sequence === sequence && !this.snapshot.isPlaying)
+        this.segments.set(unitIndex, { sequence: unitIndex, status: "failed", explanation });
+        if (
+          !this.isDisposed &&
+          this.snapshot.currentUnitIndex === unitIndex &&
+          !this.snapshot.isPlaying
+        )
           this.update({ error: explanation });
       });
   }
 
   private async advance(revision: number, retry = false) {
-    const sequence = this.snapshot.sequence;
+    const unitIndex = this.snapshot.currentUnitIndex;
     this.update({ isBuffering: true });
     try {
-      if (!this.segments.has(sequence) && !this.audiobook.canGenerate)
+      if (!this.segments.has(unitIndex) && !this.audiobook.canGenerate)
         throw new Error("Open the original trial link to generate more audio.");
-      const currentUnit = this.ensureSegment(sequence, retry);
+      const currentUnit = this.ensureSegment(unitIndex, retry);
       this.requestAudioAhead(revision);
       const segment = await currentUnit;
       if (!this.isCurrent(revision)) return;
@@ -239,14 +243,14 @@ export class ProgressivePlayer {
       if (!this.isCurrent(revision)) return;
       const audio = this.audio;
       if (!audio) return;
-      if (this.sourceSequence !== sequence) {
+      if (this.sourceUnitIndex !== unitIndex) {
         audio.src = segment.url;
-        this.sourceSequence = sequence;
+        this.sourceUnitIndex = unitIndex;
         const offset = this.offsetMilliseconds;
         audio.addEventListener(
           "loadedmetadata",
           () => {
-            if (this.sourceSequence !== sequence || !this.isCurrent(revision)) return;
+            if (this.sourceUnitIndex !== unitIndex || !this.isCurrent(revision)) return;
             audio.currentTime = Math.min(offset / 1_000, Math.max(0, audio.duration - 0.01));
           },
           { once: true },
@@ -276,26 +280,26 @@ export class ProgressivePlayer {
   private requestAudioAhead(revision: number) {
     if (!this.audiobook.canGenerate || !this.isCurrent(revision)) return;
     const offset =
-      this.sourceSequence === this.snapshot.sequence && !this.snapshot.isBuffering
+      this.sourceUnitIndex === this.snapshot.currentUnitIndex && !this.snapshot.isBuffering
         ? (this.audio?.currentTime ?? 0) * 1_000
         : this.offsetMilliseconds;
     let duration = -offset;
     const units = this.audiobook.narrationDocument.synchronizationUnits;
     for (
-      let sequence = this.snapshot.sequence;
-      sequence < units.length && duration < 60_000;
-      sequence += 1
+      let unitIndex = this.snapshot.currentUnitIndex;
+      unitIndex < units.length && duration < 60_000;
+      unitIndex += 1
     ) {
       if (!this.isCurrent(revision)) return;
-      const known = this.segments.get(sequence);
+      const known = this.segments.get(unitIndex);
       const estimate =
         known?.status === "ready"
           ? known.durationMilliseconds
-          : Math.max(1_000, units[sequence]!.narrationText.length * 80);
+          : Math.max(1_000, units[unitIndex]!.narrationText.length * 80);
       duration += estimate;
       if (known?.status === "failed") return;
-      if (known?.status === "ready" || this.requests.has(sequence)) continue;
-      void this.ensureSegment(sequence)
+      if (known?.status === "ready" || this.requests.has(unitIndex)) continue;
+      void this.ensureSegment(unitIndex)
         .then((segment) => {
           if (segment.status === "ready" && this.isCurrent(revision))
             this.requestAudioAhead(revision);
@@ -303,8 +307,8 @@ export class ProgressivePlayer {
         })
         .catch((error: unknown) => {
           // Retain speculative failures so ticks do not retry them before explicit passage retry.
-          this.segments.set(sequence, {
-            sequence,
+          this.segments.set(unitIndex, {
+            sequence: unitIndex,
             status: "failed",
             explanation: error instanceof Error ? error.message : "Speech generation failed.",
           });
@@ -313,7 +317,8 @@ export class ProgressivePlayer {
   }
 
   private save() {
-    const unit = this.audiobook.narrationDocument.synchronizationUnits[this.snapshot.sequence]!;
+    const unit =
+      this.audiobook.narrationDocument.synchronizationUnits[this.snapshot.currentUnitIndex]!;
     const position = {
       synchronizationUnitId: unit.id,
       offsetMilliseconds: this.offsetMilliseconds,

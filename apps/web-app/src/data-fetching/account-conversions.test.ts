@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { ACCOUNT_SESSION_STORAGE_KEY } from "#src/data-fetching/account-session-storage.ts";
+import { ACCOUNT_SESSION_STORAGE_KEY } from "#src/auth/account-session-storage.ts";
 
 test.use({ serviceWorkers: "block" });
 
@@ -61,7 +61,7 @@ test("a late rate-limit response cannot change the next account's pending reques
   await component.getByRole("button", { name: "Load & listen" }).click();
   await expect.poll(() => requests).toBe(1);
   await page.evaluate(async (subject) => {
-    const path = "/src/data-fetching/account-session.ts";
+    const path = "/src/auth/account-session.ts";
     const client = await (await import(path)).ensureAuthInitialized();
     const payload = btoa(JSON.stringify({ sub: subject, exp: 4102444800 })).replaceAll("=", "");
     const { error } = await client.auth.setSession({

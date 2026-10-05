@@ -43,7 +43,17 @@ On the web, the Supabase SDK persists the session and PKCE verifier in browser l
 
 The API verifies Supabase JWTs locally against the issuer's signing keys and validates audience, role, subject, and time claims. The HTTP authentication adapter verifies the token and supplies dependencies to the [account authentication use case](../../libs/api-server/src/use-cases/authenticate-account.ts), which resolves account ownership, provisions first-use identities, and resumes unfinished provisioning. First use provisions a separate Cup account ID through the registry. Provisioning is persisted and retried, and checks the provider identity before activation; ingress limits constrain new account creation. The account initializes its welcome duration allowance once. Subsequent operations consult Cup lifecycle state in addition to token validity.
 
-Sources: [session lifecycle](../../apps/web-app/src/data-fetching/account-session.ts), [web adapter](../../apps/web-app/src/platform/account-auth.web.ts), [Android adapter](../../apps/web-app/src/platform/account-auth.android.ts), [iOS adapter](../../apps/web-app/src/platform/account-auth.ios.ts), [token verification](../../libs/api-server/src/account-auth.ts), and [registry provisioning](../../libs/registry/src/registry-durable-object.ts).
+Sources: [session lifecycle](../../apps/web-app/src/auth/account-session.ts), [web adapter](../../apps/web-app/src/platform/account-auth.web.ts), [Android adapter](../../apps/web-app/src/platform/account-auth.android.ts), [iOS adapter](../../apps/web-app/src/platform/account-auth.ios.ts), [token verification](../../libs/api-server/src/account-auth.ts), and [registry provisioning](../../libs/registry/src/registry-durable-object.ts).
+
+## Resuming a conversion after sign-in
+
+When a reader submits a source URL for an account conversion, the client saves one pending request in `sessionStorage` before either starting the conversion or asking the reader to sign in. The request contains the normalized source URL, an idempotency key, and whether the reader has submitted it. On the web, this preserves the reader's submission through the Google/Supabase redirect and page reloads within the tab's session. The request stays out of the OAuth callback URL, and its lifetime is limited to the tab's session rather than persisting as a long-lived draft. This storage is separate from the Supabase session and PKCE verifier in local storage; it does not establish identity or authorize a conversion.
+
+When a signed-in session becomes available, the submission hook automatically resumes a stored submitted request once per mounted hook. A stored source URL also restores the form's initial value. Submitting the same normalized URL reuses its idempotency key so retries can refer to the same server request; submitting a different URL replaces the pending request with a new key. Cancelling the sign-in prompt retains the URL and key but marks the request as unsubmitted, preventing automatic resumption.
+
+Successful admission clears the matching pending request before navigating to the audiobook. A rate-limit response marks the matching request as unsubmitted, retaining its URL and key for an explicit retry. Other failures leave the request available for retry, including automatic resumption on a later mount when it is still marked submitted. Response handlers check the current account identity and request key before changing stored state, so a late response cannot clear or disable a newer request. Invalid stored data is discarded when read. These rules also apply to the shared submission code used by Android, whose native Google sign-in does not use the web callback.
+
+Sources: [pending request storage](../../apps/web-app/src/data-fetching/account-conversion-storage.ts), [submission and resumption](../../apps/web-app/src/app/use-cases/account-conversions.ts), and [admission response handling](../../apps/web-app/src/data-fetching/account.ts).
 
 ## Private media access
 
@@ -70,7 +80,7 @@ Audiobook JSON lives at `/api/audiobooks/{conversionId}` and requires bearer ide
 
 The client refreshes media authorization and pauses playback when authorization fails. Sign-out clears local identity and cached account data, stops and unloads media, and waits for outstanding cookie issuance before clearing media sessions so a late response cannot silently reestablish playback. Local sign-out is not an immediate global revocation mechanism for every existing JWT.
 
-Sources: [media cookie and token handling](../../libs/api-server/src/account-auth.ts), [ownership middleware](../../libs/api-server/src/api-server.ts), [delivery](../../libs/api-server/src/serve-audiobook.ts), and [client session transitions](../../apps/web-app/src/data-fetching/account-session.ts).
+Sources: [media cookie and token handling](../../libs/api-server/src/account-auth.ts), [ownership middleware](../../libs/api-server/src/api-server.ts), [delivery](../../libs/api-server/src/serve-audiobook.ts), and [client session transitions](../../apps/web-app/src/auth/account-session.ts).
 
 ## Trial access
 

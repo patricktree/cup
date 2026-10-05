@@ -6,6 +6,19 @@ test("renders landing", async ({ mount }) => {
   await expect(component).toHaveScreenshot("landing.png");
 });
 
+test("renders sign-in dialog", async ({ mount, page }) => {
+  await mount("routes/index/SignIn");
+  await expect(
+    page.getByRole("heading", { name: "Just listen.", includeHidden: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue with Google" })).toBeFocused();
+  await expect(page.getByRole("textbox", { name: "URL", includeHidden: true })).toHaveValue(
+    "https://example.com/article",
+  );
+  await expect(page).toHaveScreenshot("sign-in-dialog.png");
+});
+
 test("anonymous submission asks for sign-in and cancellation preserves the URL", async ({
   mount,
   page,
@@ -14,7 +27,7 @@ test("anonymous submission asks for sign-in and cancellation preserves the URL",
   const input = component.getByRole("textbox", { name: "URL" });
   await input.fill("https://example.com/article");
   await component.getByRole("button", { name: "Load & listen" }).click();
-  await expect(page.getByRole("dialog", { name: "Sign in to convert" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue with Google" })).toBeFocused();
   await page.keyboard.press("Shift+Tab");
   await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
@@ -24,15 +37,15 @@ test("anonymous submission asks for sign-in and cancellation preserves the URL",
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(component.getByRole("button", { name: "Load & listen" })).toBeFocused();
   await expect(input).toHaveValue("https://example.com/article");
-  await expect(page.getByRole("dialog", { name: "Sign in to convert" })).not.toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).not.toBeVisible();
   await page.reload();
   await mount("routes/index/LandingPage");
   await expect(input).toHaveValue("https://example.com/article");
   await expect(component.getByRole("button", { name: "Load & listen" })).toBeEnabled();
   await component.getByRole("button", { name: "Load & listen" }).click();
-  await expect(page.getByRole("dialog", { name: "Sign in to convert" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Sign in to convert" })).not.toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).not.toBeVisible();
   await expect(input).toHaveValue("https://example.com/article");
 });
 
@@ -50,9 +63,9 @@ test("invalid account URL shows a field error and becomes submittable after corr
     }),
   ).toBeVisible();
   await expect(input).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByRole("dialog", { name: "Sign in to convert" })).not.toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).not.toBeVisible();
   await input.fill("https://example.com/article");
   await expect(input).not.toHaveAttribute("aria-invalid", "true");
   await component.getByRole("button", { name: "Load & listen" }).click();
-  await expect(page.getByRole("dialog", { name: "Sign in to convert" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).toBeVisible();
 });

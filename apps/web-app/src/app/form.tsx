@@ -61,7 +61,8 @@ function TextField({
 }
 
 type SubmitButtonProps = {
-  sx?: { button: string };
+  sx?: { button?: string | undefined };
+  refs?: { button?: React.Ref<HTMLButtonElement> | undefined };
   disabled?: boolean;
   disabledWhenPristine?: boolean;
   label: string;
@@ -70,6 +71,7 @@ type SubmitButtonProps = {
 
 function SubmitButton({
   sx,
+  refs,
   disabled = false,
   disabledWhenPristine = false,
   label,
@@ -83,6 +85,7 @@ function SubmitButton({
     >
       {([canSubmit, isPristine, isSubmitting]) => (
         <DSButton
+          ref={refs?.button}
           className={sx?.button}
           disabled={disabled || !canSubmit || (disabledWhenPristine && isPristine)}
           isPending={isSubmitting}

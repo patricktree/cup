@@ -34,7 +34,7 @@ final class NarrationPositionStore {
     return position;
   }
 
-  static int initialSequence(JSONObject config, Context context) throws Exception {
+  static int initialUnitIndex(JSONObject config, Context context) throws Exception {
     JSONObject position = initialPosition(config, context);
     JSONArray units =
         config

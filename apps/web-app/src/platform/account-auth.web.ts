@@ -3,7 +3,7 @@ import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import {
   ACCOUNT_SESSION_STORAGE_KEY,
   ACCOUNT_SESSION_CODE_VERIFIER_STORAGE_KEY,
-} from "#src/data-fetching/account-session-storage.js";
+} from "#src/auth/account-session-storage.js";
 
 export async function initializeAuthStorage() {
   const storage = window.localStorage;

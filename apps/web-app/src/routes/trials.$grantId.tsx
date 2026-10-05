@@ -13,8 +13,8 @@ import { ConversionEntryPage } from "#src/app/components/conversion-entry-page.j
 import { ErrorMessage } from "#src/app/components/error-message.js";
 import { StartConversionForm } from "#src/app/components/start-conversion-form.js";
 import { DSButton } from "#src/app/design-system/button.js";
-import { getResourceAccountSession } from "#src/data-fetching/account-session.js";
-import { useAccountSession } from "#src/data-fetching/account.js";
+import { getResourceAccountSession } from "#src/auth/account-session.js";
+import { useAccountSession } from "#src/auth/hooks.js";
 import {
   ApiError,
   createGrantQuery,
