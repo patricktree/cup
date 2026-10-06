@@ -268,7 +268,7 @@ export async function selectElementIds({
 }): Promise<SelectionChunkResult> {
   const request: SelectionCompletionRequest = {
     systemPrompt: configuration.systemPrompt,
-    userPrompt: `<audiobook-source-material-html>\n${stripNativeElementIds(annotatedSourceMaterial.html)}\n</audiobook-source-material-html>`,
+    userPrompt: `<audiobook-source-material-html>\n${prepareSelectionPromptHtml(annotatedSourceMaterial.html)}\n</audiobook-source-material-html>`,
     tool: configuration.tool,
   };
   const completionOptions = {
@@ -592,17 +592,22 @@ function isSourceElementIds(elementIds: readonly string[]): elementIds is Source
 
 class UnknownSelectionElementIdsError extends Error {}
 
-// Preserve native anchors in the output, but expose only selection IDs to the model.
-function stripNativeElementIds(html: string): string {
+// Reduce formatting noise for selection without changing the source used to reconstruct narration.
+function prepareSelectionPromptHtml(html: string): string {
   const fragment = parseFragment(html);
-  stripNativeElementIdsFromChildren(fragment);
+  prepareSelectionPromptChildren(fragment);
   return serialize(fragment);
 }
 
-function stripNativeElementIdsFromChildren(parent: DefaultTreeAdapterMap["parentNode"]): void {
+function prepareSelectionPromptChildren(parent: DefaultTreeAdapterMap["parentNode"]): void {
   for (const child of parent.childNodes) {
+    if ("value" in child) {
+      child.value = child.value.replace(/[\t\n\f\r ]+/gu, " ");
+      continue;
+    }
+
     if (!("tagName" in child)) continue;
     child.attrs = child.attrs.filter((attribute) => attribute.name !== "id");
-    stripNativeElementIdsFromChildren(getElementContent(child));
+    prepareSelectionPromptChildren(getElementContent(child));
   }
 }

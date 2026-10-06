@@ -5,31 +5,31 @@
   },
   {
     "id": "narration-unit-0002",
-    "narrationText": "The capabilities that make agents useful also make them difficult to evaluate. The\nstrategies that work across deployments combine techniques to match the complexity of\nthe systems they measure."
+    "narrationText": "The capabilities that make agents useful also make them difficult to evaluate. The strategies that work across deployments combine techniques to match the complexity of the systems they measure."
   },
   {
     "id": "narration-unit-0003",
-    "narrationText": "Introduction\n\nGood evaluations help teams ship AI agents more confidently. Without them, it’s easy\nto get stuck in reactive loops—catching issues only in production, where fixing one\nfailure creates others. Evals make problems and behavioral changes visible before\nthey affect users, and their value compounds over the lifecycle of an agent."
+    "narrationText": "Introduction\n\nGood evaluations help teams ship AI agents more confidently. Without them, it’s easy to get stuck in reactive loops—catching issues only in production, where fixing one failure creates others. Evals make problems and behavioral changes visible before they affect users, and their value compounds over the lifecycle of an agent."
   },
   {
     "id": "narration-unit-0004",
-    "narrationText": "As we described in\nBuilding effective agents, agents operate over many turns: calling tools, modifying state, and adapting\nbased on intermediate results. These same capabilities that make AI agents\nuseful—autonomy, intelligence, and flexibility—also make them harder to evaluate."
+    "narrationText": "As we described in Building effective agents, agents operate over many turns: calling tools, modifying state, and adapting based on intermediate results. These same capabilities that make AI agents useful—autonomy, intelligence, and flexibility—also make them harder to evaluate."
   },
   {
     "id": "narration-unit-0005",
-    "narrationText": "Through our internal work and with customers at the frontier of agent development,\nwe’ve learned how to design more rigorous and useful evals for agents. Here's what's\nworked across a range of agent architectures and use cases in real-world deployment."
+    "narrationText": "Through our internal work and with customers at the frontier of agent development, we’ve learned how to design more rigorous and useful evals for agents. Here's what's worked across a range of agent architectures and use cases in real-world deployment."
   },
   {
     "id": "narration-unit-0006",
-    "narrationText": "The structure of an evaluation\n\nAn evaluation (“eval”) is a test for an AI system: give an AI an\ninput, then apply grading logic to its output to measure success. In this post, we\nfocus on automated evals that can be run during development without\nreal users."
+    "narrationText": "The structure of an evaluation\n\nAn evaluation (“eval”) is a test for an AI system: give an AI an input, then apply grading logic to its output to measure success. In this post, we focus on automated evals that can be run during development without real users."
   },
   {
     "id": "narration-unit-0007",
-    "narrationText": "Single-turn evaluations are straightforward: a prompt, a response,\nand grading logic. For earlier LLMs, single-turn, non-agentic evals were the main\nevaluation method. As AI capabilities have advanced,\nmulti-turn evaluations have become increasingly common."
+    "narrationText": "Single-turn evaluations are straightforward: a prompt, a response, and grading logic. For earlier LLMs, single-turn, non-agentic evals were the main evaluation method. As AI capabilities have advanced, multi-turn evaluations have become increasingly common."
   },
   {
     "id": "narration-unit-0008",
-    "narrationText": "Agent evaluations are even more complex. Agents use tools across\nmany turns, modifying state in the environment and adapting as they go—which means\nmistakes can propagate and compound. Frontier models can also find creative\nsolutions that surpass the limits of static evals. For instance, Opus 4.5 solved a\n𝜏2-bench problem about\nbooking a flight by\ndiscovering a loophole\nin the policy. It “failed” the evaluation as written, but actually came up with a\nbetter solution for the user."
+    "narrationText": "Agent evaluations are even more complex. Agents use tools across many turns, modifying state in the environment and adapting as they go—which means mistakes can propagate and compound. Frontier models can also find creative solutions that surpass the limits of static evals. For instance, Opus 4.5 solved a 𝜏2-bench problem about booking a flight by discovering a loophole in the policy. It “failed” the evaluation as written, but actually came up with a better solution for the user."
   },
   {
     "id": "narration-unit-0009",
@@ -37,75 +37,75 @@
   },
   {
     "id": "narration-unit-0010",
-    "narrationText": "A task (a.k.a problem or\ntest case) is a single test with defined inputs and success\ncriteria."
+    "narrationText": "A task (a.k.a problem or test case) is a single test with defined inputs and success criteria."
   },
   {
     "id": "narration-unit-0011",
-    "narrationText": "Each attempt at a task is a trial. Because model outputs vary\nbetween runs, we run multiple trials to produce more consistent results."
+    "narrationText": "Each attempt at a task is a trial. Because model outputs vary between runs, we run multiple trials to produce more consistent results."
   },
   {
     "id": "narration-unit-0012",
-    "narrationText": "A grader is logic that scores some aspect of the agent’s\nperformance. A task can have multiple graders, each containing multiple assertions\n(sometimes called checks)."
+    "narrationText": "A grader is logic that scores some aspect of the agent’s performance. A task can have multiple graders, each containing multiple assertions (sometimes called checks)."
   },
   {
     "id": "narration-unit-0013",
-    "narrationText": "A transcript (also called a trace or\ntrajectory) is the complete record of a trial, including outputs, tool calls, reasoning,\nintermediate results, and any other interactions. For the Anthropic API, this is\nthe full messages array at the end of an eval run - containing all the calls to\nthe API and all of the returned responses during the evaluation."
+    "narrationText": "A transcript (also called a trace or trajectory) is the complete record of a trial, including outputs, tool calls, reasoning, intermediate results, and any other interactions. For the Anthropic API, this is the full messages array at the end of an eval run - containing all the calls to the API and all of the returned responses during the evaluation."
   },
   {
     "id": "narration-unit-0014",
-    "narrationText": "The outcome is the final state in the environment at the end of\nthe trial. A flight-booking agent might say “Your flight has been booked” at the\nend of the transcript, but the outcome is whether a reservation exists in the\nenvironment’s SQL database."
+    "narrationText": "The outcome is the final state in the environment at the end of the trial. A flight-booking agent might say “Your flight has been booked” at the end of the transcript, but the outcome is whether a reservation exists in the environment’s SQL database."
   },
   {
     "id": "narration-unit-0015",
-    "narrationText": "An evaluation harness is the infrastructure that runs evals\nend-to-end. It provides instructions and tools, runs tasks concurrently, records\nall the steps, grades outputs, and aggregates results."
+    "narrationText": "An evaluation harness is the infrastructure that runs evals end-to-end. It provides instructions and tools, runs tasks concurrently, records all the steps, grades outputs, and aggregates results."
   },
   {
     "id": "narration-unit-0016",
-    "narrationText": "An agent harness (or scaffold) is the system\nthat enables a model to act as an agent: it processes inputs, orchestrates tool\ncalls, and returns results. When we evaluate “an agent,” we’re evaluating the\nharness and the model working together. For example,\nClaude Code is a flexible\nagent harness, and we used its core primitives through the\nAgent SDK to\nbuild our\nlong-running agent harness."
+    "narrationText": "An agent harness (or scaffold) is the system that enables a model to act as an agent: it processes inputs, orchestrates tool calls, and returns results. When we evaluate “an agent,” we’re evaluating the harness and the model working together. For example, Claude Code is a flexible agent harness, and we used its core primitives through the Agent SDK to build our long-running agent harness."
   },
   {
     "id": "narration-unit-0017",
-    "narrationText": "An evaluation suite is a collection of tasks designed to measure\nspecific capabilities or behaviors. Tasks in a suite typically share a broad goal.\nFor instance, a customer support eval suite might test refunds, cancellations, and\nescalations."
+    "narrationText": "An evaluation suite is a collection of tasks designed to measure specific capabilities or behaviors. Tasks in a suite typically share a broad goal. For instance, a customer support eval suite might test refunds, cancellations, and escalations."
   },
   {
     "id": "narration-unit-0018",
-    "narrationText": "Why build evaluations?\n\nWhen teams first start building agents, they can get surprisingly far through a\ncombination of manual testing,\ndogfooding, and\nintuition. More rigorous evaluation may even seem like overhead that slows down\nshipping. But after the early prototyping stages, once an agent is in production and\nhas started scaling, building without evals starts to break down."
+    "narrationText": "Why build evaluations?\n\nWhen teams first start building agents, they can get surprisingly far through a combination of manual testing, dogfooding, and intuition. More rigorous evaluation may even seem like overhead that slows down shipping. But after the early prototyping stages, once an agent is in production and has started scaling, building without evals starts to break down."
   },
   {
     "id": "narration-unit-0019",
-    "narrationText": "The breaking point often comes when users report the agent feels worse after\nchanges, and the team is “flying blind” with no way to verify except to guess and\ncheck. Absent evals, debugging is reactive: wait for complaints, reproduce manually,\nfix the bug, and hope nothing else regressed. Teams can't distinguish real\nregressions from noise, automatically test changes against hundreds of scenarios\nbefore shipping, or measure improvements."
+    "narrationText": "The breaking point often comes when users report the agent feels worse after changes, and the team is “flying blind” with no way to verify except to guess and check. Absent evals, debugging is reactive: wait for complaints, reproduce manually, fix the bug, and hope nothing else regressed. Teams can't distinguish real regressions from noise, automatically test changes against hundreds of scenarios before shipping, or measure improvements."
   },
   {
     "id": "narration-unit-0020",
-    "narrationText": "We’ve seen this progression play out many times. For instance, Claude Code started\nwith fast iteration based on feedback from Anthropic employees and external users.\nLater, we added evals—first for narrow areas like concision and file edits, and then\nfor more complex behaviors like over-engineering. These evals helped identify\nissues, guide improvements, and focus research-product collaborations. Combined with\nproduction monitoring, A/B tests, user research, and more, evals provide signals to\ncontinue improving Claude Code as it scales."
+    "narrationText": "We’ve seen this progression play out many times. For instance, Claude Code started with fast iteration based on feedback from Anthropic employees and external users. Later, we added evals—first for narrow areas like concision and file edits, and then for more complex behaviors like over-engineering. These evals helped identify issues, guide improvements, and focus research-product collaborations. Combined with production monitoring, A/B tests, user research, and more, evals provide signals to continue improving Claude Code as it scales."
   },
   {
     "id": "narration-unit-0021",
-    "narrationText": "Writing evals is useful at any stage in the agent lifecycle. Early on, evals force\nproduct teams to specify what success means for the agent, while later they help\nuphold a consistent quality bar."
+    "narrationText": "Writing evals is useful at any stage in the agent lifecycle. Early on, evals force product teams to specify what success means for the agent, while later they help uphold a consistent quality bar."
   },
   {
     "id": "narration-unit-0022",
-    "narrationText": "Descript’s agent helps users edit videos, so\nthey built evals around three dimensions of a successful editing workflow: don’t\nbreak things, do what I asked, and do it well. They evolved from manual grading to\nLLM graders with criteria defined by the product team and periodic human\ncalibration, and now regularly run two separate suites for quality benchmarking and\nregression testing. The Bolt AI team started\nbuilding evals later, after they already had a widely used agent. In 3 months, they\nbuilt an eval system that runs their agent and grades outputs with static analysis,\nuses browser agents to test apps, and employs LLM judges for behaviors like\ninstruction following."
+    "narrationText": "Descript’s agent helps users edit videos, so they built evals around three dimensions of a successful editing workflow: don’t break things, do what I asked, and do it well. They evolved from manual grading to LLM graders with criteria defined by the product team and periodic human calibration, and now regularly run two separate suites for quality benchmarking and regression testing. The Bolt AI team started building evals later, after they already had a widely used agent. In 3 months, they built an eval system that runs their agent and grades outputs with static analysis, uses browser agents to test apps, and employs LLM judges for behaviors like instruction following."
   },
   {
     "id": "narration-unit-0023",
-    "narrationText": "Some teams create evals at the start of development; others add them once at scale\nwhen evals become a bottleneck for improving the agent. Evals are especially useful\nat the start of agent development to explicitly encode expected behavior. Two\nengineers reading the same initial spec could come away with different\ninterpretations on how the AI should handle edge cases. An eval suite resolves this\nambiguity. Regardless of when they’re created, evals help accelerate development."
+    "narrationText": "Some teams create evals at the start of development; others add them once at scale when evals become a bottleneck for improving the agent. Evals are especially useful at the start of agent development to explicitly encode expected behavior. Two engineers reading the same initial spec could come away with different interpretations on how the AI should handle edge cases. An eval suite resolves this ambiguity. Regardless of when they’re created, evals help accelerate development."
   },
   {
     "id": "narration-unit-0024",
-    "narrationText": "Evals also shape how quickly you can adopt new models. When more powerful models\ncome out, teams without evals face weeks of testing while competitors with evals can\nquickly determine the model’s strengths, tune their prompts, and upgrade in\ndays."
+    "narrationText": "Evals also shape how quickly you can adopt new models. When more powerful models come out, teams without evals face weeks of testing while competitors with evals can quickly determine the model’s strengths, tune their prompts, and upgrade in days."
   },
   {
     "id": "narration-unit-0025",
-    "narrationText": "Once evals exist, you get baselines and regression tests for free: latency, token\nusage, cost per task, and error rates can be tracked on a static bank of tasks.\nEvals can also become the highest-bandwidth communication channel between product\nand research teams, defining metrics researchers can optimize against. Clearly,\nevals have wide-ranging benefits beyond tracking regressions and improvements. Their\ncompounding value is easy to miss given that costs are visible upfront while\nbenefits accumulate later."
+    "narrationText": "Once evals exist, you get baselines and regression tests for free: latency, token usage, cost per task, and error rates can be tracked on a static bank of tasks. Evals can also become the highest-bandwidth communication channel between product and research teams, defining metrics researchers can optimize against. Clearly, evals have wide-ranging benefits beyond tracking regressions and improvements. Their compounding value is easy to miss given that costs are visible upfront while benefits accumulate later."
   },
   {
     "id": "narration-unit-0026",
-    "narrationText": "How to evaluate AI agents\n\nWe see several common types of agents deployed at scale today, including coding\nagents, research agents, computer use agents, and conversational agents. Each type\nmay be deployed across a wide variety of industries, but they can be evaluated using\nsimilar techniques. You don’t need to invent an evaluation from scratch. The\nsections below describe proven techniques for several agent types. Use these methods\nas a foundation, then extend them to your domain."
+    "narrationText": "How to evaluate AI agents\n\nWe see several common types of agents deployed at scale today, including coding agents, research agents, computer use agents, and conversational agents. Each type may be deployed across a wide variety of industries, but they can be evaluated using similar techniques. You don’t need to invent an evaluation from scratch. The sections below describe proven techniques for several agent types. Use these methods as a foundation, then extend them to your domain."
   },
   {
     "id": "narration-unit-0027",
-    "narrationText": "Types of graders for agents\n\nAgent evaluations typically combine three types of graders: code-based, model-based,\nand human. Each grader evaluates some portion of either the transcript or the\noutcome. An essential component of effective evaluation design is to choose the\nright graders for the job."
+    "narrationText": "Types of graders for agents\n\nAgent evaluations typically combine three types of graders: code-based, model-based, and human. Each grader evaluates some portion of either the transcript or the outcome. An essential component of effective evaluation design is to choose the right graders for the job."
   },
   {
     "id": "narration-unit-0028",
@@ -125,15 +125,15 @@
   },
   {
     "id": "narration-unit-0032",
-    "narrationText": "• String match checks (exact, regex, fuzzy, etc.)\n• Binary tests\n(fail-to-pass, pass-to-pass)\n• Static analysis (lint, type,\nsecurity)\n• Outcome verification\n• Tool calls verification\n(tools used, parameters)\n• Transcript analysis (turns taken, token\nusage)"
+    "narrationText": "• String match checks (exact, regex, fuzzy, etc.)\n• Binary tests (fail-to-pass, pass-to-pass)\n• Static analysis (lint, type, security)\n• Outcome verification\n• Tool calls verification (tools used, parameters)\n• Transcript analysis (turns taken, token usage)"
   },
   {
     "id": "narration-unit-0033",
-    "narrationText": "• Fast\n• Cheap\n• Objective\n• Reproducible\n• Easy to\ndebug\n• Verify specific conditions"
+    "narrationText": "• Fast\n• Cheap\n• Objective\n• Reproducible\n• Easy to debug\n• Verify specific conditions"
   },
   {
     "id": "narration-unit-0034",
-    "narrationText": "• Brittle to valid variations that don’t match expected patterns\nexactly\n• Lacking in nuance\n• Limited for evaluating some more\nsubjective tasks"
+    "narrationText": "• Brittle to valid variations that don’t match expected patterns exactly\n• Lacking in nuance\n• Limited for evaluating some more subjective tasks"
   },
   {
     "id": "narration-unit-0035",
@@ -265,31 +265,31 @@
   },
   {
     "id": "narration-unit-0067",
-    "narrationText": "For each task, scoring can be weighted (combined grader scores must hit a\nthreshold), binary (all graders must pass), or a hybrid."
+    "narrationText": "For each task, scoring can be weighted (combined grader scores must hit a threshold), binary (all graders must pass), or a hybrid."
   },
   {
     "id": "narration-unit-0068",
-    "narrationText": "Capability vs. regression evals\n\nCapability or “quality” evals ask, “What can this agent do well?”\nThey should start at a low pass rate, targeting tasks the agent struggles with and\ngiving teams a hill to climb."
+    "narrationText": "Capability vs. regression evals\n\nCapability or “quality” evals ask, “What can this agent do well?” They should start at a low pass rate, targeting tasks the agent struggles with and giving teams a hill to climb."
   },
   {
     "id": "narration-unit-0069",
-    "narrationText": "Regression evals ask, “Does the agent still handle all the tasks it\nused to?” and should have a nearly 100% pass rate. They protect against backsliding,\nas a decline in score signals that something is broken and needs to be improved. As\nteams hill-climb on capability evals, it’s important to also run regression evals to\nmake sure changes don’t cause issues elsewhere."
+    "narrationText": "Regression evals ask, “Does the agent still handle all the tasks it used to?” and should have a nearly 100% pass rate. They protect against backsliding, as a decline in score signals that something is broken and needs to be improved. As teams hill-climb on capability evals, it’s important to also run regression evals to make sure changes don’t cause issues elsewhere."
   },
   {
     "id": "narration-unit-0070",
-    "narrationText": "After an agent is launched and optimized, capability evals with high pass rates can\n“graduate” to become a regression suite that is run continuously to catch any drift.\nTasks that once measured “Can we do this at all?” then measure “Can we still do this\nreliably?”"
+    "narrationText": "After an agent is launched and optimized, capability evals with high pass rates can “graduate” to become a regression suite that is run continuously to catch any drift. Tasks that once measured “Can we do this at all?” then measure “Can we still do this reliably?”"
   },
   {
     "id": "narration-unit-0071",
-    "narrationText": "Evaluating coding agents\n\nCoding agents write, test, and debug code, navigating codebases and\nrunning commands much like a human developer. Effective evals for modern coding\nagents usually rely on well-specified tasks, stable test environments, and thorough\ntests for the generated code."
+    "narrationText": "Evaluating coding agents\n\nCoding agents write, test, and debug code, navigating codebases and running commands much like a human developer. Effective evals for modern coding agents usually rely on well-specified tasks, stable test environments, and thorough tests for the generated code."
   },
   {
     "id": "narration-unit-0072",
-    "narrationText": "Deterministic graders are natural for coding agents because software is generally\nstraightforward to evaluate: does the code run and do the tests pass? Two widely\nused coding agent benchmarks,\nSWE-bench Verified and\nTerminal-Bench, follow this approach. SWE-bench\nVerified gives agents GitHub issues from popular Python repositories and grades\nsolutions by running the test suite; a solution passes only if it fixes the failing\ntests without breaking existing ones. LLMs have progressed from 40% to >80% on\nthis eval in just one year. Terminal-Bench takes a different track: it tests\nend-to-end technical tasks, such as building a Linux kernel from source or training\nan ML model."
+    "narrationText": "Deterministic graders are natural for coding agents because software is generally straightforward to evaluate: does the code run and do the tests pass? Two widely used coding agent benchmarks, SWE-bench Verified and Terminal-Bench, follow this approach. SWE-bench Verified gives agents GitHub issues from popular Python repositories and grades solutions by running the test suite; a solution passes only if it fixes the failing tests without breaking existing ones. LLMs have progressed from 40% to >80% on this eval in just one year. Terminal-Bench takes a different track: it tests end-to-end technical tasks, such as building a Linux kernel from source or training an ML model."
   },
   {
     "id": "narration-unit-0073",
-    "narrationText": "Once you have a set of pass-or-fail tests for validating the key\noutcomes of a coding task, it’s often useful to also grade the\ntranscript. For instance, heuristics-based code quality rules can evaluate\nthe generated code based on more than passing tests, and model-based graders with\nclear rubrics can assess behaviors like how the agent calls tools or interacts with\nthe user."
+    "narrationText": "Once you have a set of pass-or-fail tests for validating the key outcomes of a coding task, it’s often useful to also grade the transcript. For instance, heuristics-based code quality rules can evaluate the generated code based on more than passing tests, and model-based graders with clear rubrics can assess behaviors like how the agent calls tools or interacts with the user."
   },
   {
     "id": "narration-unit-0074",
@@ -297,19 +297,19 @@
   },
   {
     "id": "narration-unit-0075",
-    "narrationText": "Consider a coding task where the agent must fix an authentication bypass\nvulnerability. As shown in the illustrative YAML file below, one could evaluate this\nagent using both graders and metrics."
+    "narrationText": "Consider a coding task where the agent must fix an authentication bypass vulnerability. As shown in the illustrative YAML file below, one could evaluate this agent using both graders and metrics."
   },
   {
     "id": "narration-unit-0076",
-    "narrationText": "Note that this example showcases the full range of available graders for\nillustration. In practice, coding evaluations typically rely on unit tests for\ncorrectness verification and an LLM rubric for assessing overall code quality, with\nadditional graders and metrics added only as needed."
+    "narrationText": "Note that this example showcases the full range of available graders for illustration. In practice, coding evaluations typically rely on unit tests for correctness verification and an LLM rubric for assessing overall code quality, with additional graders and metrics added only as needed."
   },
   {
     "id": "narration-unit-0077",
-    "narrationText": "Evaluating conversational agents\n\nConversational agents interact with users in domains like support,\nsales, or coaching. Unlike traditional chatbots, they maintain state, use tools, and\ntake actions mid-conversation. While coding and research agents can also involve\nmany turns of interaction with the user, conversational agents present a distinct\nchallenge: the quality of the interaction itself is part of what you're evaluating.\nEffective evals for conversational agents usually rely on verifiable end-state\noutcomes and rubrics that capture both task completion and interaction quality.\nUnlike most other evals, they often require a second LLM to simulate the user. We\nuse this approach in our\nalignment auditing agents\nto stress-test models through extended, adversarial conversations."
+    "narrationText": "Evaluating conversational agents\n\nConversational agents interact with users in domains like support, sales, or coaching. Unlike traditional chatbots, they maintain state, use tools, and take actions mid-conversation. While coding and research agents can also involve many turns of interaction with the user, conversational agents present a distinct challenge: the quality of the interaction itself is part of what you're evaluating. Effective evals for conversational agents usually rely on verifiable end-state outcomes and rubrics that capture both task completion and interaction quality. Unlike most other evals, they often require a second LLM to simulate the user. We use this approach in our alignment auditing agents to stress-test models through extended, adversarial conversations."
   },
   {
     "id": "narration-unit-0078",
-    "narrationText": "Success for conversational agents can be multidimensional: is the ticket resolved\n(state check), did it finish in <10 turns (transcript constraint), and was the\ntone appropriate (LLM rubric)? Two benchmarks that incorporate multidimensionality\nare 𝜏-Bench and its successor,\nτ2-Bench. These simulate multi-turn\ninteractions across domains like retail support and airline booking, where one model\nplays a user persona while the agent navigates realistic scenarios."
+    "narrationText": "Success for conversational agents can be multidimensional: is the ticket resolved (state check), did it finish in <10 turns (transcript constraint), and was the tone appropriate (LLM rubric)? Two benchmarks that incorporate multidimensionality are 𝜏-Bench and its successor, τ2-Bench. These simulate multi-turn interactions across domains like retail support and airline booking, where one model plays a user persona while the agent navigates realistic scenarios."
   },
   {
     "id": "narration-unit-0079",
@@ -317,39 +317,39 @@
   },
   {
     "id": "narration-unit-0080",
-    "narrationText": "Consider a support task where the agent must handle a refund for a frustrated\ncustomer."
+    "narrationText": "Consider a support task where the agent must handle a refund for a frustrated customer."
   },
   {
     "id": "narration-unit-0081",
-    "narrationText": "As in our coding agent example, this task showcases multiple grader types for\nillustration. In practice, conversational agent evaluations typically use\nmodel-based graders to assess both communication quality and goal completion,\nbecause many tasks—like answering a question—may have multiple “correct” solutions."
+    "narrationText": "As in our coding agent example, this task showcases multiple grader types for illustration. In practice, conversational agent evaluations typically use model-based graders to assess both communication quality and goal completion, because many tasks—like answering a question—may have multiple “correct” solutions."
   },
   {
     "id": "narration-unit-0082",
-    "narrationText": "Evaluating research agents\n\nResearch agents gather, synthesize, and analyze information, then\nproduce outputs like an answer or report. Unlike coding agents where unit tests\nprovide binary pass/fail signals, research quality can only be judged relative to\nthe task. What counts as “comprehensive,” “well-sourced,” or even “correct” depends\non context: a market scan, due diligence for an acquisition, and a scientific report\neach require different standards."
+    "narrationText": "Evaluating research agents\n\nResearch agents gather, synthesize, and analyze information, then produce outputs like an answer or report. Unlike coding agents where unit tests provide binary pass/fail signals, research quality can only be judged relative to the task. What counts as “comprehensive,” “well-sourced,” or even “correct” depends on context: a market scan, due diligence for an acquisition, and a scientific report each require different standards."
   },
   {
     "id": "narration-unit-0083",
-    "narrationText": "Research evals face unique challenges: experts may disagree on whether a synthesis\nis comprehensive, ground truth shifts as reference content changes constantly, and\nlonger, more open-ended outputs create more room for mistakes. A benchmark like\nBrowseComp, for example, tests whether\nAI agents can find needles in haystacks across the open web—questions designed to be\neasy to verify but hard to solve."
+    "narrationText": "Research evals face unique challenges: experts may disagree on whether a synthesis is comprehensive, ground truth shifts as reference content changes constantly, and longer, more open-ended outputs create more room for mistakes. A benchmark like BrowseComp, for example, tests whether AI agents can find needles in haystacks across the open web—questions designed to be easy to verify but hard to solve."
   },
   {
     "id": "narration-unit-0084",
-    "narrationText": "One strategy to build research agent evals is to combine grader types. Groundedness\nchecks verify that claims are supported by retrieved sources, coverage checks define\nkey facts a good answer must include, and source quality checks confirm the\nconsulted sources are authoritative, rather than simply the first retrieved. For\ntasks with objectively correct answers (“What was Company X’s Q3 revenue?”), exact\nmatch works. An LLM can flag unsupported claims and gaps in coverage but also verify\nthe open-ended synthesis for coherence and completeness."
+    "narrationText": "One strategy to build research agent evals is to combine grader types. Groundedness checks verify that claims are supported by retrieved sources, coverage checks define key facts a good answer must include, and source quality checks confirm the consulted sources are authoritative, rather than simply the first retrieved. For tasks with objectively correct answers (“What was Company X’s Q3 revenue?”), exact match works. An LLM can flag unsupported claims and gaps in coverage but also verify the open-ended synthesis for coherence and completeness."
   },
   {
     "id": "narration-unit-0085",
-    "narrationText": "Given the subjective nature of research quality, LLM-based rubrics should be\nfrequently calibrated against expert human judgment to grade these agents\neffectively."
+    "narrationText": "Given the subjective nature of research quality, LLM-based rubrics should be frequently calibrated against expert human judgment to grade these agents effectively."
   },
   {
     "id": "narration-unit-0086",
-    "narrationText": "Computer use agents\n\nComputer use agents interact with software through the same\ninterface as humans—screenshots, mouse clicks, keyboard inputs, and scrolling—rather\nthan through APIs or code execution. They can use any application with a graphical\nuser interface (GUI), from design tools to legacy enterprise software. Evaluation\nrequires running the agent in a real or sandboxed environment where it can use\nsoftware applications and checking whether it achieved the intended outcome. For\ninstance, WebArena tests\nbrowser-based tasks, using URL and page state checks to verify the agent navigated\ncorrectly, along with backend state verification for tasks that modify data\n(confirming an order was actually placed, not just that the confirmation page\nappeared). OSWorld extends this to full\noperating system control, with evaluation scripts that inspect diverse artifacts\nafter task completion: file system state, application configs, database contents,\nand UI element properties."
+    "narrationText": "Computer use agents\n\nComputer use agents interact with software through the same interface as humans—screenshots, mouse clicks, keyboard inputs, and scrolling—rather than through APIs or code execution. They can use any application with a graphical user interface (GUI), from design tools to legacy enterprise software. Evaluation requires running the agent in a real or sandboxed environment where it can use software applications and checking whether it achieved the intended outcome. For instance, WebArena tests browser-based tasks, using URL and page state checks to verify the agent navigated correctly, along with backend state verification for tasks that modify data (confirming an order was actually placed, not just that the confirmation page appeared). OSWorld extends this to full operating system control, with evaluation scripts that inspect diverse artifacts after task completion: file system state, application configs, database contents, and UI element properties."
   },
   {
     "id": "narration-unit-0087",
-    "narrationText": "Browser use agents require a balance between token efficiency and latency. DOM-based\ninteractions execute quickly but consume many tokens, while screenshot-based\ninteractions are slower but more token-efficient. For example, when asking Claude to\nsummarize Wikipedia, it is more efficient to extract the text from the DOM. When\nfinding a new laptop case on Amazon, it is more efficient to take screenshots (as\nextracting the entire DOM is token-intensive). In our Claude for Chrome product, we\ndeveloped evals to check that the agent was selecting the right tool for each\ncontext. This enabled us to complete browser-based tasks faster and more accurately."
+    "narrationText": "Browser use agents require a balance between token efficiency and latency. DOM-based interactions execute quickly but consume many tokens, while screenshot-based interactions are slower but more token-efficient. For example, when asking Claude to summarize Wikipedia, it is more efficient to extract the text from the DOM. When finding a new laptop case on Amazon, it is more efficient to take screenshots (as extracting the entire DOM is token-intensive). In our Claude for Chrome product, we developed evals to check that the agent was selecting the right tool for each context. This enabled us to complete browser-based tasks faster and more accurately."
   },
   {
     "id": "narration-unit-0088",
-    "narrationText": "How to think about non-determinism in evaluations for agents\n\nRegardless of agent type, agent behavior varies between runs, which makes evaluation\nresults harder to interpret than they first appear. Each task has its own success\nrate—maybe 90% on one task, 50% on another—and a task that passed on one eval run\nmight fail on the next. Sometimes, what we want to measure is how\noften (what proportion of the trials) an agent succeeds for a task."
+    "narrationText": "How to think about non-determinism in evaluations for agents\n\nRegardless of agent type, agent behavior varies between runs, which makes evaluation results harder to interpret than they first appear. Each task has its own success rate—maybe 90% on one task, 50% on another—and a task that passed on one eval run might fail on the next. Sometimes, what we want to measure is how often (what proportion of the trials) an agent succeeds for a task."
   },
   {
     "id": "narration-unit-0089",
@@ -357,19 +357,19 @@
   },
   {
     "id": "narration-unit-0090",
-    "narrationText": "pass@k\nmeasures the likelihood that an agent gets at least one correct solution in\nk attempts. As k increases, pass@k score rises: more “shots on\ngoal” means higher odds of at least 1 success. A score of 50% pass@1 means that a\nmodel succeeds at half the tasks in the eval on its first try. In coding, we’re\noften most interested in the agent finding the solution on the first try—pass@1. In\nother cases, proposing many solutions is valid as long as one works."
+    "narrationText": "pass@k measures the likelihood that an agent gets at least one correct solution in k attempts. As k increases, pass@k score rises: more “shots on goal” means higher odds of at least 1 success. A score of 50% pass@1 means that a model succeeds at half the tasks in the eval on its first try. In coding, we’re often most interested in the agent finding the solution on the first try—pass@1. In other cases, proposing many solutions is valid as long as one works."
   },
   {
     "id": "narration-unit-0091",
-    "narrationText": "pass^k measures the\nprobability that all k trials succeed. As k increases, pass^k\nfalls since demanding consistency across more trials is a harder bar to clear. If\nyour agent has a 75% per-trial success rate and you run 3 trials, the probability of\npassing all three is (0.75)³ ≈ 42%. This metric especially matters for\ncustomer-facing agents where users expect reliable behavior every time."
+    "narrationText": "pass^k measures the probability that all k trials succeed. As k increases, pass^k falls since demanding consistency across more trials is a harder bar to clear. If your agent has a 75% per-trial success rate and you run 3 trials, the probability of passing all three is (0.75)³ ≈ 42%. This metric especially matters for customer-facing agents where users expect reliable behavior every time."
   },
   {
     "id": "narration-unit-0092",
-    "narrationText": "Both metrics are useful, and which to use depends on product requirements: pass@k\nfor tools where one success matters, pass^k for agents where consistency is\nessential."
+    "narrationText": "Both metrics are useful, and which to use depends on product requirements: pass@k for tools where one success matters, pass^k for agents where consistency is essential."
   },
   {
     "id": "narration-unit-0093",
-    "narrationText": "Going from zero to one: a roadmap to great evals for agents\n\nThis section lays out our practical, field-tested advice for going from no evals to\nevals you can trust. Think of this as a roadmap for eval-driven agent development:\ndefine success early, measure it clearly, and iterate continuously."
+    "narrationText": "Going from zero to one: a roadmap to great evals for agents\n\nThis section lays out our practical, field-tested advice for going from no evals to evals you can trust. Think of this as a roadmap for eval-driven agent development: define success early, measure it clearly, and iterate continuously."
   },
   {
     "id": "narration-unit-0094",
@@ -377,7 +377,7 @@
   },
   {
     "id": "narration-unit-0095",
-    "narrationText": "We see teams delay building evals because they think they need hundreds of tasks. In\nreality, 20-50 simple tasks drawn from real failures is a great start. After all, in\nearly agent development, each change to the system often has a clear, noticeable\nimpact, and this large effect size means small sample sizes suffice. More mature\nagents may need larger, more difficult evals to detect smaller effects, but it’s\nbest to take the 80/20 approach in the beginning. Evals get harder to build the\nlonger you wait. Early on, product requirements naturally translate into test cases.\nWait too long and you're reverse-engineering success criteria from a live system."
+    "narrationText": "We see teams delay building evals because they think they need hundreds of tasks. In reality, 20-50 simple tasks drawn from real failures is a great start. After all, in early agent development, each change to the system often has a clear, noticeable impact, and this large effect size means small sample sizes suffice. More mature agents may need larger, more difficult evals to detect smaller effects, but it’s best to take the 80/20 approach in the beginning. Evals get harder to build the longer you wait. Early on, product requirements naturally translate into test cases. Wait too long and you're reverse-engineering success criteria from a live system."
   },
   {
     "id": "narration-unit-0096",
@@ -385,7 +385,7 @@
   },
   {
     "id": "narration-unit-0097",
-    "narrationText": "Begin with the manual checks you run during development—the behaviors you verify\nbefore each release and common tasks end users try. If you're already in production,\nlook at your bug tracker and support queue. Converting user-reported failures into\ntest cases ensures your suite reflects actual usage; prioritizing by user impact\nhelps you invest effort where it counts."
+    "narrationText": "Begin with the manual checks you run during development—the behaviors you verify before each release and common tasks end users try. If you're already in production, look at your bug tracker and support queue. Converting user-reported failures into test cases ensures your suite reflects actual usage; prioritizing by user impact helps you invest effort where it counts."
   },
   {
     "id": "narration-unit-0098",
@@ -393,11 +393,11 @@
   },
   {
     "id": "narration-unit-0099",
-    "narrationText": "Getting task quality right is harder than it seems. A good task is one where two\ndomain experts would independently reach the same pass/fail verdict. Could they pass\nthe task themselves? If not, the task needs refinement. Ambiguity in task\nspecifications becomes noise in metrics. The same applies to criteria for\nmodel-based graders: vague rubrics produce inconsistent judgments."
+    "narrationText": "Getting task quality right is harder than it seems. A good task is one where two domain experts would independently reach the same pass/fail verdict. Could they pass the task themselves? If not, the task needs refinement. Ambiguity in task specifications becomes noise in metrics. The same applies to criteria for model-based graders: vague rubrics produce inconsistent judgments."
   },
   {
     "id": "narration-unit-0100",
-    "narrationText": "Each task should be passable by an agent that follows instructions correctly. This\ncan be subtle. For instance, auditing Terminal-Bench revealed that if a task asks\nthe agent to write a script but doesn’t specify a filepath, and the tests assume a\nparticular filepath for the script, the agent might fail through no fault of its\nown. Everything the grader checks should be clear from the task description; agents\nshouldn’t fail due to ambiguous specs. With frontier models, a 0% pass rate across\nmany trials (i.e. 0% pass@100) is most often a signal of a broken task, not an\nincapable agent, and a sign to double-check your task specification and graders. For\neach task, it’s useful to create a reference solution: a known working output that\npasses all graders. This proves that the task is solvable and verifies graders are\ncorrectly configured."
+    "narrationText": "Each task should be passable by an agent that follows instructions correctly. This can be subtle. For instance, auditing Terminal-Bench revealed that if a task asks the agent to write a script but doesn’t specify a filepath, and the tests assume a particular filepath for the script, the agent might fail through no fault of its own. Everything the grader checks should be clear from the task description; agents shouldn’t fail due to ambiguous specs. With frontier models, a 0% pass rate across many trials (i.e. 0% pass@100) is most often a signal of a broken task, not an incapable agent, and a sign to double-check your task specification and graders. For each task, it’s useful to create a reference solution: a known working output that passes all graders. This proves that the task is solvable and verifies graders are correctly configured."
   },
   {
     "id": "narration-unit-0101",
@@ -405,7 +405,7 @@
   },
   {
     "id": "narration-unit-0102",
-    "narrationText": "Test both the cases where a behavior should occur and where it\nshouldn't. One-sided evals create one-sided optimization. For instance, if\nyou only test whether the agent searches when it should, you might end up with an\nagent that searches for almost everything. Try to avoid\nclass-imbalanced\nevals. We learned this firsthand when building evals for web search in\nClaude.ai. The challenge was preventing the model from searching when it shouldn’t, while\npreserving its ability to do extensive research when appropriate. The team built\nevals covering both directions: queries where the model should search (like finding\nthe weather) and queries where it should answer from existing knowledge (like “who\nfounded Apple?”). Striking the right balance between undertriggering (not searching\nwhen it should) or overtriggering (searching when it shouldn’t) was difficult, and\ntook many rounds of refinements to both the prompts and the eval. As more example\nproblems come up, we continue to add to evals to improve our coverage."
+    "narrationText": "Test both the cases where a behavior should occur and where it shouldn't. One-sided evals create one-sided optimization. For instance, if you only test whether the agent searches when it should, you might end up with an agent that searches for almost everything. Try to avoid class-imbalanced evals. We learned this firsthand when building evals for web search in Claude.ai. The challenge was preventing the model from searching when it shouldn’t, while preserving its ability to do extensive research when appropriate. The team built evals covering both directions: queries where the model should search (like finding the weather) and queries where it should answer from existing knowledge (like “who founded Apple?”). Striking the right balance between undertriggering (not searching when it should) or overtriggering (searching when it shouldn’t) was difficult, and took many rounds of refinements to both the prompts and the eval. As more example problems come up, we continue to add to evals to improve our coverage."
   },
   {
     "id": "narration-unit-0103",
@@ -413,7 +413,7 @@
   },
   {
     "id": "narration-unit-0104",
-    "narrationText": "It’s essential that the agent in the eval functions roughly the same as the agent\nused in production, and that the environment itself doesn’t introduce further noise.\nEach trial should be “isolated” by starting from a clean environment. Unnecessary\nshared state between runs (leftover files, cached data, resource exhaustion) can\ncause correlated failures due to infrastructure flakiness rather than agent\nperformance. Shared state can also artificially inflate performance. For example, in\nsome internal evals we observed Claude gaining an unfair advantage on some tasks by\nexamining the git history from previous trials. If multiple distinct trials fail\nbecause of the same limitation in the environment (like limited CPU memory), these\ntrials are not independent because they’re affected by the same factor, and the eval\nresults become unreliable for measuring agent performance."
+    "narrationText": "It’s essential that the agent in the eval functions roughly the same as the agent used in production, and that the environment itself doesn’t introduce further noise. Each trial should be “isolated” by starting from a clean environment. Unnecessary shared state between runs (leftover files, cached data, resource exhaustion) can cause correlated failures due to infrastructure flakiness rather than agent performance. Shared state can also artificially inflate performance. For example, in some internal evals we observed Claude gaining an unfair advantage on some tasks by examining the git history from previous trials. If multiple distinct trials fail because of the same limitation in the environment (like limited CPU memory), these trials are not independent because they’re affected by the same factor, and the eval results become unreliable for measuring agent performance."
   },
   {
     "id": "narration-unit-0105",
@@ -421,27 +421,27 @@
   },
   {
     "id": "narration-unit-0106",
-    "narrationText": "As discussed above, great eval design involves choosing the best graders for the\nagent and the tasks. We recommend choosing deterministic graders where possible, LLM\ngraders where necessary or for additional flexibility, and using human graders\njudiciously for additional validation."
+    "narrationText": "As discussed above, great eval design involves choosing the best graders for the agent and the tasks. We recommend choosing deterministic graders where possible, LLM graders where necessary or for additional flexibility, and using human graders judiciously for additional validation."
   },
   {
     "id": "narration-unit-0107",
-    "narrationText": "There is a common instinct to check that agents followed very specific steps like a\nsequence of tool calls in the right order. We’ve found this approach too rigid and\nresults in overly brittle tests, as agents regularly find valid approaches that eval\ndesigners didn’t anticipate. So as not to unnecessarily punish creativity, it’s\noften better to grade what the agent produced, not the path it took."
+    "narrationText": "There is a common instinct to check that agents followed very specific steps like a sequence of tool calls in the right order. We’ve found this approach too rigid and results in overly brittle tests, as agents regularly find valid approaches that eval designers didn’t anticipate. So as not to unnecessarily punish creativity, it’s often better to grade what the agent produced, not the path it took."
   },
   {
     "id": "narration-unit-0108",
-    "narrationText": "For tasks with multiple components, build in partial credit. A\nsupport agent that correctly identifies the problem and verifies the customer but\nfails to process a refund is meaningfully better than one that fails immediately.\nIt’s important to represent this continuum of success in results."
+    "narrationText": "For tasks with multiple components, build in partial credit. A support agent that correctly identifies the problem and verifies the customer but fails to process a refund is meaningfully better than one that fails immediately. It’s important to represent this continuum of success in results."
   },
   {
     "id": "narration-unit-0109",
-    "narrationText": "Model grading often takes careful iteration to validate accuracy. LLM-as-judge\ngraders should be closely calibrated with human experts to gain confidence that\nthere is little divergence between the human grading and model grading. To avoid\nhallucinations, give the LLM a way out, like providing an instruction to return\n“Unknown” when it doesn’t have enough information. It can also help to create clear,\nstructured rubrics to grade each dimension of a task, and then grade each dimension\nwith an isolated LLM-as-judge rather than using one to grade all dimensions. Once\nthe system is robust, it’s sufficient to use human review only occasionally."
+    "narrationText": "Model grading often takes careful iteration to validate accuracy. LLM-as-judge graders should be closely calibrated with human experts to gain confidence that there is little divergence between the human grading and model grading. To avoid hallucinations, give the LLM a way out, like providing an instruction to return “Unknown” when it doesn’t have enough information. It can also help to create clear, structured rubrics to grade each dimension of a task, and then grade each dimension with an isolated LLM-as-judge rather than using one to grade all dimensions. Once the system is robust, it’s sufficient to use human review only occasionally."
   },
   {
     "id": "narration-unit-0110",
-    "narrationText": "Some evaluations have subtle failure modes that result in low scores even with good\nagent performance, as the agent fails to solve tasks due to grading bugs, agent\nharness constraints, or ambiguity. Even sophisticated teams can miss these issues.\nFor example,\nOpus 4.5 initially scored 42% on CORE-Bench, until an Anthropic researcher found multiple issues: rigid grading that penalized\n“96.12” when expecting “96.124991…”, ambiguous task specs, and stochastic tasks that\nwere impossible to reproduce exactly. After fixing bugs and using a less constrained\nscaffold, Opus 4.5’s score jumped to 95%. Similarly,\nMETR discovered\nseveral misconfigured tasks in their time horizon benchmark that asked agents to\noptimize to a stated score threshold, but the grading required exceeding that\nthreshold. This penalized models like Claude for following the instructions, while\nmodels that ignored the stated goal received better scores. Carefully\ndouble-checking tasks and graders can help avoid these problems."
+    "narrationText": "Some evaluations have subtle failure modes that result in low scores even with good agent performance, as the agent fails to solve tasks due to grading bugs, agent harness constraints, or ambiguity. Even sophisticated teams can miss these issues. For example, Opus 4.5 initially scored 42% on CORE-Bench, until an Anthropic researcher found multiple issues: rigid grading that penalized “96.12” when expecting “96.124991…”, ambiguous task specs, and stochastic tasks that were impossible to reproduce exactly. After fixing bugs and using a less constrained scaffold, Opus 4.5’s score jumped to 95%. Similarly, METR discovered several misconfigured tasks in their time horizon benchmark that asked agents to optimize to a stated score threshold, but the grading required exceeding that threshold. This penalized models like Claude for following the instructions, while models that ignored the stated goal received better scores. Carefully double-checking tasks and graders can help avoid these problems."
   },
   {
     "id": "narration-unit-0111",
-    "narrationText": "Make your graders resistant to bypasses or hacks. The agent shouldn’t be able to\neasily “cheat” the eval. Tasks and graders should be designed so that passing\ngenuinely requires solving the problem rather than exploiting unintended loopholes."
+    "narrationText": "Make your graders resistant to bypasses or hacks. The agent shouldn’t be able to easily “cheat” the eval. Tasks and graders should be designed so that passing genuinely requires solving the problem rather than exploiting unintended loopholes."
   },
   {
     "id": "narration-unit-0112",
@@ -449,11 +449,11 @@
   },
   {
     "id": "narration-unit-0113",
-    "narrationText": "You won't know if your graders are working well unless you read the transcripts and\ngrades from many trials. At Anthropic, we invested in tooling for viewing eval\ntranscripts and we regularly take the time to read them. When a task fails, the\ntranscript tells you whether the agent made a genuine mistake or whether your\ngraders rejected a valid solution. It also often surfaces key details about agent\nand eval behavior."
+    "narrationText": "You won't know if your graders are working well unless you read the transcripts and grades from many trials. At Anthropic, we invested in tooling for viewing eval transcripts and we regularly take the time to read them. When a task fails, the transcript tells you whether the agent made a genuine mistake or whether your graders rejected a valid solution. It also often surfaces key details about agent and eval behavior."
   },
   {
     "id": "narration-unit-0114",
-    "narrationText": "Failures should seem fair: it’s clear what the agent got wrong and why. When scores\ndon’t climb, we need confidence that it’s due to agent performance and not the eval.\nReading transcripts is how you verify that your eval is measuring what actually\nmatters, and is a critical skill for agent development."
+    "narrationText": "Failures should seem fair: it’s clear what the agent got wrong and why. When scores don’t climb, we need confidence that it’s due to agent performance and not the eval. Reading transcripts is how you verify that your eval is measuring what actually matters, and is a critical skill for agent development."
   },
   {
     "id": "narration-unit-0115",
@@ -461,39 +461,39 @@
   },
   {
     "id": "narration-unit-0116",
-    "narrationText": "An eval at 100% tracks regressions but provides no signal for improvement.\nEval saturation occurs when an agent passes all of the solvable\ntasks, leaving no room for improvement. For instance, SWE-Bench Verified scores\nstarted at 30% this year, and frontier models are now nearing saturation at >80%.\nAs evals approach saturation, progress will also slow, as only the most difficult\ntasks remain. This can make results deceptive, as large capability improvements\nappear as small increases in scores. For example, the code review startup\nQodo was initially unimpressed by Opus 4.5\nbecause their one-shot coding evals didn’t capture the gains on longer, more complex\ntasks. In response, they developed a new agentic eval framework, providing a much\nclearer picture of progress."
+    "narrationText": "An eval at 100% tracks regressions but provides no signal for improvement. Eval saturation occurs when an agent passes all of the solvable tasks, leaving no room for improvement. For instance, SWE-Bench Verified scores started at 30% this year, and frontier models are now nearing saturation at >80%. As evals approach saturation, progress will also slow, as only the most difficult tasks remain. This can make results deceptive, as large capability improvements appear as small increases in scores. For example, the code review startup Qodo was initially unimpressed by Opus 4.5 because their one-shot coding evals didn’t capture the gains on longer, more complex tasks. In response, they developed a new agentic eval framework, providing a much clearer picture of progress."
   },
   {
     "id": "narration-unit-0117",
-    "narrationText": "As a rule, we do not take eval scores at face value until someone digs into the\ndetails of the eval and reads some transcripts. If grading is unfair, tasks are\nambiguous, valid solutions are penalized, or the harness constrains the model, the\neval should be revised."
+    "narrationText": "As a rule, we do not take eval scores at face value until someone digs into the details of the eval and reads some transcripts. If grading is unfair, tasks are ambiguous, valid solutions are penalized, or the harness constrains the model, the eval should be revised."
   },
   {
     "id": "narration-unit-0118",
-    "narrationText": "Step 8: Keep evaluation suites healthy long-term through open contribution and\nmaintenance"
+    "narrationText": "Step 8: Keep evaluation suites healthy long-term through open contribution and maintenance"
   },
   {
     "id": "narration-unit-0119",
-    "narrationText": "An eval suite is a living artifact that needs ongoing attention and clear ownership\nto remain useful."
+    "narrationText": "An eval suite is a living artifact that needs ongoing attention and clear ownership to remain useful."
   },
   {
     "id": "narration-unit-0120",
-    "narrationText": "At Anthropic, we experimented with various approaches to eval maintenance. What\nproved most effective was establishing dedicated evals teams to own the core\ninfrastructure, while domain experts and product teams contribute most eval tasksand\nrun the evaluations themselves."
+    "narrationText": "At Anthropic, we experimented with various approaches to eval maintenance. What proved most effective was establishing dedicated evals teams to own the core infrastructure, while domain experts and product teams contribute most eval tasksand run the evaluations themselves."
   },
   {
     "id": "narration-unit-0121",
-    "narrationText": "For AI product teams, owning and iterating on evaluations should be as routine as\nmaintaining unit tests. Teams can waste weeks on AI features that “work” in early\ntesting but fail to meet unstated expectations that a well-designed eval would have\nsurfaced early. Defining eval tasks is one of the best ways to stress-test whether\nthe product requirements are concrete enough to start building."
+    "narrationText": "For AI product teams, owning and iterating on evaluations should be as routine as maintaining unit tests. Teams can waste weeks on AI features that “work” in early testing but fail to meet unstated expectations that a well-designed eval would have surfaced early. Defining eval tasks is one of the best ways to stress-test whether the product requirements are concrete enough to start building."
   },
   {
     "id": "narration-unit-0122",
-    "narrationText": "We recommend practicing eval-driven development: build evals to define planned\ncapabilities before agents can fulfill them, then iterate until the agent performs\nwell. Internally, we often build features that work “well enough” today but are bets\non what models can do in a few months. Capability evals that start at a low pass\nrate make this visible. When a new model drops, running the suite quickly reveals\nwhich bets paid off."
+    "narrationText": "We recommend practicing eval-driven development: build evals to define planned capabilities before agents can fulfill them, then iterate until the agent performs well. Internally, we often build features that work “well enough” today but are bets on what models can do in a few months. Capability evals that start at a low pass rate make this visible. When a new model drops, running the suite quickly reveals which bets paid off."
   },
   {
     "id": "narration-unit-0123",
-    "narrationText": "The people closest to product requirements and users are best positioned to define\nsuccess. With current model capabilities, product managers, customer success\nmanagers, or salespeople can use Claude Code to contribute an eval task as a PR—let\nthem! Or, even better, actively enable them."
+    "narrationText": "The people closest to product requirements and users are best positioned to define success. With current model capabilities, product managers, customer success managers, or salespeople can use Claude Code to contribute an eval task as a PR—let them! Or, even better, actively enable them."
   },
   {
     "id": "narration-unit-0124",
-    "narrationText": "How evals fit with other methods for a holistic understanding of agents\n\nAutomated evaluations can be run against an agent in thousands of tasks without\ndeploying to production or affecting real users. But this is just one of many ways\nto understand agent performance. A complete picture includes production monitoring,\nuser feedback, A/B testing, manual transcript review, and systematic human\nevaluation."
+    "narrationText": "How evals fit with other methods for a holistic understanding of agents\n\nAutomated evaluations can be run against an agent in thousands of tasks without deploying to production or affecting real users. But this is just one of many ways to understand agent performance. A complete picture includes production monitoring, user feedback, A/B testing, manual transcript review, and systematic human evaluation."
   },
   {
     "id": "narration-unit-0125",
@@ -541,7 +541,7 @@
   },
   {
     "id": "narration-unit-0136",
-    "narrationText": "Requires ongoing maintenance as product and model evolves to avoid\ndrift"
+    "narrationText": "Requires ongoing maintenance as product and model evolves to avoid drift"
   },
   {
     "id": "narration-unit-0137",
@@ -597,7 +597,7 @@
   },
   {
     "id": "narration-unit-0150",
-    "narrationText": "Slow; days or weeks to reach significance and requires sufficient\ntraffic"
+    "narrationText": "Slow; days or weeks to reach significance and requires sufficient traffic"
   },
   {
     "id": "narration-unit-0151",
@@ -605,7 +605,7 @@
   },
   {
     "id": "narration-unit-0152",
-    "narrationText": "Less signal on the underlying “why” for changes in metrics without\nbeing able to thoroughly review the transcripts"
+    "narrationText": "Less signal on the underlying “why” for changes in metrics without being able to thoroughly review the transcripts"
   },
   {
     "id": "narration-unit-0153",
@@ -641,7 +641,7 @@
   },
   {
     "id": "narration-unit-0161",
-    "narrationText": "Relying primarily on users to catch issues can have negative user\nimpact"
+    "narrationText": "Relying primarily on users to catch issues can have negative user impact"
   },
   {
     "id": "narration-unit-0162",
@@ -673,11 +673,11 @@
   },
   {
     "id": "narration-unit-0169",
-    "narrationText": "Reviewer fatigue or different reviewers can affect the signal\nquality"
+    "narrationText": "Reviewer fatigue or different reviewers can affect the signal quality"
   },
   {
     "id": "narration-unit-0170",
-    "narrationText": "Typically only gives qualitative signal rather than clear\nquantitative grading"
+    "narrationText": "Typically only gives qualitative signal rather than clear quantitative grading"
   },
   {
     "id": "narration-unit-0171",
@@ -709,38 +709,38 @@
   },
   {
     "id": "narration-unit-0178",
-    "narrationText": "Complex domains (legal, finance, healthcare) require human experts\nto conduct studies"
+    "narrationText": "Complex domains (legal, finance, healthcare) require human experts to conduct studies"
   },
   {
     "id": "narration-unit-0179",
-    "narrationText": "These methods map to different stages of agent development. Automated evals are\nespecially useful pre-launch and in CI/CD, running on each agent change and model\nupgrade as the first line of defense against quality problems. Production monitoring\nkicks in post-launch to detect distribution drift and unanticipated real-world\nfailures. A/B testing validates significant changes once you have sufficient\ntraffic. User feedback and transcript review are ongoing practices to fill the gaps:\ntriage feedback constantly, sample transcripts to read weekly, and dig deeper as\nneeded. Reserve systematic human studies for calibrating LLM graders or evaluating\nsubjective outputs where human consensus serves as the reference standard."
+    "narrationText": "These methods map to different stages of agent development. Automated evals are especially useful pre-launch and in CI/CD, running on each agent change and model upgrade as the first line of defense against quality problems. Production monitoring kicks in post-launch to detect distribution drift and unanticipated real-world failures. A/B testing validates significant changes once you have sufficient traffic. User feedback and transcript review are ongoing practices to fill the gaps: triage feedback constantly, sample transcripts to read weekly, and dig deeper as needed. Reserve systematic human studies for calibrating LLM graders or evaluating subjective outputs where human consensus serves as the reference standard."
   },
   {
     "id": "narration-unit-0180",
-    "narrationText": "The most effective teams combine these methods: automated evals for fast iteration,\nproduction monitoring for ground truth, and periodic human review for calibration."
+    "narrationText": "The most effective teams combine these methods: automated evals for fast iteration, production monitoring for ground truth, and periodic human review for calibration."
   },
   {
     "id": "narration-unit-0181",
-    "narrationText": "Conclusion\n\nTeams without evals get bogged down in reactive loops—fixing one failure, creating\nanother, unable to distinguish real regressions from noise. Teams that invest early\nfind the opposite: development accelerates as failures become test cases, test cases\nprevent regressions, and metrics replace guesswork. Evals give the whole team a\nclear hill to climb, turning “the agent feels worse” into something actionable. The\nvalue compounds, but only if you treat evals as a core component, not an\nafterthought."
+    "narrationText": "Conclusion\n\nTeams without evals get bogged down in reactive loops—fixing one failure, creating another, unable to distinguish real regressions from noise. Teams that invest early find the opposite: development accelerates as failures become test cases, test cases prevent regressions, and metrics replace guesswork. Evals give the whole team a clear hill to climb, turning “the agent feels worse” into something actionable. The value compounds, but only if you treat evals as a core component, not an afterthought."
   },
   {
     "id": "narration-unit-0182",
-    "narrationText": "The patterns vary by agent type, but the fundamentals described here are constant.\nStart early and don’t wait for the perfect suite. Source realistic tasks from the\nfailures you see. Define unambiguous, robust success criteria. Design graders\nthoughtfully and combine multiple types. Make sure the problems are hard enough for\nthe model. Iterate on the evaluations to improve their signal-to-noise ratio. Read\nthe transcripts!"
+    "narrationText": "The patterns vary by agent type, but the fundamentals described here are constant. Start early and don’t wait for the perfect suite. Source realistic tasks from the failures you see. Define unambiguous, robust success criteria. Design graders thoughtfully and combine multiple types. Make sure the problems are hard enough for the model. Iterate on the evaluations to improve their signal-to-noise ratio. Read the transcripts!"
   },
   {
     "id": "narration-unit-0183",
-    "narrationText": "AI agent evaluation is still a nascent, fast-evolving field. As agents take on\nlonger tasks, collaborate in multi-agent systems, and handle increasingly subjective\nwork, we will need to adapt our techniques. We’ll keep sharing best practices as we\nlearn more."
+    "narrationText": "AI agent evaluation is still a nascent, fast-evolving field. As agents take on longer tasks, collaborate in multi-agent systems, and handle increasingly subjective work, we will need to adapt our techniques. We’ll keep sharing best practices as we learn more."
   },
   {
     "id": "narration-unit-0184",
-    "narrationText": "Acknowledgements\n\nWritten by Mikaela Grace, Jeremy Hadfield, Rodrigo Olivares, and Jiri De Jonghe.\nWe're also grateful to David Hershey, Gian Segato, Mike Merrill, Alex Shaw, Nicholas\nCarlini, Ethan Dixon, Pedram Navid, Jake Eaton, Alyssa Baum, Lina Tawfik, Karen\nZhou, Alexander Bricken, Sam Kennedy, Robert Ying, and others for their\ncontributions. Special thanks to the customers and partners we have learned from\nthrough collaborating on evals, including iGent, Cognition, Bolt, Sierra, Vals.ai,\nMacroscope, PromptLayer, Stripe, Shopify, the Terminal Bench team, and more. This\nwork reflects the collective efforts of several teams who helped develop the\npractice of evaluations at Anthropic."
+    "narrationText": "Acknowledgements\n\nWritten by Mikaela Grace, Jeremy Hadfield, Rodrigo Olivares, and Jiri De Jonghe. We're also grateful to David Hershey, Gian Segato, Mike Merrill, Alex Shaw, Nicholas Carlini, Ethan Dixon, Pedram Navid, Jake Eaton, Alyssa Baum, Lina Tawfik, Karen Zhou, Alexander Bricken, Sam Kennedy, Robert Ying, and others for their contributions. Special thanks to the customers and partners we have learned from through collaborating on evals, including iGent, Cognition, Bolt, Sierra, Vals.ai, Macroscope, PromptLayer, Stripe, Shopify, the Terminal Bench team, and more. This work reflects the collective efforts of several teams who helped develop the practice of evaluations at Anthropic."
   },
   {
     "id": "narration-unit-0185",
-    "narrationText": "Appendix: Eval frameworks\n\nSeveral open-source and commercial frameworks can help teams implement agent\nevaluations without building infrastructure from scratch. The right choice depends\non your agent type, existing stack, and whether you need offline evaluation,\nproduction observability, or both.\nHarbor\nis designed for running agents in containerized environments, with infrastructure\nfor running trials at scale across cloud providers and a standardized format for\ndefining tasks and graders. Popular benchmarks like Terminal-Bench 2.0 ship through\nthe Harbor registry, making it easy to run established benchmarks along with custom\neval suites.\nBraintrust is a\nplatform that combines offline evaluation with production observability and\nexperiment tracking—useful for teams that need to both iterate during development\nand monitor quality in production. Its `autoevals` library includes pre-built\nscorers for factuality, relevance, and other common dimensions.\nLangSmith\noffers tracing, offline and online evaluations, and dataset management with tight\nintegration into the LangChain ecosystem.\nLangfuse provides similar capabilities as a\nself-hosted open-source alternative for teams with data residency requirements."
+    "narrationText": "Appendix: Eval frameworks\n\nSeveral open-source and commercial frameworks can help teams implement agent evaluations without building infrastructure from scratch. The right choice depends on your agent type, existing stack, and whether you need offline evaluation, production observability, or both.\nHarbor is designed for running agents in containerized environments, with infrastructure for running trials at scale across cloud providers and a standardized format for defining tasks and graders. Popular benchmarks like Terminal-Bench 2.0 ship through the Harbor registry, making it easy to run established benchmarks along with custom eval suites.\nBraintrust is a platform that combines offline evaluation with production observability and experiment tracking—useful for teams that need to both iterate during development and monitor quality in production. Its `autoevals` library includes pre-built scorers for factuality, relevance, and other common dimensions.\nLangSmith offers tracing, offline and online evaluations, and dataset management with tight integration into the LangChain ecosystem. Langfuse provides similar capabilities as a self-hosted open-source alternative for teams with data residency requirements."
   },
   {
     "id": "narration-unit-0186",
-    "narrationText": "Arize\noffers Phoenix, an open-source platform for LLM tracing, debugging, and offline or\nonline evaluations, and AX, a SaaS offering that extends Phoenix for scale,\noptimization and monitoring.\nMany teams combine multiple tools, roll\ntheir own eval framework, or just use simple evaluation scripts as a starting point.\nWe find that while frameworks can be a valuable way to accelerate progress and\nstandardize, they’re only as good as the eval tasks you run through them. It’s often\nbest to quickly pick a framework that fits your workflow, then invest your energy in\nthe evals themselves by iterating on high-quality test cases and graders."
+    "narrationText": "Arize offers Phoenix, an open-source platform for LLM tracing, debugging, and offline or online evaluations, and AX, a SaaS offering that extends Phoenix for scale, optimization and monitoring.\nMany teams combine multiple tools, roll their own eval framework, or just use simple evaluation scripts as a starting point. We find that while frameworks can be a valuable way to accelerate progress and standardize, they’re only as good as the eval tasks you run through them. It’s often best to quickly pick a framework that fits your workflow, then invest your energy in the evals themselves by iterating on high-quality test cases and graders."
   }
 ]

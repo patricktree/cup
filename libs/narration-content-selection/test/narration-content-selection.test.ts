@@ -57,6 +57,29 @@ test("preserves semantic attributes in model input and selected output", async (
   );
 });
 
+test("collapses formatting whitespace only in model input while preserving source wording", async () => {
+  let input = "";
+  const selector = createContentSelector(
+    createConfiguration(fauxAssistantMessage(), {
+      completion: async (request) => {
+        input = request.userPrompt;
+        return fauxAssistantMessage(
+          fauxToolCall("select_narration_content", { element_ids: ["0"] }),
+          { stopReason: "toolUse" },
+        );
+      },
+    }),
+  );
+  const source = '<p id="work">Test both\n    <em>cases</em>\n    carefully.<br>Next line.</p>';
+
+  const result = await selector(source);
+
+  expect(input).toContain(
+    `<p ${SOURCE_ELEMENT_ID_ATTRIBUTE}="0">Test both <em ${SOURCE_ELEMENT_ID_ATTRIBUTE}="1">cases</em> carefully.<br ${SOURCE_ELEMENT_ID_ATTRIBUTE}="2">Next line.</p>`,
+  );
+  expect(result.selectedSourceMaterialHtml).toBe(source);
+});
+
 test("corrects Wikipedia IDs without losing source attributes or retry usage", async () => {
   const requests: string[] = [];
   const attempts: unknown[] = [];

@@ -50,6 +50,8 @@ After the server accepts the request and returns a conversion ID, the app naviga
 
 Active accounts and open, unexpired trial grants may prepare articles without available duration. Existing per-owner admission limits still apply. If preparation fails, the article view shows an error and a Retry button. Retry restarts preparation for the same conversion. Speech configuration is stored with the document so later generation and retries use the same choice (model, voice, ...).
 
+Narration content selection retains complete paragraphs of main prose, including instructional prose, while excluding standalone code blocks and shell command snippets. Its model input collapses HTML formatting whitespace and exposes generated selection IDs in place of native HTML IDs. Selection reconstructs narration source material from the original HTML, preserving source wording and native anchors. Narration document creation then collapses formatting whitespace while retaining explicit line breaks. The [live evals](../../libs/narration-content-selection/test/evals/README.md) compare the resulting synchronization units exactly against committed goldens.
+
 Preparation outcomes record narration text size, chunk count, and content-selection provider usage. Generated audio duration is recorded separately per segment by the owner's duration accounting; preparation outcomes do not contain audio duration or speech-provider usage totals.
 
 ## Progressive generation and accounting

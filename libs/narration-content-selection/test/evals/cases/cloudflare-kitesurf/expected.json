@@ -13,67 +13,67 @@
   },
   {
     "id": "narration-unit-0004",
-    "narrationText": "This is one of those questions that has come up every few months internally at\nCloudflare for years. Unsurprisingly, it’s the kind that triggers long threads\nwith multiple reasons and persuasive arguments on why we should do it. The browser\nis obviously the most important software we use every day on our computers; it’s\narguably the operating system of the Internet. We’re a company on a mission to\nhelp build a better Internet — who wouldn’t want to take on the challenge of\nbuilding a new browser?"
+    "narrationText": "This is one of those questions that has come up every few months internally at Cloudflare for years. Unsurprisingly, it’s the kind that triggers long threads with multiple reasons and persuasive arguments on why we should do it. The browser is obviously the most important software we use every day on our computers; it’s arguably the operating system of the Internet. We’re a company on a mission to help build a better Internet — who wouldn’t want to take on the challenge of building a new browser?"
   },
   {
     "id": "narration-unit-0005",
-    "narrationText": "But we never quite found the balance between the technical difficulty of such an\nendeavour and the unique problems we’d be solving by doing it. And so, the idea\nwas shelved, over and over again. Until now."
+    "narrationText": "But we never quite found the balance between the technical difficulty of such an endeavour and the unique problems we’d be solving by doing it. And so, the idea was shelved, over and over again. Until now."
   },
   {
     "id": "narration-unit-0006",
-    "narrationText": "Something magical happened: we reached a tipping point where a series of powerful\ntechnical advancements in our\nDeveloper Platform\nbecame a reality, while the advent of AI agents and the demand for a new kind of\nbrowser became critical at the same time."
+    "narrationText": "Something magical happened: we reached a tipping point where a series of powerful technical advancements in our Developer Platform became a reality, while the advent of AI agents and the demand for a new kind of browser became critical at the same time."
   },
   {
     "id": "narration-unit-0007",
-    "narrationText": "Running\nWebAssembly (Wasm)\nin Workers is now very mature. Primitives like\ndynamic workers,\nSQLite-based Durable Objects,\nWorker-to-worker RPC,\nservice bindings, higher\nNodeJS compatibility\nand higher\nlimits\nopen doors to much more ambitious and complex applications that were simply not\npossible before."
+    "narrationText": "Running WebAssembly (Wasm) in Workers is now very mature. Primitives like dynamic workers, SQLite-based Durable Objects, Worker-to-worker RPC, service bindings, higher NodeJS compatibility and higher limits open doors to much more ambitious and complex applications that were simply not possible before."
   },
   {
     "id": "narration-unit-0008",
-    "narrationText": "Browser Run, our headless browser automation API product, has seen tremendous growth with\nthe rise of AI. Agents need browsers in order to perform many tasks, and in many\ncases cannot succeed without them."
+    "narrationText": "Browser Run, our headless browser automation API product, has seen tremendous growth with the rise of AI. Agents need browsers in order to perform many tasks, and in many cases cannot succeed without them."
   },
   {
     "id": "narration-unit-0009",
-    "narrationText": "But there's a problem — browser engines like Chromium were built for humans, not\nagents, and they come with overhead that AI models simply do not need. They\nconsume so much memory and compute that providing every agent with its own\ninstance is prohibitively expensive, restricting large parts of the Web to only\nthe most sophisticated and costly AI models with higher parametric knowledge,\nwhile locking out many other agentic applications."
+    "narrationText": "But there's a problem — browser engines like Chromium were built for humans, not agents, and they come with overhead that AI models simply do not need. They consume so much memory and compute that providing every agent with its own instance is prohibitively expensive, restricting large parts of the Web to only the most sophisticated and costly AI models with higher parametric knowledge, while locking out many other agentic applications."
   },
   {
     "id": "narration-unit-0010",
-    "narrationText": "We should be giving all agents a browser that excels at what’s important\nfor an AI model, even if that means being light on what’s only useful for humans.\nFor example:"
+    "narrationText": "We should be giving all agents a browser that excels at what’s important for an AI model, even if that means being light on what’s only useful for humans. For example:"
   },
   {
     "id": "narration-unit-0011",
-    "narrationText": "AI doesn’t care about tabs, themes, browser extensions, or synchronization\nacross devices. It cares about token count, context windows, scalability,\nperformance, and costs."
+    "narrationText": "AI doesn’t care about tabs, themes, browser extensions, or synchronization across devices. It cares about token count, context windows, scalability, performance, and costs."
   },
   {
     "id": "narration-unit-0012",
-    "narrationText": "Structured, machine-readable content is important, but visual perfection, smooth\n60-fps scrolling is not. Agents will be just fine if the CSS parsing is slightly\noff or the rendering isn’t pixel perfect."
+    "narrationText": "Structured, machine-readable content is important, but visual perfection, smooth 60-fps scrolling is not. Agents will be just fine if the CSS parsing is slightly off or the rendering isn’t pixel perfect."
   },
   {
     "id": "narration-unit-0013",
-    "narrationText": "The threat model in the context of AI using a browser is different. New problems\nlike prompt injection and tool safety are top priorities."
+    "narrationText": "The threat model in the context of AI using a browser is different. New problems like prompt injection and tool safety are top priorities."
   },
   {
     "id": "narration-unit-0014",
-    "narrationText": "Faced with these realizations, 12 weeks ago we asked the question again: Should we\nbuild our own browser? This time the answer was unanimous: Yes!"
+    "narrationText": "Faced with these realizations, 12 weeks ago we asked the question again: Should we build our own browser? This time the answer was unanimous: Yes!"
   },
   {
     "id": "narration-unit-0015",
-    "narrationText": "Today we are announcing Kitesurf, a new browser that runs\nentirely on top of Workers that we built specifically for agents,\navailable for free while in beta in\nBrowser Run."
+    "narrationText": "Today we are announcing Kitesurf, a new browser that runs entirely on top of Workers that we built specifically for agents, available for free while in beta in Browser Run."
   },
   {
     "id": "narration-unit-0016",
-    "narrationText": "Kitesurf is significantly more efficient in CPU and memory consumption than\nChromium for common agentic tasks like screenshots and HTML extraction. What\nfollows is the story of how we built it. Buckle up, it’s going to get technical —\nbut we promise to keep it interesting."
+    "narrationText": "Kitesurf is significantly more efficient in CPU and memory consumption than Chromium for common agentic tasks like screenshots and HTML extraction. What follows is the story of how we built it. Buckle up, it’s going to get technical — but we promise to keep it interesting."
   },
   {
     "id": "narration-unit-0017",
-    "narrationText": "How it started\n\nKitesurf started as many other great ideas have started at Cloudflare. Someone\nfound something interesting, and the next thing you know they end up “nerd\nsniping” the rest of the team with a seemingly impossible but very attractive\nidea."
+    "narrationText": "How it started\n\nKitesurf started as many other great ideas have started at Cloudflare. Someone found something interesting, and the next thing you know they end up “nerd sniping” the rest of the team with a seemingly impossible but very attractive idea."
   },
   {
     "id": "narration-unit-0018",
-    "narrationText": "We got the initial inspiration from\nobscura, a headless engine written in Rust for AI automation that has “no Chrome, no\nNode.js, no dependencies.”"
+    "narrationText": "We got the initial inspiration from obscura, a headless engine written in Rust for AI automation that has “no Chrome, no Node.js, no dependencies.”"
   },
   {
     "id": "narration-unit-0019",
-    "narrationText": "Then, with the help of an AI agent, we tried to port it to Workers. It didn't work\nvery well at first. But once we gave the AI a solid plan and a clear definition of\nsuccess — detailed enough for the agent to loop endlessly and ask questions when\nneeded — it did work.\nBlown away by this (barely) working proof of concept,\nwe decided to let the team cook."
+    "narrationText": "Then, with the help of an AI agent, we tried to port it to Workers. It didn't work very well at first. But once we gave the AI a solid plan and a clear definition of success — detailed enough for the agent to loop endlessly and ask questions when needed — it did work.\nBlown away by this (barely) working proof of concept, we decided to let the team cook."
   },
   {
     "id": "narration-unit-0020",
@@ -85,15 +85,15 @@
   },
   {
     "id": "narration-unit-0022",
-    "narrationText": "We knew that moving from a prototype to a full-blown browser that could actually\nbe useful for tasks at scale in production would take a lot of work and iteration.\nWe won’t hide that using AI to accelerate the process was key. But how do you use\nAI in such a complex project, keeping the quality of both code and results under\ncontrol without losing velocity? The answer is to provide as many tests as you\ncan."
+    "narrationText": "We knew that moving from a prototype to a full-blown browser that could actually be useful for tasks at scale in production would take a lot of work and iteration. We won’t hide that using AI to accelerate the process was key. But how do you use AI in such a complex project, keeping the quality of both code and results under control without losing velocity? The answer is to provide as many tests as you can."
   },
   {
     "id": "narration-unit-0023",
-    "narrationText": "Enter the\nWeb Platform Tests\n(WPT), the ideal setup: an extensive suite of success criteria that gave the AI\nagents clear goalposts for assessing feature conformance. We curated the selection\nand order of features to assign to the agents, allowing humans to focus on\narchitectural work and reviewing the agents' approaches."
+    "narrationText": "Enter the Web Platform Tests (WPT), the ideal setup: an extensive suite of success criteria that gave the AI agents clear goalposts for assessing feature conformance. We curated the selection and order of features to assign to the agents, allowing humans to focus on architectural work and reviewing the agents' approaches."
   },
   {
     "id": "narration-unit-0024",
-    "narrationText": "However, WPT tests only go so far: they measure conformance to\nW3C\nstandards, not a browser's ability to render and interact with real-world\nwebsites. To bridge this gap, we implemented acombination of integration testing\nand visual regression testing — it runs multistep\nPuppeteer\ntests on real websites against both Chromium and Kitesurf not only by comparing\nthe assertions that it makes, but also rendering outputs at every step to\nhighlight any unwanted differences."
+    "narrationText": "However, WPT tests only go so far: they measure conformance to W3C standards, not a browser's ability to render and interact with real-world websites. To bridge this gap, we implemented acombination of integration testing and visual regression testing — it runs multistep Puppeteer tests on real websites against both Chromium and Kitesurf not only by comparing the assertions that it makes, but also rendering outputs at every step to highlight any unwanted differences."
   },
   {
     "id": "narration-unit-0025",
@@ -101,11 +101,11 @@
   },
   {
     "id": "narration-unit-0026",
-    "narrationText": "Cloudflare has been working on providing great support for\nWebAssembly (Wasm)\nin Workers for quite some time. This is great because we can use high-performance\nC, C++, and Rust packages and compile them to Wasm. If we use Emscripten (for\nexample) and its many layers of mocked dependencies, the compiled binary can get\nbulky and slow."
+    "narrationText": "Cloudflare has been working on providing great support for WebAssembly (Wasm) in Workers for quite some time. This is great because we can use high-performance C, C++, and Rust packages and compile them to Wasm. If we use Emscripten (for example) and its many layers of mocked dependencies, the compiled binary can get bulky and slow."
   },
   {
     "id": "narration-unit-0027",
-    "narrationText": "Instead, we opted for native Rust whenever possible and to compile directly to\nWebAssembly using\nwasm-bindgen, thus avoiding unnecessary emulation layers and running as close to the metal as\npossible,\nreliably."
+    "narrationText": "Instead, we opted for native Rust whenever possible and to compile directly to WebAssembly using wasm-bindgen, thus avoiding unnecessary emulation layers and running as close to the metal as possible, reliably."
   },
   {
     "id": "narration-unit-0028",
@@ -113,11 +113,11 @@
   },
   {
     "id": "narration-unit-0029",
-    "narrationText": "A browser must render the whole unreliable and sometimes hostile web without ever\ndropping the page it's holding, so exception handling is more than just hygiene —\nit's how the application survives bad input without just crashing outright."
+    "narrationText": "A browser must render the whole unreliable and sometimes hostile web without ever dropping the page it's holding, so exception handling is more than just hygiene — it's how the application survives bad input without just crashing outright."
   },
   {
     "id": "narration-unit-0030",
-    "narrationText": "So we committed to one rule up front: any failure degrades to a blank frame or a\nmissing element, never a dead session. Catch faults at every boundary, default to\nsomething safe and empty, and log enough to diagnose."
+    "narrationText": "So we committed to one rule up front: any failure degrades to a blank frame or a missing element, never a dead session. Catch faults at every boundary, default to something safe and empty, and log enough to diagnose."
   },
   {
     "id": "narration-unit-0031",
@@ -125,15 +125,15 @@
   },
   {
     "id": "narration-unit-0032",
-    "narrationText": "Contrary to running a browser on your laptop (where you're visiting sites you\ntrust, and it's acceptable to share some resources between them), an agent is\npointed at whatever a task demands: arbitrary code from arbitrary origins."
+    "narrationText": "Contrary to running a browser on your laptop (where you're visiting sites you trust, and it's acceptable to share some resources between them), an agent is pointed at whatever a task demands: arbitrary code from arbitrary origins."
   },
   {
     "id": "narration-unit-0033",
-    "narrationText": "So we built this browser on the assumption that every page load is untrusted input\nand every session starts fresh. Each component is isolated and has access only to\nthe resources strictly necessary for its function."
+    "narrationText": "So we built this browser on the assumption that every page load is untrusted input and every session starts fresh. Each component is isolated and has access only to the resources strictly necessary for its function."
   },
   {
     "id": "narration-unit-0034",
-    "narrationText": "This seems like a perfect fit for Cloudflare Workers, whose\nsecurity model\nis built around isolation by design. But the platform only gets us the boundary\nbetween isolates. We still have to enforce the same principle at the application\nlevel, deciding what each component is allowed to touch and making sure nothing\nleaks across a page it shouldn't."
+    "narrationText": "This seems like a perfect fit for Cloudflare Workers, whose security model is built around isolation by design. But the platform only gets us the boundary between isolates. We still have to enforce the same principle at the application level, deciding what each component is allowed to touch and making sure nothing leaks across a page it shouldn't."
   },
   {
     "id": "narration-unit-0035",
@@ -141,43 +141,43 @@
   },
   {
     "id": "narration-unit-0036",
-    "narrationText": "State is what makes failure expensive — if there's nothing to reconstruct,\nrecovering from a crash is just starting a new one and replaying the request. A\nstateless component is disposable and parallel by nature: kill it the moment it\nstalls, run a thousand at once, and size them to demand instead of keeping things\nwarm. That fits automation perfectly, where load arrives in bursts and the\ncheapest thing you can do is spin up work that costs only what it used and\nvanishes when it's done. In short,\nwherever a component can be stateless, it should be."
+    "narrationText": "State is what makes failure expensive — if there's nothing to reconstruct, recovering from a crash is just starting a new one and replaying the request. A stateless component is disposable and parallel by nature: kill it the moment it stalls, run a thousand at once, and size them to demand instead of keeping things warm. That fits automation perfectly, where load arrives in bursts and the cheapest thing you can do is spin up work that costs only what it used and vanishes when it's done. In short, wherever a component can be stateless, it should be."
   },
   {
     "id": "narration-unit-0037",
-    "narrationText": "How we built it\n\nArmed with a good plan, extensive tests, and a good tooling environment, we were\nready to get started beyond the initial proof of concept. This is Kitesurf’s very\nhigh level life of a request that still holds today:"
+    "narrationText": "How we built it\n\nArmed with a good plan, extensive tests, and a good tooling environment, we were ready to get started beyond the initial proof of concept. This is Kitesurf’s very high level life of a request that still holds today:"
   },
   {
     "id": "narration-unit-0038",
-    "narrationText": "Let’s dive into the three main components that make Kitesurf work: the Engine,\nPageScript, and PageRenderer."
+    "narrationText": "Let’s dive into the three main components that make Kitesurf work: the Engine, PageScript, and PageRenderer."
   },
   {
     "id": "narration-unit-0039",
-    "narrationText": "Fetching from origins\n\nIn order to render an untrusted web page, a browser has to fetch arbitrary assets\n— images, fonts, CSS, JavaScript, and Wasm files — off the Internet. This is one\nof the most dangerous operations a browser can do."
+    "narrationText": "Fetching from origins\n\nIn order to render an untrusted web page, a browser has to fetch arbitrary assets — images, fonts, CSS, JavaScript, and Wasm files — off the Internet. This is one of the most dangerous operations a browser can do."
   },
   {
     "id": "narration-unit-0040",
-    "narrationText": "Kitesurf does it through one single component, the SandboxOutbound worker, and\nnothing else can touch the network directly — enforced by Dynamic Workers. The\nEngine uses it to bootstrap the page, fetching the main document and its scripts,\nand PageScript fetches everything else: stylesheets, images, fonts, and the page's\nown fetch() calls."
+    "narrationText": "Kitesurf does it through one single component, the SandboxOutbound worker, and nothing else can touch the network directly — enforced by Dynamic Workers. The Engine uses it to bootstrap the page, fetching the main document and its scripts, and PageScript fetches everything else: stylesheets, images, fonts, and the page's own fetch() calls."
   },
   {
     "id": "narration-unit-0041",
-    "narrationText": "We use SandboxOutbound to enforce\nCORS, inject browser-shaped headers, filter responses, and keep each page's cookies\nin their own jar. Anything that fails our policy gets a 403 — each component gets\nprecisely the network it needs and nothing more."
+    "narrationText": "We use SandboxOutbound to enforce CORS, inject browser-shaped headers, filter responses, and keep each page's cookies in their own jar. Anything that fails our policy gets a 403 — each component gets precisely the network it needs and nothing more."
   },
   {
     "id": "narration-unit-0042",
-    "narrationText": "The Engine\n\nThe Engine is the only public-facing component of Kitesurf. It handles the Chrome\nDevTools Protocol (CDP) WebSocket and HTTP REST APIs, serves a landing page that\nis useful for internal testing purposes and, most importantly, stores each session\nstate. All other components are stateless."
+    "narrationText": "The Engine\n\nThe Engine is the only public-facing component of Kitesurf. It handles the Chrome DevTools Protocol (CDP) WebSocket and HTTP REST APIs, serves a landing page that is useful for internal testing purposes and, most importantly, stores each session state. All other components are stateless."
   },
   {
     "id": "narration-unit-0043",
-    "narrationText": "The advantage of using CDP is client compatibility:\nPuppeteer, Playwright, chrome-remote-interface, and the actual Chrome DevTools frontend.\nPoint them at Kitesurf and they will all just work. This is also how Browser Run\nworks\n(more on why this is important later)."
+    "narrationText": "The advantage of using CDP is client compatibility: Puppeteer, Playwright, chrome-remote-interface, and the actual Chrome DevTools frontend. Point them at Kitesurf and they will all just work. This is also how Browser Run works (more on why this is important later)."
   },
   {
     "id": "narration-unit-0044",
-    "narrationText": "Contrary to what the name suggests, the Engine is actually the simplest of the\nKitesurf components. The fun parts come next."
+    "narrationText": "Contrary to what the name suggests, the Engine is actually the simplest of the Kitesurf components. The fun parts come next."
   },
   {
     "id": "narration-unit-0045",
-    "narrationText": "PageScript\n\nPageScript offers a good example of the power of our new Workers features: in this\ncase,\nDynamic Workers. Kitesurf simply wouldn’t have been possible before this."
+    "narrationText": "PageScript\n\nPageScript offers a good example of the power of our new Workers features: in this case, Dynamic Workers. Kitesurf simply wouldn’t have been possible before this."
   },
   {
     "id": "narration-unit-0046",
@@ -185,15 +185,15 @@
   },
   {
     "id": "narration-unit-0047",
-    "narrationText": "Every next page or out-of-process iframe (OOPIF) uses Dynamic Workers to spin up a long-lived PageScript isolate that handles\nthe page session, consisting of a clean\nglobalThis\nand the\nDOM\ndocument object."
+    "narrationText": "Every next page or out-of-process iframe (OOPIF) uses Dynamic Workers to spin up a long-lived PageScript isolate that handles the page session, consisting of a clean globalThis and the DOM document object."
   },
   {
     "id": "narration-unit-0048",
-    "narrationText": "The DOM object is then populated with the results of parsing the HTML document and\nrunning all the JavaScript scripts. For parsing the HTML and the CSS we use parts\nof\nBlitz, a modular rendering engine, and\nStylo, Firefox’s high-performance CSS parser, both written in Rust."
+    "narrationText": "The DOM object is then populated with the results of parsing the HTML document and running all the JavaScript scripts. For parsing the HTML and the CSS we use parts of Blitz, a modular rendering engine, and Stylo, Firefox’s high-performance CSS parser, both written in Rust."
   },
   {
     "id": "narration-unit-0049",
-    "narrationText": "For each found <script> tag or .wasm file we run the JavaScript and\nWebAssembly code inside the same isolate."
+    "narrationText": "For each found <script> tag or .wasm file we run the JavaScript and WebAssembly code inside the same isolate."
   },
   {
     "id": "narration-unit-0050",
@@ -201,23 +201,23 @@
   },
   {
     "id": "narration-unit-0051",
-    "narrationText": "What about\nevals, you ask? Evals are trickier to handle because for\nsecurity reasons\nwe still don’t support eval natively in Workers. We can’t spin another isolate to\nhandle them either, because it wouldn’t have access to globalThis."
+    "narrationText": "What about evals, you ask? Evals are trickier to handle because for security reasons we still don’t support eval natively in Workers. We can’t spin another isolate to handle them either, because it wouldn’t have access to globalThis."
   },
   {
     "id": "narration-unit-0052",
-    "narrationText": "Our solution is to use\nBoa JS, an ECMAScript engine written in Rust, to compile and run on Workers. We are\nbasically executing a runtime on top of a runtime, which doesn’t seem optimal, and\nit isn’t, but it works well enough to handle the occasional evals we find in the\ncode. In the future, when native eval support lands in Workers, we will migrate\naway from Boa."
+    "narrationText": "Our solution is to use Boa JS, an ECMAScript engine written in Rust, to compile and run on Workers. We are basically executing a runtime on top of a runtime, which doesn’t seem optimal, and it isn’t, but it works well enough to handle the occasional evals we find in the code. In the future, when native eval support lands in Workers, we will migrate away from Boa."
   },
   {
     "id": "narration-unit-0053",
-    "narrationText": "PageRenderer\n\nThis component is essentially responsible for generating the actual pixels from\nthe computed page objects. Here’s how it works:"
+    "narrationText": "PageRenderer\n\nThis component is essentially responsible for generating the actual pixels from the computed page objects. Here’s how it works:"
   },
   {
     "id": "narration-unit-0054",
-    "narrationText": "PageRenderer works in a loop with the Engine Worker. Every time the engine needs a\nframe, PageRenderer gets the page object from PageScript (also known as the\nscene), fetches the internal fonts and images from\nStatic Assets, rasterizes everything into an image buffer, and then returns the buffer to the\nengine in a format that the client can display like a JPEG/PNG or PDF."
+    "narrationText": "PageRenderer works in a loop with the Engine Worker. Every time the engine needs a frame, PageRenderer gets the page object from PageScript (also known as the scene), fetches the internal fonts and images from Static Assets, rasterizes everything into an image buffer, and then returns the buffer to the engine in a format that the client can display like a JPEG/PNG or PDF."
   },
   {
     "id": "narration-unit-0055",
-    "narrationText": "A big part of the magic here is handled by another Blitz module,\nblitz-paint, which in turn uses Parley for shaping the characters into glyphs, choosing\nfonts, and breaking text into lines."
+    "narrationText": "A big part of the magic here is handled by another Blitz module, blitz-paint, which in turn uses Parley for shaping the characters into glyphs, choosing fonts, and breaking text into lines."
   },
   {
     "id": "narration-unit-0056",
@@ -225,23 +225,23 @@
   },
   {
     "id": "narration-unit-0057",
-    "narrationText": "Cloudflare Workers have a\nbuilt-in remote procedure call (RPC) system\nthat allows you to call methods on other Workers, pass objects between them, and\ncall methods on those objects. You don’t have to worry about API schemas, types,\nor authentication, you just call remoteFunction(...params) and it works. You\nbenefit from the isolation and the resources of the remote Worker without losing\nthe convenience of accessing all of their functions locally using JavaScript."
+    "narrationText": "Cloudflare Workers have a built-in remote procedure call (RPC) system that allows you to call methods on other Workers, pass objects between them, and call methods on those objects. You don’t have to worry about API schemas, types, or authentication, you just call remoteFunction(...params) and it works. You benefit from the isolation and the resources of the remote Worker without losing the convenience of accessing all of their functions locally using JavaScript."
   },
   {
     "id": "narration-unit-0058",
-    "narrationText": "Kitesurf uses this RPC system: the Engine Worker calls renderFrame() from the\nPageRenderer Worker over RPC using one single call and gets a PNG as the result.\nBecause the renderer holds no page state (only a disposable cache), the engine can\nsafely kill and relaunch it on any failed or stuck RPC call — making each render\nrequest self-contained, retryable, and its isolate cheap and throwaway."
+    "narrationText": "Kitesurf uses this RPC system: the Engine Worker calls renderFrame() from the PageRenderer Worker over RPC using one single call and gets a PNG as the result. Because the renderer holds no page state (only a disposable cache), the engine can safely kill and relaunch it on any failed or stuck RPC call — making each render request self-contained, retryable, and its isolate cheap and throwaway."
   },
   {
     "id": "narration-unit-0059",
-    "narrationText": "Kitesurf passes 215,000+ WPT tests and growing\n\nKitesurf works. It already passes around 215,000+\nWPT tests, and we are adding hundreds of passing tests every week. Here you can see the\nevolution over time, up to the latest version since we started the project:"
+    "narrationText": "Kitesurf passes 215,000+ WPT tests and growing\n\nKitesurf works. It already passes around 215,000+ WPT tests, and we are adding hundreds of passing tests every week. Here you can see the evolution over time, up to the latest version since we started the project:"
   },
   {
     "id": "narration-unit-0060",
-    "narrationText": "It’s worth noting that the parts of a browser that are important to agents (e.g.,\nCSS, DOM, HTML, selection, SVG, and XHR) have good coverage already. Even things\nthat might not be particularly important in the context of agents, like streams,\nare now decently supported."
+    "narrationText": "It’s worth noting that the parts of a browser that are important to agents (e.g., CSS, DOM, HTML, selection, SVG, and XHR) have good coverage already. Even things that might not be particularly important in the context of agents, like streams, are now decently supported."
   },
   {
     "id": "narration-unit-0061",
-    "narrationText": "Performance-wise, Kitesurf is doing pretty well. Below are the medians of five\nBrowser Run\nquick-action\nruns across a\n14-URL corpus\ncomparing Chromium with Kitesurf."
+    "narrationText": "Performance-wise, Kitesurf is doing pretty well. Below are the medians of five Browser Run quick-action runs across a 14-URL corpus comparing Chromium with Kitesurf."
   },
   {
     "id": "narration-unit-0062",
@@ -357,31 +357,31 @@
   },
   {
     "id": "narration-unit-0090",
-    "narrationText": "Chromium wins the stopwatch because a\nJIT\nthat has already seen this page always beats a cold software renderer — and today\nit does, by about 1.7x. Most of that gap comes from rasterization and JPEG/PNG\nencoding, which we will keep optimizing."
+    "narrationText": "Chromium wins the stopwatch because a JIT that has already seen this page always beats a cold software renderer — and today it does, by about 1.7x. Most of that gap comes from rasterization and JPEG/PNG encoding, which we will keep optimizing."
   },
   {
     "id": "narration-unit-0091",
-    "narrationText": "But Kitesurf wins on memory and CPU, the things that actually drive your bill, by\n3-7x compared to what Chromium uses. Less memory means we can run more sessions,\nscale better, and fundamentally lower both our costs and yours."
+    "narrationText": "But Kitesurf wins on memory and CPU, the things that actually drive your bill, by 3-7x compared to what Chromium uses. Less memory means we can run more sessions, scale better, and fundamentally lower both our costs and yours."
   },
   {
     "id": "narration-unit-0092",
-    "narrationText": "The most important test of all: Kitesurf runs Doom\n\nWe highlighted the importance of testing in our design decisions, but we all know\nthat no matter how many tests you have, a project isn't truly complete until Doom\nruns on it. Here’s Kitesurf running\nhttps://silentspacemarine.com/\nfrom our little Doom\nexperiment\na few years ago."
+    "narrationText": "The most important test of all: Kitesurf runs Doom\n\nWe highlighted the importance of testing in our design decisions, but we all know that no matter how many tests you have, a project isn't truly complete until Doom runs on it. Here’s Kitesurf running https://silentspacemarine.com/ from our little Doom experiment a few years ago."
   },
   {
     "id": "narration-unit-0093",
-    "narrationText": "Try it today in Browser Run\n\nYou can try Kitesurf with Browser Run today,\navailable for free while in beta, behind per-account\nlimits."
+    "narrationText": "Try it today in Browser Run\n\nYou can try Kitesurf with Browser Run today, available for free while in beta, behind per-account limits."
   },
   {
     "id": "narration-unit-0094",
-    "narrationText": "The\nBrowser Run CDP endpoint\nnow supports Kitesurf as an option, so your existing client\nPuppeteer,\nPlaywright,\nchrome-remote-interface, or any AI Agent that speaks MCP and CDP, already works. All you need to do is\nadd the browser=kitesurf parameter to our endpoints."
+    "narrationText": "The Browser Run CDP endpoint now supports Kitesurf as an option, so your existing client Puppeteer, Playwright, chrome-remote-interface, or any AI Agent that speaks MCP and CDP, already works. All you need to do is add the browser=kitesurf parameter to our endpoints."
   },
   {
     "id": "narration-unit-0095",
-    "narrationText": "For example, to use Kitesurf with Opencode see\nUsing with MCP clients (CDP)\nin our developer documentation and use this configuration:"
+    "narrationText": "For example, to use Kitesurf with Opencode see Using with MCP clients (CDP) in our developer documentation and use this configuration:"
   },
   {
     "id": "narration-unit-0096",
-    "narrationText": "Another way to use Kitesurf is with\nBrowser Run’s Quick Actions. Again, just add browser=kitesurf to the quick action endpoint and\nit will work. For example, if you need a quick screenshot from Wikipedia, this\nwill work just fine:"
+    "narrationText": "Another way to use Kitesurf is with Browser Run’s Quick Actions. Again, just add browser=kitesurf to the quick action endpoint and it will work. For example, if you need a quick screenshot from Wikipedia, this will work just fine:"
   },
   {
     "id": "narration-unit-0097",
@@ -389,74 +389,74 @@
   },
   {
     "id": "narration-unit-0098",
-    "narrationText": "Another option to start exploring Kitesurf is to use our\npublic playground here. You can type in any URL to see how Kitesurf renders the page and interact with\nit."
+    "narrationText": "Another option to start exploring Kitesurf is to use our public playground here. You can type in any URL to see how Kitesurf renders the page and interact with it."
   },
   {
     "id": "narration-unit-0099",
-    "narrationText": "One interesting feature of the playground is that we inject Chrome DevTools in the\nUI, so you can inspect expanded DOM elements, read console messages, and watch\nnetwork activity while Kitesurf renders pages. More interestingly, we implemented\nthe necessary CDP instructions for the\nMemory panel\nto report the WebAssembly footprint of each isolate, including frames, so you can\ngain a clear understanding of the resources each page is consuming."
+    "narrationText": "One interesting feature of the playground is that we inject Chrome DevTools in the UI, so you can inspect expanded DOM elements, read console messages, and watch network activity while Kitesurf renders pages. More interestingly, we implemented the necessary CDP instructions for the Memory panel to report the WebAssembly footprint of each isolate, including frames, so you can gain a clear understanding of the resources each page is consuming."
   },
   {
     "id": "narration-unit-0100",
-    "narrationText": "Check our\nDeveloper Documentation\nfor all the details on how to use Kitesurf with Browser Run."
+    "narrationText": "Check our Developer Documentation for all the details on how to use Kitesurf with Browser Run."
   },
   {
     "id": "narration-unit-0101",
-    "narrationText": "When is Kitesurf better?\n\nAs of today, Kitesurf correctly renders pages like\nTodoMVC\n(vanilla, React, Vue, Angular, Preact), Wikipedia, Hacker News, the Cloudflare\nBlog, and much of the Cloudflare dashboard. We will keep improving Kitesurf and\nincreasing the percentage of WPT tests that pass, to improve compatibility for\nmore complex web pages."
+    "narrationText": "When is Kitesurf better?\n\nAs of today, Kitesurf correctly renders pages like TodoMVC (vanilla, React, Vue, Angular, Preact), Wikipedia, Hacker News, the Cloudflare Blog, and much of the Cloudflare dashboard. We will keep improving Kitesurf and increasing the percentage of WPT tests that pass, to improve compatibility for more complex web pages."
   },
   {
     "id": "narration-unit-0102",
-    "narrationText": "Kitesurf is great for AI agents that need to render pages but can accept the\ntrade-offs of not using a full-featured, pixel-perfect Chromium browser. It is\nalso excellent for automations and applications that rely on one-shot\nQuick Actions, such as extracting content from a page or generating PDFs or screenshots, for\ncompatible sites."
+    "narrationText": "Kitesurf is great for AI agents that need to render pages but can accept the trade-offs of not using a full-featured, pixel-perfect Chromium browser. It is also excellent for automations and applications that rely on one-shot Quick Actions, such as extracting content from a page or generating PDFs or screenshots, for compatible sites."
   },
   {
     "id": "narration-unit-0103",
-    "narrationText": "Think of Kitesurf as an ephemeral, fully-isolated, stateless engine designed to\nexist only for the duration of a task, that scales well for bursty, AI-driven\nworkloads."
+    "narrationText": "Think of Kitesurf as an ephemeral, fully-isolated, stateless engine designed to exist only for the duration of a task, that scales well for bursty, AI-driven workloads."
   },
   {
     "id": "narration-unit-0104",
-    "narrationText": "What Kitesurf is not yet able to do\n\nIf you need to play video, render WebGL, negotiate a bot-challenge handshake with\nreal TLS fingerprints, or start a ten-minute authenticated session that requires\npersistent state — Kitesurf isn’t yet the right option. Just use Browser Run’s\ndefault, which is powered by Chromium."
+    "narrationText": "What Kitesurf is not yet able to do\n\nIf you need to play video, render WebGL, negotiate a bot-challenge handshake with real TLS fingerprints, or start a ten-minute authenticated session that requires persistent state — Kitesurf isn’t yet the right option. Just use Browser Run’s default, which is powered by Chromium."
   },
   {
     "id": "narration-unit-0105",
-    "narrationText": "The best way to know if a specific site is compatible with Kitesurf is to try it.\nYou can do this by using the APIs or, more quickly, try it in our\npublic playground."
+    "narrationText": "The best way to know if a specific site is compatible with Kitesurf is to try it. You can do this by using the APIs or, more quickly, try it in our public playground."
   },
   {
     "id": "narration-unit-0106",
-    "narrationText": "Explore the DevTools panels and see what’s happening behind the scenes, with\nparticular attention to the console and the memory metrics."
+    "narrationText": "Explore the DevTools panels and see what’s happening behind the scenes, with particular attention to the console and the memory metrics."
   },
   {
     "id": "narration-unit-0107",
-    "narrationText": "Where it goes\n\nKitesurf is twelve weeks old. The first commit was in May. Here are some of the\nthings we're actively working on:"
+    "narrationText": "Where it goes\n\nKitesurf is twelve weeks old. The first commit was in May. Here are some of the things we're actively working on:"
   },
   {
     "id": "narration-unit-0108",
-    "narrationText": "Better CDP coverage. Kitesurf implements a subset of the CDP\nprotocol — enough to cover the requirements of most agents and automation tools,\nincluding robust DOM and network inspection — and we continue to expand its\ncapabilities to be as complete as possible."
+    "narrationText": "Better CDP coverage. Kitesurf implements a subset of the CDP protocol — enough to cover the requirements of most agents and automation tools, including robust DOM and network inspection — and we continue to expand its capabilities to be as complete as possible."
   },
   {
     "id": "narration-unit-0109",
-    "narrationText": "Rendering fidelity for screenshots and PDFs, because we know\nthat LLMs can often work better from an image than from the underlying\ntext."
+    "narrationText": "Rendering fidelity for screenshots and PDFs, because we know that LLMs can often work better from an image than from the underlying text."
   },
   {
     "id": "narration-unit-0110",
-    "narrationText": "WPT coverage. We are iterating rapidly to add more web APIs and\npass more WPT tests on the road to making Kitesurf production-ready."
+    "narrationText": "WPT coverage. We are iterating rapidly to add more web APIs and pass more WPT tests on the road to making Kitesurf production-ready."
   },
   {
     "id": "narration-unit-0111",
-    "narrationText": "Efficiency. We keep CPU, memory, and wall time benchmarks\nrunning all the time and are working hand-in-hand with other Developer Platform\nteams to make Kitesurf as cost-effective and efficient as possible."
+    "narrationText": "Efficiency. We keep CPU, memory, and wall time benchmarks running all the time and are working hand-in-hand with other Developer Platform teams to make Kitesurf as cost-effective and efficient as possible."
   },
   {
     "id": "narration-unit-0112",
-    "narrationText": "Final notes\n\nThank you for making it all the way here — we know this was a long and technical\nblog post, but hopefully an interesting one. We went into detail because we don't\ntake lightly how important, but also how complex, it is to build a new browser,\neven a very specific one."
+    "narrationText": "Final notes\n\nThank you for making it all the way here — we know this was a long and technical blog post, but hopefully an interesting one. We went into detail because we don't take lightly how important, but also how complex, it is to build a new browser, even a very specific one."
   },
   {
     "id": "narration-unit-0113",
-    "narrationText": "Kitesurf is in its early stages, but we wanted to open it up to you as soon as\npossible and learn from your feedback. The team will be actively improving it with\nfrequent updates focused on performance, efficiency, and compatibility."
+    "narrationText": "Kitesurf is in its early stages, but we wanted to open it up to you as soon as possible and learn from your feedback. The team will be actively improving it with frequent updates focused on performance, efficiency, and compatibility."
   },
   {
     "id": "narration-unit-0114",
-    "narrationText": "One last thing: we're going to open source Kitesurf once we're ready — hopefully\nsoon. Our goal is to let any customer deploy their own version of Kitesurf on\ntheir own accounts, if they want to."
+    "narrationText": "One last thing: we're going to open source Kitesurf once we're ready — hopefully soon. Our goal is to let any customer deploy their own version of Kitesurf on their own accounts, if they want to."
   },
   {
     "id": "narration-unit-0115",
-    "narrationText": "So give it a try in the\nplayground, keep an eye on our\nchangelog, and come chat with the team on\nDiscord. Share your experience and send us feedback; we’ll be listening."
+    "narrationText": "So give it a try in the playground, keep an eye on our changelog, and come chat with the team on Discord. Share your experience and send us feedback; we’ll be listening."
   }
 ]
