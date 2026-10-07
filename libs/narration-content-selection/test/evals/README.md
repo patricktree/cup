@@ -63,14 +63,14 @@ pnpm eval:report
 
 ## Add an experimental candidate
 
-Add a named candidate to `CANDIDATES` in `test/evals/narration-content-selection.eval.ts`. Each candidate owns the complete AI strategy: its model-backed completion function, system prompt, tool definition, and completion options such as temperature, reasoning effort, token limit, and retries.
+Add a named candidate to `CANDIDATES` in `test/evals/narration-content-selection.eval.ts`. Each candidate owns the complete AI strategy: its model-backed completion function, system prompt, tool definition, and completion options such as reasoning effort, token limit, and retries.
 
 Start experiments by spreading the production configuration and overriding only the variables under test:
 
 ```ts
 {
   ...PRODUCTION_CONFIG,
-  name: "higher-temperature",
+  name: "medium-reasoning-effort",
   role: "experiment",
   systemPrompt: `${PRODUCTION_CONFIG.systemPrompt}\nFavor concise output.`,
   tool: {
@@ -79,7 +79,7 @@ Start experiments by spreading the production configuration and overriding only 
   },
   completionOptions: {
     ...PRODUCTION_CONFIG.completionOptions,
-    temperature: 0.3,
+    reasoningEffort: "medium",
   },
 }
 ```

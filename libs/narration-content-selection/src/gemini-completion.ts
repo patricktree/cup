@@ -34,7 +34,6 @@ export const completeWithGemini: SelectionCompletion = async (request, options =
         { role: "system", content: request.systemPrompt },
         { role: "user", content: request.userPrompt },
       ],
-      temperature: options.temperature ?? 0,
       max_tokens: options.maxTokens ?? 4096,
       reasoning_effort: options.reasoningEffort ?? "low",
       tools: [{ type: "function", function: request.tool }],

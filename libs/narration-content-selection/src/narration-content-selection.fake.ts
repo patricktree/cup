@@ -62,7 +62,6 @@ export function createFakeNarrationContentSelector(
       },
     },
     completionOptions: {
-      temperature: 0,
       maxTokens: 512,
       maxRetries: 0,
     },

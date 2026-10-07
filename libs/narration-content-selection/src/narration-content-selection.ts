@@ -24,7 +24,6 @@ type SelectionCompletionRequest = {
 
 type SelectionCompletionOptions = {
   reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
-  temperature?: number;
   maxTokens?: number;
   maxRetries?: number;
 };

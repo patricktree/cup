@@ -343,7 +343,7 @@ test("uses the configured prompt, tool, completion options, and abort signal", a
       description: "Experimental tool description",
     },
     completionOptions: {
-      temperature: 0.3,
+      reasoningEffort: "medium",
       maxTokens: 2_048,
     },
   });
@@ -366,8 +366,8 @@ test("uses the configured prompt, tool, completion options, and abort signal", a
   expect(completionOptions).toEqual([
     {
       maxTokens: 2_048,
+      reasoningEffort: "medium",
       signal: expect.any(AbortSignal),
-      temperature: 0.3,
       gatewayMetadata: {
         conversionId: "conversion-123",
         stage: "content-selection",
@@ -402,9 +402,11 @@ test("uses Gemini through AI Gateway and accounts for cached input and reasoning
           chunkIndex: 1,
         });
         if (typeof init?.body !== "string") throw new Error("Expected a JSON request body");
-        expect(JSON.parse(init.body)).toMatchObject({
+        const body: unknown = JSON.parse(init.body);
+        // Gemini rejects sampling parameters on upcoming models.
+        expect(body).not.toHaveProperty("temperature");
+        expect(body).toMatchObject({
           model: "gemini-3.8-flash",
-          temperature: 0,
           max_tokens: 4096,
           reasoning_effort: "low",
           messages: [
