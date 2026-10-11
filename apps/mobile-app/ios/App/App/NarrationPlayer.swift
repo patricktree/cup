@@ -44,8 +44,8 @@ class NarrationPlayerPlugin: CAPPlugin, CAPBridgedPlugin {
       if call.options["token"] != nil { self.engine.authorize(call.getString("token")) }
       switch call.getString("action") {
       case "play": self.engine.play()
-      case "retry": self.engine.play(retry: true)
-      case "seek": self.engine.seek(call.getInt("unitIndex") ?? 0)
+      case "seekToUnit": self.engine.seek(toUnit: call.getInt("unitIndex") ?? 0)
+      case "seekTo": self.engine.seek(toPosition: call.getDouble("positionMilliseconds") ?? 0)
       default: self.engine.pause()
       }
       call.resolve()

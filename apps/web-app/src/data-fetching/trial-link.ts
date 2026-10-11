@@ -49,7 +49,10 @@ export function createAudiobookQuery(conversionId: string) {
   return queryOptions({
     queryKey: ["audiobook", conversionId],
     queryFn: ({ signal }) => getAudiobook(conversionId, signal),
-    refetchInterval: (query) => (query.state.data?.status === "pending" ? POLL_INTERVAL_MS : false),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === "pending" || status === "synthesizing" ? POLL_INTERVAL_MS : false;
+    },
     refetchIntervalInBackground: true,
   });
 }

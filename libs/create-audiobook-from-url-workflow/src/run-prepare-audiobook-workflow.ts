@@ -2,7 +2,11 @@ import type { WorkflowEvent, WorkflowStep, WorkflowStepConfig } from "cloudflare
 import { NonRetryableError } from "cloudflare:workflows";
 import { Temporal } from "temporal-polyfill";
 
-import { SPEECH_CONFIG, storeAudiobook } from "@cup/audiobook-production";
+import {
+  countNarrationTextCharactersBySegment,
+  SPEECH_CONFIG,
+  storeAudiobook,
+} from "@cup/audiobook-production";
 import { ConversionPhase, type ConversionFailureCategory } from "@cup/conversion-contracts";
 import { conversionParamsSchema, type ConversionParams } from "@cup/conversion-contracts";
 import type {
@@ -154,6 +158,7 @@ export async function runPrepareAudiobookWorkflow({
 
       return {
         audiobookReference,
+        narrationTextCharactersBySegment: countNarrationTextCharactersBySegment(narrationDocument),
         readyOutcome: {
           title: sourceMaterial.title,
           audiobookReference,
@@ -205,7 +210,13 @@ export async function runPrepareAudiobookWorkflow({
   );
 
   await step.do("record conversion ready", TERMINAL_STATE_STEP_CONFIG, async () => {
-    await execution.recordReady(readyOutcome);
+    await execution.recordReady(readyOutcome, result.narrationTextCharactersBySegment);
+  });
+
+  // The ready outcome already reserved every segment or none. Insufficient duration is a valid
+  // result that leaves nothing to dispatch; the owner's alarm dispatches if this step fails.
+  await step.do("start speech synthesis", TERMINAL_STATE_STEP_CONFIG, async () => {
+    await execution.startSynthesis(result.narrationTextCharactersBySegment);
   });
 
   return result.audiobookReference;

@@ -8,6 +8,7 @@ import {
   type PlaybackPosition,
   createConversionArtifactPrefix,
 } from "@cup/conversion-contracts";
+import { derivePreparedConversionStatus } from "@cup/conversion-contracts/duration-accounting";
 
 import {
   accountIdentitySchema,
@@ -188,6 +189,18 @@ export class AccountSqlite {
     return this.duration.reserve(conversionId, sequence, characters, nowMs);
   }
 
+  reserveMissingAudioSegments(
+    conversionId: string,
+    narrationTextCharactersBySegment: readonly number[],
+    nowMs: number,
+  ) {
+    return this.duration.reserveMissing(conversionId, narrationTextCharactersBySegment, nowMs);
+  }
+
+  reservedAudioSegments() {
+    return this.duration.reservedSegments();
+  }
+
   completeAudioSegment(
     conversionId: string,
     sequence: number,
@@ -260,6 +273,7 @@ export class AccountSqlite {
     outcome: AccountConversionOutcome,
     nowMs: number,
     executionEpoch?: number,
+    narrationTextCharactersBySegment?: readonly number[],
   ): void {
     z.number().int().nonnegative().safe().parse(nowMs);
     z.uuidv4().parse(conversionId);
@@ -308,6 +322,10 @@ export class AccountSqlite {
         .where(eq(accountConversions.conversionId, conversionId))
         .run();
       this.duration.releaseReservations(conversionId, nowMs);
+      // Reserving with the ready outcome leaves no moment in which a prepared conversion has
+      // undecided reservations: afterwards a segment without one means the document did not fit.
+      if (parsed.status === "ready" && narrationTextCharactersBySegment !== undefined)
+        this.duration.reserveMissing(conversionId, narrationTextCharactersBySegment, nowMs);
       this.database
         .update(pendingJobs)
         .set({ state: "delivered" })
@@ -374,7 +392,16 @@ export class AccountSqlite {
       .orderBy(desc(accountConversions.createdAtMs), desc(accountConversions.conversionId))
       .limit(51)
       .all();
-    const items = rows.slice(0, 50).map((row) => this.getConversion(row.conversionId));
+    const items = rows.slice(0, 50).map((row) => {
+      const conversion = this.getConversion(row.conversionId);
+      // Stored `ready` means prepared; history reports whether the audiobook can be played.
+      return conversion?.status === "ready"
+        ? {
+            ...conversion,
+            status: derivePreparedConversionStatus(this.duration.segments(row.conversionId)),
+          }
+        : conversion;
+    });
     const last = rows[49];
     return {
       items,

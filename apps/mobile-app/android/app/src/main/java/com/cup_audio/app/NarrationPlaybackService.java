@@ -39,7 +39,7 @@ public class NarrationPlaybackService extends MediaSessionService {
               new NotificationChannel(
                   "narration", "Narration", NotificationManager.IMPORTANCE_LOW));
     Handler main = new Handler(Looper.getMainLooper());
-    api = new NarrationApiClient(main);
+    api = new NarrationApiClient();
     positions = new NarrationPositionStore(this, main, api);
     coordinator =
         new NarrationPlaybackCoordinator(
@@ -47,11 +47,13 @@ public class NarrationPlaybackService extends MediaSessionService {
             main,
             api,
             positions,
-            (currentUnitIndex, playing, buffering, error) -> {
+            (currentUnitIndex, position, duration, playing, buffering, error) -> {
               if (instance != this) return;
               NarrationPlayerPlugin.wantsPlayback = playing;
               JSObject state = new JSObject();
               state.put("currentUnitIndex", currentUnitIndex);
+              state.put("positionMilliseconds", position);
+              state.put("durationMilliseconds", duration);
               state.put("isPlaying", playing);
               state.put("isBuffering", buffering);
               state.put("error", error == null ? JSONObject.NULL : error);
@@ -66,7 +68,10 @@ public class NarrationPlaybackService extends MediaSessionService {
   public int onStartCommand(Intent intent, int flags, int startId) {
     super.onStartCommand(intent, flags, startId);
     if (intent == null || NarrationPlayerPlugin.configuration == null) return START_NOT_STICKY;
-    if (!"seek".equals(intent.getStringExtra("action")))
+    String action = intent.getStringExtra("action");
+    boolean isSeek = "seekToUnit".equals(action) || "seekTo".equals(action);
+    // A seek while paused only moves the position; it must not show a playback notification.
+    if (!isSeek)
       startForeground(
           410,
           new NotificationCompat.Builder(this, "narration")
@@ -81,10 +86,12 @@ public class NarrationPlaybackService extends MediaSessionService {
         return START_NOT_STICKY;
       if (!coordinator.hasConversion(incoming.getString("conversionId"))) configure(incoming);
       coordinator.authorize(incoming);
-      if ("seek".equals(intent.getStringExtra("action")))
-        coordinator.command("seek", intent.getIntExtra("unitIndex", 0));
-      else if (shouldPlay)
-        coordinator.command("retry".equals(intent.getStringExtra("action")) ? "retry" : "play", 0);
+      if (isSeek)
+        coordinator.command(
+            action,
+            intent.getIntExtra("unitIndex", 0),
+            intent.getLongExtra("positionMilliseconds", 0));
+      else if (shouldPlay) coordinator.command("play", 0, 0);
       else pauseNarration();
     } catch (Exception failure) {
       coordinator.onFailure(failure.getMessage());
@@ -102,8 +109,8 @@ public class NarrationPlaybackService extends MediaSessionService {
     coordinator.configure(input);
   }
 
-  void command(String action, int unitIndex) {
-    coordinator.command(action, unitIndex);
+  void command(String action, int unitIndex, long positionMilliseconds) {
+    coordinator.command(action, unitIndex, positionMilliseconds);
   }
 
   void pauseNarration() {
@@ -120,7 +127,6 @@ public class NarrationPlaybackService extends MediaSessionService {
   public void onDestroy() {
     coordinator.close();
     positions.close();
-    api.close();
     audio.close();
     instance = null;
     super.onDestroy();

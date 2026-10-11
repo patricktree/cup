@@ -1,5 +1,6 @@
 export {
   PermanentNarrationSynthesisError,
+  RateLimitedNarrationSynthesisError,
   produceAudioSegment,
   type NarrationChunk,
   type NarrationSynthesisResponseMode,
@@ -14,6 +15,7 @@ export {
 export {
   loadAudiobook,
   audiobookSchema,
+  countNarrationTextCharactersBySegment,
   storeAudiobook,
   type Audiobook,
   type ManifestStorage,

@@ -2,23 +2,29 @@ import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor
 
 import type { PlaybackPosition } from "@cup/web-app-api.routes";
 
-import type { PreparedAudiobook, PlayerSnapshot } from "#src/app/player/progressive-player.js";
+import type { PlayableAudiobook, PlayerSnapshot } from "#src/app/player/audiobook-player.js";
+import {
+  createAudiobookTimeline,
+  findTimelineEntryIndex,
+  type AudiobookTimeline,
+} from "#src/app/player/audiobook-timeline.js";
 import { getResourceAccountSession } from "#src/auth/account-session.js";
 
 const native = registerPlugin<{
   configure(input: {
     playerId: string;
     conversionId: string;
-    audiobook: PreparedAudiobook;
+    audiobook: PlayableAudiobook;
     position: PlaybackPosition | null;
     token: string | null;
     isSignedIn: boolean;
-  }): Promise<PlayerSnapshot>;
+  }): Promise<Partial<PlayerSnapshot>>;
   command(input: {
-    action: "play" | "pause" | "seek" | "retry";
+    action: "play" | "pause" | "seekToUnit" | "seekTo";
     playerId?: string;
     token?: string | null;
     unitIndex?: number;
+    positionMilliseconds?: number;
   }): Promise<void>;
   addListener(
     event: "state",
@@ -30,7 +36,7 @@ export function stopNativePlayback() {
   if (Capacitor.isNativePlatform()) void native.command({ action: "pause" });
 }
 
-/** Native engines own audio, lookahead, and listening positions while the WebView is suspended. */
+/** Native engines own audio and listening positions while the WebView is suspended. */
 export class NativePlayer {
   private readonly playerId = crypto.randomUUID();
   private snapshot: PlayerSnapshot;
@@ -38,12 +44,13 @@ export class NativePlayer {
   private initialization: Promise<void> | undefined;
   private listener: PluginListenerHandle | undefined;
   private readonly conversionId: string;
-  private readonly audiobook: PreparedAudiobook;
+  private readonly audiobook: PlayableAudiobook;
   private readonly position: PlaybackPosition | null;
   private readonly isSignedIn: boolean;
+  private readonly timeline: AudiobookTimeline;
   constructor(
     conversionId: string,
-    audiobook: PreparedAudiobook,
+    audiobook: PlayableAudiobook,
     position: PlaybackPosition | null,
     isSignedIn: boolean,
   ) {
@@ -51,13 +58,19 @@ export class NativePlayer {
     this.audiobook = audiobook;
     this.position = position;
     this.isSignedIn = isSignedIn;
+    // The native engine reports the restored position; until then show the start of the unit.
+    const timeline = createAudiobookTimeline(audiobook.segments);
+    this.timeline = timeline;
     const unitIndex = position
       ? audiobook.narrationDocument.synchronizationUnits.findIndex(
           (unit) => unit.id === position.synchronizationUnitId,
         )
       : 0;
+    const entry = timeline.entries[Math.max(0, findTimelineEntryIndex(timeline, unitIndex))];
     this.snapshot = {
-      currentUnitIndex: Math.max(0, unitIndex),
+      currentUnitIndex: entry?.unitIndex ?? 0,
+      positionMilliseconds: entry?.startMilliseconds ?? 0,
+      durationMilliseconds: timeline.durationMilliseconds,
       isPlaying: false,
       isBuffering: false,
       error: null,
@@ -70,15 +83,16 @@ export class NativePlayer {
     };
   };
   getSnapshot = () => this.snapshot;
-  private update = (state: PlayerSnapshot) => {
-    this.snapshot = state;
+  // A native engine that is not running yet reports only part of the state.
+  private update = (state: Partial<PlayerSnapshot>) => {
+    this.snapshot = { ...this.snapshot, ...state };
     for (const listener of this.listeners) listener();
   };
-  attach = (audio: HTMLAudioElement | null) => {
-    const previous = this.initialization ?? Promise.resolve();
-    this.initialization = audio
-      ? previous.then(() => this.initialize())
-      : previous.then(() => this.close());
+  open = () => {
+    this.initialization = (this.initialization ?? Promise.resolve()).then(() => this.initialize());
+  };
+  close = () => {
+    this.initialization = (this.initialization ?? Promise.resolve()).then(() => this.stop());
   };
   private async initialize() {
     this.listener = await native.addListener("state", this.update);
@@ -94,19 +108,21 @@ export class NativePlayer {
       }),
     );
   }
-  private async close() {
+  private async stop() {
     await native.command({ action: "pause", playerId: this.playerId });
     await this.listener?.remove();
   }
-  private command(action: "play" | "pause" | "seek" | "retry", unitIndex?: number) {
+  private command(
+    action: "play" | "pause" | "seekToUnit" | "seekTo",
+    target: { unitIndex?: number; positionMilliseconds?: number } = {},
+  ) {
     void this.initialization
       ?.then(async () => {
-        const session =
-          action === "play" || action === "retry" ? await getResourceAccountSession() : undefined;
+        const session = action === "play" ? await getResourceAccountSession() : undefined;
         return native.command({
           action,
           playerId: this.playerId,
-          ...(unitIndex === undefined ? {} : { unitIndex }),
+          ...target,
           ...(session === undefined ? {} : { token: session?.access_token ?? null }),
         });
       })
@@ -121,6 +137,13 @@ export class NativePlayer {
   }
   play = () => this.command("play");
   pause = () => this.command("pause");
-  seek = (unitIndex: number) => this.command("seek", unitIndex);
-  retry = () => this.command("retry");
+  seekToUnit = (unitIndex: number) => this.command("seekToUnit", { unitIndex });
+  seekTo = (positionMilliseconds: number) => this.command("seekTo", { positionMilliseconds });
+  skip = (direction: 1 | -1) => {
+    const entryIndex = this.timeline.entries.findIndex(
+      (entry) => entry.unitIndex === this.snapshot.currentUnitIndex,
+    );
+    const destination = this.timeline.entries[entryIndex + direction];
+    if (entryIndex >= 0 && destination) this.seekToUnit(destination.unitIndex);
+  };
 }

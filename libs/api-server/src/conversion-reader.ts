@@ -15,6 +15,7 @@ export type ConversionReader = {
   listAudioSegments(): Promise<
     readonly Pick<SegmentUsage, "sequence" | "state" | "actualMilliseconds">[]
   >;
+  getAvailableMilliseconds(): Promise<number>;
 };
 
 /** Internal reads require request authorization before resolving the conversion reader. */
@@ -39,6 +40,7 @@ export function resolveConversionReader(
         return outcome.audiobookReference;
       },
       listAudioSegments: () => account.listAudioSegments(conversionId),
+      getAvailableMilliseconds: async () => (await account.inspect()).balance.available,
     };
   }
 
@@ -48,5 +50,6 @@ export function resolveConversionReader(
     getConversion: () => grant.getConversion(conversionId),
     getReadyAudiobookReference: () => grant.getReadyAudiobookReference(conversionId),
     listAudioSegments: () => grant.listAudioSegments(conversionId),
+    getAvailableMilliseconds: async () => (await grant.inspect()).duration.availableMilliseconds,
   };
 }

@@ -1,8 +1,10 @@
 ---
-status: partially superseded by ADRs 0006 and 0007
+status: partially superseded by ADRs 0006, 0007, and 0008
 ---
 
 # Prepare narration before player-controlled synthesis
+
+[ADR 0008](0008-synthesize-the-whole-narration-document.md) supersedes player-controlled synthesis, the speech synthesis lookahead, seek-driven generation, per-player scheduling, and the preparation-only `ready` status. The preparation boundary, one audio segment per synchronization unit, removal of the assembled track and exports, and the listening position remain accepted. The original decisions below are preserved as historical rationale.
 
 [ADR 0007](0007-require-active-grant-access-for-trial-audiobooks.md) supersedes trial link-only reading and replay and continued trial access after grant expiry or revocation. Trial audiobook requests now require a session for the owning unexpired, unrevoked grant; allowance exhaustion still permits reading and replay. The original decisions below are preserved as historical rationale.
 

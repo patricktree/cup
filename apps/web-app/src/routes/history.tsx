@@ -46,6 +46,14 @@ function HistoryPage(): React.ReactNode {
                   <Link to="/audiobooks/$conversionId" params={{ conversionId: item.conversionId }}>
                     Processing
                   </Link>
+                ) : item.status === "synthesizing" ? (
+                  <Link to="/audiobooks/$conversionId" params={{ conversionId: item.conversionId }}>
+                    Generating audio
+                  </Link>
+                ) : item.status === "insufficient-duration" ? (
+                  <Link to="/audiobooks/$conversionId" params={{ conversionId: item.conversionId }}>
+                    Not enough audio duration
+                  </Link>
                 ) : (
                   <span>
                     {item.outcome?.status === "failed"

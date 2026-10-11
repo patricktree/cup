@@ -16,6 +16,13 @@ export type Audiobook = {
 };
 
 /** Identifies a stored canonical audiobook manifest. */
+/** The text length of each synchronization unit, which is what its audio segment is estimated from. */
+export function countNarrationTextCharactersBySegment(narrationDocument: {
+  synchronizationUnits: readonly { narrationText: string }[];
+}): number[] {
+  return narrationDocument.synchronizationUnits.map((unit) => unit.narrationText.length);
+}
+
 export type AudiobookReference = {
   key: string;
   contentType: typeof AUDIOBOOK_MANIFEST_CONTENT_TYPE;

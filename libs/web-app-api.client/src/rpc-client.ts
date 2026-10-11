@@ -75,23 +75,7 @@ export class WebAppApiClient {
     );
   }
 
-  async getSegment(params: ConversionParams, sequence: number) {
-    return this.#honoClient.api.audiobooks[":conversionId"].segments[":sequence"].$get(
-      { param: { ...params, sequence: String(sequence) } },
-      { init: { credentials: "include" } },
-    );
-  }
-  async generateSegment(params: ConversionParams, sequence: number, retry = false) {
-    return this.#honoClient.api.audiobooks[":conversionId"].segments[":sequence"].$post(
-      {
-        param: { ...params, sequence: String(sequence) },
-        json: { retry },
-        header: browserHeaders(),
-      },
-      { init: { credentials: "include" } },
-    );
-  }
-  async retryPreparation(params: ConversionParams) {
+  async retryConversion(params: ConversionParams) {
     return this.#honoClient.api.audiobooks[":conversionId"].retry.$post(
       { param: params, json: {}, header: browserHeaders() },
       { init: { credentials: "include" } },
@@ -181,23 +165,7 @@ export class AuthenticatedRpcClient {
     );
   }
 
-  async getSegment(params: ConversionParams, sequence: number) {
-    return this.#honoClient.api.audiobooks[":conversionId"].segments[":sequence"].$get(
-      { param: { ...params, sequence: String(sequence) } },
-      this.#options(),
-    );
-  }
-  async generateSegment(params: ConversionParams, sequence: number, retry = false) {
-    return this.#honoClient.api.audiobooks[":conversionId"].segments[":sequence"].$post(
-      {
-        param: { ...params, sequence: String(sequence) },
-        json: { retry },
-        header: browserHeaders(),
-      },
-      this.#options(),
-    );
-  }
-  async retryPreparation(params: ConversionParams) {
+  async retryConversion(params: ConversionParams) {
     return this.#honoClient.api.audiobooks[":conversionId"].retry.$post(
       { param: params, json: {}, header: browserHeaders() },
       this.#options(),

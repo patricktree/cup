@@ -3,53 +3,69 @@ import { Capacitor } from "@capacitor/core";
 import type { PlaybackPosition } from "@cup/web-app-api.routes";
 
 import {
-  ProgressivePlayer,
-  type PreparedAudiobook,
+  AudiobookPlayer,
+  type PlayableAudiobook,
   type PlayerSnapshot,
-} from "#src/app/player/progressive-player.js";
+} from "#src/app/player/audiobook-player.js";
 import { NativePlayer } from "#src/platform/native-player.js";
 
 export type Player = {
   subscribe: (listener: () => void) => () => void;
   getSnapshot: () => PlayerSnapshot;
-  attach: (audio: HTMLAudioElement | null) => void;
+  open: () => void;
+  close: () => void;
   play: () => void;
   pause: () => void;
-  seek: (unitIndex: number) => void;
-  retry: () => void;
-  onPause?: () => void;
-  onEnded?: () => void;
-  onTimeUpdate?: () => void;
-  onMediaError?: () => void;
+  seekToUnit: (unitIndex: number) => void;
+  seekTo: (positionMilliseconds: number) => void;
+  /** Moves to the next or previous segment that has audio. */
+  skip: (direction: 1 | -1) => void;
 };
 
 export function createPlayer(
   conversionId: string,
-  audiobook: PreparedAudiobook,
+  audiobook: PlayableAudiobook,
   position: PlaybackPosition | null,
   subject: string | null,
 ): Player {
   return Capacitor.isNativePlatform()
     ? new NativePlayer(conversionId, audiobook, position, subject !== null)
-    : ProgressivePlayer.forConversion(conversionId, audiobook, position, subject);
+    : AudiobookPlayer.forConversion(conversionId, audiobook, position, subject);
 }
 
+const MEDIA_SESSION_ACTIONS = ["play", "pause", "nexttrack", "previoustrack", "seekto"] as const;
+
+/** Publishes the whole-audiobook timeline to the browser's media controls. */
 export function registerPlayerMediaSession(player: Player, title: string) {
   if (Capacitor.isNativePlatform() || !navigator.mediaSession) return undefined;
 
-  navigator.mediaSession.metadata = new MediaMetadata({ title });
-  navigator.mediaSession.setActionHandler("play", player.play);
-  navigator.mediaSession.setActionHandler("pause", player.pause);
-  navigator.mediaSession.setActionHandler("nexttrack", () =>
-    player.seek(player.getSnapshot().currentUnitIndex + 1),
-  );
-  navigator.mediaSession.setActionHandler("previoustrack", () =>
-    player.seek(player.getSnapshot().currentUnitIndex - 1),
-  );
+  const { mediaSession } = navigator;
+  mediaSession.metadata = new MediaMetadata({ title });
+  mediaSession.setActionHandler("play", player.play);
+  mediaSession.setActionHandler("pause", player.pause);
+  mediaSession.setActionHandler("nexttrack", () => player.skip(1));
+  mediaSession.setActionHandler("previoustrack", () => player.skip(-1));
+  mediaSession.setActionHandler("seekto", (details) => {
+    if (details.seekTime !== undefined) player.seekTo(details.seekTime * 1_000);
+  });
+
+  const publishPosition = () => {
+    const { durationMilliseconds, positionMilliseconds, isPlaying } = player.getSnapshot();
+    mediaSession.playbackState = isPlaying ? "playing" : "paused";
+    if (durationMilliseconds <= 0) return;
+
+    mediaSession.setPositionState({
+      duration: durationMilliseconds / 1_000,
+      position: Math.min(positionMilliseconds, durationMilliseconds) / 1_000,
+      playbackRate: 1,
+    });
+  };
+  publishPosition();
+  const unsubscribe = player.subscribe(publishPosition);
 
   return () => {
-    for (const action of ["play", "pause", "nexttrack", "previoustrack"] as const)
-      navigator.mediaSession.setActionHandler(action, null);
+    unsubscribe();
+    for (const action of MEDIA_SESSION_ACTIONS) mediaSession.setActionHandler(action, null);
     player.pause();
   };
 }

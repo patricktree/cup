@@ -4,6 +4,8 @@ import { NONCE, secureHeaders } from "hono/secure-headers";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { Temporal } from "temporal-polyfill";
 
+import { countNarrationTextCharactersBySegment } from "@cup/audiobook-production";
+import { derivePreparedConversionStatus } from "@cup/conversion-contracts/duration-accounting";
 import {
   clearGrantSessionCookie,
   createGrantSessionCookie,
@@ -22,7 +24,6 @@ import { audiobookSchema, createWebAppApi, type WebAppApiHandlers } from "@cup/w
 
 import { authenticateAccountRequest, mediaCookie, mediaRequest } from "#src/account-auth.ts";
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
-import { getAudioSegmentStateFromEnvironment } from "#src/audio-segment-state.ts";
 import { resolveConversionDispatch } from "#src/conversion-dispatch.ts";
 import { resolveConversionReader } from "#src/conversion-reader.ts";
 import { routeApplicationDomain } from "#src/domain-routing.ts";
@@ -33,6 +34,7 @@ import { isDevelopmentOperatorRequest } from "#src/operator-access.ts";
 import { loadReadyAudiobookFromEnvironment, serveAudio } from "#src/serve-audiobook.ts";
 import { createConversionGrant } from "#src/use-cases/create-conversion-grant.ts";
 import { getGrantConversion as loadGrantConversion } from "#src/use-cases/get-grant-conversion.ts";
+import { getSynthesisState } from "#src/use-cases/get-synthesis-state.ts";
 import { startAudiobookConversion } from "#src/use-cases/start-audiobook-conversion.ts";
 import { applyWebAppCspNonce } from "#src/web-app-csp.ts";
 
@@ -140,7 +142,7 @@ async function getAccountConversion(
     return context.json(
       {
         ...base,
-        status: "ready",
+        status: derivePreparedConversionStatus(await auth.account.listAudioSegments(conversionId)),
         title: conversion.outcome.title,
         completedAt: toIsoString(conversion.completedAtMs ?? conversion.createdAtMs),
         audiobookUrl: `/app/audiobooks/${conversionId}`,
@@ -606,22 +608,25 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
     const audiobook = await loadReadyAudiobookFromEnvironment(context.env, conversionId, reader);
     if (!audiobook)
       return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
-    const usage = await reader.listAudioSegments();
-    const origin = new URL(context.req.url).origin;
-    const segments = usage
-      .filter((item) => item.state === "settled")
-      .map((item) => ({
-        sequence: item.sequence,
-        status: "ready" as const,
-        durationMilliseconds: item.actualMilliseconds,
-        url:
-          origin +
-          "/api/files/audiobooks/" +
-          conversionId +
-          "/segments/" +
-          item.sequence +
-          "/audio.mp3",
-      }));
+    const synthesis = await getSynthesisState(
+      {
+        conversionId,
+        origin: new URL(context.req.url).origin,
+        narrationTextCharactersBySegment: countNarrationTextCharactersBySegment(
+          audiobook.narrationDocument,
+        ),
+      },
+      {
+        listAudioSegments: () => reader.listAudioSegments(),
+        getAvailableMilliseconds: () => reader.getAvailableMilliseconds(),
+        getFailureExplanation: async (sequence) => {
+          const failure = await context.env.AUDIO_BUCKET.get(
+            `${reader.artifactPrefix}segment-${sequence}-failure.json`,
+          );
+          return failure ? (await failure.json<{ explanation: string }>()).explanation : undefined;
+        },
+      },
+    );
     const account =
       owner.kind === "account"
         ? context.env.ACCOUNTS.get(context.env.ACCOUNTS.idFromName(owner.accountId))
@@ -639,85 +644,16 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
     return context.json(
       audiobookSchema.parse({
         ...base,
-        status: "ready",
+        ...synthesis,
         title: audiobook.title,
         narrationDocument: audiobook.narrationDocument,
-        segments,
         playbackPosition,
       }),
       200,
     );
   },
 
-  async getSegment(context) {
-    const { conversionId, sequence } = context.req.valid("param");
-    const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
-    const audiobook = await loadReadyAudiobookFromEnvironment(context.env, conversionId);
-    if (!owner || !audiobook?.narrationDocument.synchronizationUnits[sequence])
-      return jsonError(context.get("requestId"), "audiobook-not-found", "Segment not found.", 404);
-    return context.json(
-      await getAudioSegmentStateFromEnvironment(
-        context.env,
-        conversionId,
-        owner,
-        sequence,
-        new URL(context.req.url).origin,
-      ),
-      200,
-    );
-  },
-
-  async generateSegment(context) {
-    const { conversionId, sequence } = context.req.valid("param");
-    const denied = requireBrowserMutation(context.req.raw, context.get("requestId"));
-    if (denied) return denied;
-    const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
-    if (!owner)
-      return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
-    if (owner.kind === "trial") {
-      const auth = await authenticateGrant(
-        context.env,
-        owner.grantId,
-        context.req.header("Cookie"),
-      );
-      if (auth.result !== "valid")
-        return jsonError(
-          context.get("requestId"),
-          "grant-session-required",
-          "Open the original trial link to generate more audio.",
-          401,
-        );
-    }
-    const audiobook = await loadReadyAudiobookFromEnvironment(context.env, conversionId);
-    if (!audiobook?.narrationDocument.synchronizationUnits[sequence])
-      return jsonError(context.get("requestId"), "audiobook-not-found", "Segment not found.", 404);
-    const origin = new URL(context.req.url).origin;
-    const current = await getAudioSegmentStateFromEnvironment(
-      context.env,
-      conversionId,
-      owner,
-      sequence,
-      origin,
-    );
-    if (
-      current.status === "ready" ||
-      (current.status === "failed" && !context.req.valid("json").retry)
-    )
-      return context.json(current, 200);
-    const dispatch = resolveConversionDispatch(context.env, conversionId, owner);
-    const result = await dispatch.requestAudioSegment(sequence, context.req.valid("json").retry);
-    return context.json(
-      {
-        sequence,
-        status:
-          result?.status === "errored" || result?.status === "terminated" ? "failed" : "generating",
-        explanation: result?.error?.message,
-      },
-      200,
-    );
-  },
-
-  async retryPreparation(context) {
+  async retryConversion(context) {
     const { conversionId } = context.req.valid("param");
     const denied = requireBrowserMutation(context.req.raw, context.get("requestId"));
     if (denied) return denied;
@@ -732,12 +668,30 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
         return jsonError(
           context.get("requestId"),
           "grant-session-required",
-          "Open the original trial link to retry preparation.",
+          "Open the original trial link to retry.",
           401,
         );
     }
-    await resolveConversionDispatch(context.env, conversionId, owner).retryPreparation();
-    return context.body(null, 204);
+    const dispatch = resolveConversionDispatch(context.env, conversionId, owner);
+    const audiobook = await loadReadyAudiobookFromEnvironment(context.env, conversionId);
+    if (!audiobook) {
+      await dispatch.retryPreparation();
+      return context.json({ result: "started" as const }, 200);
+    }
+
+    // A prepared conversion retries synthesis: failed segments, or the whole document when it
+    // previously did not fit. A refusal for insufficient duration is an outcome, not an error.
+    const result = await dispatch.startSynthesis(
+      countNarrationTextCharactersBySegment(audiobook.narrationDocument),
+    );
+    if (result.result === "expired" || result.result === "revoked")
+      return jsonError(
+        context.get("requestId"),
+        `grant-${result.result}`,
+        "This trial no longer permits new speech generation.",
+        403,
+      );
+    return context.json(result, 200);
   },
 
   async savePosition(context) {

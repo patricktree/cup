@@ -12,16 +12,13 @@ import React from "react";
 import { ErrorMessage } from "#src/app/components/error-message.js";
 import { QueryBoundary } from "#src/app/components/query-boundary.js";
 import { DSButton } from "#src/app/design-system/button.js";
-import type { PreparedAudiobook } from "#src/app/player/progressive-player.js";
+import type { PlayableAudiobook, PreparedAudiobook } from "#src/app/player/audiobook-player.js";
 import { composeClassnames } from "#src/app/utils.ts";
-import {
-  refreshPlaybackAuthorization,
-  getResourceAccountSession,
-} from "#src/auth/account-session.js";
+import { refreshPlaybackAuthorization } from "#src/auth/account-session.js";
 import { useAccountSession } from "#src/auth/hooks.js";
-import { getLocalPlaybackPosition, useRetryPreparation } from "#src/data-fetching/reader.js";
+import { getLocalPlaybackPosition, useRetryConversion } from "#src/data-fetching/reader.js";
 import { createAudiobookQuery } from "#src/data-fetching/trial-link.js";
-import { createPlayer, registerPlayerMediaSession } from "#src/platform/player.js";
+import { createPlayer, registerPlayerMediaSession, type Player } from "#src/platform/player.js";
 import { STOP_PLAYBACK_EVENT_NAME } from "#src/playback-events.js";
 
 export const Route = createFileRoute("/audiobooks/$conversionId")({ component: AudiobookBoundary });
@@ -53,7 +50,7 @@ function AudiobookPage(): React.JSX.Element {
   const { conversionId } = Route.useParams();
   const session = useAccountSession();
   const query = useSuspenseQuery(createAudiobookQuery(conversionId));
-  const retry = useRetryPreparation(conversionId, useQueryClient());
+  const retry = useRetryConversion(conversionId, useQueryClient());
 
   if (query.isError) {
     return (
@@ -90,12 +87,142 @@ function AudiobookPage(): React.JSX.Element {
   );
 }
 
+/** Shows the narration document; playback starts once every segment has audio or a final failure. */
 function PreparedReader({
   conversionId,
   audiobook,
 }: {
   conversionId: string;
   audiobook: PreparedAudiobook;
+}) {
+  const retry = useRetryConversion(conversionId, useQueryClient());
+  const [shouldPlayWithoutFailedSegments, setShouldPlayWithoutFailedSegments] =
+    React.useState(false);
+  const failedUnitIndexes = React.useMemo(
+    () =>
+      audiobook.segments
+        .filter((segment) => segment.status === "failed")
+        .map((segment) => segment.sequence),
+    [audiobook.segments],
+  );
+  const retryButton = (
+    <DSButton disabled={retry.isPending || !audiobook.canGenerate} onClick={() => retry.mutate()}>
+      Retry
+    </DSButton>
+  );
+  // A refused retry of failed segments changes nothing in the audiobook, so it is reported here.
+  const retryOutcomeNotice = retry.error ? (
+    <ReaderNotice>
+      <p>{retry.error.message}</p>
+    </ReaderNotice>
+  ) : retry.data?.result === "insufficient-duration" && audiobook.status === "ready" ? (
+    <ReaderNotice>
+      <p>
+        Not enough audio duration to retry. The missing audio needs about{" "}
+        {formatDuration(retry.data.requiredMilliseconds)}, and{" "}
+        {formatDuration(retry.data.availableMilliseconds)} is available.
+      </p>
+    </ReaderNotice>
+  ) : null;
+
+  const hasAudio = audiobook.segments.some((segment) => segment.status === "ready");
+
+  if (
+    audiobook.status === "ready" &&
+    hasAudio &&
+    (failedUnitIndexes.length === 0 || shouldPlayWithoutFailedSegments)
+  ) {
+    return (
+      <PlayableReader
+        conversionId={conversionId}
+        audiobook={audiobook}
+        failedUnitIndexes={failedUnitIndexes}
+        notice={
+          failedUnitIndexes.length === 0 ? null : (
+            <>
+              {retryOutcomeNotice}
+              <ReaderNotice>
+                <p>
+                  {formatSegmentCount(failedUnitIndexes.length)} without audio{" "}
+                  {failedUnitIndexes.length === 1 ? "is" : "are"} skipped during playback.
+                </p>
+                {retryButton}
+              </ReaderNotice>
+            </>
+          )
+        }
+      />
+    );
+  }
+
+  return (
+    <>
+      <BackLink />
+
+      {retryOutcomeNotice}
+
+      {audiobook.status === "insufficient-duration" ? (
+        <ReaderNotice>
+          {audiobook.availableMilliseconds >= audiobook.requiredMilliseconds ? (
+            // Duration was freed since generation was refused; nothing starts until Retry.
+            <p>Audio has not been generated for this article yet.</p>
+          ) : (
+            <p>
+              Not enough audio duration for this article. It needs about{" "}
+              {formatDuration(audiobook.requiredMilliseconds)}, and{" "}
+              {formatDuration(audiobook.availableMilliseconds)} is available.
+            </p>
+          )}
+          {retryButton}
+        </ReaderNotice>
+      ) : null}
+
+      {audiobook.status === "ready" ? (
+        <ReaderNotice>
+          <p>
+            {hasAudio
+              ? `Audio could not be generated for ${formatSegmentCount(failedUnitIndexes.length)}, marked in the text.`
+              : "Audio could not be generated for this article."}
+          </p>
+          {retryButton}
+          {hasAudio ? (
+            <DSButton onClick={() => setShouldPlayWithoutFailedSegments(true)}>
+              Play without {failedUnitIndexes.length === 1 ? "it" : "them"}
+            </DSButton>
+          ) : null}
+        </ReaderNotice>
+      ) : null}
+
+      <NarrationDocument audiobook={audiobook} failedUnitIndexes={failedUnitIndexes} />
+
+      <PlayerControlsBar>
+        {audiobook.status === "synthesizing" ? (
+          <output>
+            Generating audio…{" "}
+            {audiobook.segments.filter((segment) => segment.status === "ready").length} of{" "}
+            {formatSegmentCount(audiobook.segments.length)} ready
+          </output>
+        ) : null}
+        <div className={playButtonRowClassName}>
+          <DSButton variant="text" aria-label="Play" disabled>
+            <Play size={48} />
+          </DSButton>
+        </div>
+      </PlayerControlsBar>
+    </>
+  );
+}
+
+function PlayableReader({
+  conversionId,
+  audiobook,
+  failedUnitIndexes,
+  notice,
+}: {
+  conversionId: string;
+  audiobook: PlayableAudiobook;
+  failedUnitIndexes: readonly number[];
+  notice: React.ReactNode;
 }) {
   const session = useAccountSession();
   const [player] = React.useState(() =>
@@ -114,36 +241,17 @@ function PreparedReader({
     },
     [player],
   );
-  const audioElement = React.useRef<HTMLAudioElement>(null);
   React.useEffect(
-    function attachAudio() {
-      player.attach(audioElement.current);
+    function openPlayer() {
+      player.open();
       return () => {
         player.pause();
-        player.attach(null);
+        player.close();
       };
     },
     [player],
   );
-  const narrationDocumentElementRef = React.useRef<HTMLDivElement>(null);
   const [authorizationError, setAuthorizationError] = React.useState<string | null>(null);
-  const units = audiobook.narrationDocument.synchronizationUnits;
-
-  React.useEffect(
-    function highlightCurrentSegment() {
-      const narrationDocumentElement = narrationDocumentElementRef.current;
-      check.assert(narrationDocumentElement);
-
-      for (const previous of narrationDocumentElement.querySelectorAll('[aria-current="true"]')) {
-        previous.removeAttribute("aria-current");
-      }
-
-      narrationDocumentElement
-        .querySelector(`[id="${units[state.currentUnitIndex]!.id}"]`)
-        ?.setAttribute("aria-current", "true");
-    },
-    [state.currentUnitIndex, units],
-  );
 
   React.useEffect(function authorizeInitialMedia() {
     void refreshPlaybackAuthorization().catch((error: unknown) =>
@@ -160,140 +268,47 @@ function PreparedReader({
     [player, audiobook.title],
   );
 
-  async function play() {
-    try {
-      await refreshPlaybackAuthorization(await getResourceAccountSession());
-      setAuthorizationError(null);
-      player.play();
-    } catch (error) {
-      setAuthorizationError(
-        error instanceof Error ? error.message : "Playback authorization could not be refreshed.",
-      );
-    }
-  }
-
-  const playFromSegment = React.useEffectEvent((unitIndex: number) => {
-    player.seek(unitIndex);
-    void play();
-  });
-
-  React.useEffect(
-    function addSegmentPlaybackButtons() {
-      const narrationDocumentElement = narrationDocumentElementRef.current;
-      check.assert(narrationDocumentElement);
-
-      const buttons = units.map((unit, unitIndex) => {
-        const segment = narrationDocumentElement.querySelector(`[id="${unit.id}"]`);
-        check.assert(segment);
-
-        const button = document.createElement("button");
-        button.type = "button";
-        button.dataset["segmentControl"] = "";
-        button.setAttribute("aria-label", `Play segment ${unitIndex + 1}`);
-        button.addEventListener("click", () => playFromSegment(unitIndex));
-        segment.append(button);
-        return button;
+  function play() {
+    // Start within the user gesture; browsers refuse audio that starts after awaiting.
+    player.play();
+    void refreshPlaybackAuthorization()
+      .then(() => setAuthorizationError(null))
+      .catch((error: unknown) => {
+        player.pause();
+        setAuthorizationError(
+          error instanceof Error ? error.message : "Playback authorization could not be refreshed.",
+        );
       });
-
-      return () => {
-        for (const button of buttons) button.remove();
-      };
-    },
-    [units],
-  );
+  }
 
   return (
     <>
-      <div
-        className={css`
-          display: inline-flex;
-          gap: var(--spacing-base);
-          align-items: center;
-          margin-block-end: calc(1*var(--spacing-base));
+      <BackLink />
 
-          font-size: var(--font-size-display);
-        `}
-      >
-        <Link to="/" aria-label="Back to home">
-          <ArrowLeft size="1em" />
-        </Link>
-      </div>
+      {notice}
 
-      <div
-        ref={narrationDocumentElementRef}
-        className={composeClassnames(
-          css`
-            & > article {
-              padding-block-end: var(--player-controls-height);
-            }
-
-            & > article > * {
-              margin-block-end: calc(2 * var(--spacing-base));
-            }
-
-            [id]:has(> [data-segment-control]) {
-              /* "anchor" for the absolutely-positioned play-segment buttons */
-              position: relative;
-            }
-
-            [data-segment-control] {
-              position: absolute;
-              inset: 0;
-              width: 100%;
-              height: 100%;
-              padding: 0;
-              cursor: pointer;
-              background: transparent;
-              border: 0;
-              border-radius: 0;
-            }
-
-            [aria-current="true"] {
-              font-weight: var(--font-weight-inter-figma-medium);
-            }
-          `,
-        )}
-        dangerouslySetInnerHTML={{ __html: audiobook.narrationDocument.html }}
+      <NarrationDocument
+        audiobook={audiobook}
+        failedUnitIndexes={failedUnitIndexes}
+        currentUnitIndex={state.currentUnitIndex}
+        onSelectUnit={(unitIndex) => {
+          player.seekToUnit(unitIndex);
+          play();
+        }}
       />
 
-      <div
-        className={css`
-          position: fixed;
-          right: 0;
-          bottom: 0;
-          left: 0;
-
-          display: flex;
-          flex-direction: column;
-          gap: calc(3*var(--spacing-base));
-          height: var(--player-controls-height);
-          padding-block: calc(4*var(--spacing-base));
-          padding-inline: var(--app-padding-inline);
-
-          background-color: var(--color-bg);
-        `}
-      >
-        <hr
-          className={css`
-            border: 0;
-            border-top: 1.5px solid var(--color-fg-emphasized-xs);
-          `}
-        />
-        <div
-          className={css`
-            display: flex;
-            justify-content: center;
-          `}
-        >
+      <PlayerControlsBar>
+        <PlaybackProgress player={player} title={audiobook.title} />
+        <div className={playButtonRowClassName}>
           <DSButton
             variant="text"
             aria-label={state.isPlaying ? "Pause" : "Play"}
-            onClick={() => (state.isPlaying ? player.pause() : void play())}
+            onClick={() => (state.isPlaying ? player.pause() : play())}
           >
             {state.isPlaying ? <Pause size={48} /> : <Play size={48} />}
           </DSButton>
         </div>
-      </div>
+      </PlayerControlsBar>
 
       {state.error || authorizationError ? (
         /* TODO: implement some general error handling like toasts/snackbars and put it there */
@@ -304,50 +319,292 @@ function PreparedReader({
           `}
         >
           <p>{state.error ?? authorizationError}</p>
-          <DSButton
-            onClick={() => {
-              setAuthorizationError(null);
-              player.retry();
-            }}
-          >
-            Retry segment
-          </DSButton>
         </div>
       ) : null}
-
-      <audio
-        ref={audioElement}
-        preload="auto"
-        crossOrigin="use-credentials"
-        onPause={player.onPause}
-        onEnded={player.onEnded}
-        onTimeUpdate={player.onTimeUpdate}
-        onError={player.onMediaError}
-        aria-label={`Narration of ${audiobook.title}`}
-      >
-        <track
-          kind="captions"
-          srcLang="und"
-          label="Narration"
-          src={captionSource(
-            units[state.currentUnitIndex]!.narrationText,
-            state.durationMilliseconds ??
-              Math.max(1000, units[state.currentUnitIndex]!.narrationText.length * 80),
-          )}
-        />
-      </audio>
     </>
   );
 }
 
-function captionSource(text: string, durationMilliseconds: number) {
-  const end = new Date(Math.ceil(durationMilliseconds)).toISOString().slice(11, 23);
-  return (
-    "data:text/vtt;charset=utf-8," +
-    encodeURIComponent(
-      `WEBVTT\n\n00:00:00.000 --> ${end}\n${text.replaceAll("-->", "→").replaceAll(/\s+/g, " ")}\n`,
-    )
+/** Position and length on the whole-audiobook timeline, with seeking. */
+function PlaybackProgress({ player, title }: { player: Player; title: string }) {
+  const { positionMilliseconds, durationMilliseconds } = React.useSyncExternalStore(
+    player.subscribe,
+    player.getSnapshot,
   );
+
+  return (
+    <div
+      className={css`
+        display: flex;
+        gap: var(--spacing-base);
+        align-items: center;
+
+        font-size: var(--font-size-sm);
+        font-variant-numeric: tabular-nums;
+        color: var(--color-fg-emphasized-sm);
+
+        input {
+          flex: 1;
+          min-width: 0;
+          accent-color: var(--color-primary);
+        }
+      `}
+    >
+      <span>{formatTimelinePosition(positionMilliseconds)}</span>
+      <input
+        type="range"
+        aria-label={`Position in ${title}`}
+        aria-valuetext={`${formatDuration(positionMilliseconds)} of ${formatDuration(durationMilliseconds)}`}
+        min={0}
+        max={durationMilliseconds}
+        step={1_000}
+        value={Math.min(positionMilliseconds, durationMilliseconds)}
+        onChange={(event) => player.seekTo(event.currentTarget.valueAsNumber)}
+      />
+      <span>{formatTimelinePosition(durationMilliseconds)}</span>
+    </div>
+  );
+}
+
+function NarrationDocument({
+  audiobook,
+  failedUnitIndexes,
+  currentUnitIndex,
+  onSelectUnit,
+}: {
+  audiobook: PreparedAudiobook;
+  failedUnitIndexes: readonly number[];
+  currentUnitIndex?: number;
+  onSelectUnit?: (unitIndex: number) => void;
+}) {
+  const narrationDocumentElementRef = React.useRef<HTMLDivElement>(null);
+  const units = audiobook.narrationDocument.synchronizationUnits;
+  const currentUnitId = currentUnitIndex === undefined ? undefined : units[currentUnitIndex]?.id;
+  const isSelectable = onSelectUnit !== undefined;
+
+  React.useEffect(
+    function highlightCurrentSegment() {
+      const narrationDocumentElement = narrationDocumentElementRef.current;
+      check.assert(narrationDocumentElement);
+
+      for (const previous of narrationDocumentElement.querySelectorAll('[aria-current="true"]')) {
+        previous.removeAttribute("aria-current");
+      }
+
+      narrationDocumentElement
+        .querySelector(`[id="${currentUnitId ?? ""}"]`)
+        ?.setAttribute("aria-current", "true");
+    },
+    [currentUnitId],
+  );
+
+  React.useEffect(
+    function markSegmentsWithoutAudio() {
+      const narrationDocumentElement = narrationDocumentElementRef.current;
+      check.assert(narrationDocumentElement);
+
+      const marked = failedUnitIndexes.flatMap((unitIndex) => {
+        const unit = units[unitIndex];
+        const segment = unit && narrationDocumentElement.querySelector(`[id="${unit.id}"]`);
+        if (!segment) return [];
+
+        segment.setAttribute("data-synthesis-failed", "");
+        segment.setAttribute("title", "Audio could not be generated for this segment.");
+        return [segment];
+      });
+
+      return () => {
+        for (const segment of marked) {
+          segment.removeAttribute("data-synthesis-failed");
+          segment.removeAttribute("title");
+        }
+      };
+    },
+    [failedUnitIndexes, units],
+  );
+
+  const selectUnit = React.useEffectEvent((unitIndex: number) => onSelectUnit?.(unitIndex));
+
+  React.useEffect(
+    function addSegmentPlaybackButtons() {
+      if (!isSelectable) return undefined;
+
+      const narrationDocumentElement = narrationDocumentElementRef.current;
+      check.assert(narrationDocumentElement);
+
+      const buttons = units.flatMap((unit, unitIndex) => {
+        // A segment without audio has nothing to start; playback skips it.
+        if (failedUnitIndexes.includes(unitIndex)) return [];
+
+        const segment = narrationDocumentElement.querySelector(`[id="${unit.id}"]`);
+        check.assert(segment);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.dataset["segmentControl"] = "";
+        button.setAttribute("aria-label", `Play segment ${unitIndex + 1}`);
+        button.addEventListener("click", () => selectUnit(unitIndex));
+        segment.append(button);
+        return [button];
+      });
+
+      return () => {
+        for (const button of buttons) button.remove();
+      };
+    },
+    [units, failedUnitIndexes, isSelectable],
+  );
+
+  return (
+    <div
+      ref={narrationDocumentElementRef}
+      className={composeClassnames(
+        css`
+          & > article {
+            padding-block-end: var(--player-controls-height);
+          }
+
+          & > article > * {
+            margin-block-end: calc(2 * var(--spacing-base));
+          }
+
+          [id]:has(> [data-segment-control]) {
+            /* "anchor" for the absolutely-positioned play-segment buttons */
+            position: relative;
+          }
+
+          [data-segment-control] {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            cursor: pointer;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+          }
+
+          [aria-current="true"] {
+            font-weight: var(--font-weight-inter-figma-medium);
+          }
+
+          [data-synthesis-failed] {
+            padding-inline-start: var(--spacing-base);
+            color: var(--color-fg-emphasized-sm);
+            border-inline-start: 3px solid var(--color-error);
+          }
+        `,
+      )}
+      dangerouslySetInnerHTML={{ __html: audiobook.narrationDocument.html }}
+    />
+  );
+}
+
+function BackLink() {
+  return (
+    <div
+      className={css`
+        display: inline-flex;
+        gap: var(--spacing-base);
+        align-items: center;
+        margin-block-end: calc(1*var(--spacing-base));
+
+        font-size: var(--font-size-display);
+      `}
+    >
+      <Link to="/" aria-label="Back to home">
+        <ArrowLeft size="1em" />
+      </Link>
+    </div>
+  );
+}
+
+function ReaderNotice({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className={css`
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-base);
+        align-items: center;
+        padding: calc(1.5 * var(--spacing-base));
+        margin-block-end: calc(2 * var(--spacing-base));
+
+        font-size: var(--font-size-sm);
+        border: 1px solid var(--color-fg-emphasized-xs);
+        border-radius: var(--border-radius-sm);
+
+        p {
+          flex: 1 1 100%;
+        }
+      `}
+    >
+      {children}
+    </div>
+  );
+}
+
+function PlayerControlsBar({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className={css`
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        left: 0;
+
+        display: flex;
+        flex-direction: column;
+        gap: calc(2*var(--spacing-base));
+        justify-content: center;
+        height: var(--player-controls-height);
+        padding-block: calc(2*var(--spacing-base));
+        padding-inline: var(--app-padding-inline);
+
+        background-color: var(--color-bg);
+        border-top: 1.5px solid var(--color-fg-emphasized-xs);
+
+        output {
+          font-size: var(--font-size-sm);
+          color: var(--color-fg-emphasized-sm);
+          text-align: center;
+        }
+      `}
+    >
+      {children}
+    </div>
+  );
+}
+
+const playButtonRowClassName = css`
+  display: flex;
+  justify-content: center;
+`;
+
+function formatSegmentCount(count: number) {
+  return `${count} ${count === 1 ? "segment" : "segments"}`;
+}
+
+/** Formats a duration in minutes and seconds, for example "12 min 5 s". */
+function formatDuration(milliseconds: number) {
+  const totalSeconds = Math.round(milliseconds / 1_000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return minutes === 0 ? `${seconds} s` : `${minutes} min ${seconds} s`;
+}
+
+/** Formats a timeline position as a clock, for example "1:02:05" or "12:05". */
+function formatTimelinePosition(milliseconds: number) {
+  const totalSeconds = Math.floor(milliseconds / 1_000);
+  const hours = Math.floor(totalSeconds / 3_600);
+  const minutes = Math.floor((totalSeconds % 3_600) / 60);
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+
+  return hours === 0
+    ? `${minutes}:${seconds}`
+    : `${hours}:${String(minutes).padStart(2, "0")}:${seconds}`;
 }
 
 function ReaderSkeleton() {

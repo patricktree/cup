@@ -13,6 +13,30 @@ export const segmentUsageSchema = z
   .strict();
 export type SegmentUsage = z.infer<typeof segmentUsageSchema>;
 
+/** How much audio a narration document needs and how much its owner can still reserve. */
+export const insufficientDurationSchema = z
+  .object({
+    requiredMilliseconds: z.number().int().positive(),
+    availableMilliseconds: z.number().int().nonnegative(),
+  })
+  .strict();
+export type InsufficientDuration = z.infer<typeof insufficientDurationSchema>;
+
+export type PreparedConversionStatus = "insufficient-duration" | "synthesizing" | "ready";
+
+/**
+ * Derives a prepared conversion's status from its segments' reservations and settlements.
+ *
+ * Reservations are taken for the whole narration document or not at all, so a prepared conversion
+ * without any did not fit the available duration.
+ */
+export function derivePreparedConversionStatus(
+  usage: readonly Pick<SegmentUsage, "state">[],
+): PreparedConversionStatus {
+  if (usage.length === 0) return "insufficient-duration";
+  return usage.some((segment) => segment.state === "reserved") ? "synthesizing" : "ready";
+}
+
 export function estimateAudioDuration(narrationTextCharacters: number): number {
   if (!Number.isSafeInteger(narrationTextCharacters) || narrationTextCharacters < 1)
     throw new Error("Narration character count must be a positive safe integer");

@@ -1,8 +1,10 @@
 ---
-status: partially superseded by ADR 0007
+status: superseded by ADR 0008
 ---
 
 # Synthesize the selected unit while paused
+
+[ADR 0008](0008-synthesize-the-whole-narration-document.md) supersedes this decision: synthesis covers the whole narration document and is no longer triggered by the player. The original decisions below are preserved as historical rationale.
 
 [ADR 0007](0007-require-active-grant-access-for-trial-audiobooks.md) supersedes trial link-only reading and replay and continued trial access after grant expiry or revocation. Trial audiobook requests now require a session for the owning unexpired, unrevoked grant; allowance exhaustion still permits reading and replay. The original decisions below are preserved as historical rationale.
 

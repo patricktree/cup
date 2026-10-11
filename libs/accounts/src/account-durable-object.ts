@@ -2,8 +2,8 @@ import { DurableObject } from "cloudflare:workers";
 import { Temporal } from "temporal-polyfill";
 
 import {
-  dispatchSegmentWorkflow,
-  type SegmentWorkflowParams,
+  dispatchSegmentWorkflows,
+  reconcileSegmentWorkflow,
   type SynthesisWorkflowDispatcher,
   type PlaybackPosition,
   createAccountArtifactPrefix,
@@ -76,13 +76,24 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     return result;
   }
 
-  settleConversion(
+  /** A ready outcome with segment text lengths also reserves the whole narration document. */
+  async settleConversion(
     conversionId: string,
     outcome: AccountConversionOutcome,
     nowMs = Temporal.Now.instant().epochMilliseconds,
     executionEpoch?: number,
+    narrationTextCharactersBySegment?: readonly number[],
   ) {
-    this.sqlite.settleConversion(conversionId, outcome, nowMs, executionEpoch);
+    // The alarm dispatches reserved segments if the workflow never gets to.
+    if (narrationTextCharactersBySegment !== undefined)
+      await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
+    this.sqlite.settleConversion(
+      conversionId,
+      outcome,
+      nowMs,
+      executionEpoch,
+      narrationTextCharactersBySegment,
+    );
   }
 
   reserveAudioSegment(
@@ -155,13 +166,46 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
       throw new Error("Account execution is fenced");
   }
 
-  requestAudioSegment(params: SegmentWorkflowParams, retry: boolean) {
-    return this.ctx.blockConcurrencyWhile(async () => {
-      this.assertExecution(params.conversionId, params.executionEpoch);
-      if (this.sqlite.getConversion(params.conversionId)?.status !== "ready")
-        throw new Error("Narration is not prepared");
-      return dispatchSegmentWorkflow(this.env.SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW, params, retry);
+  /** Reserves the whole narration document before dispatching any segment; see ADR 0008. */
+  async startSynthesis(
+    conversionId: string,
+    narrationTextCharactersBySegment: readonly number[],
+    executionEpoch: number,
+  ) {
+    this.assertExecution(conversionId, executionEpoch);
+    if (this.sqlite.getConversion(conversionId)?.status !== "ready")
+      throw new Error("Narration is not prepared");
+
+    const reservation = this.sqlite.reserveMissingAudioSegments(
+      conversionId,
+      narrationTextCharactersBySegment,
+      Temporal.Now.instant().epochMilliseconds,
+    );
+    if (reservation.result !== "reserved") return reservation;
+
+    // The alarm completes a dispatch that fails partway.
+    await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
+    // The gate keeps concurrent retries from restarting each other's instances. A throw inside it
+    // would reset this object, so a dispatch failure is carried out of the gate first.
+    const failure = await this.ctx.blockConcurrencyWhile(async () => {
+      try {
+        await dispatchSegmentWorkflows(
+          this.env.SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW,
+          {
+            v: 3,
+            conversionId,
+            owner: { kind: "account", accountId: this.sqlite.snapshot().accountId },
+            executionEpoch,
+          },
+          reservation.sequences,
+        );
+        return undefined;
+      } catch (error) {
+        return { error };
+      }
     });
+    if (failure) throw failure.error;
+    return { result: "started" as const };
   }
 
   releaseAudioSegment(conversionId: string, sequence: number, executionEpoch: number) {
@@ -222,10 +266,12 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     await this.reconcileLifecycle();
     if (this.sqlite.snapshot().state === "deleting") return;
     await this.reconcileDispatch();
+    await this.reconcileSynthesis();
     if (
       this.sqlite.snapshot().state === "active" &&
       this.lifecycle.outbox().length === 0 &&
       this.sqlite.unsettledConversions().length === 0 &&
+      this.sqlite.reservedAudioSegments().length === 0 &&
       this.artifactWriters.writers().length === 0
     )
       await this.ctx.storage.deleteAlarm();
@@ -274,6 +320,35 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
       } catch {
         /* Persisted intent and the alarm retry dependency failures. */
       }
+    }
+  }
+
+  /** Dispatches or resumes synthesis owed to reserved segments, and releases what cannot run. */
+  private async reconcileSynthesis() {
+    const account = this.sqlite.snapshot();
+    for (const segment of this.sqlite.reservedAudioSegments()) {
+      const result = await reconcileSegmentWorkflow(
+        this.env.SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW,
+        {
+          v: 3,
+          conversionId: segment.conversionId,
+          owner: { kind: "account", accountId: account.accountId },
+          executionEpoch: account.executionEpoch,
+          sequence: segment.sequence,
+        },
+        { canResume: this.canExecute(segment.conversionId, account.executionEpoch) },
+      );
+      if (result === "stopped")
+        this.sqlite.releaseAudioSegment(segment.conversionId, segment.sequence);
+    }
+  }
+
+  private canExecute(conversionId: string, executionEpoch: number) {
+    try {
+      this.assertExecution(conversionId, executionEpoch);
+      return true;
+    } catch {
+      return false;
     }
   }
 

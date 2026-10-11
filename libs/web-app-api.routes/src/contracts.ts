@@ -6,6 +6,7 @@ import {
   durationBalanceSchema,
 } from "@cup/conversion-contracts";
 import { sourceUrlSchema } from "@cup/conversion-contracts";
+import { insufficientDurationSchema } from "@cup/conversion-contracts/duration-accounting";
 import {
   grantConversionSnapshotSchema,
   grantConversionsSchema,
@@ -48,6 +49,9 @@ export const conversionDetailSchema = z.discriminatedUnion("status", [
   grantConversionSnapshotSchema.options[0].extend({
     lastStartedPhase: conversionPhaseSchema,
   }),
+  // A prepared conversion reports the state of its audio; only `ready` can be played.
+  grantConversionSnapshotSchema.options[1].extend({ status: z.literal("insufficient-duration") }),
+  grantConversionSnapshotSchema.options[1].extend({ status: z.literal("synthesizing") }),
   grantConversionSnapshotSchema.options[1],
   grantConversionSnapshotSchema.options[2],
 ]);
@@ -105,26 +109,44 @@ export const audioSegmentSchema = z.discriminatedUnion("status", [
 ]);
 export type AudioSegment = z.infer<typeof audioSegmentSchema>;
 const readerBase = { originalUrl: sourceUrlSchema, canGenerate: z.boolean() };
+const preparedBase = {
+  ...readerBase,
+  title: z.string().min(1),
+  narrationDocument: z
+    .object({
+      html: z.string().min(1),
+      synchronizationUnits: z.array(SYNCHRONIZATION_UNIT_SCHEMA).min(1),
+    })
+    .strict(),
+  // One entry per synchronization unit, in document order.
+  segments: z.array(audioSegmentSchema),
+  playbackPosition: playbackPositionSchema.nullable(),
+};
 export const audiobookSchema = z.discriminatedUnion("status", [
   z.object({ ...readerBase, status: z.literal("pending") }).strict(),
   z.object({ ...readerBase, status: z.literal("failed"), explanation: z.string() }).strict(),
+  // The whole narration document did not fit the available duration; nothing was reserved.
   z
     .object({
-      ...readerBase,
-      status: z.literal("ready"),
-      title: z.string().min(1),
-      narrationDocument: z
-        .object({
-          html: z.string().min(1),
-          synchronizationUnits: z.array(SYNCHRONIZATION_UNIT_SCHEMA).min(1),
-        })
-        .strict(),
-      segments: z.array(audioSegmentSchema),
-      playbackPosition: playbackPositionSchema.nullable(),
+      ...preparedBase,
+      status: z.literal("insufficient-duration"),
+      ...insufficientDurationSchema.shape,
     })
     .strict(),
+  z.object({ ...preparedBase, status: z.literal("synthesizing") }).strict(),
+  // Every segment has audio or a final failure, so the total duration is known.
+  z.object({ ...preparedBase, status: z.literal("ready") }).strict(),
 ]);
 export type Audiobook = z.infer<typeof audiobookSchema>;
+
+/** A refused retry reserves nothing; the durations tell the reader why. */
+export const retryConversionResponseSchema = z.discriminatedUnion("result", [
+  z.object({ result: z.literal("started") }).strict(),
+  z
+    .object({ result: z.literal("insufficient-duration"), ...insufficientDurationSchema.shape })
+    .strict(),
+]);
+export type RetryConversionResponse = z.infer<typeof retryConversionResponseSchema>;
 
 export const errorResponseSchema = z
   .object({
@@ -166,7 +188,7 @@ export const historyItemSchema = z.object({
   idempotencyKey: z.uuidv4(),
   sourceUrl: z.string(),
   createdAtMs: z.number(),
-  status: z.enum(["pending", "ready", "failed"]),
+  status: z.enum(["pending", "insufficient-duration", "synthesizing", "ready", "failed"]),
   outcome: z.union([
     z.object({ status: z.literal("ready"), title: z.string() }).passthrough(),
     z.object({ status: z.literal("failed"), explanation: z.string() }).passthrough(),

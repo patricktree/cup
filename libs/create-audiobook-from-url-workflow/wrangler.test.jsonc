@@ -21,5 +21,12 @@
       ],
     },
   ],
+  "workflows": [
+    {
+      "name": "synthesize-audio-segment-test",
+      "binding": "SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW",
+      "class_name": "DispatchedAudioSegmentWorkflow",
+    },
+  ],
   "r2_buckets": [{ "binding": "AUDIO_BUCKET", "bucket_name": "workflow-integration-test" }],
 }

@@ -1,31 +1,18 @@
 package com.cup_audio.app;
 
-import android.os.Handler;
 import android.webkit.CookieManager;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import org.json.JSONObject;
 
-/** Owns authenticated HTTP and segment polling; callbacks run on the main thread. */
+/** Owns authenticated HTTP for the native player. */
 final class NarrationApiClient {
   static final String ORIGIN = "https://cup-audio.com";
 
-  interface SegmentCallback {
-    void complete(JSONObject segment, String error);
-  }
-
-  private final Handler main;
-  private final ExecutorService network = Executors.newCachedThreadPool();
   private String token, cookie;
-
-  NarrationApiClient(Handler main) {
-    this.main = main;
-  }
 
   void configure(JSONObject config) {
     authorize(config);
@@ -34,31 +21,6 @@ final class NarrationApiClient {
 
   void authorize(JSONObject config) {
     token = config.isNull("token") ? null : config.optString("token", null);
-  }
-
-  void requestSegment(String id, int sequence, boolean retry, SegmentCallback callback) {
-    Map<String, String> auth = headers();
-    network.execute(
-        () -> {
-          JSONObject result = null;
-          String message = null;
-          try {
-            String path = "/api/audiobooks/" + id + "/segments/" + sequence;
-            result = http("POST", path, new JSONObject().put("retry", retry), auth);
-            while (result.getString("status").equals("generating")) {
-              Thread.sleep(1000);
-              result = http("GET", path, null, auth);
-            }
-            if (!result.getString("status").equals("ready"))
-              throw new Exception(
-                  result.optString("explanation", "Speech generation failed. Retry this segment."));
-          } catch (Exception failure) {
-            message = failure.getMessage();
-          }
-          JSONObject segment = result;
-          String error = message;
-          main.post(() -> callback.complete(segment, error));
-        });
   }
 
   Map<String, String> headers() {
@@ -108,9 +70,5 @@ final class NarrationApiClient {
     int count;
     while ((count = input.read(buffer)) != -1) result.write(buffer, 0, count);
     return result.toString(StandardCharsets.UTF_8.name());
-  }
-
-  void close() {
-    network.shutdown();
   }
 }

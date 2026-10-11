@@ -714,7 +714,10 @@ test("retries reuse reservations, failures release only unfinished work, and rep
   expect((await grant.completeAudioSegment(id, 0, 700.25)).result).toBe("replayed");
   await expectWorkerRpcRejection(grant.completeAudioSegment(id, 0, 800));
   await expectWorkerRpcRejection(grant.completeAudioSegment(id, 1, 800));
-  expect(await grant.listAudioSegments(id)).toHaveLength(1);
+  expect((await grant.listAudioSegments(id)).map((segment) => segment.state)).toEqual([
+    "settled",
+    "released",
+  ]);
   expect(await grant.migrate()).toBe(6);
   expect((await grant.inspect(CREATED_AT_MS)).duration.spentMilliseconds).toBe(701);
 });

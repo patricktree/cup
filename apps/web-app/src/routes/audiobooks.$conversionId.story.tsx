@@ -2,7 +2,7 @@ import { createMemoryHistory } from "@tanstack/react-router";
 import { http, HttpResponse } from "msw";
 import React from "react";
 
-import type { Audiobook, ErrorResponse } from "@cup/web-app-api.routes";
+import type { Audiobook, ErrorResponse, RetryConversionResponse } from "@cup/web-app-api.routes";
 
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
 import { queryClient } from "#src/data-fetching/query-client.js";
@@ -24,14 +24,6 @@ export const ReadyAudiobook = {
   component: () => <GlobalProviders router={router} />,
   handlers: [
     http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(createAudiobook())),
-    http.post(`/api/audiobooks/${CONVERSION_ID}/segments/0`, () =>
-      HttpResponse.json({
-        sequence: 0,
-        status: "ready",
-        durationMilliseconds: 5000,
-        url: `https://example.com/segments/0/audio.mp3`,
-      }),
-    ),
   ],
 } satisfies Story;
 
@@ -52,18 +44,14 @@ export const GatesNotesArticle = {
   component: () => <GlobalProviders router={gatesNotesRouter} />,
   handlers: [
     http.get(`/api/audiobooks/${GATES_NOTES_CONVERSION_ID}`, () =>
-      HttpResponse.json({ ...gatesNotesAudiobook, status: "ready" } satisfies Audiobook),
-    ),
-    http.post(`/api/audiobooks/${GATES_NOTES_CONVERSION_ID}/segments/:sequence`, ({ params }) => {
-      const sequence = Number(params["sequence"]);
-
-      return HttpResponse.json({
-        sequence,
+      HttpResponse.json({
+        ...gatesNotesAudiobook,
         status: "ready",
-        durationMilliseconds: 5000,
-        url: `https://example.com/segments/${sequence}/audio.mp3`,
-      });
-    }),
+        segments: gatesNotesAudiobook.narrationDocument.synchronizationUnits.map(
+          (_unit, sequence) => createReadySegment(sequence),
+        ),
+      } satisfies Audiobook),
+    ),
   ],
 } satisfies Story;
 
@@ -103,22 +91,96 @@ export const AudiobookLoadError = {
   ],
 } satisfies Story;
 
-function createAudiobook(): Audiobook {
+function createReadySegment(sequence: number) {
   return {
-    status: "ready",
-    canGenerate: true,
-    playbackPosition: null,
-    segments: [],
-    title: "A deterministic document about careful testing",
-    originalUrl: SOURCE_URL,
-    narrationDocument: {
-      html: '<h1>A deterministic document about careful testing</h1><p id="unit-1">Keep the important boundaries real.</p>',
-      synchronizationUnits: [
-        { id: "unit-1", narrationText: "Keep the important boundaries real." },
-      ],
-    },
+    sequence,
+    status: "ready" as const,
+    durationMilliseconds: 5000,
+    url: `https://example.com/segments/${sequence}/audio.mp3`,
   };
 }
+
+const PREPARED_AUDIOBOOK = {
+  canGenerate: true,
+  playbackPosition: null,
+  title: "A deterministic document about careful testing",
+  originalUrl: SOURCE_URL,
+  narrationDocument: {
+    html: '<article><h1 id="unit-1">A deterministic document about careful testing</h1><p id="unit-2">Keep the important boundaries real.</p><p id="unit-3">Replace only what you cannot control.</p></article>',
+    synchronizationUnits: [
+      { id: "unit-1", narrationText: "A deterministic document about careful testing" },
+      { id: "unit-2", narrationText: "Keep the important boundaries real." },
+      { id: "unit-3", narrationText: "Replace only what you cannot control." },
+    ],
+  },
+};
+
+function createAudiobook(): Audiobook {
+  return {
+    ...PREPARED_AUDIOBOOK,
+    status: "ready",
+    segments: [createReadySegment(0), createReadySegment(1), createReadySegment(2)],
+  };
+}
+
+function createPreparedStory(audiobook: Audiobook) {
+  return {
+    component: () => <GlobalProviders router={router} />,
+    handlers: [
+      http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(audiobook)),
+      // The allowance was spent elsewhere, so a retry of the missing audio is refused.
+      http.post(`/api/audiobooks/${CONVERSION_ID}/retry`, () =>
+        HttpResponse.json({
+          result: "insufficient-duration",
+          requiredMilliseconds: 3_000,
+          availableMilliseconds: 1_000,
+        } satisfies RetryConversionResponse),
+      ),
+    ],
+  } satisfies Story;
+}
+
+export const SynthesizingAudiobook = createPreparedStory({
+  ...PREPARED_AUDIOBOOK,
+  status: "synthesizing",
+  segments: [
+    createReadySegment(0),
+    { sequence: 1, status: "generating" },
+    { sequence: 2, status: "generating" },
+  ],
+});
+
+export const InsufficientDuration = createPreparedStory({
+  ...PREPARED_AUDIOBOOK,
+  status: "insufficient-duration",
+  requiredMilliseconds: 754_000,
+  availableMilliseconds: 95_000,
+  segments: [
+    { sequence: 0, status: "absent" },
+    { sequence: 1, status: "absent" },
+    { sequence: 2, status: "absent" },
+  ],
+});
+
+export const AudiobookWithoutAudio = createPreparedStory({
+  ...PREPARED_AUDIOBOOK,
+  status: "ready",
+  segments: [0, 1, 2].map((sequence) => ({
+    sequence,
+    status: "failed" as const,
+    explanation: "The provider is unavailable.",
+  })),
+});
+
+export const AudiobookWithFailedSegment = createPreparedStory({
+  ...PREPARED_AUDIOBOOK,
+  status: "ready",
+  segments: [
+    createReadySegment(0),
+    { sequence: 1, status: "failed", explanation: "The provider rejected this text." },
+    createReadySegment(2),
+  ],
+});
 
 export const PendingConversion = {
   component: () => <GlobalProviders router={router} />,

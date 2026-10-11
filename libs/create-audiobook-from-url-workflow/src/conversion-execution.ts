@@ -1,4 +1,3 @@
-import type { AccountDurableObject } from "@cup/accounts";
 import { accountArtifactBucket } from "@cup/accounts/artifact-writer";
 import {
   createConversionArtifactPrefix,
@@ -6,6 +5,7 @@ import {
   type ConversionOwner,
   type ConversionPhase,
 } from "@cup/conversion-contracts";
+import type { SegmentUsage } from "@cup/conversion-contracts/duration-accounting";
 import type { ConversionGrantDurableObject } from "@cup/conversion-grants";
 
 import type { AudiobookWorkflowEnvironment } from "#src/workflow-environment.ts";
@@ -15,15 +15,16 @@ export type ConversionExecution = {
   artifactBucket: R2Bucket;
   getReadyAudiobookReference(): Promise<AudiobookReference | undefined>;
   phaseStarted(phase: ConversionPhase): Promise<void>;
-  recordReady(outcome: Parameters<ConversionGrantDurableObject["recordReady"]>[1]): Promise<void>;
+  /** Records the prepared document and reserves all of its segments, or none, in one step. */
+  recordReady(
+    outcome: Parameters<ConversionGrantDurableObject["recordReady"]>[1],
+    narrationTextCharactersBySegment: readonly number[],
+  ): Promise<void>;
   recordFailed(outcome: Parameters<ConversionGrantDurableObject["recordFailed"]>[1]): Promise<void>;
-  reserveAudioSegment(
-    sequence: number,
-    characters: number,
-  ): Promise<
-    | Awaited<ReturnType<AccountDurableObject["reserveAudioSegment"]>>
-    | Awaited<ReturnType<ConversionGrantDurableObject["reserveAudioSegment"]>>
-  >;
+  /** Dispatches every reserved segment; reserves first when a retry finds segments unreserved. */
+  startSynthesis(narrationTextCharactersBySegment: readonly number[]): Promise<void>;
+  /** Reservations are taken for the whole document by the owner; a segment only checks its own. */
+  getAudioSegmentState(sequence: number): Promise<SegmentUsage["state"] | undefined>;
   completeAudioSegment(sequence: number, durationMilliseconds: number): Promise<void>;
   releaseAudioSegment(sequence: number): Promise<void>;
 };
@@ -58,7 +59,7 @@ export function resolveConversionExecution(
         return outcome?.status === "ready" ? outcome.audiobookReference : undefined;
       },
       phaseStarted: async () => account.assertExecution(conversionId, executionEpoch),
-      recordReady: async (outcome) =>
+      recordReady: async (outcome, narrationTextCharactersBySegment) =>
         account.settleConversion(
           conversionId,
           {
@@ -68,6 +69,7 @@ export function resolveConversionExecution(
           },
           undefined,
           executionEpoch,
+          narrationTextCharactersBySegment,
         ),
       recordFailed: async (outcome) =>
         account.settleConversion(
@@ -80,8 +82,19 @@ export function resolveConversionExecution(
           undefined,
           executionEpoch,
         ),
-      reserveAudioSegment: (sequence, characters) =>
-        account.reserveAudioSegment(conversionId, sequence, characters, executionEpoch),
+      startSynthesis: async (narrationTextCharactersBySegment) => {
+        await account.startSynthesis(
+          conversionId,
+          narrationTextCharactersBySegment,
+          executionEpoch,
+        );
+      },
+      getAudioSegmentState: async (sequence) => {
+        await account.assertExecution(conversionId, executionEpoch);
+        return (await account.listAudioSegments(conversionId)).find(
+          (segment) => segment.sequence === sequence,
+        )?.state;
+      },
       completeAudioSegment: async (sequence, duration) => {
         await account.completeAudioSegment(conversionId, sequence, duration, executionEpoch);
       },
@@ -96,14 +109,18 @@ export function resolveConversionExecution(
     artifactBucket: env.AUDIO_BUCKET,
     getReadyAudiobookReference: () => grant.getReadyAudiobookReference(conversionId),
     phaseStarted: (phase) => grant.recordPhaseStarted(conversionId, phase),
-    recordReady: async (outcome) => {
-      await grant.recordReady(conversionId, outcome);
+    recordReady: async (outcome, narrationTextCharactersBySegment) => {
+      await grant.recordReady(conversionId, outcome, narrationTextCharactersBySegment);
     },
     recordFailed: async (outcome) => {
       await grant.recordFailed(conversionId, outcome);
     },
-    reserveAudioSegment: (sequence, characters) =>
-      grant.reserveAudioSegment(conversionId, sequence, characters),
+    startSynthesis: async (narrationTextCharactersBySegment) => {
+      await grant.startSynthesis(conversionId, narrationTextCharactersBySegment);
+    },
+    getAudioSegmentState: async (sequence) =>
+      (await grant.listAudioSegments(conversionId)).find((segment) => segment.sequence === sequence)
+        ?.state,
     completeAudioSegment: async (sequence, duration) => {
       await grant.completeAudioSegment(conversionId, sequence, duration);
     },

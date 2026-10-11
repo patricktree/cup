@@ -26,24 +26,6 @@ final class NarrationApiClient: NarrationApi {
     }
   }
 
-  func requestSegment(
-    _ id: String, sequence: Int, retry: Bool,
-    completion: @escaping (Result<[String: Any], Error>) -> Void
-  ) {
-    let auth = headers
-    let path = "/api/audiobooks/\(id)/segments/\(sequence)"
-    func receive(_ result: Result<[String: Any], Error>) {
-      if case .success(let segment) = result, segment["status"] as? String == "generating" {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-          self.http("GET", path, headers: auth, completion: receive)
-        }
-      } else {
-        completion(result)
-      }
-    }
-    http("POST", path, body: ["retry": retry], headers: auth, completion: receive)
-  }
-
   func http(
     _ method: String, _ path: String, body: [String: Any]? = nil, headers: [String: String],
     completion: @escaping (Result<[String: Any], Error>) -> Void

@@ -2,15 +2,28 @@ import AVFoundation
 import MediaPlayer
 import UIKit
 
-/// Owns AVPlayer, interruptions, remote commands, and finite buffering background tasks.
+/// Owns the queue player, interruptions, remote commands, and finite buffering background tasks.
+///
+/// The queue holds the current segment and the following one, so the boundary between them needs
+/// no loading pause. The following segment is supplied one at a time with current authorization.
 final class NarrationAudioAdapter: NarrationAudioOutput {
   var onTick: (() -> Void)?
+  var onAdvanced: (() -> Void)?
   var onEnded: (() -> Void)?
+  var onFollowingFailed: (() -> Void)?
+  var onFailure: ((String) -> Void)?
   var onPause: (() -> Void)?
   var onPlay: (() -> Void)?
   var onNext: (() -> Void)?
   var onPrevious: (() -> Void)?
-  private let player = AVPlayer()
+  var onSeek: ((Double) -> Void)?
+  private let player = AVQueuePlayer()
+  // Tracked here because the queue may already have advanced when an item's end is delivered.
+  private var playingItem: AVPlayerItem?
+  private var followingItem: AVPlayerItem?
+  private var followingObservation: NSKeyValueObservation?
+  // Keeps the failure observer of a segment alive after it advanced from following to playing.
+  private var advancedObservation: NSKeyValueObservation?
   private var observation: NSKeyValueObservation?
   private var periodicObserver: Any?
   private var observers: [NSObjectProtocol] = []
@@ -32,9 +45,18 @@ final class NarrationAudioAdapter: NarrationAudioOutput {
         forName: .AVPlayerItemDidPlayToEndTime, object: nil, queue: .main
       ) { [weak self] notification in
         guard let self, let item = notification.object as? AVPlayerItem,
-          item === self.player.currentItem
+          item === self.playingItem
         else { return }
-        self.onEnded?()
+        // The queue player continues into the following item by itself.
+        if let followingItem = self.followingItem {
+          self.playingItem = followingItem
+          self.followingItem = nil
+          self.advancedObservation = self.followingObservation
+          self.followingObservation = nil
+          self.onAdvanced?()
+        } else {
+          self.onEnded?()
+        }
       })
     observers.append(
       NotificationCenter.default.addObserver(
@@ -61,6 +83,14 @@ final class NarrationAudioAdapter: NarrationAudioOutput {
     bind(remote.pauseCommand) { [weak self] in self?.onPause?() }
     bind(remote.nextTrackCommand) { [weak self] in self?.onNext?() }
     bind(remote.previousTrackCommand) { [weak self] in self?.onPrevious?() }
+    let seekTarget = remote.changePlaybackPositionCommand.addTarget { [weak self] event in
+      guard let event = event as? MPChangePlaybackPositionCommandEvent else {
+        return .commandFailed
+      }
+      DispatchQueue.main.async { self?.onSeek?(event.positionTime * 1000) }
+      return .success
+    }
+    commands.append((remote.changePlaybackPositionCommand, seekTarget))
   }
 
   private func bind(_ command: MPRemoteCommand, action: @escaping () -> Void) {
@@ -82,8 +112,7 @@ final class NarrationAudioAdapter: NarrationAudioOutput {
   ) {
     revision += 1
     let generation = revision
-    let item = AVPlayerItem(
-      asset: AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers]))
+    let item = createItem(url, headers: headers)
     observation = item.observe(\.status, options: [.new, .initial]) { [weak self] item, _ in
       DispatchQueue.main.async {
         guard let self, generation == self.revision else { return }
@@ -104,7 +133,37 @@ final class NarrationAudioAdapter: NarrationAudioOutput {
         }
       }
     }
-    player.replaceCurrentItem(with: item)
+    playingItem = item
+    followingItem = nil
+    followingObservation = nil
+    advancedObservation = nil
+    player.removeAllItems()
+    player.insert(item, after: nil)
+  }
+
+  func enqueueNext(_ url: URL?, headers: [String: String]) {
+    if let followingItem { player.remove(followingItem) }
+    followingObservation = nil
+    followingItem = url.map { createItem($0, headers: headers) }
+    guard let item = followingItem, player.canInsert(item, after: playingItem) else { return }
+    // The queue player would skip a failed item silently, so its failure is reported instead.
+    followingObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
+      DispatchQueue.main.async {
+        guard let self, item.status == .failed else { return }
+        if item === self.followingItem {
+          self.player.remove(item)
+          self.followingItem = nil
+          self.onFollowingFailed?()
+        } else if item === self.playingItem {
+          self.onFailure?(item.error?.localizedDescription ?? "Audio could not be played.")
+        }
+      }
+    }
+    player.insert(item, after: playingItem)
+  }
+
+  private func createItem(_ url: URL, headers: [String: String]) -> AVPlayerItem {
+    AVPlayerItem(asset: AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers]))
   }
 
   func resume() { player.play() }
@@ -114,10 +173,12 @@ final class NarrationAudioAdapter: NarrationAudioOutput {
     player.pause()
   }
 
-  func updateNowPlaying(title: String, offset: Double, isPlaying: Bool) {
+  /// Publishes the whole-audiobook timeline, not the current segment's.
+  func updateNowPlaying(title: String, position: Double, duration: Double, isPlaying: Bool) {
     MPNowPlayingInfoCenter.default().nowPlayingInfo = [
       MPMediaItemPropertyTitle: title,
-      MPNowPlayingInfoPropertyElapsedPlaybackTime: offset / 1000,
+      MPMediaItemPropertyPlaybackDuration: duration / 1000,
+      MPNowPlayingInfoPropertyElapsedPlaybackTime: position / 1000,
       MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
     ]
   }

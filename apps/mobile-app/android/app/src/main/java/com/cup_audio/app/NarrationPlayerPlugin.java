@@ -32,19 +32,12 @@ public class NarrationPlayerPlugin extends Plugin {
                 call.reject(error.getMessage());
                 return;
               }
+              // The WebView derives the initial timeline position from the same audiobook; the
+              // service publishes the authoritative state once it runs.
               JSObject state = new JSObject();
-              state.put("currentUnitIndex", 0);
               state.put("isPlaying", false);
               state.put("isBuffering", false);
               state.put("error", org.json.JSONObject.NULL);
-              try {
-                org.json.JSONObject config = new org.json.JSONObject(configuration);
-                state.put(
-                    "currentUnitIndex", NarrationPositionStore.initialUnitIndex(config, getContext()));
-              } catch (Exception error) {
-                call.reject(error.getMessage());
-                return;
-              }
               call.resolve(state);
             });
   }
@@ -70,7 +63,10 @@ public class NarrationPlayerPlugin extends Plugin {
                 return;
               }
               if (action.equals("pause")) wantsPlayback = false;
-              if ((action.equals("play") || action.equals("retry")) && configuration != null) {
+              int unitIndex = call.getInt("unitIndex", 0);
+              long positionMilliseconds =
+                  Math.round(call.getDouble("positionMilliseconds", 0.0));
+              if (action.equals("play") && configuration != null) {
                 wantsPlayback = true;
                 try {
                   org.json.JSONObject config = new org.json.JSONObject(configuration);
@@ -84,12 +80,13 @@ public class NarrationPlayerPlugin extends Plugin {
                 intent.putExtra("playerId", call.getString("playerId"));
                 intent.putExtra("action", action);
                 ContextCompat.startForegroundService(getContext(), intent);
-              } else if (service != null) service.command(action, call.getInt("unitIndex", 0));
-              else if (action.equals("seek") && configuration != null) {
+              } else if (service != null) service.command(action, unitIndex, positionMilliseconds);
+              else if (!action.equals("pause") && configuration != null) {
                 Intent intent = new Intent(getContext(), NarrationPlaybackService.class);
                 intent.putExtra("playerId", call.getString("playerId"));
-                intent.putExtra("action", "seek");
-                intent.putExtra("unitIndex", call.getInt("unitIndex", 0));
+                intent.putExtra("action", action);
+                intent.putExtra("unitIndex", unitIndex);
+                intent.putExtra("positionMilliseconds", positionMilliseconds);
                 getContext().startService(intent);
               }
               call.resolve();

@@ -89,8 +89,6 @@ test("missing, invalid and foreign grant sessions cannot read trial text or audi
     const { app, env, bucketRead } = fixture();
     for (const [path, method, headers] of [
       [audiobookPath, "GET", {}],
-      [`${audiobookPath}/segments/0`, "GET", {}],
-      [`${audiobookPath}/segments/0`, "POST", {}],
       [`${audiobookPath}/retry`, "POST", {}],
       [audioPath, "GET", {}],
       [audioPath, "HEAD", {}],
@@ -120,8 +118,6 @@ test("expiry and revocation block subsequent text and media requests before stor
     validateSession.mockResolvedValue({ result: "valid", snapshot: { state } });
     for (const [path, method, headers] of [
       [audiobookPath, "GET", {}],
-      [`${audiobookPath}/segments/0`, "GET", {}],
-      [`${audiobookPath}/segments/0`, "POST", {}],
       [`${audiobookPath}/retry`, "POST", {}],
       [audioPath, "HEAD", {}],
       [audioPath, "GET", { Range: "bytes=0-1" }],

@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import { AUDIO_FORMAT } from "#src/audio-format.ts";
 import { LEGACY_GEMINI_SPEECH_CONFIG } from "#src/speech-synthesis-config.ts";
-import { PermanentNarrationSynthesisError, type SynthesisOptions } from "#src/speech-synthesis.ts";
+import {
+  PermanentNarrationSynthesisError,
+  RateLimitedNarrationSynthesisError,
+  type SynthesisOptions,
+} from "#src/speech-synthesis.ts";
 
 const AUDIO_STREAM_CHUNK_SIZE = 64 * 1024;
 const SPEECH_GATEWAY_ID = "default";
@@ -166,6 +170,10 @@ export async function synthesizeGeminiAudio({
     const providerMessage = getErrorMessage(responseBody);
 
     const message = `Google AI Studio narration synthesis failed with status ${response.status}: ${providerMessage}`;
+
+    if (response.status === 429) {
+      throw new RateLimitedNarrationSynthesisError(message);
+    }
 
     if (!isRetryableProviderError(response.status, providerMessage)) {
       throw new PermanentNarrationSynthesisError(message);

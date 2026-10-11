@@ -1,5 +1,9 @@
 import { AUDIO_FORMAT } from "#src/audio-format.ts";
-import { PermanentNarrationSynthesisError, type SynthesisOptions } from "#src/speech-synthesis.ts";
+import {
+  PermanentNarrationSynthesisError,
+  RateLimitedNarrationSynthesisError,
+  type SynthesisOptions,
+} from "#src/speech-synthesis.ts";
 
 const REQUEST_TIMEOUT_MILLISECONDS = 90_000;
 
@@ -46,7 +50,10 @@ export async function synthesizeElevenLabsAudio({
 
   if (!response.ok) {
     const message = `ElevenLabs narration synthesis failed with status ${response.status}: ${await response.text()}`;
-    if (response.status === 408 || response.status === 429 || response.status >= 500) {
+    if (response.status === 429) {
+      throw new RateLimitedNarrationSynthesisError(message);
+    }
+    if (response.status === 408 || response.status >= 500) {
       throw new Error(message);
     }
     throw new PermanentNarrationSynthesisError(message);

@@ -1,49 +1,56 @@
 import type { Page } from "@playwright/test";
 
-import { audioSegmentSchema } from "@cup/web-app-api.routes";
+import { audiobookSchema, type Audiobook } from "@cup/web-app-api.routes";
 
 import { expect } from "#test-e2e/fixtures.ts";
 import { getTrialSessionHeaders } from "#test-e2e/journey.ts";
 
-/** Request one unit explicitly without advancing the player or speculating ahead. */
-export async function generateUnit(page: Page, conversionId: string, sequence = 0, token?: string) {
-  const path = `/api/audiobooks/${conversionId}/segments/${sequence}`;
-  const headers = {
-    "Content-Type": "application/json",
-    "X-Create-Audiobook-From-URL-Request": "1",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-  const response = await page.evaluate(
-    async (input) => {
-      const mutation = await fetch(input.path, {
-        method: "POST",
-        headers: input.headers,
-        body: JSON.stringify({ retry: true }),
-      });
-      return { status: mutation.status, body: await mutation.json() };
+type PreparedAudiobook = Extract<Audiobook, { title: string }>;
+
+export async function readAudiobook(page: Page, conversionId: string, token?: string) {
+  const response = await page.request.get(
+    new URL(`/api/audiobooks/${conversionId}`, page.url()).href,
+    {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(await getTrialSessionHeaders(page)),
+      },
     },
-    { path, headers },
   );
-  expect(response.status).toBe(200);
-  const requestHeaders = { ...headers, ...(await getTrialSessionHeaders(page)) };
+  return audiobookSchema.parse(await response.json());
+}
+
+/** Waits for a prepared conversion, whatever the state of its audio. */
+export async function waitForPreparedAudiobook(
+  page: Page,
+  conversionId: string,
+  token?: string,
+): Promise<PreparedAudiobook> {
+  let prepared: PreparedAudiobook | undefined;
   await expect
     .poll(
       async () => {
-        const statusResponse = await page.request.get(new URL(path, page.url()).href, {
-          headers: requestHeaders,
-        });
-        const segment = audioSegmentSchema.parse(await statusResponse.json());
-        if (segment.status === "failed") throw new Error(segment.explanation);
-        return segment.status;
+        const audiobook = await readAudiobook(page, conversionId, token);
+        if ("title" in audiobook) prepared = audiobook;
+        return audiobook.status;
       },
-      { timeout: 60_000 },
+      { timeout: 90_000 },
     )
+    .not.toBe("pending");
+  if (!prepared) throw new Error("Expected a prepared audiobook.");
+  return prepared;
+}
+
+/** Synthesis starts by itself after preparation; waits until every segment has audio. */
+export async function waitForGeneratedAudio(page: Page, conversionId: string, token?: string) {
+  await expect
+    .poll(async () => (await readAudiobook(page, conversionId, token)).status, { timeout: 90_000 })
     .toBe("ready");
-  const segment = audioSegmentSchema.parse(
-    await (
-      await page.request.get(new URL(path, page.url()).href, { headers: requestHeaders })
-    ).json(),
-  );
-  if (segment.status !== "ready") throw new Error("Expected generated audio to remain ready.");
-  return segment;
+  const audiobook = await readAudiobook(page, conversionId, token);
+  if (audiobook.status !== "ready") throw new Error("Expected generated audio to remain ready.");
+
+  return audiobook.segments.map((segment) => {
+    if (segment.status !== "ready") throw new Error(`Segment ${segment.sequence} has no audio.`);
+    return segment;
+  });
 }

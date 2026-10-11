@@ -3,7 +3,7 @@ import type { RouteHandler } from "@hono/zod-openapi";
 
 import {
   audiobookSchema,
-  audioSegmentSchema,
+  retryConversionResponseSchema,
   segmentParamsSchema,
   playbackPositionSchema,
   authConfigResponseSchema,
@@ -314,37 +314,7 @@ const audiobookRoute = createRoute({
   },
 });
 
-const segmentResponses = {
-  200: {
-    content: { "application/json": { schema: audioSegmentSchema } },
-    description: "Unit audio availability.",
-  },
-  401: errorResponse("Synthesis authorization required."),
-  403: errorResponse("Synthesis blocked."),
-  404: errorResponse("Unit not found."),
-  409: errorResponse("Narration not prepared."),
-  500: errorResponse("Unavailable."),
-};
-const getSegmentRoute = createRoute({
-  method: "get",
-  path: "/api/audiobooks/{conversionId}/segments/{sequence}",
-  request: { params: segmentParamsSchema },
-  responses: segmentResponses,
-});
-const generateSegmentRoute = createRoute({
-  method: "post",
-  path: "/api/audiobooks/{conversionId}/segments/{sequence}",
-  request: {
-    params: segmentParamsSchema,
-    headers: routeBrowserMutationHeadersSchema,
-    body: {
-      required: true,
-      content: { "application/json": { schema: z.object({ retry: z.boolean() }).strict() } },
-    },
-  },
-  responses: segmentResponses,
-});
-const retryPreparationRoute = createRoute({
+const retryConversionRoute = createRoute({
   method: "post",
   path: "/api/audiobooks/{conversionId}/retry",
   request: {
@@ -353,7 +323,10 @@ const retryPreparationRoute = createRoute({
     body: { required: true, content: { "application/json": { schema: z.object({}).strict() } } },
   },
   responses: {
-    204: { description: "Preparation restarted." },
+    200: {
+      content: { "application/json": { schema: retryConversionResponseSchema } },
+      description: "Preparation restarted, or the outcome of requesting the missing segments.",
+    },
     401: errorResponse("Authorization required."),
     403: errorResponse("Blocked."),
     404: errorResponse("Not found."),
@@ -418,9 +391,7 @@ export type WebAppApiHandlers<Bindings extends object> = {
   getConversion: WebAppApiRouteHandler<typeof getConversionRoute, Bindings>;
   startTrialConversion: WebAppApiRouteHandler<typeof startTrialConversionRoute, Bindings>;
   getAudiobook: WebAppApiRouteHandler<typeof audiobookRoute, Bindings>;
-  getSegment: WebAppApiRouteHandler<typeof getSegmentRoute, Bindings>;
-  generateSegment: WebAppApiRouteHandler<typeof generateSegmentRoute, Bindings>;
-  retryPreparation: WebAppApiRouteHandler<typeof retryPreparationRoute, Bindings>;
+  retryConversion: WebAppApiRouteHandler<typeof retryConversionRoute, Bindings>;
   savePosition: WebAppApiRouteHandler<typeof savePositionRoute, Bindings>;
   getAudio: WebAppApiRouteHandler<typeof audioRoute, Bindings>;
   headAudio: WebAppApiRouteHandler<typeof audioHeadRoute, Bindings>;
@@ -443,9 +414,7 @@ export function createWebAppApi<Bindings extends object>(handlers: WebAppApiHand
     .openapi(getConversionRoute, handlers.getConversion)
     .openapi(startTrialConversionRoute, handlers.startTrialConversion)
     .openapi(audiobookRoute, handlers.getAudiobook)
-    .openapi(getSegmentRoute, handlers.getSegment)
-    .openapi(generateSegmentRoute, handlers.generateSegment)
-    .openapi(retryPreparationRoute, handlers.retryPreparation)
+    .openapi(retryConversionRoute, handlers.retryConversion)
     .openapi(savePositionRoute, handlers.savePosition)
     .openapi(audioRoute, handlers.getAudio)
     .openapi(audioHeadRoute, handlers.headAudio);
@@ -474,9 +443,7 @@ export function createWebAppContractApp() {
     getAudiobook: unavailable,
     getAudio: unavailable,
     headAudio: unavailable,
-    getSegment: unavailable,
-    generateSegment: unavailable,
-    retryPreparation: unavailable,
+    retryConversion: unavailable,
     savePosition: unavailable,
   });
 }

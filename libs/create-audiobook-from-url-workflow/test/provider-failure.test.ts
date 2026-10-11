@@ -20,13 +20,23 @@ vi.mock("cloudflare:workflows", () => ({
 
 import { NonRetryableError } from "cloudflare:workflows";
 
+import type { AccountDurableObject } from "@cup/accounts";
 import type { SpeechSynthesisAi } from "@cup/audiobook-production";
 import { createFakeSpeechSynthesisAi } from "@cup/audiobook-production/fake";
+import type { ConversionGrantDurableObject } from "@cup/conversion-grants";
 import { createFakeNarrationContentSelector } from "@cup/narration-content-selection/fake";
 import { createControlledSourceMaterialPreparer } from "@cup/prepare-source-material/fake";
 
 import { runPrepareAudiobookWorkflow } from "#src/run-prepare-audiobook-workflow.ts";
 import type { AudiobookWorkflowEnvironment } from "#src/workflow-environment.ts";
+
+// The test Worker adds a hook to its owner classes that runs their alarm on demand.
+type WithAlarmHook<Owner> = Owner & { reconcileForTest(): Promise<void> };
+type TestEnvironment = Omit<AudiobookWorkflowEnvironment, "ACCOUNTS" | "CONVERSION_GRANTS"> & {
+  ACCOUNTS: DurableObjectNamespace<WithAlarmHook<AccountDurableObject>>;
+  CONVERSION_GRANTS: DurableObjectNamespace<WithAlarmHook<ConversionGrantDurableObject>>;
+  SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW: Workflow;
+};
 
 const SOURCE_URL = "https://example.com/provider-failure";
 const ALLOWANCE = 7_200_000;
@@ -34,8 +44,8 @@ const harness = createTestHarness({
   root: path.resolve(import.meta.dirname, ".."),
   workers: [{ configPath: "./wrangler.test.jsonc" }],
 });
-const worker = harness.getWorker<AudiobookWorkflowEnvironment>();
-let environment: AudiobookWorkflowEnvironment;
+const worker = harness.getWorker<TestEnvironment>();
+let environment: TestEnvironment;
 
 beforeAll(async () => {
   await harness.listen();
@@ -45,11 +55,15 @@ afterAll(() => harness.close());
 
 import { runAudioSegmentWorkflow } from "#src/run-audio-segment-workflow.ts";
 
-test("preparation publishes the document without invoking speech or reserving allowance", async () => {
+test("preparation reserves duration for every segment of the document", async () => {
   const { grant, grantId, conversionId, now } = await createConversion();
   await runConversion(grantId, conversionId);
   expect((await grant.getConversion(conversionId))?.status).toBe("ready");
-  expect((await grant.inspect(now)).duration.reservedMilliseconds).toBe(0);
+  const segments = await grant.listAudioSegments(conversionId);
+  expect(segments.map((segment) => segment.state)).toEqual(["reserved", "reserved"]);
+  expect((await grant.inspect(now)).duration.reservedMilliseconds).toBe(
+    segments.reduce((total, segment) => total + segment.estimatedMilliseconds, 0),
+  );
   const artifacts = await environment.AUDIO_BUCKET.list({
     prefix: "conversions/" + conversionId + "/",
   });
@@ -58,11 +72,112 @@ test("preparation publishes the document without invoking speech or reserving al
   ]);
 });
 
+test.each(["trial", "account"] as const)(
+  "a %s document is reserved with its ready outcome and the alarm dispatches what the workflow could not",
+  async (kind) => {
+    const { grant, grantId, conversionId: trialConversionId } = await createConversion();
+    const accountId = crypto.randomUUID();
+    const account = environment.ACCOUNTS.get(environment.ACCOUNTS.idFromName(accountId));
+    await account.initialize({
+      accountId,
+      subject: crypto.randomUUID(),
+      createdAtMs: Temporal.Now.instant().epochMilliseconds,
+    });
+    const started = await account.startConversion({
+      sourceUrl: SOURCE_URL,
+      idempotencyKey: crypto.randomUUID(),
+    });
+    if (!started.conversion) throw new Error("Expected conversion");
+    const conversionId = kind === "account" ? started.conversion.conversionId : trialConversionId;
+    const owner = kind === "account" ? account : grant;
+
+    // Stop the workflow right after it recorded the ready outcome, before it dispatches.
+    const step = createImmediateRetryStep();
+    const runStep = step.do.bind(step);
+    step.do = ((name: string, ...rest: unknown[]) =>
+      name === "start speech synthesis"
+        ? Promise.reject(new Error("Dispatch unavailable"))
+        : Reflect.apply(runStep, step, [name, ...rest])) as WorkflowStep["do"];
+    await expect(
+      runConversion(grantId, conversionId, kind === "account" ? accountId : undefined, false, step),
+    ).rejects.toThrow("Dispatch unavailable");
+
+    expect((await owner.listAudioSegments(conversionId)).map((segment) => segment.state)).toEqual([
+      "reserved",
+      "reserved",
+    ]);
+    const workflow = environment.SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW;
+    await expect(workflow.get(`segment-${conversionId}-0`)).rejects.toBeInstanceOf(Error);
+
+    await owner.reconcileForTest();
+    for (const sequence of [0, 1])
+      await expect(
+        (await workflow.get(`segment-${conversionId}-${sequence}`)).status(),
+      ).resolves.toBeDefined();
+    // Dispatched work keeps its reservation until it settles or reports a failure.
+    expect((await owner.listAudioSegments(conversionId)).map((segment) => segment.state)).toEqual([
+      "reserved",
+      "reserved",
+    ]);
+  },
+);
+
+test("a document exceeding the available duration reserves nothing", async () => {
+  const { grant, grantId, conversionId, now } = await createConversion();
+  // Enough for either segment alone, but not for the whole document.
+  await grant.setDurationAllowance(2_500, now);
+  await runConversion(grantId, conversionId);
+  expect((await grant.getConversion(conversionId))?.status).toBe("ready");
+  expect(await grant.listAudioSegments(conversionId)).toEqual([]);
+  expect((await grant.inspect(now)).duration.reservedMilliseconds).toBe(0);
+});
+
+test("an account document exceeding the available duration reserves nothing until retried", async () => {
+  const accountId = crypto.randomUUID();
+  const account = environment.ACCOUNTS.get(environment.ACCOUNTS.idFromName(accountId));
+  await account.initialize({
+    accountId,
+    subject: crypto.randomUUID(),
+    createdAtMs: Temporal.Now.instant().epochMilliseconds,
+  });
+  const welcomeAllowance = (await account.inspect()).balance.available;
+  // Leave enough for either segment alone, but not for the whole document.
+  await account.adjustAllowance(crypto.randomUUID(), 2_500 - welcomeAllowance, "test");
+  const started = await account.startConversion({
+    sourceUrl: SOURCE_URL,
+    idempotencyKey: crypto.randomUUID(),
+  });
+  if (!started.conversion) throw new Error("Expected conversion");
+  const conversionId = started.conversion.conversionId;
+
+  await runConversion(accountId, conversionId, accountId);
+  expect(await account.listAudioSegments(conversionId)).toEqual([]);
+  expect((await account.inspect()).balance).toMatchObject({ available: 2_500, reserved: 0 });
+
+  const narrationTextCharactersBySegment = [12, 32];
+  await expect(
+    account.startSynthesis(conversionId, narrationTextCharactersBySegment, 1),
+  ).resolves.toEqual({
+    result: "insufficient-duration",
+    requiredMilliseconds: 3_560,
+    availableMilliseconds: 2_500,
+  });
+  await account.adjustAllowance(crypto.randomUUID(), 10_000, "test");
+  await expect(
+    account.startSynthesis(conversionId, narrationTextCharactersBySegment, 1),
+  ).resolves.toEqual({
+    result: "started",
+  });
+  expect((await account.inspect()).balance).toMatchObject({ available: 8_940, reserved: 3_560 });
+});
+
 test.each([400, 503])(
   "failed unit synthesis (%i) leaves prepared text and releases only its reservation",
   async (status) => {
     const { grant, grantId, conversionId, now } = await createConversion();
     await runConversion(grantId, conversionId);
+    const [failing, other] = await grant.listAudioSegments(conversionId);
+    if (!failing || !other) throw new Error("Expected two reserved segments");
     await expect(
       runSegment(
         conversionId,
@@ -73,12 +188,25 @@ test.each([400, 503])(
     ).rejects.toThrow("Configured deterministic speech failure");
     expect((await grant.getConversion(conversionId))?.status).toBe("ready");
     expect((await grant.inspect(now)).duration).toEqual({
-      availableMilliseconds: ALLOWANCE,
-      reservedMilliseconds: 0,
+      availableMilliseconds: ALLOWANCE - other.estimatedMilliseconds,
+      reservedMilliseconds: other.estimatedMilliseconds,
       spentMilliseconds: 0,
     });
-    // Explicit retry can reuse a released reservation and produce accessible audio once.
-    await runSegment(conversionId, { kind: "trial", grantId }, 0, createFakeSpeechSynthesisAi());
+    // A segment never reserves for itself: without the owner's retry it has nothing to spend.
+    const ai = createFakeSpeechSynthesisAi();
+    const gateway = vi.spyOn(ai, "gateway");
+    await expect(runSegment(conversionId, { kind: "trial", grantId }, 0, ai)).rejects.toThrow(
+      "no duration reservation",
+    );
+    expect(gateway).not.toHaveBeenCalled();
+    // The owner's retry reserves the released segment again and it produces accessible audio once.
+    await expect(
+      grant.startSynthesis(conversionId, [
+        failing.narrationTextCharacters,
+        other.narrationTextCharacters,
+      ]),
+    ).resolves.toEqual({ result: "started" });
+    await runSegment(conversionId, { kind: "trial", grantId }, 0, ai);
     const before = (await grant.inspect(now)).duration;
     await runSegment(
       conversionId,
@@ -89,6 +217,33 @@ test.each([400, 503])(
     expect((await grant.inspect(now)).duration).toEqual(before);
   },
 );
+
+test("a rate-limited segment waits out the provider limit before failing", async () => {
+  const { grant, grantId, conversionId } = await createConversion();
+  await runConversion(grantId, conversionId);
+  const sleep = vi.fn<WorkflowStep["sleep"]>().mockResolvedValue();
+  const step = createImmediateRetryStep();
+  step.sleep = sleep;
+
+  await expect(
+    runSegment(
+      conversionId,
+      { kind: "trial", grantId },
+      0,
+      createFakeSpeechSynthesisAi({ failureStatus: 429 }),
+      1,
+      step,
+    ),
+  ).rejects.toThrow("Configured deterministic speech failure");
+
+  expect(sleep.mock.calls.map(([name]) => name)).toEqual([
+    "wait for speech provider rate limit 1",
+    "wait for speech provider rate limit 2",
+    "wait for speech provider rate limit 3",
+    "wait for speech provider rate limit 4",
+  ]);
+  expect((await grant.listAudioSegments(conversionId))[0]?.state).toBe("released");
+});
 
 test("account segment retry preserves its ledger and earlier successful audio", async () => {
   const accountId = crypto.randomUUID();
@@ -115,7 +270,18 @@ test("account segment retry preserves its ledger and earlier successful audio", 
       createFakeSpeechSynthesisAi({ failureStatus: 503 }),
     ),
   ).rejects.toThrow("Configured deterministic speech failure");
-  expect((await account.inspect()).balance).toEqual(balance);
+  // Only the failed segment returns its reservation; the settled charge stays.
+  expect((await account.inspect()).balance).toEqual({
+    unit: "audio-millisecond",
+    available: balance.available + balance.reserved,
+    reserved: 0,
+  });
+  const segments = await account.listAudioSegments(conversionId);
+  await account.startSynthesis(
+    conversionId,
+    segments.map((segment) => segment.narrationTextCharacters),
+    1,
+  );
   await runSegment(conversionId, { kind: "account", accountId }, 1, createFakeSpeechSynthesisAi());
   expect(
     (await account.listAudioSegments(conversionId)).filter((item) => item.state === "settled"),
@@ -160,7 +326,10 @@ test("a stale account execution epoch cannot reserve duration or publish segment
 
   expect(gateway).not.toHaveBeenCalled();
   expect((await account.inspect()).balance).toEqual(balance);
-  expect(await account.listAudioSegments(conversionId)).toEqual([]);
+  expect((await account.listAudioSegments(conversionId)).map((segment) => segment.state)).toEqual([
+    "reserved",
+    "reserved",
+  ]);
   const artifacts = await environment.AUDIO_BUCKET.list({
     prefix: `accounts/${accountId}/conversions/${conversionId}/`,
   });
@@ -214,11 +383,12 @@ function runSegment(
   sequence: number,
   ai: SpeechSynthesisAi,
   executionEpoch = 1,
+  step = createImmediateRetryStep(),
 ) {
   return runAudioSegmentWorkflow({
     env: environment,
     ai,
-    step: createImmediateRetryStep(),
+    step,
     event: {
       workflowName: "segment-test",
       instanceId: "segment-" + conversionId + "-" + sequence,
@@ -245,6 +415,7 @@ function runConversion(
   conversionId: string,
   accountId?: string,
   shouldFailPreparation = false,
+  step = createImmediateRetryStep(),
 ) {
   return runPrepareAudiobookWorkflow({
     env: environment,
@@ -262,7 +433,7 @@ function runConversion(
         : { grantId, sourceUrl: SOURCE_URL },
       timestamp: new globalThis.Date(Temporal.Now.instant().epochMilliseconds),
     },
-    step: createImmediateRetryStep(),
+    step,
     services: {
       prepareSourceMaterial: shouldFailPreparation
         ? async () => {

@@ -1,8 +1,8 @@
 import { useMutation, type QueryClient } from "@tanstack/react-query";
 
 import {
-  audioSegmentSchema,
   playbackPositionSchema,
+  retryConversionResponseSchema,
   type PlaybackPosition,
 } from "@cup/web-app-api.routes";
 
@@ -16,28 +16,18 @@ async function readerClient() {
   const session = await getResourceAccountSession();
   return session ? client.createAuthenticatedRpcClient(session.access_token) : client;
 }
-export async function requestAudioSegment(conversionId: string, unitIndex: number, retry: boolean) {
-  return parseResponse(
-    await (await readerClient()).generateSegment({ conversionId }, unitIndex, retry),
-    (body) => audioSegmentSchema.parse(body),
-  );
-}
-export async function getAudioSegment(conversionId: string, unitIndex: number) {
-  return parseResponse(
-    await (await readerClient()).getSegment({ conversionId }, unitIndex),
-    (body) => audioSegmentSchema.parse(body),
-  );
-}
-export function useRetryPreparation(conversionId: string, queryClient: QueryClient) {
+/** Retries preparation, or synthesis of the segments still lacking audio once prepared. */
+export function useRetryConversion(conversionId: string, queryClient: QueryClient) {
   return useMutation({
-    mutationFn: () => retryPreparation(conversionId),
+    mutationFn: () => retryConversion(conversionId),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: createAudiobookQuery(conversionId).queryKey }),
   });
 }
-async function retryPreparation(conversionId: string) {
-  const response = await (await readerClient()).retryPreparation({ conversionId });
-  if (!response.ok) await parseResponse(response, () => undefined);
+async function retryConversion(conversionId: string) {
+  return parseResponse(await (await readerClient()).retryConversion({ conversionId }), (body) =>
+    retryConversionResponseSchema.parse(body),
+  );
 }
 export function getLocalPlaybackPosition(conversionId: string): PlaybackPosition | null {
   const value = localStorage.getItem(`cup:position:v1:${conversionId}`);

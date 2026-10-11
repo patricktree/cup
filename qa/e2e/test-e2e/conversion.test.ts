@@ -6,51 +6,43 @@ import {
   startConversion,
   waitForAudiobook,
 } from "#test-e2e/journey.ts";
-import { generateUnit } from "#test-e2e/synthesis.ts";
+import { waitForGeneratedAudio } from "#test-e2e/synthesis.ts";
 
-test("generates the selected unit while paused, then Play requests audio ahead and plays", async ({
+test("generates audio for the whole document, then plays it on one timeline", async ({
   page,
   workerEnvironment,
 }) => {
   await openNewTrial(page, workerEnvironment);
   await startConversion(page);
   await waitForAudiobook(page);
-  await expect
-    .poll(
-      async () =>
-        (await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json()).length,
-    )
-    .toBe(1);
-  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
-  await expect
-    .poll(() =>
-      page.locator("audio").evaluate((audio) => audio instanceof HTMLAudioElement && audio.paused),
-    )
-    .toBe(true);
+  const id = new URL(page.url()).pathname.split("/").at(-1)!;
+  const segments = await waitForGeneratedAudio(page, id);
+  expect(segments.length).toBeGreaterThan(1);
+  const calls = await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json();
+  expect(calls).toHaveLength(segments.length);
+
+  const play = page.getByRole("button", { name: "Play", exact: true });
+  await expect(play).toBeEnabled({ timeout: 30_000 });
   await expect(page.getByRole("link", { name: /Download/ })).toHaveCount(0);
-  await page.getByRole("button", { name: "Play", exact: true }).click();
+  const position = page.getByRole("slider");
+  // The progress bar spans every segment, not only the one playing.
+  await expect(position).toHaveAttribute(
+    "max",
+    String(segments.reduce((total, segment) => total + segment.durationMilliseconds, 0)),
+  );
+  await play.click();
   await expect
-    .poll(
-      () =>
-        page
-          .locator("audio")
-          .evaluate(
-            (element) =>
-              element instanceof HTMLAudioElement && !element.paused && element.currentTime > 0,
-          ),
-      { timeout: 60_000 },
-    )
-    .toBe(true);
+    .poll(async () => Number(await position.inputValue()), { timeout: 60_000 })
+    .toBeGreaterThan(0);
   await page.getByRole("button", { name: "Pause", exact: true }).click();
-  const url = await page.locator("audio").getAttribute("src");
-  if (!url) throw new Error("Segment URL missing");
-  await validateAudioSegment({ audioUrl: url, page });
-  const before = await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await validateAudioSegment({ audioUrl: segments[0]!.url, page });
+
   await page.reload();
   await waitForAudiobook(page);
-  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+  await expect(play).toBeEnabled({ timeout: 30_000 });
   expect(await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json()).toEqual(
-    before,
+    calls,
   );
 });
 
@@ -62,7 +54,7 @@ test("trial article links require the owning grant session for reading and repla
   await startConversion(page);
   await waitForAudiobook(page);
   const id = new URL(page.url()).pathname.split("/").at(-1)!;
-  const segment = await generateUnit(page, id);
+  const segment = (await waitForGeneratedAudio(page, id))[0]!;
   const beforeAnonymous = await (
     await fetch(workerEnvironment.origin + "/__qa/speech-calls")
   ).json();
@@ -77,10 +69,10 @@ test("trial article links require the owning grant session for reading and repla
   ).toBe(401);
   expect((await anonymous.request.get(segment.url)).status()).toBe(401);
   const response = await anonymous.request.post(
-    workerEnvironment.origin + `/api/audiobooks/${id}/segments/1`,
+    workerEnvironment.origin + `/api/audiobooks/${id}/retry`,
     {
       headers: { "Content-Type": "application/json", "X-Create-Audiobook-From-URL-Request": "1" },
-      data: { retry: false },
+      data: {},
     },
   );
   expect(response.status()).toBe(401);
@@ -107,9 +99,9 @@ test("trial article links require the owning grant session for reading and repla
   await anonymous.close();
 });
 
-test.describe("unit failure and recovery", () => {
+test.describe("segment failure and recovery", () => {
   test.use({ qaScenario: "tts-failure" });
-  test("keeps prepared text after synthesis failure and retries the same unit", async ({
+  test("keeps prepared text after synthesis failure and retries the failed segments", async ({
     page,
     workerEnvironment,
   }) => {
@@ -117,31 +109,24 @@ test.describe("unit failure and recovery", () => {
     await openNewTrial(page, workerEnvironment);
     await startConversion(page);
     await waitForAudiobook(page);
-    await expect(page.getByRole("button", { name: "Retry segment" })).toBeVisible({
+    await expect(page.getByText("Audio could not be generated for this article.")).toBeVisible({
       timeout: 90_000,
     });
     await waitForAudiobook(page);
-    await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
     await workerEnvironment.restart("success");
-    await page.getByRole("button", { name: "Retry segment" }).click();
-    await expect
-      .poll(
-        () =>
-          page
-            .locator("audio")
-            .evaluate(
-              (element) =>
-                element instanceof HTMLAudioElement && !element.paused && element.currentTime > 0,
-            ),
-        { timeout: 60_000 },
-      )
-      .toBe(true);
+    await page.getByRole("button", { name: "Retry", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Play", exact: true })).toBeEnabled({
+      timeout: 60_000,
+    });
+    await expect(page.getByText(/Audio could not be generated/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Play without/ })).toHaveCount(0);
   });
 });
 
 test.describe("preparation recovery", () => {
   test.use({ qaScenario: "preparation-failure" });
-  test("retries preparation on the same article and prepares its selected unit while paused", async ({
+  test("retries preparation on the same article and then generates its audio", async ({
     page,
     workerEnvironment,
   }) => {
@@ -155,12 +140,12 @@ test.describe("preparation recovery", () => {
     await page.getByRole("button", { name: "Retry", exact: true }).click();
     await waitForAudiobook(page);
     await expect(page).toHaveURL(url);
-    await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
-    await expect
-      .poll(
-        async () =>
-          (await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json()).length,
-      )
-      .toBe(1);
+    const segments = await waitForGeneratedAudio(page, new URL(url).pathname.split("/").at(-1)!);
+    await expect(page.getByRole("button", { name: "Play", exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
+    expect(
+      await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json(),
+    ).toHaveLength(segments.length);
   });
 });

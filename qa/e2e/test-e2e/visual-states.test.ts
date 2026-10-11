@@ -248,6 +248,7 @@ test("retries an audiobook loading failure", async ({
     }
     await fulfillJson(route, 200, createAudiobook(workerEnvironment.origin));
   });
+  await mockSegmentAudio(page, workerEnvironment.origin);
   expectConsoleError(CONSOLE_ERRORS.serverError);
   expectConsoleError(/^ApiError: The article could not be loaded\./);
 
@@ -353,6 +354,14 @@ async function mockConversion(
 async function mockAudiobook(page: Page, origin: string): Promise<void> {
   await page.route(`${origin}/api/audiobooks/${CONVERSION_ID}`, async (route) => {
     await fulfillJson(route, 200, createAudiobook(origin));
+  });
+  await mockSegmentAudio(page, origin);
+}
+
+/** The player preloads the first segment when it opens. */
+async function mockSegmentAudio(page: Page, origin: string): Promise<void> {
+  await page.route(`${origin}/api/files/audiobooks/${CONVERSION_ID}/segments/**`, async (route) => {
+    await route.fulfill({ status: 200, contentType: "audio/mpeg", body: Buffer.alloc(0) });
   });
 }
 

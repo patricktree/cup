@@ -2,7 +2,8 @@ import { DurableObject } from "cloudflare:workers";
 import { Temporal } from "temporal-polyfill";
 
 import {
-  dispatchSegmentWorkflow,
+  dispatchSegmentWorkflows,
+  reconcileSegmentWorkflow,
   type SegmentWorkflowParams,
   type TrialWorkflowParams,
   createConversionArtifactPrefix,
@@ -231,11 +232,73 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
     });
   }
 
-  requestAudioSegment(params: SegmentWorkflowParams, retry: boolean) {
-    return this.ctx.blockConcurrencyWhile(async () => {
-      const conversion = await this.getConversion(params.conversionId);
+  /** Reserves the whole narration document before dispatching any segment; see ADR 0008. */
+  async startSynthesis(conversionId: string, narrationTextCharactersBySegment: readonly number[]) {
+    const reservation = await this.reserveMissingAudioSegments(
+      conversionId,
+      narrationTextCharactersBySegment,
+    );
+    if (reservation.result !== "reserved") return reservation;
+
+    // The gate keeps concurrent retries from restarting each other's instances. A throw inside it
+    // would reset this object, so a dispatch failure is carried out of the gate first; the alarm
+    // completes a dispatch that fails partway.
+    const failure = await this.ctx.blockConcurrencyWhile(async () => {
+      try {
+        await dispatchSegmentWorkflows(
+          this.env.SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW,
+          {
+            v: 3,
+            conversionId,
+            owner: { kind: "trial", grantId: reservation.grantId },
+            executionEpoch: 1,
+          },
+          reservation.sequences,
+        );
+        return undefined;
+      } catch (error) {
+        return { error };
+      }
+    });
+    if (failure) throw failure.error;
+    return { result: "started" as const };
+  }
+
+  /**
+   * Reserves every segment lacking audio, or none when their whole estimate exceeds the available
+   * duration.
+   */
+  private reserveMissingAudioSegments(
+    conversionId: string,
+    narrationTextCharactersBySegment: readonly number[],
+  ) {
+    return this.ctx.storage.transaction(async () => {
+      const record = await this.sqlite.requireRecord();
+      const conversion = record.conversions.find((item) => item.conversionId === conversionId);
       if (conversion?.status !== "ready") throw new Error("Narration is not prepared");
-      return dispatchSegmentWorkflow(this.env.SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW, params, retry);
+
+      const reservation = reserveMissingSegments(
+        record,
+        conversionId,
+        narrationTextCharactersBySegment,
+      );
+      if (reservation.result !== "reserved") return reservation;
+
+      if (reservation.hasChanged) {
+        await this.sqlite.save(record);
+        await this.ctx.storage.setAlarm(
+          Temporal.Now.instant().epochMilliseconds + RECONCILIATION_RETRY_MS,
+        );
+      }
+      return {
+        result: "reserved" as const,
+        grantId: record.grantId,
+        sequences: record.segmentUsage
+          .filter(
+            (segment) => segment.conversionId === conversionId && segment.state === "reserved",
+          )
+          .map((segment) => segment.sequence),
+      };
     });
   }
 
@@ -402,7 +465,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
 
   async listAudioSegments(conversionId: string) {
     return (await this.sqlite.requireRecord()).segmentUsage
-      .filter((segment) => segment.conversionId === conversionId && segment.state === "settled")
+      .filter((segment) => segment.conversionId === conversionId)
       .toSorted((left, right) => left.sequence - right.sequence);
   }
 
@@ -440,15 +503,20 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
       providerUsage?: Record<string, unknown>;
       completedAtMs?: number;
     },
+    narrationTextCharactersBySegment?: readonly number[],
   ): Promise<"recorded" | "replayed"> {
-    return this.recordTerminal(conversionId, {
-      status: "ready",
-      completedAtMs: input.completedAtMs ?? Temporal.Now.instant().epochMilliseconds,
-      title: input.title,
-      audiobookReference: input.audiobookReference,
-      ...(input.measurements === undefined ? {} : { measurements: input.measurements }),
-      ...(input.providerUsage === undefined ? {} : { providerUsage: input.providerUsage }),
-    });
+    return this.recordTerminal(
+      conversionId,
+      {
+        status: "ready",
+        completedAtMs: input.completedAtMs ?? Temporal.Now.instant().epochMilliseconds,
+        title: input.title,
+        audiobookReference: input.audiobookReference,
+        ...(input.measurements === undefined ? {} : { measurements: input.measurements }),
+        ...(input.providerUsage === undefined ? {} : { providerUsage: input.providerUsage }),
+      },
+      narrationTextCharactersBySegment,
+    );
   }
 
   async recordFailed(
@@ -562,9 +630,11 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
     return GRANT_SCHEMA_VERSION;
   }
 
+  /** A ready outcome with segment text lengths also reserves the whole narration document. */
   private async recordTerminal(
     conversionId: string,
     terminal: TerminalOutcome,
+    narrationTextCharactersBySegment?: readonly number[],
   ): Promise<"recorded" | "replayed"> {
     return this.ctx.storage.transaction(async () => {
       const record = await this.sqlite.requireRecord();
@@ -594,6 +664,10 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
         if (segment.conversionId === conversionId && segment.state === "reserved")
           segment.state = "released";
       }
+      // Reserving with the ready outcome leaves no moment in which a prepared conversion has
+      // undecided reservations: afterwards a segment without one means the document did not fit.
+      if (terminal.status === "ready" && narrationTextCharactersBySegment !== undefined)
+        reserveMissingSegments(record, conversionId, narrationTextCharactersBySegment);
       record.registrySnapshotRevision += 1;
       await this.sqlite.save(record);
       await this.ctx.storage.setAlarm(
@@ -644,6 +718,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
     }
 
     await this.reconcileGeneration(record);
+    await this.reconcileSynthesis(record);
     record = await this.sqlite.requireRecord();
     await this.cleanupFailedArtifacts(record);
 
@@ -660,8 +735,12 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
           (conversion.status === "failed" && conversion.cleanupState === "pending"),
       );
     if (hasDueMaintenance) {
+      const hasSynthesisInFlight = record.segmentUsage.some(
+        (segment) => segment.state === "reserved",
+      );
       await this.ctx.storage.setAlarm(
-        Temporal.Now.instant().epochMilliseconds + MAINTENANCE_RETRY_MS,
+        Temporal.Now.instant().epochMilliseconds +
+          (hasSynthesisInFlight ? RECONCILIATION_RETRY_MS : MAINTENANCE_RETRY_MS),
       );
     }
   }
@@ -682,6 +761,27 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
       } catch {
         // An ambiguous platform result must not release reservations for work that might still be running.
       }
+    }
+  }
+
+  /** Dispatches or resumes synthesis owed to reserved segments, and releases what cannot run. */
+  private async reconcileSynthesis(record: GrantRecord): Promise<void> {
+    for (const segment of record.segmentUsage) {
+      if (segment.state !== "reserved") continue;
+      const result = await reconcileSegmentWorkflow(
+        this.env.SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW,
+        {
+          v: 3,
+          conversionId: segment.conversionId,
+          owner: { kind: "trial", grantId: record.grantId },
+          executionEpoch: 1,
+          sequence: segment.sequence,
+        },
+        // Reserved work may finish after expiry or revocation, so a grant can always resume it.
+        { canResume: true },
+      );
+      if (result === "stopped")
+        await this.releaseAudioSegment(segment.conversionId, segment.sequence);
     }
   }
 
@@ -737,4 +837,58 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
       await this.sqlite.save(record);
     });
   }
+}
+
+/**
+ * Reserves on the record every segment lacking audio, or none when their whole estimate exceeds the
+ * available duration. The caller saves the record.
+ */
+function reserveMissingSegments(
+  record: GrantRecord,
+  conversionId: string,
+  narrationTextCharactersBySegment: readonly number[],
+) {
+  const usage = record.segmentUsage.filter((segment) => segment.conversionId === conversionId);
+  const missing = narrationTextCharactersBySegment.flatMap((characters, sequence) => {
+    const existing = usage.find((segment) => segment.sequence === sequence);
+    if (existing === undefined || existing.state === "released")
+      return [
+        {
+          conversionId,
+          sequence,
+          narrationTextCharacters: characters,
+          estimatedMilliseconds: estimateAudioDuration(characters),
+          state: "reserved" as const,
+          actualMilliseconds: 0,
+          chargedMilliseconds: 0,
+        },
+      ];
+    if (existing.narrationTextCharacters !== characters)
+      throw new Error("Segment reservation conflicts with synthesis identity");
+    return [];
+  });
+  if (missing.length === 0) return { result: "reserved" as const, hasChanged: false };
+
+  const state = deriveGrantState(record, Temporal.Now.instant().epochMilliseconds);
+  if (state === "expired" || state === "revoked") return { result: state };
+
+  const requiredMilliseconds = missing.reduce(
+    (total, segment) => total + segment.estimatedMilliseconds,
+    0,
+  );
+  const { availableMilliseconds } = deriveDurationBalance(record);
+  if (requiredMilliseconds > availableMilliseconds)
+    return {
+      result: "insufficient-duration" as const,
+      requiredMilliseconds,
+      availableMilliseconds,
+    };
+
+  for (const reservation of missing) {
+    const existing = usage.find((segment) => segment.sequence === reservation.sequence);
+    if (existing) Object.assign(existing, reservation);
+    else record.segmentUsage.push(reservation);
+  }
+  record.registrySnapshotRevision += 1;
+  return { result: "reserved" as const, hasChanged: true };
 }

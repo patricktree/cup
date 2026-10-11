@@ -22,6 +22,14 @@ export class PermanentNarrationSynthesisError extends Error {
   }
 }
 
+/** Identifies a provider rate limit, which clears only after its per-minute window passes. */
+export class RateLimitedNarrationSynthesisError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RateLimitedNarrationSynthesisError";
+  }
+}
+
 export type SynthesisOptions = {
   ai: SpeechSynthesisAi;
   conversionId: string;

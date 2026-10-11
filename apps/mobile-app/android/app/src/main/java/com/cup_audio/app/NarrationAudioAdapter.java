@@ -13,14 +13,29 @@ import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.session.MediaSession;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import org.json.JSONObject;
 
-/** Owns Media3, lock-screen controls, audio focus, and buffering wake locks. */
+/**
+ * Owns Media3, lock-screen controls, audio focus, and buffering wake locks.
+ *
+ * <p>The player holds one media item per audio segment, so it buffers the following segment ahead
+ * of each boundary. The media session instead sees one item spanning the whole audiobook, which
+ * gives the notification and lock screen a single progress bar with the exact length.
+ */
 @androidx.annotation.OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
 final class NarrationAudioAdapter {
   interface Listener {
+    /** Playback moved to another segment, by reaching a boundary or by seeking. */
+    void onSegmentChanged();
+
+    void onBufferingChanged(boolean isBuffering);
+
     void onEnded();
+
+    /** A position on the whole-audiobook timeline chosen in the system media controls. */
+    void onSeek(long positionMilliseconds);
 
     void onNext();
 
@@ -35,6 +50,7 @@ final class NarrationAudioAdapter {
   private final MediaSession session;
   private final DefaultHttpDataSource.Factory httpFactory;
   private final PowerManager.WakeLock preparationWakeLock;
+  private List<NarrationTimeline.Entry> entries = new ArrayList<>();
 
   NarrationAudioAdapter(Context context, Listener listener) {
     preparationWakeLock =
@@ -73,6 +89,46 @@ final class NarrationAudioAdapter {
           }
 
           @Override
+          public long getDuration() {
+            return entries.isEmpty() ? C.TIME_UNSET : NarrationTimeline.duration(entries);
+          }
+
+          @Override
+          public long getContentDuration() {
+            return getDuration();
+          }
+
+          @Override
+          public long getCurrentPosition() {
+            return segmentStart() + super.getCurrentPosition();
+          }
+
+          @Override
+          public long getContentPosition() {
+            return getCurrentPosition();
+          }
+
+          @Override
+          public long getBufferedPosition() {
+            return segmentStart() + super.getBufferedPosition();
+          }
+
+          @Override
+          public long getContentBufferedPosition() {
+            return getBufferedPosition();
+          }
+
+          @Override
+          public void seekTo(long positionMilliseconds) {
+            listener.onSeek(positionMilliseconds);
+          }
+
+          @Override
+          public void seekTo(int mediaItemIndex, long positionMilliseconds) {
+            listener.onSeek(positionMilliseconds);
+          }
+
+          @Override
           public void seekToNextMediaItem() {
             listener.onNext();
           }
@@ -99,7 +155,14 @@ final class NarrationAudioAdapter {
           public void onPlaybackStateChanged(int state) {
             if (state == Player.STATE_READY && preparationWakeLock.isHeld())
               preparationWakeLock.release();
+            listener.onBufferingChanged(state == Player.STATE_BUFFERING);
             if (state == Player.STATE_ENDED) listener.onEnded();
+          }
+
+          @Override
+          public void onMediaItemTransition(MediaItem item, int reason) {
+            if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED)
+              listener.onSegmentChanged();
           }
 
           @Override
@@ -111,7 +174,7 @@ final class NarrationAudioAdapter {
 
           @Override
           public void onPlayerError(PlaybackException failure) {
-            listener.onFailure("Audio could not be played. Retry this segment.");
+            listener.onFailure("Audio could not be played. Press Play to try again.");
           }
         });
   }
@@ -120,8 +183,18 @@ final class NarrationAudioAdapter {
     return session;
   }
 
+  /** The position within the current segment. */
   long positionMilliseconds() {
     return player.getCurrentPosition();
+  }
+
+  int currentIndex() {
+    return player.getCurrentMediaItemIndex();
+  }
+
+  private long segmentStart() {
+    int index = player.getCurrentMediaItemIndex();
+    return index >= 0 && index < entries.size() ? entries.get(index).start : 0;
   }
 
   void authorize(Map<String, String> headers) {
@@ -131,6 +204,11 @@ final class NarrationAudioAdapter {
   void reset() {
     player.stop();
     player.clearMediaItems();
+    entries = new ArrayList<>();
+  }
+
+  void seek(int index, long offset) {
+    player.seekTo(index, offset);
   }
 
   void pause() {
@@ -141,14 +219,17 @@ final class NarrationAudioAdapter {
     player.play();
   }
 
-  void load(JSONObject segment, String unitId, String title, long offset) throws Exception {
-    MediaItem item =
-        new MediaItem.Builder()
-            .setUri(segment.getString("url"))
-            .setMediaId(unitId)
-            .setMediaMetadata(new MediaMetadata.Builder().setTitle(title).build())
-            .build();
-    player.setMediaItem(item, offset);
+  void load(List<NarrationTimeline.Entry> timeline, String title, int index, long offset) {
+    entries = timeline;
+    List<MediaItem> items = new ArrayList<>();
+    for (NarrationTimeline.Entry entry : timeline)
+      items.add(
+          new MediaItem.Builder()
+              .setUri(entry.url)
+              .setMediaId(entry.unitId)
+              .setMediaMetadata(new MediaMetadata.Builder().setTitle(title).build())
+              .build());
+    player.setMediaItems(items, index, offset);
     player.prepare();
     player.play();
   }

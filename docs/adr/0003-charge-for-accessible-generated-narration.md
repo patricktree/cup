@@ -1,8 +1,10 @@
 ---
-status: partially superseded by ADRs 0004, 0006, and 0007
+status: partially superseded by ADRs 0004, 0006, 0007, and 0008
 ---
 
 # Charge for accessible generated narration
+
+[ADR 0008](0008-synthesize-the-whole-narration-document.md) supersedes progressive, player-controlled synthesis: the whole narration document is reserved and synthesized as part of the conversion, pausing no longer affects synthesis, and the deferred explicit cancellation is dropped. Estimates, per-segment settlement, capped overruns, and free reuse remain accepted. The original decisions below are preserved as historical rationale.
 
 [ADR 0007](0007-require-active-grant-access-for-trial-audiobooks.md) supersedes trial link-only reading and replay and continued trial access after grant expiry or revocation. Trial audiobook requests now require a session for the owning unexpired, unrevoked grant; allowance exhaustion still permits reading and replay. The original decisions below are preserved as historical rationale.
 

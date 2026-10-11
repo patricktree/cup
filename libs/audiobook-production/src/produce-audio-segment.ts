@@ -21,6 +21,7 @@ import { synthesizeElevenLabsAudio } from "#src/synthesize-elevenlabs-audio.ts";
 import { synthesizeGeminiAudio } from "#src/synthesize-gemini-audio.ts";
 export {
   PermanentNarrationSynthesisError,
+  RateLimitedNarrationSynthesisError,
   type SpeechSynthesisAi,
   type NarrationChunk,
   type NarrationSynthesisResponseMode,

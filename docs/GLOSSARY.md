@@ -80,13 +80,13 @@ _Avoid_: conversion slots, listening time
 
 ## duration reservation
 
-A portion of a duration allowance temporarily held for requested narration synthesis, based on its estimated audio duration. It is unavailable to other requests until reconciled against delivered audio or released when synthesis ends without accessible audio.
+A portion of a duration allowance temporarily held for one audio segment’s narration synthesis, based on its estimated audio duration. A conversion’s reservations are taken together: either every segment still lacking audio is reserved or none is. Each is unavailable to other conversions until reconciled against delivered audio or released when its synthesis ends without accessible audio.
 
 _Avoid_: charge, spent allowance
 
 ## available duration
 
-The unspent portion of a duration allowance that is not held by active duration reservations. It is the balance shown to users and available for new synthesis requests.
+The unspent portion of a duration allowance that is not held by active duration reservations. It is the balance shown to users and available for new duration reservations.
 
 _Avoid_: total allowance, reserved duration
 
@@ -98,13 +98,13 @@ _Avoid_: trial link, user identity
 
 ## grant session
 
-Browser or native-app authorization derived from a grant credential. Session validity and grant availability are checked separately. It may inspect its conversion grant and, while the grant remains unexpired and unrevoked, prepare articles, including when its duration allowance is exhausted. New speech synthesis additionally requires sufficient available duration. A grant session does not authorize listing the grant’s conversions. Reading prepared trial text and replaying completed audio require a session for the owning grant while it remains unexpired and unrevoked, including when its duration allowance is exhausted. An audiobook link alone does not authorize access.
+Browser or native-app authorization derived from a grant credential. Session validity and grant availability are checked separately. It may inspect its conversion grant and, while the grant remains unexpired and unrevoked, prepare articles, including when its duration allowance is exhausted. Speech synthesis additionally requires available duration covering the whole narration document. A grant session does not authorize listing the grant’s conversions. Reading prepared trial text and replaying completed audio require a session for the owning grant while it remains unexpired and unrevoked, including when its duration allowance is exhausted. An audiobook link alone does not authorize access.
 
 _Avoid_: grant credential, user session
 
 ## conversion status
 
-The preparation state of a conversion: pending while its narration document is being prepared, ready when the document is available, or failed when preparation could not finish. A ready conversion may have no generated audio; availability and failure are tracked independently for each audio segment.
+The state of a conversion: pending while its narration document is being prepared; synthesizing while audio is generated for the whole document, during which the text can already be read; ready when every segment has audio or a final failure; failed when preparation could not finish; or insufficient duration when the narration document needs more than the available duration, in which case the document stays readable and synthesis can be requested again.
 
 _Avoid_: workflow status
 
@@ -182,27 +182,21 @@ _Avoid_: sentence, paragraph, narration chunk
 
 ## segment
 
-The user-facing name for a synchronization unit: an independently selectable part of an audiobook's narration document and its corresponding audio. It can include headings or multiple paragraphs, and its text can be available before the corresponding audio segment is generated.
+The user-facing name for a synchronization unit: an independently selectable part of an audiobook's narration document and its corresponding audio. It can include headings or multiple paragraphs, and its text can be read before the corresponding audio segment is generated. A segment whose synthesis finally failed has no audio and is skipped during playback.
 
 _Avoid_: passage, paragraph, section
 
 ## synchronization cue
 
-A relationship between one synchronization unit and its corresponding interval in narration audio. Current playback uses a separate audio segment per unit and a local offset within that segment.
+A relationship between one synchronization unit and its corresponding interval in narration audio. Playback uses a separate audio segment per unit and a local offset within that segment; a position on the whole audiobook is derived from the durations of the preceding segments.
 
 _Avoid_: timestamp, subtitle, caption
 
 ## audiobook
 
-The adaptation produced from source content, comprising a prepared narration document and independently available narration audio segments. Its text can be read before any speech is generated; playback progressively supplies the audio for its synchronization units.
+The adaptation produced from source content, comprising a prepared narration document and one narration audio segment per synchronization unit. Its text can be read while speech is generated. It becomes playable once every segment has audio or a final failure, so its total duration is known before playback starts.
 
 _Avoid_: audio file, audio output, workflow output
-
-## speech synthesis lookahead
-
-The portion of narration at and ahead of a player’s listening position for which it requests audio in advance to support uninterrupted playback.
-
-_Avoid_: buffer, playback buffer
 
 ## listening position
 

@@ -77,43 +77,68 @@ export class AccountDurationLedger {
         };
       }
       if (estimate > this.balance().available) return { result: "insufficient-duration" as const };
-      const operationId = `segment:${conversionId}:${sequence}:${crypto.randomUUID()}`;
-      this.database
-        .insert(creditOperations)
-        .values({
-          operationId,
-          requestId: operationId,
-          kind: "reservation",
-          unit: "audio-millisecond",
-          amount: estimate,
-          state: "reserved",
-          cause: conversionId,
-        })
-        .run();
-      this.database
-        .insert(accountAudioSegments)
-        .values({
-          conversionId,
-          sequence,
-          narrationTextCharacters: characters,
-          estimatedMilliseconds: estimate,
-          state: "reserved",
-          operationId,
-        })
-        .onConflictDoUpdate({
-          target: [accountAudioSegments.conversionId, accountAudioSegments.sequence],
-          set: {
-            operationId,
-            state: "reserved",
-            estimatedMilliseconds: estimate,
-            actualMilliseconds: 0,
-            chargedMilliseconds: 0,
-          },
-        })
-        .run();
-      this.appendEntry(operationId, "reserve", estimate, -estimate, estimate, nowMs, conversionId);
+      this.insertReservation(conversionId, sequence, characters, estimate, nowMs);
       return { result: "reserved" as const };
     });
+  }
+
+  /**
+   * Reserves every segment lacking audio, or none when their whole estimate exceeds the available
+   * duration.
+   */
+  reserveMissing(
+    conversionId: string,
+    narrationTextCharactersBySegment: readonly number[],
+    nowMs: number,
+  ) {
+    return this.database.transaction(() => {
+      const existing = new Map(
+        this.segments(conversionId).map((segment) => [segment.sequence, segment]),
+      );
+      const missing = narrationTextCharactersBySegment.flatMap((characters, sequence) => {
+        const segment = existing.get(sequence);
+        if (segment === undefined || segment.state === "released")
+          return [{ sequence, characters, estimate: estimateAudioDuration(characters) }];
+        if (segment.narrationTextCharacters !== characters)
+          throw new Error("Segment reservation conflicts with synthesis identity");
+        return [];
+      });
+
+      const requiredMilliseconds = missing.reduce((total, segment) => total + segment.estimate, 0);
+      const availableMilliseconds = this.balance().available;
+      if (requiredMilliseconds > availableMilliseconds)
+        return {
+          result: "insufficient-duration" as const,
+          requiredMilliseconds,
+          availableMilliseconds,
+        };
+
+      for (const segment of missing)
+        this.insertReservation(
+          conversionId,
+          segment.sequence,
+          segment.characters,
+          segment.estimate,
+          nowMs,
+        );
+      return {
+        result: "reserved" as const,
+        sequences: this.segments(conversionId)
+          .filter((segment) => segment.state === "reserved")
+          .map((segment) => segment.sequence),
+      };
+    });
+  }
+
+  reservedSegments(): { conversionId: string; sequence: number }[] {
+    return this.database
+      .select({
+        conversionId: accountAudioSegments.conversionId,
+        sequence: accountAudioSegments.sequence,
+      })
+      .from(accountAudioSegments)
+      .where(eq(accountAudioSegments.state, "reserved"))
+      .all();
   }
 
   complete(conversionId: string, sequence: number, durationMilliseconds: number, nowMs: number) {
@@ -290,6 +315,50 @@ export class AccountDurationLedger {
       reconstructed: { available: Math.max(0, totals.available), reserved: totals.reserved },
       entries: totals.entries,
     };
+  }
+
+  private insertReservation(
+    conversionId: string,
+    sequence: number,
+    characters: number,
+    estimate: number,
+    nowMs: number,
+  ): void {
+    const operationId = `segment:${conversionId}:${sequence}:${crypto.randomUUID()}`;
+    this.database
+      .insert(creditOperations)
+      .values({
+        operationId,
+        requestId: operationId,
+        kind: "reservation",
+        unit: "audio-millisecond",
+        amount: estimate,
+        state: "reserved",
+        cause: conversionId,
+      })
+      .run();
+    this.database
+      .insert(accountAudioSegments)
+      .values({
+        conversionId,
+        sequence,
+        narrationTextCharacters: characters,
+        estimatedMilliseconds: estimate,
+        state: "reserved",
+        operationId,
+      })
+      .onConflictDoUpdate({
+        target: [accountAudioSegments.conversionId, accountAudioSegments.sequence],
+        set: {
+          operationId,
+          state: "reserved",
+          estimatedMilliseconds: estimate,
+          actualMilliseconds: 0,
+          chargedMilliseconds: 0,
+        },
+      })
+      .run();
+    this.appendEntry(operationId, "reserve", estimate, -estimate, estimate, nowMs, conversionId);
   }
 
   private rawBalance() {

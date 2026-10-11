@@ -1,10 +1,10 @@
 import type { Page } from "@playwright/test";
 
-import { audiobookSchema, accountSnapshotSchema } from "@cup/web-app-api.routes";
+import { accountSnapshotSchema } from "@cup/web-app-api.routes";
 
 import { expect, test } from "#test-e2e/fixtures.ts";
 import { waitForAudiobook } from "#test-e2e/journey.ts";
-import { generateUnit } from "#test-e2e/synthesis.ts";
+import { readAudiobook, waitForGeneratedAudio } from "#test-e2e/synthesis.ts";
 
 const SOURCE_URL = "https://source.example.test/fixture";
 
@@ -27,7 +27,7 @@ test("Google PKCE signup resumes conversion, protects history and media, and sup
   const mediaUrl = `${origin}/api/files/audiobooks/${conversionId}/segments/0/audio.mp3`;
   await waitForAudiobook(page);
   if (!conversionId) throw new Error("Conversion missing");
-  await generateUnit(page, conversionId, 0, await readAccessToken(page));
+  await waitForGeneratedAudio(page, conversionId, await readAccessToken(page));
   const remainingAllowance = (await readAccount(page, origin)).balance.available;
   expect(remainingAllowance).toBeLessThan(30 * 60 * 1_000);
   await page.reload();
@@ -105,7 +105,7 @@ test("signup keeps trial conversions separate from the new account and its histo
   const originalId = new URL(originalUrl).pathname.split("/").at(-1);
   await waitForAudiobook(page);
   if (!originalId) throw new Error("Conversion missing");
-  await generateUnit(page, originalId);
+  await waitForGeneratedAudio(page, originalId);
   let importRequests = 0;
   page.on("request", (request) => {
     if (new URL(request.url()).pathname.startsWith("/api/account/imports")) importRequests += 1;
@@ -118,8 +118,14 @@ test("signup keeps trial conversions separate from the new account and its histo
   await waitForAudiobook(page);
   const accountConversionId = new URL(page.url()).pathname.split("/").at(-1);
   if (!accountConversionId) throw new Error("Conversion missing");
-  const segment = await generateUnit(page, accountConversionId, 0, await readAccessToken(page));
-  const expectedAllowance = 30 * 60 * 1_000 - Math.ceil(segment.durationMilliseconds);
+  const segments = await waitForGeneratedAudio(
+    page,
+    accountConversionId,
+    await readAccessToken(page),
+  );
+  const expectedAllowance =
+    30 * 60 * 1_000 -
+    segments.reduce((total, segment) => total + Math.ceil(segment.durationMilliseconds), 0);
   expect((await readAccount(page, origin)).balance.available).toBe(expectedAllowance);
   const privateUrl = page.url();
   const privateId = new URL(privateUrl).pathname.split("/").at(-1);
@@ -228,7 +234,9 @@ test("root auth handles signup and session restoration without account navigatio
   const privateUrl = page.url();
   await page.reload();
   await expect(page).toHaveURL(privateUrl);
-  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeEnabled({
+    timeout: 60_000,
+  });
 
   await page.goto(`${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
@@ -268,7 +276,9 @@ test("failed sign-in leaves anonymous trial access available", async ({
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
   await page.getByRole("button", { name: "Load & listen" }).click();
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
-  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeEnabled({
+    timeout: 60_000,
+  });
 });
 
 async function readAccount(page: Page, origin: string) {
@@ -343,13 +353,8 @@ test("account positions restore once and use last-write-wins across players", as
   const url = page.url();
   const id = new URL(url).pathname.split("/").at(-1)!;
   const token = await readAccessToken(page);
-  const document = audiobookSchema.parse(
-    await (
-      await page.request.get(origin + "/api/audiobooks/" + id, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-    ).json(),
-  );
+  await waitForGeneratedAudio(page, id, token);
+  const document = await readAudiobook(page, id, token);
   if (document.status !== "ready") throw new Error("Article not prepared");
   const unitId = document.narrationDocument.synchronizationUnits[1]!.id;
   const save = await page.evaluate(
@@ -378,6 +383,7 @@ test("account positions restore once and use last-write-wins across players", as
   await waitForAudiobook(second);
   await expect(second.locator(`[id="${unitId}"]`)).toHaveAttribute("aria-current", "true");
   await second.getByRole("button", { name: "Play segment 3", exact: true }).click();
+  await expect(second.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   await second.getByRole("button", { name: "Pause", exact: true }).click();
   await expect
     .poll(async () => {

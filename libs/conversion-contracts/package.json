@@ -32,6 +32,7 @@
     "turbo:test": "pnpm run test"
   },
   "dependencies": {
+    "p-map": "^7.0.8",
     "zod": "^4.5.4"
   },
   "devDependencies": {

@@ -2,13 +2,19 @@ import Foundation
 
 private final class Audio: NarrationAudioOutput {
   var onTick: (() -> Void)?
+  var onAdvanced: (() -> Void)?
   var onEnded: (() -> Void)?
+  var onFollowingFailed: (() -> Void)?
+  var onFailure: ((String) -> Void)?
   var onPause: (() -> Void)?
   var onPlay: (() -> Void)?
   var onNext: (() -> Void)?
   var onPrevious: (() -> Void)?
+  var onSeek: ((Double) -> Void)?
   var positionMilliseconds: Double?
   var loads: [(URL, Double)] = []
+  var enqueued: [URL?] = []
+  var nowPlaying: (position: Double, duration: Double)?
   func activate() throws {}
   func load(
     _ url: URL, headers: [String: String], offset: Double, completion: @escaping (String?) -> Void
@@ -17,40 +23,34 @@ private final class Audio: NarrationAudioOutput {
     positionMilliseconds = offset
     completion(nil)
   }
+  func enqueueNext(_ url: URL?, headers: [String: String]) { enqueued.append(url) }
   func resume() {}
   func pause() {}
-  func updateNowPlaying(title: String, offset: Double, isPlaying: Bool) {}
+  func updateNowPlaying(title: String, position: Double, duration: Double, isPlaying: Bool) {
+    nowPlaying = (position, duration)
+  }
   func beginBufferingTask() {}
   func endBufferingTask() {}
+
+  /// The queue player continued into the enqueued segment.
+  func advance() {
+    positionMilliseconds = 0
+    onAdvanced?()
+  }
 }
 
 private final class Api: NarrationApi {
   var headers: [String: String] = [:]
-  var requests: [(String, Int, Bool, (Result<[String: Any], Error>) -> Void)] = []
   var writes: [(String, [String: Any], [String: String], (Result<[String: Any], Error>) -> Void)] =
     []
   func configure(token: String?, cookies: [HTTPCookie]) { authorize(token) }
   func authorize(_ token: String?) { headers = token.map { ["Authorization": $0] } ?? [:] }
-  func requestSegment(
-    _ id: String, sequence: Int, retry: Bool,
-    completion: @escaping (Result<[String: Any], Error>) -> Void
-  ) {
-    requests.append((id, sequence, retry, completion))
-  }
   func http(
     _ method: String, _ path: String, body: [String: Any]?, headers: [String: String],
     completion: @escaping (Result<[String: Any], Error>) -> Void
   ) {
     precondition(method == "PUT")
     writes.append((path, body!, headers, completion))
-  }
-  func complete(_ index: Int, duration: Double = 20000) {
-    let (_, sequence, _, callback) = requests[index]
-    callback(
-      .success([
-        "sequence": sequence, "status": "ready", "durationMilliseconds": duration,
-        "url": "https://cup-audio.com/audio/\(sequence)",
-      ]))
   }
 }
 
@@ -68,152 +68,173 @@ private final class Positions: NarrationPositions {
   }
 }
 
-private func config(_ id: String = "article", canGenerate: Bool = true) -> [String: Any] {
+/// Four units of 20 seconds each; units listed in `failed` have no audio.
+private func config(failed: Set<Int> = []) -> [String: Any] {
   [
-    "conversionId": id, "playerId": "player", "isSignedIn": true,
+    "conversionId": "article", "playerId": "player", "isSignedIn": true,
     "audiobook": [
-      "title": "Article", "segments": [], "canGenerate": canGenerate,
+      "title": "Article", "canGenerate": true,
+      "segments": (0..<4).map { sequence -> [String: Any] in
+        failed.contains(sequence)
+          ? ["sequence": sequence, "status": "failed", "explanation": "Rejected"]
+          : [
+            "sequence": sequence, "status": "ready", "durationMilliseconds": 20000.0,
+            "url": "https://cup-audio.com/audio/\(sequence)",
+          ]
+      },
       "narrationDocument": [
-        "synchronizationUnits":
-          (0..<8).map { ["id": "unit-\($0)", "narrationText": String(repeating: "a", count: 250)] }
+        "synchronizationUnits": (0..<4).map { ["id": "unit-\($0)", "narrationText": "Text"] }
       ],
     ],
   ]
 }
 
+private func createPlayer(
+  failed: Set<Int> = [], position: [String: Any]? = nil
+) throws -> (NarrationPlaybackCoordinator, Audio, Positions) {
+  let audio = Audio()
+  let positions = Positions()
+  positions.position = position
+  let player = NarrationPlaybackCoordinator(audio: audio, api: Api(), positions: positions)
+  try player.configure(config(failed: failed), cookies: [])
+  return (player, audio, positions)
+}
+
 @main
 struct PlaybackCoordinatorTests {
   static func main() throws {
-    try readOnlySelectionDoesNotSynthesize()
-    try pausedSelectionGeneratesOnlyTheActiveUnit()
-    try pauseKeepsCompletedAudioWithoutScheduling()
-    try seekPrioritizesDestination()
+    try reportsTheWholeAudiobookTimeline()
+    try playEnqueuesTheFollowingSegment()
+    try advancingContinuesTheTimelineWithoutReloading()
+    try seekingByPositionSelectsSegmentAndOffset()
+    try segmentsWithoutAudioAreSkipped()
     try restoreOnlyOnConfigure()
-    try failureAndExplicitRetry()
-    try staleArticleResultDoesNotMovePlayer()
+    try endingReturnsToTheStartPaused()
+    try failedPreloadIsLoadedAgainAtTheBoundary()
+    try seekingToTheEndStaysPlayable()
+    try pauseJustBeforeABoundaryKeepsTheTimeline()
     orderedPositionWritesCaptureAuthorization()
-    print("8 native playback behavior tests passed")
+    print("11 native playback behavior tests passed")
   }
 
-  private static func readOnlySelectionDoesNotSynthesize() throws {
-    let api = Api()
-    let audio = Audio()
-    let positions = Positions()
-    let player = NarrationPlaybackCoordinator(audio: audio, api: api, positions: positions)
-    try player.configure(config(canGenerate: false), cookies: [])
-    player.seek(4)
-    precondition(api.requests.isEmpty && audio.loads.isEmpty)
+  private static func reportsTheWholeAudiobookTimeline() throws {
+    let (player, audio, _) = try createPlayer()
+    precondition(player.snapshot()["durationMilliseconds"] as? Double == 80000)
+    precondition(player.snapshot()["positionMilliseconds"] as? Double == 0)
     precondition(player.snapshot()["isPlaying"] as? Bool == false)
+    precondition(audio.loads.isEmpty && audio.nowPlaying?.duration == 80000)
   }
 
-  private static func pausedSelectionGeneratesOnlyTheActiveUnit() throws {
-    let api = Api()
-    let audio = Audio()
-    let positions = Positions()
-    let player = NarrationPlaybackCoordinator(audio: audio, api: api, positions: positions)
-    try player.configure(config(), cookies: [])
-    precondition(api.requests.map { $0.1 } == [0])
-    player.seek(4)
-    precondition(api.requests.map { $0.1 } == [0, 4])
-    api.complete(0)
-    api.complete(1)
-    precondition(audio.loads.isEmpty && player.snapshot()["isPlaying"] as? Bool == false)
+  private static func playEnqueuesTheFollowingSegment() throws {
+    let (player, audio, _) = try createPlayer()
     player.play()
-    precondition(api.requests.map { $0.1 } == [0, 4, 5, 6])
-    precondition(audio.loads.first?.0.lastPathComponent == "4")
+    precondition(audio.loads.map { $0.0.lastPathComponent } == ["0"])
+    precondition(audio.enqueued.map { $0?.lastPathComponent } == ["1"])
+    precondition(player.snapshot()["isPlaying"] as? Bool == true)
   }
 
-  private static func pauseKeepsCompletedAudioWithoutScheduling() throws {
-    let api = Api()
-    let audio = Audio()
-    let positions = Positions()
-    let player = NarrationPlaybackCoordinator(audio: audio, api: api, positions: positions)
-    try player.configure(config(), cookies: [])
+  private static func advancingContinuesTheTimelineWithoutReloading() throws {
+    let (player, audio, positions) = try createPlayer()
     player.play()
-    precondition(api.requests.map { $0.1 } == [0, 1, 2])
-    player.pause()
-    api.complete(0)
-    precondition(api.requests.count == 3 && audio.loads.isEmpty)
-    player.play()
-    precondition(audio.loads.count == 1 && api.requests.map { $0.1 } == [0, 1, 2])
+    audio.advance()
+    precondition(audio.loads.count == 1)
+    precondition(audio.enqueued.map { $0?.lastPathComponent } == ["1", "2"])
+    precondition(player.snapshot()["currentUnitIndex"] as? Int == 1)
+    audio.positionMilliseconds = 5000
     audio.onTick?()
-    precondition(api.requests.map { $0.1 } == [0, 1, 2])
+    precondition(player.snapshot()["positionMilliseconds"] as? Double == 25000)
+    precondition(audio.nowPlaying?.position == 25000)
     player.pause()
-    api.complete(2)
-    api.complete(1)
-    precondition(api.requests.map { $0.1 } == [0, 1, 2])  // In-flight units finish without extending speech synthesis lookahead.
-    player.play()
-    precondition(api.requests.map { $0.1 } == [0, 1, 2])  // 60s of audio ends speech synthesis lookahead.
+    precondition(positions.saved.last?.0 == "unit-1" && positions.saved.last?.1 == 5000)
   }
 
-  private static func seekPrioritizesDestination() throws {
-    let api = Api()
-    let audio = Audio()
-    let positions = Positions()
-    let player = NarrationPlaybackCoordinator(audio: audio, api: api, positions: positions)
-    try player.configure(config(), cookies: [])
+  private static func seekingByPositionSelectsSegmentAndOffset() throws {
+    let (player, audio, positions) = try createPlayer()
+    player.seek(toPosition: 47000)
+    precondition(audio.loads.isEmpty && player.snapshot()["currentUnitIndex"] as? Int == 2)
+    precondition(positions.saved.last?.0 == "unit-2" && positions.saved.last?.1 == 7000)
     player.play()
-    player.seek(4)
-    precondition(api.requests.map { $0.1 } == [0, 1, 2, 4, 5, 6])
-    api.complete(0)
-    precondition(audio.loads.isEmpty)
-    api.complete(3)
-    precondition(audio.loads.first?.0.lastPathComponent == "4")
-    precondition(api.requests.map { $0.1 } == [0, 1, 2, 4, 5, 6])
-    player.pause()
-    player.seek(2)
-    precondition(api.requests.count == 6 && positions.saved.last?.0 == "unit-2")
+    precondition(audio.loads.last?.0.lastPathComponent == "2" && audio.loads.last?.1 == 7000)
+    // A position chosen in the system media controls uses the same timeline.
+    audio.onSeek?(61000)
+    precondition(audio.loads.last?.0.lastPathComponent == "3" && audio.loads.last?.1 == 1000)
+    precondition(audio.enqueued.last! == nil)
+    player.seek(toUnit: 1)
+    precondition(audio.loads.last?.0.lastPathComponent == "1" && audio.loads.last?.1 == 0)
+  }
+
+  private static func segmentsWithoutAudioAreSkipped() throws {
+    let (player, audio, _) = try createPlayer(failed: [1])
+    precondition(player.snapshot()["durationMilliseconds"] as? Double == 60000)
+    player.play()
+    precondition(audio.enqueued.map { $0?.lastPathComponent } == ["2"])
+    audio.advance()
+    precondition(player.snapshot()["currentUnitIndex"] as? Int == 2)
+    precondition(player.snapshot()["positionMilliseconds"] as? Double == 20000)
+    player.seek(toUnit: 1)
+    precondition(player.snapshot()["currentUnitIndex"] as? Int == 2)
   }
 
   private static func restoreOnlyOnConfigure() throws {
-    let api = Api()
-    let audio = Audio()
-    let positions = Positions()
-    positions.position = ["synchronizationUnitId": "unit-2", "offsetMilliseconds": 1500.0]
-    let player = NarrationPlaybackCoordinator(audio: audio, api: api, positions: positions)
-    try player.configure(config(), cookies: [])
-    precondition(
-      player.snapshot()["currentUnitIndex"] as? Int == 2 && player.snapshot()["isPlaying"] as? Bool == false
-    )
-    positions.position = ["synchronizationUnitId": "unit-4", "offsetMilliseconds": 0.0]
+    let (player, audio, positions) = try createPlayer(
+      position: ["synchronizationUnitId": "unit-2", "offsetMilliseconds": 1500.0])
+    precondition(player.snapshot()["currentUnitIndex"] as? Int == 2)
+    precondition(player.snapshot()["positionMilliseconds"] as? Double == 41500)
+    precondition(player.snapshot()["isPlaying"] as? Bool == false)
+    positions.position = ["synchronizationUnitId": "unit-3", "offsetMilliseconds": 0.0]
     player.play()
-    api.complete(0)
     precondition(audio.loads.first?.1 == 1500 && positions.restores == 1)
     audio.positionMilliseconds = 2500
     player.pause()
     precondition(positions.saved.last?.0 == "unit-2" && positions.saved.last?.1 == 2500)
   }
 
-  private static func failureAndExplicitRetry() throws {
-    let api = Api()
-    let audio = Audio()
-    let positions = Positions()
-    let player = NarrationPlaybackCoordinator(audio: audio, api: api, positions: positions)
-    try player.configure(config(), cookies: [])
+  private static func endingReturnsToTheStartPaused() throws {
+    let (player, audio, positions) = try createPlayer()
+    player.seek(toUnit: 3)
     player.play()
-    api.requests[0].3(.success(["status": "failed", "explanation": "No allowance"]))
-    precondition(
-      player.snapshot()["isPlaying"] as? Bool == false
-        && player.snapshot()["error"] as? String == "No allowance")
-    player.play(retry: true)
-    precondition(api.requests.count == 4 && api.requests[3].2)
-    api.complete(3)
-    precondition(audio.loads.count == 1 && player.snapshot()["error"] is NSNull)
+    audio.onEnded?()
+    precondition(player.snapshot()["isPlaying"] as? Bool == false)
+    precondition(player.snapshot()["positionMilliseconds"] as? Double == 0)
+    precondition(positions.saved.last?.0 == "unit-0" && positions.saved.last?.1 == 0)
   }
 
-  private static func staleArticleResultDoesNotMovePlayer() throws {
-    let api = Api()
-    let audio = Audio()
-    let positions = Positions()
-    let player = NarrationPlaybackCoordinator(audio: audio, api: api, positions: positions)
-    try player.configure(config("first"), cookies: [])
+  private static func failedPreloadIsLoadedAgainAtTheBoundary() throws {
+    let (player, audio, _) = try createPlayer()
     player.play()
-    try player.configure(config("second"), cookies: [])
+    audio.onFollowingFailed?()
+    // The adapter dropped the failed segment, so the current one ends with nothing enqueued.
+    audio.onEnded?()
+    precondition(audio.loads.map { $0.0.lastPathComponent } == ["0", "1"])
+    precondition(player.snapshot()["currentUnitIndex"] as? Int == 1)
+    precondition(player.snapshot()["isPlaying"] as? Bool == true)
+    audio.onFailure?("Network lost")
+    precondition(player.snapshot()["isPlaying"] as? Bool == false)
+    precondition(player.snapshot()["error"] as? String == "Network lost")
+  }
+
+  private static func seekingToTheEndStaysPlayable() throws {
+    let (player, audio, _) = try createPlayer()
+    player.seek(toPosition: 80000)
+    precondition(player.snapshot()["currentUnitIndex"] as? Int == 3)
+    precondition(player.snapshot()["positionMilliseconds"] as? Double == 79999)
     player.play()
-    api.complete(0)
-    precondition(audio.loads.isEmpty && api.requests.count == 6)
-    api.complete(3)
+    precondition(audio.loads.last?.0.lastPathComponent == "3" && audio.loads.last?.1 == 19999)
+  }
+
+  private static func pauseJustBeforeABoundaryKeepsTheTimeline() throws {
+    let (player, audio, _) = try createPlayer()
+    player.play()
+    audio.positionMilliseconds = 19990
+    player.pause()
+    // The queue player had already continued into the following segment.
+    audio.advance()
+    precondition(player.snapshot()["currentUnitIndex"] as? Int == 1)
+    precondition(player.snapshot()["positionMilliseconds"] as? Double == 20000)
+    precondition(player.snapshot()["isPlaying"] as? Bool == false)
+    player.play()
     precondition(audio.loads.count == 1)
+    precondition(audio.enqueued.last??.lastPathComponent == "2")
   }
 
   private static func orderedPositionWritesCaptureAuthorization() {
