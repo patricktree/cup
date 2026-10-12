@@ -48,9 +48,9 @@
   },
   "dependencies": {
     "@cup/conversion-contracts": "workspace:*",
-    "drizzle-orm": "^0.45.2",
-    "temporal-polyfill": "^1.0.4",
-    "zod": "^4.5.4"
+    "drizzle-orm": "^0.45.4",
+    "temporal-polyfill": "^1.0.5",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",
@@ -59,7 +59,7 @@
     "@patricktree-stack/config-vitest": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native": "catalog:",
-    "drizzle-kit": "0.31.10",
+    "drizzle-kit": "0.31.11",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
     "typescript": "catalog:",

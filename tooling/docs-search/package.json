@@ -22,7 +22,7 @@
     "@tobilu/qmd": "2.8.3",
     "commander": "^15.0.0",
     "typescript": "5.9.3",
-    "zod": "^4.5.4"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",

@@ -38,8 +38,8 @@
     "turbo:test": "pnpm run test"
   },
   "dependencies": {
-    "openai": "^7.25.0",
-    "p-map": "^7.0.8",
+    "openai": "^7.32.0",
+    "p-map": "^7.1.0",
     "parse5": "^8.0.1",
     "type-fest": "^5.10.0",
     "zod": "^4.6.5"
@@ -55,7 +55,7 @@
     "@vitest/coverage-v8": "catalog:",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
-    "tinyrainbow": "^3.1.1",
+    "tinyrainbow": "^3.2.0",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",

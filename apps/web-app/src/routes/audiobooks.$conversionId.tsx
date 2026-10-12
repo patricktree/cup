@@ -458,44 +458,42 @@ function NarrationDocument({
   return (
     <div
       ref={narrationDocumentElementRef}
-      className={composeClassnames(
-        css`
-          & > article {
-            padding-block-end: var(--player-controls-height);
-          }
+      className={composeClassnames(css`
+        & > article {
+          padding-block-end: var(--player-controls-height);
+        }
 
-          & > article > * {
-            margin-block-end: calc(2 * var(--spacing-base));
-          }
+        & > article > * {
+          margin-block-end: calc(2 * var(--spacing-base));
+        }
 
-          [id]:has(> [data-segment-control]) {
-            /* "anchor" for the absolutely-positioned play-segment buttons */
-            position: relative;
-          }
+        [id]:has(> [data-segment-control]) {
+          /* "anchor" for the absolutely-positioned play-segment buttons */
+          position: relative;
+        }
 
-          [data-segment-control] {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            padding: 0;
-            cursor: pointer;
-            background: transparent;
-            border: 0;
-            border-radius: 0;
-          }
+        [data-segment-control] {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          padding: 0;
+          cursor: pointer;
+          background: transparent;
+          border: 0;
+          border-radius: 0;
+        }
 
-          [aria-current="true"] {
-            font-weight: var(--font-weight-inter-figma-medium);
-          }
+        [aria-current="true"] {
+          font-weight: var(--font-weight-inter-figma-medium);
+        }
 
-          [data-synthesis-failed] {
-            padding-inline-start: var(--spacing-base);
-            color: var(--color-fg-emphasized-sm);
-            border-inline-start: 3px solid var(--color-error);
-          }
-        `,
-      )}
+        [data-synthesis-failed] {
+          padding-inline-start: var(--spacing-base);
+          color: var(--color-fg-emphasized-sm);
+          border-inline-start: 3px solid var(--color-error);
+        }
+      `)}
       dangerouslySetInnerHTML={{ __html: audiobook.narrationDocument.html }}
     />
   );

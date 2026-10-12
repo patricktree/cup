@@ -32,8 +32,8 @@
     "turbo:test": "pnpm run test"
   },
   "dependencies": {
-    "p-map": "^7.0.8",
-    "zod": "^4.5.4"
+    "p-map": "^7.1.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",

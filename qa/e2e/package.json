@@ -45,7 +45,7 @@
     "@typescript/native": "catalog:",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
-    "temporal-polyfill": "^1.0.4",
+    "temporal-polyfill": "^1.0.5",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",

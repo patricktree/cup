@@ -44,7 +44,7 @@
     "hono": "catalog:hono",
     "jose": "^6.2.12",
     "temporal-polyfill": "^1.0.5",
-    "zod": "^4.5.4"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",

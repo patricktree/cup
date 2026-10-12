@@ -18,7 +18,7 @@ Cloudflare can expose the steps of a Workflow instance, but not through
   The `order=desc` option returns newest steps first. See Cloudflare's
   [Get logs and status from instance API](https://developers.cloudflare.com/api/resources/workflows/subresources/instances/methods/get/).
 - Wrangler uses this inspection capability: `wrangler workflows instances
-describe` shows whether each step is running, successful, or failed, along
+  describe` shows whether each step is running, successful, or failed, along
   with sleeps, retries, output, and errors. See Cloudflare's
   [getting-started guide](https://developers.cloudflare.com/workflows/get-started/guide/#6-deploy-your-workflow)
   and [Wrangler command reference](https://developers.cloudflare.com/workflows/reference/wrangler-commands/#workflows-instances-describe).
