@@ -203,9 +203,15 @@ catalogs:
     stylelint-config-standard:
       specifier: ^40.0.0
       version: 40.0.0
+    stylelint-order:
+      specifier: ^8.1.2
+      version: 8.1.2
     typescript:
       specifier: npm:@typescript/typescript6@^6.0.2
       version: 6.0.2
+    vite:
+      specifier: ^8.3.1
+      version: 8.3.1
     vitest:
       specifier: ^4.1.11
       version: 4.1.11
@@ -248,7 +254,7 @@ catalogs:
       specifier: ^8.3.1
       version: 8.3.1
 
-packageExtensionsChecksum: sha256-wm9BnxoY7lxZLvHVh46YPaqt8bTcS/o1YBXU5F5p5F4=
+packageExtensionsChecksum: sha256-wm7Z6yYv4Ixokkzs7DiTig2uN8gDSvTustMipx0iYZs=
 
 importers:
 
@@ -392,10 +398,13 @@ importers:
         version: 17.15.0
       stylelint-config-recess-order:
         specifier: 'catalog:'
-        version: 7.8.0(stylelint@17.15.0)
+        version: 7.8.0(stylelint-order@8.1.2(stylelint@17.15.0))(stylelint@17.15.0)
       stylelint-config-standard:
         specifier: 'catalog:'
         version: 40.0.0(stylelint@17.15.0)
+      stylelint-order:
+        specifier: 'catalog:'
+        version: 8.1.2(stylelint@17.15.0)
 
   .patricktree-stack/tooling/config-turbo-typescript: {}
 
@@ -403,9 +412,12 @@ importers:
 
   .patricktree-stack/tooling/config-vitest:
     devDependencies:
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11
+        version: 4.1.11(vite@8.3.1)
 
   .patricktree-stack/tooling/config-wyw-in-js: {}
 
@@ -555,9 +567,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)
+        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)(vite@8.3.1(@types/node@26.6.3))
 
   apps/web-app:
     dependencies:
@@ -734,9 +749,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)
+        version: 4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3))
       wrangler:
         specifier: 'catalog:'
         version: 4.144.0(@types/node@26.6.3)
@@ -810,9 +828,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)
+        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)(vite@8.3.1(@types/node@26.6.3))
 
   libs/audiobook-production:
     dependencies:
@@ -859,9 +880,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)
+        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)(vite@8.3.1(@types/node@26.6.3))
       wrangler:
         specifier: 'catalog:'
         version: 4.144.0(@types/node@26.6.3)
@@ -902,9 +926,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)
+        version: 4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3))
 
   libs/conversion-grants:
     dependencies:
@@ -951,9 +978,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)
+        version: 4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3))
       wrangler:
         specifier: 'catalog:'
         version: 4.144.0(@types/node@26.6.3)
@@ -1024,9 +1054,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)
+        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)(vite@8.3.1(@types/node@26.6.3))
       wrangler:
         specifier: 'catalog:'
         version: 4.144.0(@types/node@26.6.3)
@@ -1063,9 +1096,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)
+        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)(vite@8.3.1(@types/node@26.6.3))
 
   libs/narration-content-selection:
     dependencies:
@@ -1121,9 +1157,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)
+        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)(vite@8.3.1(@types/node@26.6.3))
       vitest-evals:
         specifier: 0.17.0
         version: 0.17.0(tinyrainbow@3.1.1)(vitest@4.1.11)(zod@4.6.5)
@@ -1167,9 +1206,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)
+        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)(vite@8.3.1(@types/node@26.6.3))
 
   libs/operator-api.client:
     dependencies:
@@ -1250,9 +1292,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)
+        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)(vite@8.3.1(@types/node@26.6.3))
 
   libs/prepare-source-material:
     dependencies:
@@ -1299,9 +1344,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)
+        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)(vite@8.3.1(@types/node@26.6.3))
 
   libs/registry:
     dependencies:
@@ -1354,9 +1402,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)
+        version: 4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3))
       wrangler:
         specifier: 'catalog:'
         version: 4.144.0(@types/node@26.6.3)
@@ -1449,9 +1500,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)
+        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)(vite@8.3.1(@types/node@26.6.3))
 
   qa/e2e:
     dependencies:
@@ -1522,9 +1576,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)
+        version: 4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3))
       wrangler:
         specifier: 'catalog:'
         version: 4.144.0(@types/node@26.6.3)
@@ -1663,9 +1720,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)
+        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)(vite@8.3.1(@types/node@26.6.3))
 
   tooling/prepare-declaration-build:
     dependencies:
@@ -1706,9 +1766,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)
+        version: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)(vite@8.3.1(@types/node@26.6.3))
 
 packages:
 
@@ -6365,6 +6428,7 @@ packages:
     resolution: {integrity: sha512-ObYusdkXavm8ulgb5xvmU1l8wgCdveNYG12hOTUEdjS8bNhSRggl4or0mE0JaOnQz+Ve2xZemVpwqERCgJbntg==}
     peerDependencies:
       stylelint: ^16.18.0 || ^17.0.0
+      stylelint-order: ^7.0.0 || ^8.0.0
 
   stylelint-config-recommended@18.0.0:
     resolution: {integrity: sha512-mxgT2XY6YZ3HWWe3Di8umG6aBmWmHTblTgu/f10rqFXnyWxjKWwNdjSWkgkwCtxIKnqjSJzvFmPT5yabVIRxZg==}
@@ -6378,8 +6442,8 @@ packages:
     peerDependencies:
       stylelint: ^17.0.0
 
-  stylelint-order@8.1.1:
-    resolution: {integrity: sha512-LqsEB6VggJuu5v10RtkrQsBObcdwBE7GuAOlwfc/LR3VL/w8UqKX2BOLIjhyGt0Gne/njo7gRNGiJAKhfmPMNw==}
+  stylelint-order@8.1.2:
+    resolution: {integrity: sha512-A+bxnIMVmzkWr6KlIwHnjQqTWBXPlIixoJa962BpK1N5bkhq3lXhKHjs4fY8ecooktjd3B3TtRiqoLSj+MfbxQ==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       stylelint: ^16.18.0 || ^17.0.0
@@ -6719,6 +6783,7 @@ packages:
       '@vitest/ui': 4.1.11
       happy-dom: '*'
       jsdom: '*'
+      vite: ^6.0.0 || ^7.0.0 || ^8.0.0
     peerDependenciesMeta:
       '@edge-runtime/vm':
         optional: true
@@ -8815,7 +8880,7 @@ snapshots:
       obug: 2.2.1
       std-env: 4.3.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)
+      vitest: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)(vite@8.3.1(@types/node@26.6.3))
 
   '@vitest/expect@4.1.11':
     dependencies:
@@ -10875,10 +10940,10 @@ snapshots:
 
   strip-json-comments@5.0.3: {}
 
-  stylelint-config-recess-order@7.8.0(stylelint@17.15.0):
+  stylelint-config-recess-order@7.8.0(stylelint-order@8.1.2(stylelint@17.15.0))(stylelint@17.15.0):
     dependencies:
       stylelint: 17.15.0
-      stylelint-order: 8.1.1(stylelint@17.15.0)
+      stylelint-order: 8.1.2(stylelint@17.15.0)
 
   stylelint-config-recommended@18.0.0(stylelint@17.15.0):
     dependencies:
@@ -10889,7 +10954,7 @@ snapshots:
       stylelint: 17.15.0
       stylelint-config-recommended: 18.0.0(stylelint@17.15.0)
 
-  stylelint-order@8.1.1(stylelint@17.15.0):
+  stylelint-order@8.1.2(stylelint@17.15.0):
     dependencies:
       postcss: 8.5.28
       postcss-sorting: 10.0.0(postcss@8.5.28)
@@ -11206,85 +11271,11 @@ snapshots:
       '@vitest-evals/core': 0.17.0
       '@vitest-evals/report-ui': 0.17.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)
+      vitest: 4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)(vite@8.3.1(@types/node@26.6.3))
     optionalDependencies:
       zod: 4.6.5
 
-  vitest@4.1.11:
-    dependencies:
-      '@vitest/expect': 4.1.11
-      '@vitest/mocker': 4.1.11(vite@8.3.1)
-      '@vitest/pretty-format': 4.1.11
-      '@vitest/runner': 4.1.11
-      '@vitest/snapshot': 4.1.11
-      '@vitest/spy': 4.1.11
-      '@vitest/utils': 4.1.11
-      es-module-lexer: 2.3.2
-      expect-type: 1.4.0
-      magic-string: 0.30.21
-      obug: 2.2.1
-      pathe: 2.0.3
-      picomatch: 4.0.7
-      std-env: 4.3.0
-      tinybench: 2.9.0
-      tinyexec: 1.3.1
-      tinyglobby: 0.2.17
-      tinyrainbow: 3.1.1
-      vite: 8.3.1
-      why-is-node-running: 2.3.0
-    transitivePeerDependencies:
-      - '@vitejs/devtools'
-      - esbuild
-      - jiti
-      - less
-      - msw
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - terser
-      - tsx
-      - yaml
-
-  vitest@4.1.11(@types/node@26.6.3):
-    dependencies:
-      '@vitest/expect': 4.1.11
-      '@vitest/mocker': 4.1.11(vite@8.3.1(@types/node@26.6.3))
-      '@vitest/pretty-format': 4.1.11
-      '@vitest/runner': 4.1.11
-      '@vitest/snapshot': 4.1.11
-      '@vitest/spy': 4.1.11
-      '@vitest/utils': 4.1.11
-      es-module-lexer: 2.3.2
-      expect-type: 1.4.0
-      magic-string: 0.30.21
-      obug: 2.2.1
-      pathe: 2.0.3
-      picomatch: 4.0.7
-      std-env: 4.3.0
-      tinybench: 2.9.0
-      tinyexec: 1.3.1
-      tinyglobby: 0.2.17
-      tinyrainbow: 3.1.1
-      vite: 8.3.1(@types/node@26.6.3)
-      why-is-node-running: 2.3.0
-    optionalDependencies:
-      '@types/node': 26.6.3
-    transitivePeerDependencies:
-      - '@vitejs/devtools'
-      - esbuild
-      - jiti
-      - less
-      - msw
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - terser
-      - tsx
-      - yaml
-
-  vitest@4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11):
+  vitest@4.1.11(@types/node@26.6.3)(@vitest/coverage-v8@4.1.11)(vite@8.3.1(@types/node@26.6.3)):
     dependencies:
       '@vitest/expect': 4.1.11
       '@vitest/mocker': 4.1.11(vite@8.3.1(@types/node@26.6.3))
@@ -11310,18 +11301,59 @@ snapshots:
       '@types/node': 26.6.3
       '@vitest/coverage-v8': 4.1.11(vitest@4.1.11)
     transitivePeerDependencies:
-      - '@vitejs/devtools'
-      - esbuild
-      - jiti
-      - less
       - msw
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - terser
-      - tsx
-      - yaml
+
+  vitest@4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)):
+    dependencies:
+      '@vitest/expect': 4.1.11
+      '@vitest/mocker': 4.1.11(vite@8.3.1(@types/node@26.6.3))
+      '@vitest/pretty-format': 4.1.11
+      '@vitest/runner': 4.1.11
+      '@vitest/snapshot': 4.1.11
+      '@vitest/spy': 4.1.11
+      '@vitest/utils': 4.1.11
+      es-module-lexer: 2.3.2
+      expect-type: 1.4.0
+      magic-string: 0.30.21
+      obug: 2.2.1
+      pathe: 2.0.3
+      picomatch: 4.0.7
+      std-env: 4.3.0
+      tinybench: 2.9.0
+      tinyexec: 1.3.1
+      tinyglobby: 0.2.17
+      tinyrainbow: 3.1.1
+      vite: 8.3.1(@types/node@26.6.3)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 26.6.3
+    transitivePeerDependencies:
+      - msw
+
+  vitest@4.1.11(vite@8.3.1):
+    dependencies:
+      '@vitest/expect': 4.1.11
+      '@vitest/mocker': 4.1.11(vite@8.3.1)
+      '@vitest/pretty-format': 4.1.11
+      '@vitest/runner': 4.1.11
+      '@vitest/snapshot': 4.1.11
+      '@vitest/spy': 4.1.11
+      '@vitest/utils': 4.1.11
+      es-module-lexer: 2.3.2
+      expect-type: 1.4.0
+      magic-string: 0.30.21
+      obug: 2.2.1
+      pathe: 2.0.3
+      picomatch: 4.0.7
+      std-env: 4.3.0
+      tinybench: 2.9.0
+      tinyexec: 1.3.1
+      tinyglobby: 0.2.17
+      tinyrainbow: 3.1.1
+      vite: 8.3.1
+      why-is-node-running: 2.3.0
+    transitivePeerDependencies:
+      - msw
 
   walk-up-path@4.0.0: {}
 
