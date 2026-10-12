@@ -12,14 +12,16 @@ Before changing, renaming, or removing a domain concept or cross-component behav
 
 ## Environment setup
 
-On a fresh checkout or worktree, initialize the shared tooling submodule before installing dependencies. The preinstall check rejects a missing or empty `.patricktree-stack` directory:
+On a fresh checkout or worktree, initialize the shared tooling submodule before installing dependencies:
 
 ```sh
 git submodule update --init --recursive
 pnpm install
 ```
 
-Cloudflare credentials are required for application development, including AI calls. The postinstall check fails until `apps/cloudflare-worker/.env.local` and `libs/narration-content-selection/.env.evals` contain matching `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_KEY` values. After the initial installation attempt, configure them and retry:
+If the submodule is missing, the preinstall check initializes it and fails; retry `pnpm install`, because pnpm scanned the workspace before the submodule's packages existed. Claude Code sessions run both commands at session start through `.claude/hooks/session-start.sh`.
+
+Cloudflare credentials are required for application development, including AI calls. The postinstall check fails until `apps/cloudflare-worker/.env.local` and `libs/narration-content-selection/.env.evals` contain matching `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_KEY` values. In a linked worktree, postinstall creates missing files from the main checkout's `apps/cloudflare-worker/.env.local`. In a main checkout, configure them after the initial installation attempt and retry:
 
 ```sh
 node tooling/env-setup/src/cli.ts setup --from /absolute/path/to/existing.env
