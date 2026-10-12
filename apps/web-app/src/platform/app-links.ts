@@ -2,7 +2,7 @@ export function handleAppLink(value: string, navigate: (href: string) => void): 
   const url = URL.parse(value);
   if (
     url === null ||
-    url.origin !== "https://cup-audio.com" ||
+    url.origin !== "https://cup.audio" ||
     url.username ||
     url.password ||
     (url.pathname !== "/app" && !url.pathname.startsWith("/app/"))

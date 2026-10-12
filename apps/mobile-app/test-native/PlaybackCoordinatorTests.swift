@@ -79,7 +79,7 @@ private func config(failed: Set<Int> = []) -> [String: Any] {
           ? ["sequence": sequence, "status": "failed", "explanation": "Rejected"]
           : [
             "sequence": sequence, "status": "ready", "durationMilliseconds": 20000.0,
-            "url": "https://cup-audio.com/audio/\(sequence)",
+            "url": "https://cup.audio/audio/\(sequence)",
           ]
       },
       "narrationDocument": [

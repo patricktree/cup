@@ -88,7 +88,7 @@
 - (void)openInCup {
     if (!self.sharedURL) return;
     NSURLComponents *components = [[NSURLComponents alloc] init];
-    components.scheme = @"cup-audio";
+    components.scheme = @"audio.cup.app";
     components.host = @"share";
     components.queryItems = @[[NSURLQueryItem queryItemWithName:@"url" value:self.sharedURL.absoluteString]];
     // URLSearchParams treats unescaped plus signs as spaces.

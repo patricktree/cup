@@ -38,7 +38,7 @@ The Worker configuration adds the account class and renames the deployed `Conver
 | `CONVERSION_IP_LIMIT`      | Conversion requests per minute/IP; default 60                         |
 | `CONVERSION_OWNER_LIMIT`   | New conversion requests per minute/account or trial grant; default 10 |
 
-Supply the required values with the existing deployment secret mechanism. Keep Google client secrets in Supabase/Terraform, not browser configuration. Configure Google as the enabled social provider, ES256 JWT signing, a 300-second JWT lifetime, and the production redirect allow-list. Preserve the existing Android OAuth client, package name, and signing certificate registration.
+Supply the required values with the existing deployment secret mechanism. Keep Google client secrets in Supabase/Terraform, not browser configuration. Configure Google as the enabled social provider, ES256 JWT signing, a 300-second JWT lifetime, and the production redirect allow-list. Register the Android OAuth client for package `audio.cup.app` and its signing certificate; a client registered for the former package `com.cup_audio.app` does not match.
 
 Configure the Resend domain and sender used by the [deletion coordinator](../libs/registry/src/deletion-coordinator.ts). Inspect notification outcomes through the operator CLI; provider acceptance is not proof of inbox delivery.
 

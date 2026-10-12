@@ -73,7 +73,7 @@ test("anonymous range, HEAD and conditional requests cannot touch private storag
     ["GET", { "If-None-Match": "known" }],
   ] as const) {
     const response = await app.request(
-      `https://cup-audio.com/api/files/audiobooks/${conversionId}/segments/0/audio.mp3`,
+      `https://cup.audio/api/files/audiobooks/${conversionId}/segments/0/audio.mp3`,
       { method, headers },
       env,
     );
@@ -90,7 +90,7 @@ test("non-owners and blocked accounts cannot touch private storage", async () =>
   ] as const) {
     const { app, env, token, bucketRead } = await fixture(owner, state);
     const response = await app.request(
-      `https://cup-audio.com/api/files/audiobooks/${conversionId}/segments/1/audio.mp3`,
+      `https://cup.audio/api/files/audiobooks/${conversionId}/segments/1/audio.mp3`,
       { headers: { Cookie: `cup_media=${token}` } },
       env,
     );
@@ -102,7 +102,7 @@ test("non-owners and blocked accounts cannot touch private storage", async () =>
 test("media cookie is HttpOnly and never authorizes JSON account APIs", async () => {
   const { app, env, token } = await fixture();
   const response = await app.request(
-    "https://cup-audio.com/api/files/session",
+    "https://cup.audio/api/files/session",
     {
       method: "POST",
       headers: {
@@ -119,13 +119,13 @@ test("media cookie is HttpOnly and never authorizes JSON account APIs", async ()
   expect(response.headers.get("Set-Cookie")).toContain("Secure");
   expect(response.headers.get("Set-Cookie")).toContain("Path=/api/files;");
   const denied = await app.request(
-    "https://cup-audio.com/api/account",
+    "https://cup.audio/api/account",
     { headers: { Cookie: `cup_media=${token}` } },
     env,
   );
   expect(denied.status).toBe(401);
   const accepted = await app.request(
-    "https://cup-audio.com/api/account",
+    "https://cup.audio/api/account",
     { headers: { Authorization: `Bearer ${token}` } },
     env,
   );
@@ -141,7 +141,7 @@ test("percent-encoded owner identifiers cannot bypass media authorization", asyn
     "/segments/1/audio.mp3",
   ]) {
     const response = await app.request(
-      `https://cup-audio.com/api/${resource ? "files/audiobooks" : "audiobooks"}/%66${conversionId.slice(1)}${resource}`,
+      `https://cup.audio/api/${resource ? "files/audiobooks" : "audiobooks"}/%66${conversionId.slice(1)}${resource}`,
       {},
       env,
     );
@@ -153,13 +153,13 @@ test("percent-encoded owner identifiers cannot bypass media authorization", asyn
 test("media cookies do not authorize audiobook JSON or media-session creation", async () => {
   const { app, env, token, bucketRead } = await fixture();
   const audiobook = await app.request(
-    `https://cup-audio.com/api/audiobooks/${conversionId}`,
+    `https://cup.audio/api/audiobooks/${conversionId}`,
     { headers: { Cookie: `cup_media=${token}` } },
     env,
   );
   expect(audiobook.status).toBe(401);
   const session = await app.request(
-    "https://cup-audio.com/api/files/session",
+    "https://cup.audio/api/files/session",
     {
       method: "POST",
       headers: {

@@ -54,7 +54,7 @@ A concurrent lock-contention test has not been performed.
 
 The production backend manages the existing cup-production GCP project, imported on 2026-09-22 with deletion protection.
 The project currently has no organization parent and billing is disabled; adoption preserves those settings.
-Terraform created the Supabase project named cup-production in Ireland (eu-west-1), with a five-minute JWT lifetime and <https://cup-audio.com/app> as the site URL. This project was created through Terraform; the Google Cloud projects, state bucket, and Resend domain were adopted by importing existing resources.
+Terraform created the Supabase project named cup-production in Ireland (eu-west-1), with a five-minute JWT lifetime. Its site URL is <https://cup.audio/app> in this configuration; applying that change after the move from `cup-audio.com` remains a rollout step. This project was created through Terraform; the Google Cloud projects, state bucket, and Resend domain were adopted by importing existing resources.
 The Google OAuth client and Cloudflare DNS records remain outside Terraform state. Terraform configures Supabase to use the manually created Google OAuth client. Application deployment and Cloudflare Worker secrets are managed separately with Wrangler; see [production configuration](../docs/social-signup-operations.md#configure-production).
 Supabase uses a management access token; Resend uses a separate full-access management credential.
 Keep secrets outside committed files.
@@ -80,11 +80,13 @@ Import omits tracking/TLS values, so an initial in-place update records those ex
 The provider preserves tracking/TLS state rather than reading live values, so plans cannot detect dashboard changes to those settings; inspect Resend directly when investigating drift.
 The custom return path is left unspecified to preserve the existing domain; DNS records and sending API keys were not adopted or replaced.
 
+The configuration also declares `cup.audio`, the domain the [deletion coordinator](../libs/registry/src/deletion-coordinator.ts) sends from, with the same settings. On 2026-10-12, the operator reported creating it in the Resend dashboard and adding its DNS records in Cloudflare; it is not in Terraform state yet. The configuration's `import` block adopts it (c9699e52-23e4-4fa7-a86c-b1a21f3e0d16) on the next apply; as with `cup-audio.com`, expect an in-place update that records the tracking and TLS settings. Its verification remains an unverified rollout step, and the Worker's sending-only key must be allowed to send from it. `cup-audio.com` stays declared until the deployed Worker sends from `cup.audio`.
+
 ## Google sign-in configuration
 
 The Google Web application OAuth client is created manually in the cup-production Google Auth Platform project.
 Store its ID and secret in `terraform/.env.local` as `TF_VAR_google_web_client_id` and `TF_VAR_google_web_client_secret`.
 Terraform configures Supabase's Google provider from these values, with nonce validation enabled.
-Google must allow the new Supabase callback shown above and JavaScript origin <https://cup-audio.com>.
-Android OAuth registration and end-to-end web/Android sign-in still require rollout verification. Native iOS account support is deferred.
+Google must allow the new Supabase callback shown above and JavaScript origin <https://cup.audio>.
+The Android OAuth client must be registered for package `audio.cup.app`. Android OAuth registration and end-to-end web/Android sign-in still require rollout verification. Native iOS account support is deferred.
 The Supabase provider preserves masked OAuth secrets in state, so a no-change plan does not prove the secret works or detect an out-of-band secret change.

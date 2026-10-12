@@ -1,4 +1,4 @@
-package com.cup_audio.app;
+package audio.cup.app;
 
 import android.content.Intent;
 import android.net.Uri;
@@ -24,7 +24,7 @@ public class AndroidAppLinksPlugin extends Plugin {
         }
         Uri url = intent.getData();
         if (url == null || !"https".equals(url.getScheme()) ||
-            !"cup-audio.com".equals(url.getHost())) {
+            !"cup.audio".equals(url.getHost())) {
             return;
         }
 

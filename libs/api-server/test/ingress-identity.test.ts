@@ -10,7 +10,7 @@ test("canonicalizes IPv6 variants and IPv4-mapped addresses into one rate bucket
 });
 
 test("ignores spoofed forwarding headers outside trusted Cloudflare metadata", async () => {
-  const request = new Request("https://cup-audio.com/api/account", {
+  const request = new Request("https://cup.audio/api/account", {
     headers: { "CF-Connecting-IP": "192.0.2.1", "X-Forwarded-For": "192.0.2.1" },
   });
   expect(await ingressIdentity(request)).toBeUndefined();

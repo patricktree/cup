@@ -16,7 +16,7 @@ test("opens cold-start and repeat App Links while rejecting other origins", asyn
           listener: (payload: { url: string }) => void,
         ) => {
           listener({
-            url: "https://cup-audio.com/app/trials/test?from=link#credential=v1.test",
+            url: "https://cup.audio/app/trials/test?from=link#credential=v1.test",
           });
           window.addEventListener("test-app-link", (event) => {
             if (event instanceof CustomEvent) listener({ url: String(event.detail) });
@@ -33,19 +33,20 @@ test("opens cold-start and repeat App Links while rejecting other origins", asyn
     const { initializeAndroidAppLinks } = await import(modulePath);
     await initializeAndroidAppLinks((href: string) => paths.push(href));
     for (const url of [
-      "https://cup-audio.com/app/audiobooks/next",
+      "https://cup.audio/app/audiobooks/next",
       "https://create-audiobook-from-url.patricktree.me/app/trials/old",
+      "https://cup-audio.com/app/trials/old",
       "https://example.com/trials/untrusted",
-      "http://cup-audio.com/",
-      "https://cup-audio.com.evil.test/",
+      "http://cup.audio/",
+      "https://cup.audio.evil.test/",
       "not a URL",
-      "https://cup-audio.com/app/audiobooks/test",
-      "https://cup-audio.com/app/",
-      "https://cup-audio.com/app",
-      "https://cup-audio.com/",
-      "https://cup-audio.com/trials/legacy",
-      "https://cup-audio.com/application",
-      "https://cup-audio.com/api/grants/test",
+      "https://cup.audio/app/audiobooks/test",
+      "https://cup.audio/app/",
+      "https://cup.audio/app",
+      "https://cup.audio/",
+      "https://cup.audio/trials/legacy",
+      "https://cup.audio/application",
+      "https://cup.audio/api/grants/test",
     ]) {
       window.dispatchEvent(new CustomEvent("test-app-link", { detail: url }));
     }

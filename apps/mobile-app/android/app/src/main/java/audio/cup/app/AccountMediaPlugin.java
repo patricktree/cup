@@ -1,4 +1,4 @@
-package com.cup_audio.app;
+package audio.cup.app;
 
 import android.webkit.CookieManager;
 import com.getcapacitor.JSObject;
@@ -10,7 +10,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 /** Installs the owner-session cookie in the WebView used by the HTML audio element. */
 @CapacitorPlugin(name = "AccountMedia")
 public class AccountMediaPlugin extends Plugin {
-    private static final String ORIGIN = "https://cup-audio.com";
+    private static final String ORIGIN = "https://cup.audio";
 
     @Override
     public void load() {

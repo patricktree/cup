@@ -1,6 +1,6 @@
 # Mobile app
 
-Capacitor shells for Android and iOS, based on Content Relay's `apps/mobile-app`. Both package Cup from the shared web app in `apps/web-app/dist/web`. Android uses `com.cup_audio.app`; iOS uses `com.cup-audio.app` with the extension `com.cup-audio.app.share`.
+Capacitor shells for Android and iOS, based on Content Relay's `apps/mobile-app`. Both package Cup from the shared web app in `apps/web-app/dist/web`. Both use the identifier `audio.cup.app`; the iOS Share Extension uses `audio.cup.app.share`.
 
 ## Build
 
@@ -9,8 +9,6 @@ From the repository root:
 ```sh
 pnpm --filter '@cup/mobile-app' build
 ```
-
-The sync command selects the platform-specific Capacitor ID through `CUP_NATIVE_PLATFORM`. Use `CUP_NATIVE_PLATFORM=android` with direct Android Capacitor commands.
 
 This runs the cached shared web build and Capacitor configuration check, then syncs web assets into both native projects. Sync runs outside Turbo and always executes, even when both build tasks hit the cache.
 
@@ -37,7 +35,7 @@ Start an Android emulator in Android Studio, or connect a device with USB debugg
 ```sh
 cd apps/mobile-app/android
 ./gradlew assembleDebug testDebugUnitTest lintDebug installDebug
-adb shell am start -n com.cup_audio.app/.MainActivity
+adb shell am start -n audio.cup.app/.MainActivity
 ```
 
 The debug APK is written to `apps/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk`. Confirm the landing page renders and the app can close and reopen without a crash.
@@ -50,28 +48,28 @@ After building, open `apps/mobile-app/ios/App/App.xcodeproj` in Xcode and choose
 
 The Android app accepts shared plain text containing an HTTP or HTTPS URL and fills the conversion form without submitting it. It reopens the last trial whose credential was successfully exchanged in the app. If no trial is remembered, the shared URL waits until a conversion form is opened.
 
-HTTPS links to `/app` and `/app/…` on `cup-audio.com` open the matching route in the app after Android verifies the domain association. API and download URLs are excluded from App Links. Paths, query parameters, and fragments are preserved, including trial credentials. Both cold starts and links delivered to an already running app are handled. Normal Capacitor launches start at `/app/`.
+HTTPS links to `/app` and `/app/…` on `cup.audio` open the matching route in the app after Android verifies the domain association. API and download URLs are excluded from App Links. Paths, query parameters, and fragments are preserved, including trial credentials. Both cold starts and links delivered to an already running app are handled. Normal Capacitor launches start at `/app/`.
 
-Deploy the web app so `https://cup-audio.com/.well-known/assetlinks.json` serves the file from `apps/web-app/public/.well-known/assetlinks.json` as JSON, without redirects. That file trusts Patrick's local Android debug certificate. A release or Play Store build requires its signing certificate's SHA-256 fingerprint to be added before deployment; another machine's debug certificate will also differ.
+Deploy the web app so `https://cup.audio/.well-known/assetlinks.json` serves the file from `apps/web-app/public/.well-known/assetlinks.json` as JSON, without redirects. That file trusts Patrick's local Android debug certificate. A release or Play Store build requires its signing certificate's SHA-256 fingerprint to be added before deployment; another machine's debug certificate will also differ.
 
 After deploying the association file and installing the rebuilt APK, request verification and inspect the result:
 
 ```sh
-adb shell pm verify-app-links --re-verify com.cup_audio.app
-adb shell pm get-app-links com.cup_audio.app
+adb shell pm verify-app-links --re-verify audio.cup.app
+adb shell pm get-app-links audio.cup.app
 ```
 
 Verification is asynchronous. Wait until the domain reports `verified`, then open a link without specifying the app package, so Android exercises domain resolution:
 
 ```sh
-adb shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d 'https://cup-audio.com/app/'
+adb shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d 'https://cup.audio/app/'
 ```
 
 See [Android's App Links verification guide](https://developer.android.com/training/app-links/verify-applinks) for device settings and troubleshooting.
 
 ## Backend access and grant sessions
 
-Mobile API requests use ordinary `fetch` calls patched by `CapacitorHttp` to use native networking. The backend origin is `https://cup-audio.com`. Browser requests continue using the browser's same-origin fetch.
+Mobile API requests use ordinary `fetch` calls patched by `CapacitorHttp` to use native networking. The backend origin is `https://cup.audio`. Browser requests continue using the browser's same-origin fetch.
 
 Both clients exchange trial credentials for persistent Secure, HttpOnly cookies. Capacitor's native cookie manager stores the server-issued cookies and sends them on later requests. Trial requests use those cookies; private account requests additionally carry the signed-in user's bearer token. The `CapacitorCookies` document.cookie patch (<https://capacitorjs.com/docs/apis/cookies>) is not enabled.
 
@@ -83,17 +81,17 @@ Capacitor's native HTTP response headers can expose Set-Cookie to JavaScript, so
 
 The iOS app bundles `CupShare.appex`, displayed as **Cup** in Safari and Chrome's Share Sheets. Share a web URL or text containing an HTTP(S) URL, then tap **Open in Cup** to open the main app and prefill the conversion form. Cup trial links open their app route, including the credential exchange.
 
-The handoff uses `cup-audio://share?url=<encoded-url>`. Cup links under `https://cup-audio.com/app` open their corresponding app route, preserving trial credential fragments. Other HTTP(S) URLs prefill the conversion form for the last authorized trial without submitting it. If no trial has been authorized, the URL remains pending in memory until a form opens; closing the app discards it.
+The handoff uses `audio.cup.app://share?url=<encoded-url>`. Cup links under `https://cup.audio/app` open their corresponding app route, preserving trial credential fragments. Other HTTP(S) URLs prefill the conversion form for the last authorized trial without submitting it. If no trial has been authorized, the URL remains pending in memory until a form opens; closing the app discards it.
 
 The extension uses the same responder-chain URL-opening approach as Chromium, calling `openURL:options:completionHandler:` dynamically. Apple does not support this handoff from Share Extensions; test it after iOS updates. A failed handoff stays in the extension with an error and retry button. The extension does not start conversions or access session cookies.
 
-Build the App scheme with a local `DEVELOPMENT_TEAM` override; it builds, signs, and embeds the extension. Both bundle identifiers need provisioning: `com.cup-audio.app` and `com.cup-audio.app.share`. Verify Safari and Chrome sharing with Cup terminated and already running, cancellation, repeated shares, URLs containing `&`, `+`, or fragments, and trial links. If Cup is hidden, look under More in the Share Sheet's app row.
+Build the App scheme with a local `DEVELOPMENT_TEAM` override; it builds, signs, and embeds the extension. Both bundle identifiers need provisioning: `audio.cup.app` and `audio.cup.app.share`. Verify Safari and Chrome sharing with Cup terminated and already running, cancellation, repeated shares, URLs containing `&`, `+`, or fragments, and trial links. If Cup is hidden, look under More in the Share Sheet's app row.
 
 ## iOS Universal Links
 
-The App target includes the Associated Domains entitlement for `applinks:cup-audio.com`. HTTPS links to `/app` and `/app/…` navigate to the corresponding app route on cold and warm launches, preserving query parameters and trial credential fragments. Other domains, credentials in the URL authority, and routes outside `/app` are rejected by the iOS intake handler.
+The App target includes the Associated Domains entitlement for `applinks:cup.audio`. HTTPS links to `/app` and `/app/…` navigate to the corresponding app route on cold and warm launches, preserving query parameters and trial credential fragments. Other domains, credentials in the URL authority, and routes outside `/app` are rejected by the iOS intake handler.
 
-Deploy `apps/web-app/public/.well-known/apple-app-site-association` together with `apps/web-app/public/_headers` so `https://cup-audio.com/.well-known/apple-app-site-association` returns JSON with status 200 and no redirect. The association uses Cup's new bundle ID with Patrick's current Personal Team prefix; it must be updated to the enrolled team's prefix before Universal Links can work. Before using another signing team, replace its app ID prefix with the application identifier prefix from that team's signed app or provisioning profile. Do not put a local development-team override into the Xcode project.
+Deploy `apps/web-app/public/.well-known/apple-app-site-association` together with `apps/web-app/public/_headers` so `https://cup.audio/.well-known/apple-app-site-association` returns JSON with status 200 and no redirect. The association uses Cup's bundle ID with Patrick's current Personal Team prefix; it must be updated to the enrolled team's prefix before Universal Links can work. Before using another signing team, replace its app ID prefix with the application identifier prefix from that team's signed app or provisioning profile. Do not put a local development-team override into the Xcode project.
 
 Associated Domains requires a signing team enrolled in the Apple Developer Program. The current Personal Team cannot provision this capability; Xcode rejects the signed build until an eligible team is selected. An unsigned build can validate native compilation, but cannot verify Universal Links on an iPad.
 
@@ -109,7 +107,7 @@ Edit the canonical artwork in `tooling/brand-assets/assets/` at the repository r
 
 A conversion generates audio for its whole narration document before playback, so the native player receives every segment with its duration. Each platform's `NarrationPlaybackCoordinator` owns playback intent and the whole-audiobook timeline independently of the WebView: it maps a position on the audiobook to a segment and offset, skips segments without audio, and reports position and total duration to the WebView and the system media controls. Anonymous positions stay on the device; signed-in positions use the account API and restore only when the player initially loads.
 
-Both platforms separate native playback into the same responsibilities. `NarrationApiClient` owns authentication headers and HTTP; `NarrationPositionStore` restores listening positions and serializes account saves; `NarrationAudioAdapter` owns platform audio, interruptions, lock-screen controls, and buffering background resources. Android's [service](android/app/src/main/java/com/cup_audio/app/NarrationPlaybackService.java) hosts their lifetime, while the [plugin](android/app/src/main/java/com/cup_audio/app/NarrationPlayerPlugin.java) translates Capacitor commands. iOS's [bridge](ios/App/App/NarrationPlayer.swift) constructs the components; the [coordinator](ios/App/App/NarrationPlaybackCoordinator.swift) depends on [protocols](ios/App/App/NarrationPlaybackDependencies.swift) so its behavior can be tested without a queue player or a simulator.
+Both platforms separate native playback into the same responsibilities. `NarrationApiClient` owns authentication headers and HTTP; `NarrationPositionStore` restores listening positions and serializes account saves; `NarrationAudioAdapter` owns platform audio, interruptions, lock-screen controls, and buffering background resources. Android's [service](android/app/src/main/java/audio/cup/app/NarrationPlaybackService.java) hosts their lifetime, while the [plugin](android/app/src/main/java/audio/cup/app/NarrationPlayerPlugin.java) translates Capacitor commands. iOS's [bridge](ios/App/App/NarrationPlayer.swift) constructs the components; the [coordinator](ios/App/App/NarrationPlaybackCoordinator.swift) depends on [protocols](ios/App/App/NarrationPlaybackDependencies.swift) so its behavior can be tested without a queue player or a simulator.
 
 Segment boundaries have no loading pause. Android gives Media3 one playlist item per segment and lets it buffer ahead; its media session reports the whole audiobook's duration and position and translates seeks, while still exposing the playlist's items. iOS keeps the current and following segment in a queue player and supplies the next one at each boundary with current authorization.
 

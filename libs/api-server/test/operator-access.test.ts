@@ -118,14 +118,14 @@ test("typed operator account routes preserve complete inspection and deletion re
   const { env } = fixture();
   const app = createApiServer({ validateOperatorAccess: async () => true });
   const account = await app.request(
-    `https://cup-audio.com/api/operator/accounts/${accountId}`,
+    `https://cup.audio/api/operator/accounts/${accountId}`,
     {},
     env,
   );
   expect(account.status).toBe(200);
   expect(inspectAccountResponseSchema.parse(await account.json())).toEqual(inspection);
   const deletionList = await app.request(
-    "https://cup-audio.com/api/operator/accounts/deletions",
+    "https://cup.audio/api/operator/accounts/deletions",
     {},
     env,
   );
@@ -138,13 +138,13 @@ test("account routes remain behind operator authentication and reject invalid ac
   const denied = createApiServer({ validateOperatorAccess: async () => false });
   for (const path of [accountId, "deletions"]) {
     expect(
-      (await denied.request(`https://cup-audio.com/api/operator/accounts/${path}`, {}, env)).status,
+      (await denied.request(`https://cup.audio/api/operator/accounts/${path}`, {}, env)).status,
     ).toBe(401);
   }
   expect(readAccount).not.toHaveBeenCalled();
   const app = createApiServer({ validateOperatorAccess: async () => true });
   expect(
-    (await app.request("https://cup-audio.com/api/operator/accounts/invalid", {}, env)).status,
+    (await app.request("https://cup.audio/api/operator/accounts/invalid", {}, env)).status,
   ).toBe(404);
   expect(readAccount).not.toHaveBeenCalled();
 });

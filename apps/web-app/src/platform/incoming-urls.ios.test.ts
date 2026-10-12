@@ -13,7 +13,7 @@ test("delivers share URLs to the form and preserves trial credentials", async ({
         ],
         nativePromise: async () => ({
           url:
-            "cup-audio://share?url=" +
+            "audio.cup.app://share?url=" +
             encodeURIComponent("https://example.com/first?a=1&b=2#section"),
         }),
         nativeCallback: (
@@ -51,7 +51,7 @@ test("delivers share URLs to the form and preserves trial credentials", async ({
     await page.evaluate((url) => {
       window.dispatchEvent(
         new CustomEvent("test-share", {
-          detail: "cup-audio://share?url=" + encodeURIComponent(url),
+          detail: "audio.cup.app://share?url=" + encodeURIComponent(url),
         }),
       );
     }, value);
@@ -62,10 +62,8 @@ test("delivers share URLs to the form and preserves trial credentials", async ({
     window.dispatchEvent(
       new CustomEvent("test-share", {
         detail:
-          "cup-audio://share?url=" +
-          encodeURIComponent(
-            "https://cup-audio.com/app/trials/example?from=share#credential=v1.test",
-          ),
+          "audio.cup.app://share?url=" +
+          encodeURIComponent("https://cup.audio/app/trials/example?from=share#credential=v1.test"),
       }),
     );
   });
@@ -87,7 +85,7 @@ test("opens cold-start and repeat Universal Links only for Cup app routes", asyn
           },
         ],
         nativePromise: async () => ({
-          url: "https://cup-audio.com/app/trials/test?from=keep#credential=v1.test",
+          url: "https://cup.audio/app/trials/test?from=keep#credential=v1.test",
         }),
         nativeCallback: (
           _plugin: string,
@@ -116,18 +114,19 @@ test("opens cold-start and repeat Universal Links only for Cup app routes", asyn
       },
     );
     for (const url of [
-      "https://cup-audio.com/app/audiobooks/next",
-      "https://cup-audio.com/app",
-      "https://cup-audio.com/app/",
-      "https://cup-audio.com/app/trials/next#credential=v1.a+b",
+      "https://cup.audio/app/audiobooks/next",
+      "https://cup.audio/app",
+      "https://cup.audio/app/",
+      "https://cup.audio/app/trials/next#credential=v1.a+b",
       "https://example.com/app/trials/test",
-      "https://cup-audio.com.evil.test/app",
-      "http://cup-audio.com/app",
-      "https://user:password@cup-audio.com/app",
-      "https://cup-audio.com:444/app",
-      "https://cup-audio.com/application",
-      "https://cup-audio.com/api/grants/test",
-      "https://cup-audio.com/",
+      "https://cup-audio.com/app/trials/old",
+      "https://cup.audio.evil.test/app",
+      "http://cup.audio/app",
+      "https://user:password@cup.audio/app",
+      "https://cup.audio:444/app",
+      "https://cup.audio/application",
+      "https://cup.audio/api/grants/test",
+      "https://cup.audio/",
       "not a URL",
     ])
       window.dispatchEvent(new CustomEvent("test-app-link", { detail: url }));

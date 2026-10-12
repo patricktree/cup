@@ -9,9 +9,7 @@ const pathToWebApp = require.resolve("@cup/web-app/package.json");
 const pathToWebAppDist = path.join(pathToWebApp, "..", "./dist/web");
 
 const config: CapacitorConfig = {
-  // Sync each platform separately because Android package names cannot contain hyphens.
-  appId:
-    process.env["CUP_NATIVE_PLATFORM"] === "android" ? "com.cup_audio.app" : "com.cup-audio.app",
+  appId: "audio.cup.app",
   appName: "Cup",
   webDir: pathToWebAppDist,
   server: { appStartPath: "/app/" },

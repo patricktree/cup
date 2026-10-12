@@ -1,50 +1,50 @@
 import { expect, gotoPage, test } from "#test-e2e/fixtures.ts";
 
-test("carries trial credentials across the old-domain redirect and redeems them", async ({
-  page,
-  workerEnvironment,
-}) => {
-  await page.route("https://create-audiobook-from-url.patricktree.me/**", async (route) => {
-    const url = new URL(route.request().url());
-    const response = await route.fetch({
-      url: `${workerEnvironment.origin}${url.pathname}${url.search}`,
-      headers: { ...route.request().headers(), host: url.host },
-      maxRedirects: 0,
+for (const oldOrigin of [
+  "https://cup-audio.com",
+  "https://create-audiobook-from-url.patricktree.me",
+]) {
+  test(`carries trial credentials across the redirect from ${oldOrigin} and redeems them`, async ({
+    page,
+    workerEnvironment,
+  }) => {
+    await page.route(`${oldOrigin}/**`, async (route) => {
+      const url = new URL(route.request().url());
+      const response = await route.fetch({
+        url: `${workerEnvironment.origin}${url.pathname}${url.search}`,
+        headers: { ...route.request().headers(), host: url.host },
+        maxRedirects: 0,
+      });
+      expect(response.status()).toBe(308);
+      expect(response.headers()["location"]).toBe(`https://cup.audio${url.pathname}${url.search}`);
+      // Assert the production destination, then keep the browser on the isolated test Worker.
+      await route.fulfill({
+        response,
+        headers: {
+          ...response.headers(),
+          location: `${workerEnvironment.origin}${url.pathname}${url.search}`,
+        },
+      });
     });
-    expect(response.status()).toBe(308);
-    expect(response.headers()["location"]).toBe(
-      `https://cup-audio.com${url.pathname}${url.search}`,
-    );
-    // Assert the production destination, then keep the browser on the isolated test Worker.
-    await route.fulfill({
-      response,
-      headers: {
-        ...response.headers(),
-        location: `${workerEnvironment.origin}${url.pathname}${url.search}`,
-      },
-    });
+    for (const prefix of ["/trials", "/app/trials"]) {
+      const grant = await workerEnvironment.createGrant();
+      const credential = new URL(grant.trialLink).hash;
+      const exchangeResponse = page.waitForResponse((response) =>
+        response.url().endsWith(`/api/grants/${grant.grantId}/sessions`),
+      );
+      await gotoPage(page, `${oldOrigin}${prefix}/${grant.grantId}?from=email${credential}`);
+      const exchange = await exchangeResponse;
+      expect(exchange.status()).toBe(201);
+      expect(exchange.request().postDataJSON()).toEqual({
+        credential: new URLSearchParams(credential.slice(1)).get("credential"),
+      });
+      await expect(page.getByRole("heading", { name: "Just Listen." })).toBeVisible();
+      await expect(page).toHaveURL(`${workerEnvironment.origin}/app/trials/${grant.grantId}`);
+      await page.reload();
+      await expect(page.getByRole("heading", { name: "Just Listen." })).toBeVisible();
+    }
   });
-  for (const prefix of ["/trials", "/app/trials"]) {
-    const grant = await workerEnvironment.createGrant();
-    const credential = new URL(grant.trialLink).hash;
-    const exchangeResponse = page.waitForResponse((response) =>
-      response.url().endsWith(`/api/grants/${grant.grantId}/sessions`),
-    );
-    await gotoPage(
-      page,
-      `https://create-audiobook-from-url.patricktree.me${prefix}/${grant.grantId}?from=email${credential}`,
-    );
-    const exchange = await exchangeResponse;
-    expect(exchange.status()).toBe(201);
-    expect(exchange.request().postDataJSON()).toEqual({
-      credential: new URLSearchParams(credential.slice(1)).get("credential"),
-    });
-    await expect(page.getByRole("heading", { name: "Just Listen." })).toBeVisible();
-    await expect(page).toHaveURL(`${workerEnvironment.origin}/app/trials/${grant.grantId}`);
-    await page.reload();
-    await expect(page.getByRole("heading", { name: "Just Listen." })).toBeVisible();
-  }
-});
+}
 
 test("redirects the homepage, app entry, and legacy trial URLs", async ({
   request,

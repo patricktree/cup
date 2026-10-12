@@ -3,7 +3,7 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.cup_audio.app",
+      "package_name": "audio.cup.app",
       "sha256_cert_fingerprints": [
         "CB:70:7E:E7:59:0E:68:0E:62:7C:47:9D:F7:C9:4E:DF:D2:E4:63:8C:46:8F:66:55:5B:E6:6B:73:A8:67:12:85"
       ]

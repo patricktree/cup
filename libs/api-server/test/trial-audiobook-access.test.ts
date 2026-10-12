@@ -14,7 +14,7 @@ vi.mock("@cup/conversion-grants", async () => ({
 const conversionId = "f9cc2e59-46a3-4890-b923-bda04d03b4d0";
 const grantId = "d1a52e64-3e4d-4a7f-a711-7fb11501e9af";
 const cookie = `__Secure-grant-session-${grantId}=valid-session`;
-const origin = "https://cup-audio.com";
+const origin = "https://cup.audio";
 const audiobookPath = `/api/audiobooks/${conversionId}`;
 const audioPath = `/api/files/audiobooks/${conversionId}/segments/0/audio.mp3`;
 

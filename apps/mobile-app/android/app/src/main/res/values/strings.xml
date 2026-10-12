@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Cup</string>
     <string name="title_activity_main">Cup</string>
-    <string name="package_name">com.cup_audio.app</string>
-    <string name="custom_url_scheme">com.cup_audio.app</string>
+    <string name="package_name">audio.cup.app</string>
+    <string name="custom_url_scheme">audio.cup.app</string>
 </resources>

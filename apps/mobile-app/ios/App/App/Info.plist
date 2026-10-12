@@ -7,7 +7,7 @@
 			<dict>
 				<key>CFBundleURLSchemes</key>
 				<array>
-					<string>cup-audio</string>
+					<string>audio.cup.app</string>
 				</array>
 			</dict>
 		</array>

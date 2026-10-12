@@ -1,4 +1,4 @@
-package com.cup_audio.app;
+package audio.cup.app;
 
 import android.webkit.CookieManager;
 import java.net.HttpURLConnection;
@@ -10,7 +10,7 @@ import org.json.JSONObject;
 
 /** Owns authenticated HTTP for the native player. */
 final class NarrationApiClient {
-  static final String ORIGIN = "https://cup-audio.com";
+  static final String ORIGIN = "https://cup.audio";
 
   private String token, cookie;
 

@@ -9,7 +9,7 @@ export function handleShareLink(
   const envelope = URL.parse(value);
   if (
     envelope === null ||
-    envelope.protocol !== "cup-audio:" ||
+    envelope.protocol !== "audio.cup.app:" ||
     envelope.hostname !== "share" ||
     envelope.username ||
     envelope.password ||

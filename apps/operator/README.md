@@ -22,7 +22,7 @@ Do not use the Worker's **Protect this Worker behind Access** action because it 
 4. If `workers.dev` is unavailable in the **Domain** list, select **Switch to custom input**.
 5. Enter these application values:
 
-   - Hostname: `cup-audio.com`
+   - Hostname: `cup.audio`
    - Path: `/api/operator/*`
    - Protocol: **HTTPS**, if Cloudflare requests it
 
@@ -46,12 +46,12 @@ The Worker validates the resulting Access JSON Web Token (JWT) before it runs an
 
 ## Authenticate the CLI
 
-The application runs at `https://cup-audio.com`. The old hostname `create-audiobook-from-url.patricktree.me` only redirects trial links; operator and other API clients must use the new hostname. Existing grants and their original trial credentials remain valid, but browser and native sessions must be established again on the new domain.
+The application runs at `https://cup.audio`. The former hostnames `cup-audio.com`, `www.cup-audio.com`, and `create-audiobook-from-url.patricktree.me`, and the alternate `www.cup.audio`, redirect every request to it; operator and other API clients must use `cup.audio` directly. Existing grants and their original trial credentials remain valid, but sessions belong to one hostname: readers reopen their original trial link or sign in again on `cup.audio`.
 
 The Access application protects `/api/operator/*`, which does not include its parent `/api/operator/` path. Authenticate against an actual protected endpoint:
 
 ```sh
-export CREATE_AUDIOBOOK_FROM_URL_OPERATOR_URL="https://cup-audio.com"
+export CREATE_AUDIOBOOK_FROM_URL_OPERATOR_URL="https://cup.audio"
 export CREATE_AUDIOBOOK_FROM_URL_ACCESS_TOKEN="$(
   cloudflared access token \
     -app="${CREATE_AUDIOBOOK_FROM_URL_OPERATOR_URL}/api/operator/grants"
@@ -193,7 +193,7 @@ brew install cloudflared
 
 If `cloudflared` reports `failed to find Access application`, confirm both of these conditions:
 
-- The self-hosted Access application domain is `cup-audio.com/api/operator/*`.
+- The self-hosted Access application domain is `cup.audio/api/operator/*`.
 - The `cloudflared` command targets a child endpoint such as `/api/operator/grants`, not the parent `/api/operator/` path.
 
 ### The Worker reports `operator-unauthorized`

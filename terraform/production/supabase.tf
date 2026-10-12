@@ -38,7 +38,7 @@ resource "supabase_project" "production" {
 resource "supabase_settings" "production" {
   project_ref = supabase_project.production.id
   auth = jsonencode({
-    site_url                         = "https://cup-audio.com/app"
+    site_url                         = "https://cup.audio/app"
     uri_allow_list                   = "http://127.0.0.1:5174/web.html"
     jwt_exp                          = 300
     external_google_enabled          = true

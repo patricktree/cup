@@ -1,4 +1,4 @@
-package com.cup_audio.app;
+package audio.cup.app;
 
 import java.util.ArrayList;
 import java.util.List;

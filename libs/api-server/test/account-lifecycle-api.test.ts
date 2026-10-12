@@ -58,7 +58,7 @@ beforeEach(() => {
 function request(path = "", body: unknown = { challengeId }, headers: Record<string, string> = {}) {
   if (!isEnvironment(env)) throw new Error("Invalid fixture");
   return createApiServer().request(
-    `https://cup-audio.com/api/account/deletion${path}`,
+    `https://cup.audio/api/account/deletion${path}`,
     {
       method: "POST",
       headers: {

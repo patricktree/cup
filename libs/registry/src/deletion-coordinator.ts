@@ -103,7 +103,7 @@ export class DeletionCoordinator {
           attempt,
           "scheduled",
           "Your Cup account deletion is scheduled",
-          `Your Cup account is scheduled for deletion on ${Temporal.Instant.fromEpochMilliseconds(attempt.deadlineMs).toString()}. Until that time, sign in at https://cup-audio.com/app/account and choose Restore account. Signing in alone does not cancel deletion.`,
+          `Your Cup account is scheduled for deletion on ${Temporal.Instant.fromEpochMilliseconds(attempt.deadlineMs).toString()}. Until that time, sign in at https://cup.audio/app/account and choose Restore account. Signing in alone does not cancel deletion.`,
         );
       }
     });
@@ -179,7 +179,7 @@ export class DeletionCoordinator {
             job,
             "completed",
             "Your Cup account has been deleted",
-            "Your Cup account and its private conversions have been deleted. Original trial conversions remain separate. You can create a new Cup account at https://cup-audio.com/app.",
+            "Your Cup account and its private conversions have been deleted. Original trial conversions remain separate. You can create a new Cup account at https://cup.audio/app.",
           );
         } else throw new Error("Deletion dependencies are pending");
       } catch {
@@ -376,7 +376,7 @@ export class DeletionCoordinator {
             "Idempotency-Key": notification.key,
           },
           body: JSON.stringify({
-            from: "Cup <no-reply@cup-audio.com>",
+            from: "Cup <no-reply@cup.audio>",
             to: [notification.email],
             subject: notification.subject,
             text: notification.text,

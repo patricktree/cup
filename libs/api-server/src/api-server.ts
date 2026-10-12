@@ -26,7 +26,7 @@ import { authenticateAccountRequest, mediaCookie, mediaRequest } from "#src/acco
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
 import { resolveConversionDispatch } from "#src/conversion-dispatch.ts";
 import { resolveConversionReader } from "#src/conversion-reader.ts";
-import { routeApplicationDomain } from "#src/domain-routing.ts";
+import { APPLICATION_ORIGIN, routeApplicationDomain } from "#src/domain-routing.ts";
 import { revokeVerifiedGoogleToken } from "#src/google-token-revocation.ts";
 import { accountAuthError, jsonError } from "#src/http-errors.ts";
 import { ingressIdentity } from "#src/ingress-identity.ts";
@@ -1081,7 +1081,7 @@ export function createApiServer(dependencies: ApiServerDependencies = production
   for (const path of ["/api/audiobooks/*", "/api/files/audiobooks/*"]) {
     app.use(path, async (context, next) => {
       const origin = context.req.header("Origin");
-      if (origin === "https://localhost" || origin === "https://cup-audio.com") {
+      if (origin === "https://localhost" || origin === APPLICATION_ORIGIN) {
         context.header("Access-Control-Allow-Origin", origin);
         context.header("Access-Control-Allow-Credentials", "true");
         context.header("Vary", "Origin");
@@ -1106,7 +1106,7 @@ export function createApiServer(dependencies: ApiServerDependencies = production
         );
         if (denied) return denied;
         await next();
-        if (origin === "https://localhost" || origin === "https://cup-audio.com") {
+        if (origin === "https://localhost" || origin === APPLICATION_ORIGIN) {
           context.header("Access-Control-Allow-Origin", origin);
           context.header("Access-Control-Allow-Credentials", "true");
           context.header("Vary", "Origin");
@@ -1131,7 +1131,7 @@ export function createApiServer(dependencies: ApiServerDependencies = production
           404,
         );
       await next();
-      if (origin !== "https://localhost" && origin !== "https://cup-audio.com")
+      if (origin !== "https://localhost" && origin !== APPLICATION_ORIGIN)
         context.header("Access-Control-Allow-Origin", undefined);
       context.header("Cross-Origin-Resource-Policy", "same-origin");
     });
@@ -1284,7 +1284,7 @@ function requireBrowserMutation(request: Request, requestId: string): Response |
     request.headers.get("X-Create-Audiobook-From-URL-Request") !== "1" ||
     request.headers.get("Content-Type") !== "application/json" ||
     (origin &&
-      ![new URL(request.url).origin, "https://localhost", "https://cup-audio.com"].includes(origin))
+      ![new URL(request.url).origin, "https://localhost", APPLICATION_ORIGIN].includes(origin))
   )
     return jsonError(requestId, "origin-blocked", "The request origin is not allowed.", 403);
   return undefined;

@@ -3,7 +3,7 @@ import Foundation
 /// Captures authorization per request so an old article cannot inherit a later session.
 final class NarrationApiClient: NarrationApi {
   private let session = URLSession(configuration: .default)
-  private let origin = "https://cup-audio.com"
+  private let origin = "https://cup.audio"
   private(set) var headers: [String: String] = [:]
 
   func configure(token: String?, cookies: [HTTPCookie]) {
