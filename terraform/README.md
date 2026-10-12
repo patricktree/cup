@@ -54,7 +54,7 @@ A concurrent lock-contention test has not been performed.
 
 The production backend manages the existing cup-production GCP project, imported on 2026-09-22 with deletion protection.
 The project currently has no organization parent and billing is disabled; adoption preserves those settings.
-Terraform created the Supabase project named cup-production in Ireland (eu-west-1), with a five-minute JWT lifetime. Its site URL is <https://cup.audio/app> in this configuration; applying that change after the move from `cup-audio.com` remains a rollout step. This project was created through Terraform; the Google Cloud projects, state bucket, and Resend domain were adopted by importing existing resources.
+Terraform created the Supabase project named cup-production in Ireland (eu-west-1), with a five-minute JWT lifetime. Its site URL is <https://cup.audio/app>, applied on 2026-10-12 together with a replacement Google OAuth client secret. This project was created through Terraform; the Google Cloud projects, state bucket, and Resend domain were adopted by importing existing resources.
 The Google OAuth client and Cloudflare DNS records remain outside Terraform state. Terraform configures Supabase to use the manually created Google OAuth client. Application deployment and Cloudflare Worker secrets are managed separately with Wrangler; see [production configuration](../docs/social-signup-operations.md#configure-production).
 Supabase uses a management access token; Resend uses a separate full-access management credential.
 Keep secrets outside committed files.
@@ -80,7 +80,7 @@ Import omits tracking/TLS values, so an initial in-place update records those ex
 The provider preserves tracking/TLS state rather than reading live values, so plans cannot detect dashboard changes to those settings; inspect Resend directly when investigating drift.
 The custom return path is left unspecified to preserve the existing domain; DNS records and sending API keys were not adopted or replaced.
 
-The configuration also declares `cup.audio`, the domain the [deletion coordinator](../libs/registry/src/deletion-coordinator.ts) sends from, with the same settings. On 2026-10-12, the operator reported creating it in the Resend dashboard and adding its DNS records in Cloudflare; it is not in Terraform state yet. The configuration's `import` block adopts it (c9699e52-23e4-4fa7-a86c-b1a21f3e0d16) on the next apply; as with `cup-audio.com`, expect an in-place update that records the tracking and TLS settings. Its verification remains an unverified rollout step, and the Worker's sending-only key must be allowed to send from it. `cup-audio.com` stays declared until the deployed Worker sends from `cup.audio`.
+The configuration also declares `cup.audio`, the domain the [deletion coordinator](../libs/registry/src/deletion-coordinator.ts) sends from, with the same settings. It was created in the Resend dashboard with its DNS records added in Cloudflare, then imported (c9699e52-23e4-4fa7-a86c-b1a21f3e0d16) on 2026-10-12; the same apply recorded its tracking and TLS settings, the import reported the domain as verified, and the subsequent plan reported no changes. That the Worker's sending-only key may send from it is unverified. `cup-audio.com` stays declared until it is retired.
 
 ## Google sign-in configuration
 
