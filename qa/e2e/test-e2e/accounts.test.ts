@@ -91,6 +91,7 @@ test("Google PKCE signup resumes conversion, protects history and media, and sup
 
 test("signup keeps trial conversions separate from the new account and its history", async ({
   page,
+  request: isolatedRequest,
   workerEnvironment,
 }) => {
   test.setTimeout(90_000);
@@ -131,10 +132,10 @@ test("signup keeps trial conversions separate from the new account and its histo
   const privateId = new URL(privateUrl).pathname.split("/").at(-1);
   expect(privateId).not.toBe(originalId);
   const accessToken = await readAccessToken(page);
-  // Account authentication does not confer access to another grant's conversions.
+  // Account authentication does not confer access to another grant's conversions. The isolated request context omits the trial session cookie this browser still holds.
   expect(
     (
-      await page.request.get(`${origin}/api/conversions/${originalId}`, {
+      await isolatedRequest.get(`${origin}/api/conversions/${originalId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
     ).status(),
@@ -156,7 +157,7 @@ test("signup keeps trial conversions separate from the new account and its histo
     .toBe(401);
   expect(
     (
-      await page.request.get(`${origin}/api/files/audiobooks/${originalId}/segments/0/audio.mp3`)
+      await isolatedRequest.get(`${origin}/api/files/audiobooks/${originalId}/segments/0/audio.mp3`)
     ).status(),
   ).toBe(401);
 });

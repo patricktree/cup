@@ -41,7 +41,7 @@ export async function waitForAudiobook(page: Page): Promise<void> {
   ).toBeVisible({ timeout: 90_000 });
 }
 
-/** Node-side requests omit Secure cookies on the local HTTP server; forward the browser session. */
+/** Forwards the browser's trial sessions to a request context that does not share its cookies. */
 export async function getTrialSessionHeaders(page: Page): Promise<{ Cookie: string }> {
   const cookies = await page.context().cookies();
   return {
