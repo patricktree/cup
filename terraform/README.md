@@ -74,13 +74,14 @@ Configure social providers against callback <https://evwjipxgacwotgbmqtla.supaba
 
 ## Resend domain
 
-Imported cup-audio.com (f4b08144-5f30-4792-9491-3cac68af01b4) using y0n0zawa/resend 1.0.1.
+The configuration declares `cup.audio`, the domain the [deletion coordinator](../libs/registry/src/deletion-coordinator.ts) sends from.
+It was created in the Resend dashboard with its DNS records added in Cloudflare, then imported (c9699e52-23e4-4fa7-a86c-b1a21f3e0d16) on 2026-10-12 using y0n0zawa/resend 1.0.1; the import reported the domain as verified.
 The domain stays in Ireland with tracking disabled, opportunistic TLS and deletion protection.
-Import omits tracking/TLS values, so an initial in-place update records those existing settings.
+Import omits tracking/TLS values, so the same apply recorded those settings with an in-place update.
 The provider preserves tracking/TLS state rather than reading live values, so plans cannot detect dashboard changes to those settings; inspect Resend directly when investigating drift.
-The custom return path is left unspecified to preserve the existing domain; DNS records and sending API keys were not adopted or replaced.
+The custom return path is left unspecified; DNS records and sending API keys are not managed here. That the Worker's sending-only key may send from the domain is unverified.
 
-The configuration also declares `cup.audio`, the domain the [deletion coordinator](../libs/registry/src/deletion-coordinator.ts) sends from, with the same settings. It was created in the Resend dashboard with its DNS records added in Cloudflare, then imported (c9699e52-23e4-4fa7-a86c-b1a21f3e0d16) on 2026-10-12; the same apply recorded its tracking and TLS settings, the import reported the domain as verified, and the subsequent plan reported no changes. That the Worker's sending-only key may send from it is unverified. `cup-audio.com` stays declared until it is retired.
+The former sending domain `cup-audio.com` (f4b08144-5f30-4792-9491-3cac68af01b4) was deleted in the Resend dashboard on 2026-10-12 after the application moved to `cup.audio`, then removed from this configuration and from Terraform state.
 
 ## Google sign-in configuration
 
