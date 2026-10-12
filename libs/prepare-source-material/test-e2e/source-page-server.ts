@@ -9,12 +9,7 @@ const recordings = new Map(
 );
 
 const server = http.createServer((request, response) => {
-  const url = new URL(request.url ?? "/", "http://127.0.0.1:4187");
-  if (url.pathname === "/health") {
-    response.writeHead(200).end("Ready");
-    return;
-  }
-
+  const url = new URL(request.url ?? "/", "http://127.0.0.1");
   const recording = recordings.get(url.searchParams.get("url") ?? "");
   if (url.pathname !== "/resource" || !recording) {
     response.writeHead(404).end("No recorded source-page response");
@@ -28,4 +23,10 @@ const server = http.createServer((request, response) => {
   response.end(recording.body);
 });
 
-server.listen(4187, "127.0.0.1");
+server.listen(0, "127.0.0.1", () => {
+  const address = server.address();
+  if (address === null || typeof address === "string")
+    throw new Error("No source-page server port.");
+  // The Playwright configuration reads the assigned port from this line.
+  console.log(`Listening on http://127.0.0.1:${address.port}`);
+});

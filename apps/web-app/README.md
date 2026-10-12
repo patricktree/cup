@@ -61,4 +61,6 @@ After intentional visual changes, regenerate the Docker baselines and review the
 pnpm --filter '@cup/web-app' test:components --update-snapshots
 ```
 
-Explore the stories with `pnpm --filter '@cup/web-app' dev:gallery`.
+Each run starts its own gallery server on a port the operating system assigns. It never attaches to a gallery that is already running, so runs in several checkouts do not interfere with each other or with an interactive gallery.
+
+Explore the stories with `pnpm --filter '@cup/web-app' dev:gallery`, which serves the gallery at <http://127.0.0.1:3100/ui-gallery/index.html>.
