@@ -26,20 +26,30 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 function RootLayout(): React.JSX.Element {
   return (
     <main
+      // stable key under which the router's scroll restoration stores this container's position
+      data-scroll-restoration-id="main"
       className={css`
-        display: grid;
-        align-content: center;
-        max-width: var(--app-max-width);
-        min-height: 100%;
-        padding-block: var(--app-padding-block);
-        padding-inline: var(--app-padding-inline);
-        margin-inline: auto;
+        /* fixed app shell: fills the viewport and scrolls its content instead of the document */
+        height: 100dvh;
+        overflow-y: auto;
 
         /* stacking context to put it above the background gradient */
         isolation: isolate;
       `}
     >
-      <Outlet />
+      <div
+        className={css`
+          display: grid;
+          align-content: center;
+          max-width: var(--app-max-width);
+          min-height: 100%;
+          padding-block: var(--app-padding-block);
+          padding-inline: var(--app-padding-inline);
+          margin-inline: auto;
+        `}
+      >
+        <Outlet />
+      </div>
     </main>
   );
 }

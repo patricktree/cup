@@ -134,12 +134,6 @@ export const cssBase = css`
       text-underline-offset: 0.2em;
     }
 
-    html,
-    body,
-    #root {
-      height: 100%;
-    }
-
     h1,
     h2,
     h3,

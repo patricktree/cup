@@ -19,6 +19,8 @@ export function createAppRouter(history?: RouterHistory) {
     defaultPreloadStaleTime: 0,
     routeTree,
     scrollRestoration: true,
+    // The document itself never scrolls; `<main>` in the root route is the scroll container that must reset on navigation.
+    scrollToTopSelectors: ["main"],
   });
 }
 
