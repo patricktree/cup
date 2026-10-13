@@ -4,6 +4,7 @@ import {
   assertPublicSourceUrl,
   type Browser,
   cleanAudiobookSourceMaterialHtml,
+  extractHeroImageDeclaration,
   loadPublicSourcePage,
   prepareSourceMaterial,
 } from "#src/prepare-source-material.ts";
@@ -299,4 +300,112 @@ test.each([
     }),
   ).resolves.toEqual({ html: "<p>Source content</p>", title: "Source title" });
   expect(modes).toEqual([false, true]);
+});
+
+test("prefers the secure Open Graph image and reads its alternative text", () => {
+  expect(
+    extractHeroImageDeclaration(
+      `
+        <meta name="twitter:image" content="https://cdn.publisher.example/twitter.jpg" />
+        <meta property="og:image" content="http://cdn.publisher.example/hero.jpg" />
+        <meta property="og:image:secure_url" content="https://cdn.publisher.example/hero.jpg" />
+        <meta property="og:image:alt" content="  A lighthouse   at dusk " />
+        <meta property="og:image" content="https://cdn.publisher.example/second.jpg" />
+      `,
+      SOURCE_URL,
+    ),
+  ).toEqual({
+    url: "https://cdn.publisher.example/hero.jpg",
+    alternativeText: "A lighthouse at dusk",
+  });
+});
+
+test("falls back to the Twitter card image and resolves it against the source page", () => {
+  expect(
+    extractHeroImageDeclaration(
+      '<meta name="twitter:image" content="/images/hero.png"><meta name="twitter:image:alt" content="A chart">',
+      SOURCE_URL,
+    ),
+  ).toEqual({ url: "https://publisher.example/images/hero.png", alternativeText: "A chart" });
+});
+
+test.each([
+  ["no image metadata", '<meta property="og:title" content="A title">'],
+  ["an empty declaration", '<meta property="og:image" content=" ">'],
+  ["an embedded image", '<meta property="og:image" content="data:image/png;base64,iVBORw0KGgo=">'],
+  ["an unparsable URL", '<meta property="og:image" content="https://">'],
+  [
+    "an oversized URL",
+    `<meta property="og:image" content="https://cdn.publisher.example/${"a".repeat(2048)}">`,
+  ],
+])("declares no hero image for %s", (_description, headHtml) => {
+  expect(extractHeroImageDeclaration(headHtml, SOURCE_URL)).toBeUndefined();
+});
+
+test("takes the hero image from the rendered load even when the static load wins on text", async () => {
+  const sourceMaterial = await prepareSourceMaterial({
+    browser: UNUSED_BROWSER,
+    url: SOURCE_URL,
+    loadSourcePage: async ({ javaScriptEnabled }) => ({
+      bodyHtml: "<main><h1>Source title</h1><p>Complete source text.</p></main>",
+      documentTitle: "Source title | Publisher",
+      heroImage: {
+        url: javaScriptEnabled
+          ? "https://cdn.publisher.example/article.jpg"
+          : "https://cdn.publisher.example/site-default.jpg",
+      },
+      responseStatus: 200,
+    }),
+  });
+
+  expect(sourceMaterial).toEqual({
+    html: "<main><h1>Source title</h1><p>Complete source text.</p></main>",
+    title: "Source title",
+    heroImage: { url: "https://cdn.publisher.example/article.jpg" },
+  });
+});
+
+test("keeps the static load's hero image when the rendered load declares none", async () => {
+  const sourceMaterial = await prepareSourceMaterial({
+    browser: UNUSED_BROWSER,
+    url: SOURCE_URL,
+    loadSourcePage: async ({ javaScriptEnabled }) => ({
+      bodyHtml: "<main><h1>Source title</h1><p>Complete source text.</p></main>",
+      documentTitle: "Source title | Publisher",
+      ...(javaScriptEnabled
+        ? {}
+        : { heroImage: { url: "https://cdn.publisher.example/static.jpg" } }),
+      responseStatus: 200,
+    }),
+  });
+
+  expect(sourceMaterial.heroImage).toEqual({ url: "https://cdn.publisher.example/static.jpg" });
+});
+
+test("reads the hero image declaration from the loaded page's head", async () => {
+  const browser = {
+    newPage: async () => ({
+      route: async () => {},
+      context: () => ({ addCookies: async () => {} }),
+      goto: async () => ({ status: () => 200 }),
+      waitForFunction: async () => {},
+      locator: (selector) => ({
+        innerHTML: async () =>
+          selector === "head"
+            ? '<meta property="og:image" content="https://cdn.publisher.example/hero.jpg">'
+            : "<p>Source content</p>",
+      }),
+      title: async () => "Source title",
+      close: async () => {},
+    }),
+  } satisfies Browser;
+
+  await expect(
+    loadPublicSourcePage({ browser, javaScriptEnabled: false, url: SOURCE_URL }),
+  ).resolves.toEqual({
+    bodyHtml: "<p>Source content</p>",
+    documentTitle: "Source title",
+    heroImage: { url: "https://cdn.publisher.example/hero.jpg" },
+    responseStatus: 200,
+  });
 });

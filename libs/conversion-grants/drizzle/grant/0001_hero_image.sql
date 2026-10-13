@@ -1,0 +1,1 @@
+ALTER TABLE `conversions` ADD `has_hero_image` integer;

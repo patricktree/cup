@@ -31,7 +31,11 @@ import { revokeVerifiedGoogleToken } from "#src/google-token-revocation.ts";
 import { accountAuthError, jsonError } from "#src/http-errors.ts";
 import { ingressIdentity } from "#src/ingress-identity.ts";
 import { isDevelopmentOperatorRequest } from "#src/operator-access.ts";
-import { loadReadyAudiobookFromEnvironment, serveAudio } from "#src/serve-audiobook.ts";
+import {
+  loadReadyAudiobookFromEnvironment,
+  serveAudio,
+  serveHeroImage,
+} from "#src/serve-audiobook.ts";
 import { createConversionGrant } from "#src/use-cases/create-conversion-grant.ts";
 import { getGrantConversion as loadGrantConversion } from "#src/use-cases/get-grant-conversion.ts";
 import { getSynthesisState } from "#src/use-cases/get-synthesis-state.ts";
@@ -646,6 +650,16 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
         ...base,
         ...synthesis,
         title: audiobook.title,
+        ...(audiobook.heroImage === undefined
+          ? {}
+          : {
+              heroImage: {
+                url: `${new URL(context.req.url).origin}/api/files/audiobooks/${conversionId}/hero-image`,
+                ...(audiobook.heroImage.alternativeText === undefined
+                  ? {}
+                  : { alternativeText: audiobook.heroImage.alternativeText }),
+              },
+            }),
         narrationDocument: audiobook.narrationDocument,
         playbackPosition,
       }),
@@ -733,6 +747,26 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
       context.req.raw,
       conversionId,
       sequence,
+      true,
+      context.get("requestId"),
+    );
+  },
+  async getHeroImage(context) {
+    const { conversionId } = context.req.valid("param");
+    return serveHeroImage(
+      context.env,
+      context.req.raw,
+      conversionId,
+      false,
+      context.get("requestId"),
+    );
+  },
+  async headHeroImage(context) {
+    const { conversionId } = context.req.valid("param");
+    return serveHeroImage(
+      context.env,
+      context.req.raw,
+      conversionId,
       true,
       context.get("requestId"),
     );
@@ -1347,6 +1381,7 @@ function allowedMethodsForApiPath(pathname: string): string[] | undefined {
     [/^\/api\/audiobooks\/[^/]+\/retry$/, ["POST"]],
     [/^\/api\/audiobooks\/[^/]+\/position$/, ["PUT"]],
     [/^\/api\/files\/audiobooks\/[^/]+\/segments\/[^/]+\/audio\.mp3$/, ["GET", "HEAD"]],
+    [/^\/api\/files\/audiobooks\/[^/]+\/hero-image$/, ["GET", "HEAD"]],
     [/^\/api\/operator\/grants$/, ["GET", "POST"]],
     [/^\/api\/operator\/grants\/[^/]+$/, ["GET"]],
     [/^\/api\/operator\/grants\/[^/]+\/allowance$/, ["PUT"]],

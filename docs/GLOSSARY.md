@@ -198,6 +198,12 @@ The adaptation produced from source content, comprising a prepared narration doc
 
 _Avoid_: audio file, audio output, workflow output
 
+## hero image
+
+The single image a source page designates to represent its source content, kept with the audiobook. An audiobook may have none. It is not part of the narration text and has no visual description.
+
+_Avoid_: cover, thumbnail, preview image
+
 ## listening position
 
 A user's remembered synchronization unit and offset within that unit's audio. It is restored only when a player initially loads; later saves replace the remembered position without moving other loaded players.

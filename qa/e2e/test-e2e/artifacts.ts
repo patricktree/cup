@@ -4,6 +4,44 @@ import { analyzeMp3 } from "@cup/audiobook-production";
 
 import { getTrialSessionHeaders } from "#test-e2e/journey.ts";
 
+/** Follows the audiobook's hero image pointer and checks what the delivery route serves. */
+export async function validateHeroImage({
+  conversionId,
+  origin,
+  page,
+}: {
+  conversionId: string;
+  origin: string;
+  page: Page;
+}): Promise<string> {
+  const request = page.request;
+  const headers = await getTrialSessionHeaders(page);
+  const audiobook: unknown = await (
+    await request.get(`${origin}/api/audiobooks/${conversionId}`, { headers })
+  ).json();
+  const heroImageUrl = `${origin}/api/files/audiobooks/${conversionId}/hero-image`;
+  expect(audiobook).toMatchObject({
+    heroImage: { url: heroImageUrl, alternativeText: "A deterministic hero image" },
+  });
+
+  const imageResponse = await request.get(heroImageUrl, { headers });
+  expect(imageResponse.status()).toBe(200);
+  expect(imageResponse.headers()["content-type"]).toBe("image/png");
+  const image = await imageResponse.body();
+  // The PNG signature: the stored bytes are the publisher's original, not a re-encoding.
+  expect([...image.subarray(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  expect(Number(imageResponse.headers()["content-length"])).toBe(image.byteLength);
+
+  const imageEtag = imageResponse.headers()["etag"];
+  if (imageEtag === undefined) throw new Error("Hero image response did not include an ETag");
+  const unchangedImage = await request.get(heroImageUrl, {
+    headers: { ...headers, "If-None-Match": imageEtag },
+  });
+  expect(unchangedImage.status()).toBe(304);
+
+  return heroImageUrl;
+}
+
 export async function validateAudioSegment({
   audioUrl,
   page,

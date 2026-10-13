@@ -362,6 +362,25 @@ const audioRoute = createRoute({
   },
 });
 const audioHeadRoute = createRoute({ ...audioRoute, method: "head" });
+const heroImageRoute = createRoute({
+  method: "get",
+  path: "/api/files/audiobooks/{conversionId}/hero-image",
+  request: { params: conversionParamsSchema },
+  responses: {
+    200: {
+      content: {
+        "image/jpeg": { schema: binarySchema },
+        "image/png": { schema: binarySchema },
+        "image/webp": { schema: binarySchema },
+        "image/avif": { schema: binarySchema },
+      },
+      description: "Hero image.",
+    },
+    304: { description: "Not modified." },
+    404: errorResponse("Hero image unavailable."),
+  },
+});
+const heroImageHeadRoute = createRoute({ ...heroImageRoute, method: "head" });
 
 type WebAppApiEnvironment<Bindings extends object> = {
   Bindings: Bindings;
@@ -395,6 +414,8 @@ export type WebAppApiHandlers<Bindings extends object> = {
   savePosition: WebAppApiRouteHandler<typeof savePositionRoute, Bindings>;
   getAudio: WebAppApiRouteHandler<typeof audioRoute, Bindings>;
   headAudio: WebAppApiRouteHandler<typeof audioHeadRoute, Bindings>;
+  getHeroImage: WebAppApiRouteHandler<typeof heroImageRoute, Bindings>;
+  headHeroImage: WebAppApiRouteHandler<typeof heroImageHeadRoute, Bindings>;
 };
 
 /** Creates the typed HTTP interface used by the web application. */
@@ -417,7 +438,9 @@ export function createWebAppApi<Bindings extends object>(handlers: WebAppApiHand
     .openapi(retryConversionRoute, handlers.retryConversion)
     .openapi(savePositionRoute, handlers.savePosition)
     .openapi(audioRoute, handlers.getAudio)
-    .openapi(audioHeadRoute, handlers.headAudio);
+    .openapi(audioHeadRoute, handlers.headAudio)
+    .openapi(heroImageRoute, handlers.getHeroImage)
+    .openapi(heroImageHeadRoute, handlers.headHeroImage);
 }
 
 const unavailable = (): never => {
@@ -443,6 +466,8 @@ export function createWebAppContractApp() {
     getAudiobook: unavailable,
     getAudio: unavailable,
     headAudio: unavailable,
+    getHeroImage: unavailable,
+    headHeroImage: unavailable,
     retryConversion: unavailable,
     savePosition: unavailable,
   });

@@ -1,4 +1,9 @@
-import { createAudioSegmentKey, loadAudiobook, type Audiobook } from "@cup/audiobook-production";
+import {
+  createAudioSegmentKey,
+  createHeroImageKey,
+  loadAudiobook,
+  type Audiobook,
+} from "@cup/audiobook-production";
 import type { RegistryDurableObject } from "@cup/registry";
 import type { ErrorResponse } from "@cup/web-app-api.routes";
 
@@ -90,6 +95,36 @@ export async function serveAudio(
   return new Response(isHead ? null : ranged.body, { status: 206, headers });
 }
 
+/** Serves the stored hero image of a prepared audiobook; request authorization happens before. */
+export async function serveHeroImage(
+  env: ApiServerEnvironment,
+  request: Request,
+  conversionId: string,
+  isHead: boolean,
+  requestId: string,
+): Promise<Response> {
+  const owner = await getRegistryStub(env).findConversionOwner(conversionId);
+  if (!owner) return heroImageNotFound(requestId);
+  const reader = resolveConversionReader(env, conversionId, owner);
+  const audiobook = await loadReadyAudiobookFromEnvironment(env, conversionId, reader);
+  // The manifest decides: an object left by an earlier preparation attempt is not served.
+  if (audiobook?.heroImage === undefined) return heroImageNotFound(requestId);
+
+  const key = createHeroImageKey(conversionId, reader.artifactPrefix);
+  const object = await env.AUDIO_BUCKET.get(key);
+  if (object === null) return heroImageNotFound(requestId);
+
+  const headers = new Headers({
+    "Content-Type": audiobook.heroImage.contentType,
+    ETag: object.httpEtag,
+  });
+  if (request.headers.get("If-None-Match") === object.httpEtag)
+    return new Response(null, { status: 304, headers });
+
+  headers.set("Content-Length", object.size.toString());
+  return new Response(isHead ? null : object.body, { status: 200, headers });
+}
+
 function getRegistryStub(env: ApiServerEnvironment): RegistryStub {
   return env.REGISTRY.get(env.REGISTRY.idFromName("registry"));
 }
@@ -117,6 +152,13 @@ function audiobookNotFound(requestId: string): Response {
   return Response.json(createErrorBody(requestId, "audiobook-not-found", "Audiobook not found."), {
     status: 404,
   });
+}
+
+function heroImageNotFound(requestId: string): Response {
+  return Response.json(
+    createErrorBody(requestId, "hero-image-not-found", "Hero image not found."),
+    { status: 404 },
+  );
 }
 
 function createErrorBody(requestId: string, code: string, message: string): ErrorResponse {

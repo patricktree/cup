@@ -21,7 +21,11 @@ sequenceDiagram
     API-->>Client: Conversion identity
     Client->>Client: Navigate to article skeletons
     Preparation->>Preparation: Prepare source material
-    Preparation->>AI: Select narration content
+    par Beside content selection
+        Preparation->>AI: Select narration content
+    and When the source page declares one
+        Preparation->>R2: Fetch and store hero image
+    end
     Preparation->>R2: Store document and speech configuration
     Preparation->>Owner: Set ready outcome with every segment's text length
     alt Whole-document estimate exceeds available duration
@@ -48,13 +52,29 @@ sequenceDiagram
 
 ## Preparation
 
-After the server accepts the request and returns a conversion ID, the app navigates to the article view. The reader shows title and paragraph skeletons until preparation finishes. Preparation uses [source material](../../libs/prepare-source-material/), [narration selection](../../libs/narration-content-selection/), and [document creation](../../libs/narration-document-creation/). It stores the title, safe structured HTML, synchronization units, source URL, and speech configuration, and records the preparation outcome together with every segment's text length. The owner reserves the whole document, or nothing, in the same transaction that records the outcome, so a prepared conversion never has undecided reservations. As its final step the workflow asks the owner to dispatch the reserved segments. The owners keep storing that outcome as `pending`, `ready`, or `failed`; the conversion status shown to clients is derived from it together with the segment states, as described below.
+After the server accepts the request and returns a conversion ID, the app navigates to the article view. The reader shows title and paragraph skeletons until preparation finishes. Preparation uses [source material](../../libs/prepare-source-material/), [narration selection](../../libs/narration-content-selection/), and [document creation](../../libs/narration-document-creation/). It stores the title, safe structured HTML, synchronization units, source URL, speech configuration, and a record of the hero image when one was kept, and records the preparation outcome together with every segment's text length. The owner reserves the whole document, or nothing, in the same transaction that records the outcome, so a prepared conversion never has undecided reservations. As its final step the workflow asks the owner to dispatch the reserved segments. The owners keep storing that outcome as `pending`, `ready`, or `failed`; the conversion status shown to clients is derived from it together with the segment states, as described below.
 
 Active accounts and open, unexpired trial grants may prepare articles without available duration; such an article stays readable without audio. Existing per-owner admission limits still apply. If preparation fails, the article view shows an error and a Retry button. Retry restarts preparation for the same conversion. Speech configuration is stored with the document so later generation and retries use the same choice (model, voice, ...).
 
 Narration content selection retains complete paragraphs of main prose, including instructional prose, while excluding standalone code blocks and shell command snippets. Its model input collapses HTML formatting whitespace and exposes generated selection IDs in place of native HTML IDs. Selection reconstructs narration source material from the original HTML, preserving source wording and native anchors. Narration document creation then collapses formatting whitespace while retaining explicit line breaks. The [live evals](../../libs/narration-content-selection/test/evals/README.md) compare the resulting synchronization units exactly against committed goldens.
 
 Preparation outcomes record narration text size, chunk count, and content-selection provider usage. Generated audio duration is recorded separately per segment by the owner's duration accounting; preparation outcomes do not contain audio duration or speech-provider usage totals.
+
+## Hero image
+
+Preparation keeps the hero image a source page declares, when it can. Nothing displays it yet: this change stores it, records it, and serves it, so a later surface needs only client work.
+
+Source preparation reads the declaration from page metadata, never from images in the article body: the first `og:image` (preferring `og:image:secure_url`), then `twitter:image`, with `og:image:alt` or `twitter:image:alt` as alternative text when declared. The declaration is chosen independently of which page load supplies the text. The rendered load's declaration wins when it has one, otherwise the static load's, because a static shell often declares nothing or only a site-wide image. The Gates Notes fixture is such a page: its static HTML carries no image metadata at all. Embedded `data:` images and URLs longer than 2,048 characters are ignored, since the declaration travels in a workflow step result.
+
+A separate workflow step fetches the image while narration content is selected, and the manifest is stored only after both finish. The step opens its own browser session after source preparation has closed the first, navigates to the image with JavaScript disabled, and sends the source page as referrer and the configured source-page cookies. A browser is used instead of a Worker `fetch` because publishers refuse non-browser clients: on 2026-10-13 Gates Notes answered a plain request carrying a browser user agent with `403 Access Denied`. A second session, rather than keeping the first alive, keeps the step self-contained and retryable, and the two sessions never overlap.
+
+The image is stored unchanged. It must be a JPEG, PNG, WebP, or still AVIF as identified from its leading bytes, not from the response header, and at most 10 MiB; SVG and GIF are refused. The size limit is checked against the declared length before the body is read and again on the received bytes, because the browser hands over a body only once it is fully buffered. The URL and every redirect hop must be public destinations. Request interception does not see redirect hops, so a hop to a non-public host is detected after the response and the result discarded; the request to that hop has been made by then. The same limitation applies to source pages.
+
+Keeping the image is best-effort. A refusal, a timeout, or a browser failure after one retry leaves the audiobook without a hero image and is logged as `hero-image-unavailable` with its reason; it never fails or delays the conversion beyond the step's bounds, and no client is told why. Audiobooks prepared before this behavior have none and are not backfilled.
+
+The manifest records the stored image's content type, byte length, and alternative text, and the owner's ready outcome records that one exists. The audiobook response then carries a pointer to the [delivery route](#delivery-positions-and-lifecycle), and account history items carry the owner's flag. The image is copied rather than linked from the publisher so that opening a private audiobook does not disclose the reader to the publisher, the content security policy can keep images same-origin, and the copy is erased with the account.
+
+Sources: [declaration extraction](../../libs/prepare-source-material/src/prepare-source-material.ts), [browser fetch and type detection](../../libs/prepare-source-material/src/load-hero-image.ts), [hero image step](../../libs/create-audiobook-from-url-workflow/src/run-prepare-audiobook-workflow.ts), and [storage](../../libs/audiobook-production/src/store-hero-image.ts).
 
 ## Whole-document synthesis and accounting
 
@@ -98,7 +118,7 @@ Mobile Safari starts an audio element only after a user gesture, so the browser 
 
 ## Delivery, positions, and lifecycle
 
-The reader receives prepared text independently of segment states. Only settled segments are delivered, with range, HEAD, and ETag support. Trial reading, replay, and retries require the owning grant session, and expiry or revocation blocks subsequent audiobook and media requests. Exhausted duration does not block reading or replay. Private articles require an active owning account. [Authentication](authentication.md) describes bearer and media-cookie authorization.
+The reader receives prepared text independently of segment states. Only settled segments are delivered, with range, HEAD, and ETag support. A hero image is delivered when the manifest records one, with HEAD and ETag support and the same authorization as audio segments. Trial reading, replay, and retries require the owning grant session, and expiry or revocation blocks subsequent audiobook and media requests. Exhausted duration does not block reading or replay. Private articles require an active owning account. [Authentication](authentication.md) describes bearer and media-cookie authorization.
 
 Each signed-in listener has one saved position per conversion: synchronization unit ID and offset within that unit's audio. The server replaces it on every save. Initial player load restores it and remains paused; subsequent query refreshes and other devices' saves never move a loaded player. Local writes are serialized to retain their order. Anonymous positions are stored on the browser or native device. Positions are saved periodically and on pause or seek, so device switches resume from the last successful write.
 

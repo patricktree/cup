@@ -21,11 +21,12 @@ vi.mock("cloudflare:workflows", () => ({
 import { NonRetryableError } from "cloudflare:workflows";
 
 import type { AccountDurableObject } from "@cup/accounts";
-import type { SpeechSynthesisAi } from "@cup/audiobook-production";
+import { loadAudiobook, type SpeechSynthesisAi } from "@cup/audiobook-production";
 import { createFakeSpeechSynthesisAi } from "@cup/audiobook-production/fake";
 import type { ConversionGrantDurableObject } from "@cup/conversion-grants";
 import { createFakeNarrationContentSelector } from "@cup/narration-content-selection/fake";
 import { createControlledSourceMaterialPreparer } from "@cup/prepare-source-material/fake";
+import type { HeroImageLoader } from "@cup/prepare-source-material/hero-image";
 
 import { runPrepareAudiobookWorkflow } from "#src/run-prepare-audiobook-workflow.ts";
 import type { AudiobookWorkflowEnvironment } from "#src/workflow-environment.ts";
@@ -40,6 +41,11 @@ type TestEnvironment = Omit<AudiobookWorkflowEnvironment, "ACCOUNTS" | "CONVERSI
 
 const SOURCE_URL = "https://example.com/provider-failure";
 const ALLOWANCE = 7_200_000;
+const HERO_IMAGE_DECLARATION = {
+  url: "https://cdn.example.com/hero.jpg",
+  alternativeText: "A lighthouse at dusk",
+};
+const HERO_IMAGE_BYTES = Uint8Array.of(0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10);
 const harness = createTestHarness({
   root: path.resolve(import.meta.dirname, ".."),
   workers: [{ configPath: "./wrangler.test.jsonc" }],
@@ -119,6 +125,66 @@ test.each(["trial", "account"] as const)(
       "reserved",
       "reserved",
     ]);
+  },
+);
+
+test.each(["trial", "account"] as const)(
+  "a %s conversion keeps the declared hero image with its audiobook",
+  async (kind) => {
+    const { owner, grantId, accountId, conversionId, artifactPrefix } =
+      await createOwnedConversion(kind);
+    const requests: unknown[] = [];
+
+    await runConversion(grantId, conversionId, accountId, false, undefined, async (...request) => {
+      requests.push(request);
+      return { result: "loaded", bytes: HERO_IMAGE_BYTES, contentType: "image/jpeg" };
+    });
+
+    expect(requests).toEqual([[HERO_IMAGE_DECLARATION, SOURCE_URL]]);
+    const stored = await environment.AUDIO_BUCKET.get(artifactPrefix + "hero-image");
+    expect(new Uint8Array((await stored?.arrayBuffer()) ?? [])).toEqual(HERO_IMAGE_BYTES);
+    expect(stored?.httpMetadata?.contentType).toBe("image/jpeg");
+    const audiobookReference = await owner.getReadyAudiobookReference(conversionId);
+    if (!audiobookReference) throw new Error("Expected a ready audiobook");
+    const audiobook = await loadAudiobook({ bucket: environment.AUDIO_BUCKET, audiobookReference });
+    expect(audiobook.heroImage).toEqual({
+      contentType: "image/jpeg",
+      byteLength: HERO_IMAGE_BYTES.byteLength,
+      alternativeText: "A lighthouse at dusk",
+    });
+    expect(await owner.hasHeroImage(conversionId)).toBe(true);
+  },
+);
+
+test.each([
+  ["is refused", 1, async () => ({ result: "refused", reason: "unsupported-type" }) as const],
+  [
+    "cannot be loaded even when retried",
+    2,
+    async () => {
+      throw new Error("Browser session unavailable");
+    },
+  ],
+] as const)(
+  "a conversion becomes ready without a hero image when it %s",
+  async (_description, expectedAttempts, respond) => {
+    const { owner, grantId, accountId, conversionId, artifactPrefix } =
+      await createOwnedConversion("trial");
+    let attempts = 0;
+
+    await runConversion(grantId, conversionId, accountId, false, undefined, () => {
+      attempts += 1;
+      return respond();
+    });
+
+    expect(attempts).toBe(expectedAttempts);
+    expect((await owner.getConversion(conversionId))?.status).toBe("ready");
+    expect(await environment.AUDIO_BUCKET.head(artifactPrefix + "hero-image")).toBeNull();
+    const audiobookReference = await owner.getReadyAudiobookReference(conversionId);
+    if (!audiobookReference) throw new Error("Expected a ready audiobook");
+    const audiobook = await loadAudiobook({ bucket: environment.AUDIO_BUCKET, audiobookReference });
+    expect(audiobook).not.toHaveProperty("heroImage");
+    expect(await owner.hasHeroImage(conversionId)).toBe(false);
   },
 );
 
@@ -410,12 +476,70 @@ async function createConversion() {
   return { grant, grantId, conversionId: accepted.conversion.conversionId, now };
 }
 
+/** Creates a pending conversion under either owner, with a uniform view of what tests assert. */
+async function createOwnedConversion(kind: "trial" | "account") {
+  const { grant, grantId, conversionId: trialConversionId } = await createConversion();
+  if (kind === "trial")
+    return {
+      grantId,
+      accountId: undefined,
+      conversionId: trialConversionId,
+      artifactPrefix: "conversions/" + trialConversionId + "/",
+      owner: {
+        getConversion: (conversionId: string) => grant.getConversion(conversionId),
+        getReadyAudiobookReference: (conversionId: string) =>
+          grant.getReadyAudiobookReference(conversionId),
+        hasHeroImage: async (conversionId: string) => {
+          const conversion = await grant.getConversion(conversionId);
+          // The RPC stub's type drops the ready variant, so the flag is read structurally.
+          return (
+            conversion !== undefined &&
+            "hasHeroImage" in conversion &&
+            conversion.hasHeroImage === true
+          );
+        },
+      },
+    };
+
+  const accountId = crypto.randomUUID();
+  const account = environment.ACCOUNTS.get(environment.ACCOUNTS.idFromName(accountId));
+  await account.initialize({
+    accountId,
+    subject: crypto.randomUUID(),
+    createdAtMs: Temporal.Now.instant().epochMilliseconds,
+  });
+  const started = await account.startConversion({
+    sourceUrl: SOURCE_URL,
+    idempotencyKey: crypto.randomUUID(),
+  });
+  if (!started.conversion) throw new Error("Expected conversion");
+  const conversionId = started.conversion.conversionId;
+  const getReadyOutcome = async () => {
+    const outcome = (await account.getConversion(conversionId))?.outcome;
+    return outcome?.status === "ready" ? outcome : undefined;
+  };
+
+  return {
+    grantId,
+    accountId,
+    conversionId,
+    artifactPrefix: "accounts/" + accountId + "/conversions/" + conversionId + "/",
+    owner: {
+      getConversion: () => account.getConversion(conversionId),
+      getReadyAudiobookReference: async () => (await getReadyOutcome())?.audiobookReference,
+      hasHeroImage: async () => (await getReadyOutcome())?.hasHeroImage === true,
+    },
+  };
+}
+
 function runConversion(
   grantId: string,
   conversionId: string,
   accountId?: string,
   shouldFailPreparation = false,
   step = createImmediateRetryStep(),
+  // Supplying a loader makes the source page declare a hero image.
+  loadHeroImage?: HeroImageLoader,
 ) {
   return runPrepareAudiobookWorkflow({
     env: environment,
@@ -442,7 +566,13 @@ function runConversion(
         : createControlledSourceMaterialPreparer({
             url: SOURCE_URL,
             html: "<article><h1>Failure test</h1><p>A short paragraph for narration.</p></article>",
+            ...(loadHeroImage ? { heroImage: HERO_IMAGE_DECLARATION } : {}),
           }),
+      loadHeroImage:
+        loadHeroImage ??
+        (async () => {
+          throw new Error("No hero image was declared");
+        }),
       selectNarrationContent: createFakeNarrationContentSelector(),
     },
   });

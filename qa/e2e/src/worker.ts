@@ -19,6 +19,17 @@ import sourceHtml from "#src/fixtures/source.html";
 import { createTrackedSpeechProvider, handleSpeechControl } from "#src/speech-controls.ts";
 
 const CONTROLLED_SOURCE_URL = "https://source.example.test/fixture";
+const CONTROLLED_HERO_IMAGE = {
+  url: "https://source.example.test/hero.png",
+  alternativeText: "A deterministic hero image",
+};
+// A one-pixel PNG standing in for the publisher's image, which no browser fetches here.
+const CONTROLLED_HERO_IMAGE_BYTES = Uint8Array.from(
+  atob(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAX+XDSwAAAABJRU5ErkJggg==",
+  ),
+  (character) => character.codePointAt(0) ?? 0,
+);
 
 export { RegistryDurableObject, AccountDurableObject, ConversionGrantDurableObject };
 
@@ -36,6 +47,12 @@ export class PrepareAudiobookQaWorkflow extends WorkflowEntrypoint<Env, Conversi
         prepareSourceMaterial: createControlledSourceMaterialPreparer({
           url: CONTROLLED_SOURCE_URL,
           html: sourceHtml,
+          heroImage: CONTROLLED_HERO_IMAGE,
+        }),
+        loadHeroImage: async () => ({
+          result: "loaded",
+          bytes: CONTROLLED_HERO_IMAGE_BYTES,
+          contentType: "image/png",
         }),
         selectNarrationContent: createFakeNarrationContentSelector(
           scenario === "preparation-failure"

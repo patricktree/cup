@@ -46,7 +46,7 @@ describe("SQLite conversion grant Durable Object", () => {
       name: "migration",
     });
     const migrations = await storage.exec("SELECT * FROM __drizzle_migrations");
-    expect(migrations).toHaveLength(1);
+    expect(migrations).toHaveLength(2);
     expect((await grant.inspect(CREATED_AT_MS)).state).toBe("open");
   });
 
@@ -494,7 +494,7 @@ test("replays baselines without changing grant balances or registry bindings", a
   const grant = grantStub(name);
   await grant.initialize(grantId(name), CREATED_AT_MS, EXPIRES_AT_MS);
   const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
-  expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(1);
+  expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(2);
   expect(await grant.migrate()).toBe(6);
   expect((await grant.inspect(CREATED_AT_MS)).duration.availableMilliseconds).toBe(7_200_000);
   const registry = registryStub(name);
@@ -829,7 +829,7 @@ test.each([false, true])(
     await grant.migrate();
     expect(await grant.listConversions()).toHaveLength(revoked ? 0 : 1);
     expect((await grant.inspect(CREATED_AT_MS)).duration.spentMilliseconds).toBe(revoked ? 0 : 900);
-    expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(1);
+    expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(2);
   },
 );
 
@@ -972,12 +972,21 @@ async function installProductionSchema(
     "utf8",
   );
   for (const statement of fixture.split("--> statement-breakpoint")) await storage.exec(statement);
-  for (const [table, records] of rows)
-    for (const row of records)
+  for (const [table, records] of rows) {
+    // The frozen production schema predates columns that later migrations added.
+    const productionColumns = new Set(
+      (await storage.exec(`SELECT name FROM pragma_table_info('${table}')`)).map((column) =>
+        String(column["name"]),
+      ),
+    );
+    for (const record of records) {
+      const row = Object.entries(record).filter(([column]) => productionColumns.has(column));
       await storage.exec(
-        `INSERT INTO ${table} (${Object.keys(row).join(", ")}) VALUES (${Object.keys(row)
+        `INSERT INTO ${table} (${row.map(([column]) => column).join(", ")}) VALUES (${row
           .map(() => "?")
           .join(", ")})`,
-        ...Object.values(row),
+        ...row.map(([, value]) => value),
       );
+    }
+  }
 }

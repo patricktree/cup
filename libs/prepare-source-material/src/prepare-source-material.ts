@@ -54,6 +54,12 @@ const NARRATION_TEXT_ELEMENT_TAG_NAMES = new Set<string>([
 // Keep equivalent static pages; rendering often adds small dynamic counters and page chrome.
 const BETTER_SOURCE_MATERIAL_TEXT_FACTOR = 1.1;
 const SOURCE_PAGE_JAVASCRIPT_MODES = [false, true] as const;
+// A declaration travels in a workflow step result, so its size must stay bounded.
+const MAX_HERO_IMAGE_URL_LENGTH = 2048;
+const MAX_HERO_IMAGE_ALTERNATIVE_TEXT_LENGTH = 500;
+// In order of preference; the secure variant names the same image as `og:image`.
+const OPEN_GRAPH_IMAGE_PROPERTIES = ["og:image:secure_url", "og:image", "og:image:url"] as const;
+const TWITTER_IMAGE_PROPERTIES = ["twitter:image", "twitter:image:src"] as const;
 const RENDERED_SOURCE_PAGE_READY_TIMEOUT_MS = 30_000;
 const RENDERED_SOURCE_PAGE_READINESS = {
   minimumBlockCount: 2,
@@ -89,7 +95,7 @@ type SourcePage = {
     argument: RenderedSourcePageReadinessOptions,
     options: { timeout: number },
   ): Promise<unknown>;
-  locator(selector: "body"): { innerHTML(): Promise<string> };
+  locator(selector: "body" | "head"): { innerHTML(): Promise<string> };
   title(): Promise<string>;
   close(): Promise<void>;
 };
@@ -104,10 +110,17 @@ type InterceptedRoute = {
   abort(errorCode: "blockedbyclient"): Promise<void>;
 };
 
-/** Cleaned source HTML and the title used to begin narration. */
+/** The image a source page declares in its metadata to represent its source content. */
+export type HeroImageDeclaration = {
+  url: string;
+  alternativeText?: string;
+};
+
+/** Cleaned source HTML, the title used to begin narration, and the declared hero image. */
 export type SourceMaterial = {
   html: string;
   title: string;
+  heroImage?: HeroImageDeclaration;
 };
 
 /** Prepares source material from a URL through a supplied transport. */
@@ -125,6 +138,7 @@ export type LoadSourcePageOptions = {
 export type LoadedSourcePage = {
   bodyHtml: string;
   documentTitle: string;
+  heroImage?: HeroImageDeclaration;
   responseStatus: number;
 };
 
@@ -153,7 +167,12 @@ export async function prepareSourceMaterial({
   );
 
   if (sourceMaterials.length > 0) {
-    return selectBetterSourceMaterial(sourceMaterials);
+    const { html, title } = selectBetterSourceMaterial(sourceMaterials);
+    // Independent of which load has more text: the rendered load comes last, and its metadata is
+    // the fuller declaration because a static shell often carries none or only a site-wide image.
+    const heroImage = sourceMaterials.at(-1)?.heroImage ?? sourceMaterials[0]?.heroImage;
+
+    return { html, title, ...(heroImage === undefined ? {} : { heroImage }) };
   }
 
   const failures = results.flatMap((result) =>
@@ -179,6 +198,7 @@ export function prepareLoadedSourcePage(sourcePage: LoadedSourcePage): SourceMat
   return {
     html: cleanAudiobookSourceMaterialHtml(sourcePage.bodyHtml),
     title: extractSourceTitle(sourcePage.bodyHtml, sourcePage.documentTitle),
+    ...(sourcePage.heroImage === undefined ? {} : { heroImage: sourcePage.heroImage }),
   };
 }
 
@@ -249,14 +269,83 @@ export async function loadPublicSourcePage({
       );
     }
 
+    const heroImage = extractHeroImageDeclaration(await page.locator("head").innerHTML(), url);
+
     return {
       bodyHtml: await page.locator("body").innerHTML(),
       documentTitle: await page.title(),
+      ...(heroImage === undefined ? {} : { heroImage }),
       responseStatus: response.status(),
     };
   } finally {
     await page.close();
   }
+}
+
+/** Reads the publisher-declared hero image from page metadata; body images are never considered. */
+export function extractHeroImageDeclaration(
+  headHtml: string,
+  sourcePageUrl: string,
+): HeroImageDeclaration | undefined {
+  const metadata = collectMetadata(parseFragment(headHtml));
+  const openGraphImage = findFirstMetadataContent(metadata, OPEN_GRAPH_IMAGE_PROPERTIES);
+  const declaredUrl =
+    openGraphImage ?? findFirstMetadataContent(metadata, TWITTER_IMAGE_PROPERTIES);
+
+  if (declaredUrl === undefined || !URL.canParse(declaredUrl, sourcePageUrl)) {
+    return undefined;
+  }
+
+  const url = new URL(declaredUrl, sourcePageUrl);
+  if (
+    (url.protocol !== "http:" && url.protocol !== "https:") ||
+    url.href.length > MAX_HERO_IMAGE_URL_LENGTH
+  ) {
+    return undefined;
+  }
+
+  const alternativeText = findFirstMetadataContent(metadata, [
+    openGraphImage === undefined ? "twitter:image:alt" : "og:image:alt",
+  ])?.slice(0, MAX_HERO_IMAGE_ALTERNATIVE_TEXT_LENGTH);
+
+  return { url: url.href, ...(alternativeText === undefined ? {} : { alternativeText }) };
+}
+
+type Metadata = { property: string; content: string };
+
+function collectMetadata(parentNode: DefaultTreeAdapterMap["parentNode"]): Metadata[] {
+  return parentNode.childNodes.flatMap((childNode) => {
+    if (!("tagName" in childNode)) {
+      return [];
+    }
+
+    if (childNode.tagName !== "meta") {
+      return collectMetadata(childNode);
+    }
+
+    const getAttribute = (name: string) =>
+      childNode.attrs.find((attribute) => attribute.name === name)?.value;
+    // Open Graph uses `property`; Twitter cards and many publishers use `name` for either.
+    const property = (getAttribute("property") ?? getAttribute("name"))?.trim().toLowerCase();
+    const content = normalizeTitleText(getAttribute("content") ?? "");
+
+    return property && content.length > 0 ? [{ property, content }] : [];
+  });
+}
+
+function findFirstMetadataContent(
+  metadata: readonly Metadata[],
+  properties: readonly string[],
+): string | undefined {
+  for (const property of properties) {
+    const content = metadata.find((item) => item.property === property)?.content;
+
+    if (content !== undefined) {
+      return content;
+    }
+  }
+
+  return undefined;
 }
 
 function extractSourceTitle(bodyHtml: string, documentTitle: string): string {

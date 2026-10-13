@@ -1,6 +1,6 @@
 # R2 objects and key layout
 
-Cup stores prepared narration documents, generated audio segments, and segment failure details in one R2 bucket. This page describes the keys written by the current checkout; it is not an inventory of deployed objects. The [Worker configuration](../../apps/cloudflare-worker/wrangler.jsonc) binds `AUDIO_BUCKET` to `create-audiobook-from-url-audio`.
+Cup stores prepared narration documents, hero images, generated audio segments, and segment failure details in one R2 bucket. This page describes the keys written by the current checkout; it is not an inventory of deployed objects. The [Worker configuration](../../apps/cloudflare-worker/wrangler.jsonc) binds `AUDIO_BUCKET` to `create-audiobook-from-url-audio`.
 
 ## Conversion prefixes
 
@@ -13,6 +13,7 @@ create-audiobook-from-url-audio
 │       └── conversions/
 │           └── <conversionId>/
 │               ├── audiobook.json
+│               ├── hero-image
 │               ├── audio-segments/
 │               │   ├── 0.mp3
 │               │   ├── 1.mp3
@@ -21,6 +22,7 @@ create-audiobook-from-url-audio
 └── conversions/
     └── <conversionId>/
         ├── audiobook.json
+        ├── hero-image
         ├── audio-segments/
         │   ├── 0.mp3
         │   ├── 1.mp3
@@ -41,13 +43,16 @@ Omitting the owner when constructing a conversion prefix selects the trial layou
 
 The following paths are relative to either conversion prefix.
 
-| Object key                        | Contents                                                                                                                                            | Written by                                                                                                                                                                                            |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `audiobook.json`                  | Title, original source URL, narration document HTML and synchronization units, and speech configuration: provider, model, voice, and policy version | [Manifest storage](../../libs/audiobook-production/src/store-audiobook.ts), called by the [preparation workflow](../../libs/create-audiobook-from-url-workflow/src/run-prepare-audiobook-workflow.ts) |
-| `audio-segments/<sequence>.mp3`   | Independently playable narration audio for one synchronization unit                                                                                 | [Segment production](../../libs/audiobook-production/src/produce-audio-segment.ts), called by the [segment workflow](../../libs/create-audiobook-from-url-workflow/src/run-audio-segment-workflow.ts) |
-| `segment-<sequence>-failure.json` | JSON with an `explanation` string describing the failed speech generation                                                                           | [Segment workflow failure handling](../../libs/create-audiobook-from-url-workflow/src/run-audio-segment-workflow.ts)                                                                                  |
+| Object key                        | Contents                                                                                                                                                                                                                                  | Written by                                                                                                                                                                                               |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `audiobook.json`                  | Title, original source URL, narration document HTML and synchronization units, speech configuration (provider, model, voice, and policy version), and the hero image's content type, byte length, and alternative text when one is stored | [Manifest storage](../../libs/audiobook-production/src/store-audiobook.ts), called by the [preparation workflow](../../libs/create-audiobook-from-url-workflow/src/run-prepare-audiobook-workflow.ts)    |
+| `hero-image`                      | The publisher's original image bytes, unchanged, when the source page declared one that could be kept                                                                                                                                     | [Hero image storage](../../libs/audiobook-production/src/store-hero-image.ts), called by the [preparation workflow](../../libs/create-audiobook-from-url-workflow/src/run-prepare-audiobook-workflow.ts) |
+| `audio-segments/<sequence>.mp3`   | Independently playable narration audio for one synchronization unit                                                                                                                                                                       | [Segment production](../../libs/audiobook-production/src/produce-audio-segment.ts), called by the [segment workflow](../../libs/create-audiobook-from-url-workflow/src/run-audio-segment-workflow.ts)    |
+| `segment-<sequence>-failure.json` | JSON with an `explanation` string describing the failed speech generation                                                                                                                                                                 | [Segment workflow failure handling](../../libs/create-audiobook-from-url-workflow/src/run-audio-segment-workflow.ts)                                                                                     |
 
 The manifest uses HTTP content type `application/json`. The owner stores its object reference, including key, content type, byte length, and ETag; loading validates the object against that reference. The manifest contains prepared text and synthesis configuration, not a list of generated audio objects.
+
+The hero image has no file extension; its HTTP content type is `image/jpeg`, `image/png`, `image/webp`, or `image/avif`, as identified from its bytes. It is written before the manifest that records it. The manifest is authoritative: a conversion can hold a `hero-image` object that no manifest records, left by a preparation attempt that later failed, and such an object is never served. When preparation is retried for an account under the same execution epoch, the account artifact writer answers the repeated write with the object it already stored, so the manifest describes that stored object.
 
 MP3 objects use HTTP content type `audio/mpeg`. The [audio format](../../libs/audiobook-production/src/audio-format.ts) is mono at 24,000 Hz; production encodes at 128 kbit/s. Segment publication uses a conditional write with `If-None-Match: *`. Retries validate an existing object's synthesis identity and reuse it instead of replacing audio already published for that sequence.
 
@@ -70,14 +75,14 @@ The [segment storage implementation](../../libs/audiobook-production/src/audio-s
 | `synthesis-voice`             | Voice                                                  |
 | `synthesis-policy-version`    | Synthesis policy version                               |
 
-Account-owned writes additionally carry `cup-writer-id` on manifests, audio segments, and failure objects. The [account artifact writer](../../libs/accounts/src/artifact-writer.ts) derives this ID from the execution epoch and object key, registers the write before sending it to R2, and acknowledges and drains it afterward. This lets account deletion reconcile uncertain writes before erasing the prefix. Trial writes do not use this account wrapper.
+Account-owned writes additionally carry `cup-writer-id` on manifests, hero images, audio segments, and failure objects. The [account artifact writer](../../libs/accounts/src/artifact-writer.ts) derives this ID from the execution epoch and object key, registers the write before sending it to R2, and acknowledges and drains it afterward. This lets account deletion reconcile uncertain writes before erasing the prefix. Trial writes do not use this account wrapper.
 
 ## Access and lifecycle
 
-The Worker loads manifests and serves audio through the application API. Audio delivery requires a ready manifest, a valid synchronization-unit sequence, and a settled segment in the owner's duration ledger; an MP3 object's existence alone does not make it playable. The [audio delivery handler](../../libs/api-server/src/serve-audiobook.ts) supports HEAD requests, byte ranges, and conditional ETag requests. Private artifacts require the active owning account; trial artifacts require a session for the active owning grant under the [access rules](authentication.md).
+The Worker loads manifests and serves audio through the application API. Audio delivery requires a ready manifest, a valid synchronization-unit sequence, and a settled segment in the owner's duration ledger; an MP3 object's existence alone does not make it playable. The [audio delivery handler](../../libs/api-server/src/serve-audiobook.ts) supports HEAD requests, byte ranges, and conditional ETag requests. Hero image delivery in the same module requires a ready manifest that records a hero image and supports HEAD and conditional ETag requests. Private artifacts require the active owning account; trial artifacts require a session for the active owning grant under the [access rules](authentication.md).
 
 Account erasure deletes every object under `accounts/<accountId>/` after execution is fenced and artifact writers have drained. It leaves trial conversion prefixes and other accounts separate. See [account deletion](account-deletion.md) and the [erasure implementation](../../libs/accounts/src/account-durable-object.ts).
 
 For failed trial preparation, the [grant maintenance implementation](../../libs/conversion-grants/src/conversion-grant-durable-object.ts) deletes the conversion prefix when cleanup is pending and no segment is settled. It preserves artifacts if any segment is settled. A failed audio unit does not by itself make preparation failed or trigger whole-conversion cleanup; the prepared document and completed audio remain available.
 
-Older objects can remain outside the active ownership inventory. [ADR 0004](../adr/0004-preserve-only-grants-during-drizzle-transition.md) leaves historical R2 artifacts outside the trial SQLite transition even though their conversion records and ownership routes are removed. The current writers produce the three object types above; they do not assemble a full-track audio file or write EPUB exports. Bucket contents may therefore include artifacts from earlier layouts that this page does not enumerate.
+Older objects can remain outside the active ownership inventory. [ADR 0004](../adr/0004-preserve-only-grants-during-drizzle-transition.md) leaves historical R2 artifacts outside the trial SQLite transition even though their conversion records and ownership routes are removed. The current writers produce the four object types above; they do not assemble a full-track audio file or write EPUB exports. Bucket contents may therefore include artifacts from earlier layouts that this page does not enumerate.

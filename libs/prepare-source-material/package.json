@@ -18,6 +18,10 @@
     "./fake": {
       "types": "./dist/types/source-material-preparer.fake.d.ts",
       "default": "./src/source-material-preparer.fake.ts"
+    },
+    "./hero-image": {
+      "types": "./dist/types/load-hero-image.d.ts",
+      "default": "./src/load-hero-image.ts"
     }
   },
   "scripts": {
