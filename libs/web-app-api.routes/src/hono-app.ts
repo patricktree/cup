@@ -373,6 +373,7 @@ const heroImageRoute = createRoute({
         "image/png": { schema: binarySchema },
         "image/webp": { schema: binarySchema },
         "image/avif": { schema: binarySchema },
+        "image/gif": { schema: binarySchema },
       },
       description: "Hero image.",
     },

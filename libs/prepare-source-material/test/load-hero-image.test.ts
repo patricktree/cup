@@ -200,12 +200,14 @@ test.each([
     asciiBytes("\u0000\u0000\u0000\u001Cftypavif\u0000\u0000\u0000\u0000avifmif1miaf"),
   ],
   ["image/avif", asciiBytes("\u0000\u0000\u0000\u0018ftypmif1\u0000\u0000\u0000\u0000mif1avif")],
+  ["image/gif", asciiBytes("GIF89a")],
+  ["image/gif", asciiBytes("GIF87a")],
 ] as const)("detects %s", (contentType, bytes) => {
   expect(detectHeroImageContentType(bytes)).toBe(contentType);
 });
 
 test.each([
-  ["a GIF", asciiBytes("GIF89a")],
+  ["a file that only resembles a GIF", asciiBytes("GIF90a")],
   ["an SVG", asciiBytes('<svg xmlns="http://www.w3.org/2000/svg"></svg>')],
   ["an HEIC image", asciiBytes("\u0000\u0000\u0000\u0018ftypheic\u0000\u0000\u0000\u0000mif1heic")],
   [

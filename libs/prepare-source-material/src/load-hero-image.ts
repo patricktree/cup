@@ -9,6 +9,7 @@ export const HERO_IMAGE_CONTENT_TYPES = [
   "image/png",
   "image/webp",
   "image/avif",
+  "image/gif",
 ] as const;
 export type HeroImageContentType = (typeof HERO_IMAGE_CONTENT_TYPES)[number];
 
@@ -148,8 +149,8 @@ export async function loadHeroImage({
 
 /**
  * Identifies an accepted raster format from the file's leading bytes. The response header is not
- * trusted, and SVG and GIF are deliberately left out: one can carry scripts, the other is
- * animated.
+ * trusted, and SVG is deliberately left out because it can carry scripts. Animation is not a reason
+ * to refuse an image: the original is kept, and a surface decides how to show it.
  */
 export function detectHeroImageContentType(bytes: Uint8Array): HeroImageContentType | undefined {
   if (startsWith(bytes, [0xff, 0xd8, 0xff])) {
@@ -166,6 +167,10 @@ export function detectHeroImageContentType(bytes: Uint8Array): HeroImageContentT
 
   if (readAscii(bytes, 4, 8) === "ftyp" && listFileTypeBrands(bytes).includes("avif")) {
     return "image/avif";
+  }
+
+  if (["GIF87a", "GIF89a"].includes(readAscii(bytes, 0, 6))) {
+    return "image/gif";
   }
 
   return undefined;

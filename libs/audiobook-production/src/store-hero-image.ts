@@ -2,7 +2,13 @@ import { z } from "zod";
 
 import { createConversionArtifactPrefix } from "@cup/conversion-contracts";
 
-const HERO_IMAGE_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"] as const;
+const HERO_IMAGE_CONTENT_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+  "image/gif",
+] as const;
 export type HeroImageContentType = (typeof HERO_IMAGE_CONTENT_TYPES)[number];
 
 /** What the audiobook manifest records about its stored hero image. */
