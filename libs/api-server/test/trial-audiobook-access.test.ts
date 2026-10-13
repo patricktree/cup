@@ -17,8 +17,10 @@ const cookie = `__Secure-grant-session-${grantId}=valid-session`;
 const origin = "https://cup.audio";
 const audiobookPath = `/api/audiobooks/${conversionId}`;
 const audioPath = `/api/files/audiobooks/${conversionId}/segments/0/audio.mp3`;
+const coverImagePath = `/api/files/audiobooks/${conversionId}/cover-image`;
+const coverImage = { contentType: "image/jpeg", byteLength: 3, alternativeText: "A lighthouse" };
 
-function fixture(state: GrantState = "open") {
+function fixture(state: GrantState = "open", hasCoverImage = true) {
   const manifest = JSON.stringify({
     title: "A document",
     originalUrl: "https://example.com/source",
@@ -27,6 +29,7 @@ function fixture(state: GrantState = "open") {
       html: '<h1 id="synchronization-unit-1">A document</h1>',
       synchronizationUnits: [{ id: "synchronization-unit-1", narrationText: "A document" }],
     },
+    ...(hasCoverImage ? { coverImage } : {}),
   });
   const reference = {
     key: `conversions/${conversionId}/audiobook.json`,
@@ -94,6 +97,8 @@ test("missing, invalid and foreign grant sessions cannot read trial text or audi
       [audioPath, "HEAD", {}],
       [audioPath, "GET", { Range: "bytes=0-1" }],
       [audioPath, "GET", { "If-None-Match": '"audio-etag"' }],
+      [coverImagePath, "GET", {}],
+      [coverImagePath, "HEAD", {}],
       [audiobookPath.replace(conversionId, `%66${conversionId.slice(1)}`), "GET", {}],
     ] as const) {
       const response = await app.request(
@@ -122,6 +127,8 @@ test("expiry and revocation block subsequent text and media requests before stor
       [audioPath, "HEAD", {}],
       [audioPath, "GET", { Range: "bytes=0-1" }],
       [audioPath, "GET", { "If-None-Match": '"audio-etag"' }],
+      [coverImagePath, "GET", {}],
+      [coverImagePath, "HEAD", {}],
     ] as const) {
       const response = await app.request(
         origin + path,
@@ -160,6 +167,63 @@ test("owning grant sessions can read and replay with exhausted or fully reserved
       expect(response.headers.get("Cross-Origin-Resource-Policy")).toBe("same-origin");
     }
   }
+});
+
+test("owning grant sessions can read the cover image the audiobook points to", async () => {
+  for (const state of ["open", "exhausted", "temporarily-full"] as const) {
+    const { app, env } = fixture(state);
+    const headers = { Cookie: cookie, Origin: "https://localhost" };
+    const audiobook = await app.request(origin + audiobookPath, { headers }, env);
+    expect(await audiobook.json()).toMatchObject({
+      coverImage: { url: origin + coverImagePath, alternativeText: "A lighthouse" },
+    });
+    for (const [method, extraHeaders, status, body] of [
+      ["GET", {}, 200, [1, 2, 3]],
+      ["HEAD", {}, 200, []],
+      ["GET", { "If-None-Match": '"audio-etag"' }, 304, []],
+    ] as const) {
+      const response = await app.request(
+        origin + coverImagePath,
+        { method, headers: { ...headers, ...extraHeaders } },
+        env,
+      );
+      expect(response.status).toBe(status);
+      expect([...new Uint8Array(await response.arrayBuffer())]).toEqual(body);
+      expect(response.headers.get("Content-Type")).toBe("image/jpeg");
+      expect(response.headers.get("ETag")).toBe('"audio-etag"');
+      expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://localhost");
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+      expect(response.headers.get("Cross-Origin-Resource-Policy")).toBe("same-origin");
+    }
+  }
+});
+
+test("an audiobook without a recorded cover image exposes none, whatever storage holds", async () => {
+  const { app, env, bucketRead } = fixture("open", false);
+  const headers = { Cookie: cookie };
+  const audiobook = await app.request(origin + audiobookPath, { headers }, env);
+  expect(await audiobook.json()).not.toHaveProperty("coverImage");
+  bucketRead.mockClear();
+
+  for (const method of ["GET", "HEAD"]) {
+    const response = await app.request(origin + coverImagePath, { method, headers }, env);
+    expect(response.status).toBe(404);
+  }
+  expect(bucketRead.mock.calls.map(([key]) => key)).toEqual([
+    `conversions/${conversionId}/audiobook.json`,
+    `conversions/${conversionId}/audiobook.json`,
+  ]);
+});
+
+test("the cover image route accepts only reads", async () => {
+  const { app, env } = fixture();
+  const response = await app.request(
+    origin + coverImagePath,
+    { method: "POST", headers: { Cookie: cookie } },
+    env,
+  );
+  expect(response.status).toBe(405);
+  expect(response.headers.get("Allow")).toBe("GET, HEAD");
 });
 
 test("grant validation failures fail closed without reading storage", async () => {

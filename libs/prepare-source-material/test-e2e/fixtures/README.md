@@ -2,9 +2,9 @@
 
 These fixtures capture the Anthropic, Cloudflare, and Gates Notes pages on 2026-09-30, before source-material cleanup. Each JSON file contains the original response URL, HTTP status, content type, and decoded response body for the page and its completed first-party HTML, JavaScript, CSS, and content API requests. Cloudflare's search modules are also included because the page imports them.
 
-The fixture server serves these responses locally on a port the operating system assigns for each run. The test browser adapter intercepts requests at their original public URLs and fulfills them from that server, preserving production URL validation and relative URL resolution. No browser request falls through to the internet. Images, fonts, video, and third-party analytics are blocked; missing recorded application resources fail the test.
+The fixture server serves these responses locally on a port the operating system assigns for each run. The test browser adapter intercepts requests at their original public URLs and fulfills them from that server, preserving production URL validation and relative URL resolution. No browser request falls through to the internet. Images, fonts, video, and third-party analytics are blocked; missing recorded application resources fail the test. Each page's declared cover image is asserted from its recorded metadata. The image itself is not recorded: a separate test answers the cover image navigation with a one-pixel PNG to verify that a real browser delivers the bytes, referrer, and `Accept` header the loader relies on.
 
-Gates Notes retains its original empty HTML shell, Next.js bundles, and content API responses. Its test verifies that disabling JavaScript leaves the shell empty and that enabling JavaScript produces the article. Serving an already rendered DOM would lose this coverage.
+Gates Notes retains its original empty HTML shell, Next.js bundles, and content API responses. Its test verifies that disabling JavaScript leaves the shell empty, without a declared cover image, and that enabling JavaScript produces the article and its declaration. Serving an already rendered DOM would lose this coverage.
 
 Run the suite from the repository root:
 

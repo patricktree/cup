@@ -57,7 +57,7 @@ Sources: [pending request storage](../../apps/web-app/src/data-fetching/account-
 
 ## Private media access
 
-Browser audio elements need an authorization path beyond ordinary JSON requests. The client obtains a media session using its bearer token. The Worker issues an HTTP-only, same-site cookie scoped to `/api/files` for audio segment delivery and bounded by the token's expiry. Android also installs the session through its [native media bridge](../../apps/mobile-app/android/app/src/main/java/audio/cup/app/AccountMediaPlugin.java).
+Browser audio elements need an authorization path beyond ordinary JSON requests. The client obtains a media session using its bearer token. The Worker issues an HTTP-only, same-site cookie scoped to `/api/files` for audio segment and cover image delivery and bounded by the token's expiry. Android also installs the session through its [native media bridge](../../apps/mobile-app/android/app/src/main/java/audio/cup/app/AccountMediaPlugin.java).
 
 ```mermaid
 sequenceDiagram
@@ -76,7 +76,7 @@ sequenceDiagram
     R2-->>Client: Artifact through Worker
 ```
 
-Audiobook JSON lives at `/api/audiobooks/{conversionId}` and requires bearer identity for private audiobooks. Individual MP3 segments live under `/api/files/audiobooks/{conversionId}/segments/{sequence}/audio.mp3` and accept bearer identity or the cookie fallback. There are no assembled-track, captions-file, or EPUB routes. Native players send the bearer token directly. Media-session creation at `/api/files/session` and account API operations require bearer identity. Private delivery checks the conversion's owner and current account state on requests. Scheduling deletion therefore blocks subsequent private requests even while a previously issued JWT remains unexpired. This is not a promise to retract bytes already downloaded by another client.
+Audiobook JSON lives at `/api/audiobooks/{conversionId}` and requires bearer identity for private audiobooks. Individual MP3 segments live under `/api/files/audiobooks/{conversionId}/segments/{sequence}/audio.mp3` and accept bearer identity or the cookie fallback. An audiobook's cover image lives at `/api/files/audiobooks/{conversionId}/cover-image` under the same rules. There are no assembled-track, captions-file, or EPUB routes. Native players send the bearer token directly. Media-session creation at `/api/files/session` and account API operations require bearer identity. Private delivery checks the conversion's owner and current account state on requests. Scheduling deletion therefore blocks subsequent private requests even while a previously issued JWT remains unexpired. This is not a promise to retract bytes already downloaded by another client.
 
 The client refreshes media authorization and pauses playback when authorization fails. Sign-out clears local identity and cached account data, stops and unloads media, and waits for outstanding cookie issuance before clearing media sessions so a late response cannot silently reestablish playback. Local sign-out is not an immediate global revocation mechanism for every existing JWT.
 

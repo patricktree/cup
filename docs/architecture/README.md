@@ -53,7 +53,7 @@ The Worker is the HTTP boundary. Separate preparation and audio segment synthesi
 | Preparation Workflow                      | Source rendering, narration selection, document storage, and preparation outcomes              | [Preparation entry point](../../libs/create-audiobook-from-url-workflow/src/prepare-audiobook-workflow.ts)                          |
 | Audio segment synthesis Workflow          | One segment's speech generation, artifact storage, and duration settlement                     | [Synthesis entry point](../../libs/create-audiobook-from-url-workflow/src/synthesize-audio-segment-workflow.ts)                     |
 | Account and trial state                   | Ownership, history, duration accounting, synthesis dispatch, and lifecycle                     | [Storage ownership](#storage-ownership)                                                                                             |
-| Source preparation                        | Render source pages and prepare audiobook source material                                      | [Preparation library](../../libs/prepare-source-material/)                                                                          |
+| Source preparation                        | Render source pages, prepare audiobook source material, and fetch declared cover images        | [Preparation library](../../libs/prepare-source-material/)                                                                          |
 | Narration selection and document creation | Select source material and structure narration text and synchronization units                  | [Selection library](../../libs/narration-content-selection/), [document creation library](../../libs/narration-document-creation/)  |
 | Audiobook production                      | Store prepared narration and synthesize independently playable audio segments                  | [Audiobook production library](../../libs/audiobook-production/)                                                                    |
 
@@ -97,7 +97,7 @@ Cloudflare Workflows owns execution state; the account or grant object owns the 
 ## External services
 
 - Cloudflare Access: protects operator requests
-- Cloudflare Browser Run: visits external source pages
+- Cloudflare Browser Run: visits external source pages and fetches the cover images they declare
 - Cloudflare AI Gateway: routes provider requests and records request metadata
 - Google AI Studio: narration services (TTS provider)
 - Supabase Auth: IAM (Cup owns account authorization and application data)

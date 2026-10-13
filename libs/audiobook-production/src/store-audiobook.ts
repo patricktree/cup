@@ -6,6 +6,7 @@ import type { NarrationDocument } from "@cup/narration-document-creation";
 
 import { AUDIOBOOK_MANIFEST_CONTENT_TYPE } from "#src/audio-format.ts";
 import { SPEECH_CONFIG, type SpeechConfig } from "#src/speech-synthesis-config.ts";
+import { coverImageSchema, type CoverImage } from "#src/store-cover-image.ts";
 
 /** Prepared narration; individual audio segments are published independently. */
 export type Audiobook = {
@@ -13,6 +14,8 @@ export type Audiobook = {
   originalUrl: string;
   narrationDocument: NarrationDocument;
   speechConfig: SpeechConfig;
+  /** Present only when a cover image is stored beside the manifest. */
+  coverImage?: CoverImage | undefined;
 };
 
 /** Identifies a stored canonical audiobook manifest. */
@@ -55,6 +58,7 @@ export type StoreOptions = {
   originalUrl: string;
   narrationDocument: NarrationDocument;
   speechConfig?: SpeechConfig;
+  coverImage?: CoverImage;
 };
 
 /** Supplies the storage dependency and expected identity of a manifest to load. */
@@ -78,6 +82,7 @@ export const audiobookSchema = z.object({
       policyVersion: z.string().min(1),
     })
     .default(SPEECH_CONFIG),
+  coverImage: coverImageSchema.optional(),
 });
 
 /** Derives synchronization cues and stores the canonical audiobook manifest. */
@@ -89,8 +94,15 @@ export async function storeAudiobook({
   originalUrl,
   narrationDocument,
   speechConfig = SPEECH_CONFIG,
+  coverImage,
 }: StoreOptions): Promise<AudiobookReference> {
-  const audiobook = audiobookSchema.parse({ title, originalUrl, narrationDocument, speechConfig });
+  const audiobook = audiobookSchema.parse({
+    title,
+    originalUrl,
+    narrationDocument,
+    speechConfig,
+    coverImage,
+  });
   const body = JSON.stringify(audiobook);
   const key = `${artifactPrefix ?? createConversionArtifactPrefix(conversionId)}audiobook.json`;
   const storedManifest = await bucket.put(key, body, {

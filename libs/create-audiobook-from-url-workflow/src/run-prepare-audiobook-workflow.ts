@@ -6,6 +6,9 @@ import {
   countNarrationTextCharactersBySegment,
   SPEECH_CONFIG,
   storeAudiobook,
+  storeCoverImage,
+  type CoverImage,
+  type CoverImageStorage,
 } from "@cup/audiobook-production";
 import { ConversionPhase, type ConversionFailureCategory } from "@cup/conversion-contracts";
 import { conversionParamsSchema, type ConversionParams } from "@cup/conversion-contracts";
@@ -14,7 +17,8 @@ import type {
   SelectionChunkRunner,
 } from "@cup/narration-content-selection";
 import { createNarrationDocument } from "@cup/narration-document-creation";
-import type { SourceMaterialPreparer } from "@cup/prepare-source-material";
+import type { CoverImageDeclaration, SourceMaterialPreparer } from "@cup/prepare-source-material";
+import type { CoverImageLoader } from "@cup/prepare-source-material/cover-image";
 
 import { resolveConversionExecution } from "#src/conversion-execution.ts";
 import type { AudiobookWorkflowEnvironment } from "#src/workflow-environment.ts";
@@ -45,6 +49,15 @@ const PROCESSING_STEP_CONFIG = {
   timeout: "10 minutes",
 } as const satisfies WorkflowStepConfig;
 
+// One retry covers a browser launch or connection that failed transiently; a refusal does not throw.
+const COVER_IMAGE_STEP_CONFIG = {
+  retries: {
+    limit: 1,
+    delay: "2 seconds",
+  },
+  timeout: "1 minute",
+} as const satisfies WorkflowStepConfig;
+
 const TERMINAL_STATE_STEP_CONFIG = {
   retries: {
     limit: 2,
@@ -59,6 +72,7 @@ const MAX_NARRATION_CHUNKS = 200;
 
 export type PrepareAudiobookWorkflowServices = {
   prepareSourceMaterial: SourceMaterialPreparer;
+  loadCoverImage: CoverImageLoader;
   selectNarrationContent(
     sourceMaterialHtml: string,
     options: { conversionId: string; runChunk: SelectionChunkRunner },
@@ -93,6 +107,9 @@ export async function runPrepareAudiobookWorkflow({
   const { artifactPrefix, artifactBucket: bucket } = execution;
   let stage: ConversionFailureCategory = "source-preparation";
 
+  // Assigned once source preparation has finished; it never rejects.
+  let coverImagePromise: Promise<CoverImage | undefined> | undefined;
+
   const result = await (async () => {
     try {
       const sourceMaterial = await step.do(
@@ -103,6 +120,18 @@ export async function runPrepareAudiobookWorkflow({
           return services.prepareSourceMaterial(sourceUrl);
         },
       );
+
+      // Started beside content selection and awaited only before the manifest is stored, so a
+      // slow image host does not delay selection.
+      coverImagePromise = storeDeclaredCoverImage({
+        artifactPrefix,
+        bucket,
+        conversionId,
+        declaration: sourceMaterial.coverImage,
+        loadCoverImage: services.loadCoverImage,
+        sourceUrl,
+        step,
+      });
 
       stage = "content-selection";
       await step.do("start narration content selection", PROCESSING_STEP_CONFIG, () =>
@@ -139,6 +168,7 @@ export async function runPrepareAudiobookWorkflow({
         throw new ContentLimitError();
       }
 
+      const coverImage = await coverImagePromise;
       const audiobookReference = await step.do(
         "store audiobook",
         PROCESSING_STEP_CONFIG,
@@ -152,6 +182,7 @@ export async function runPrepareAudiobookWorkflow({
             originalUrl: sourceUrl,
             narrationDocument,
             speechConfig: SPEECH_CONFIG,
+            ...(coverImage === undefined ? {} : { coverImage }),
           });
         },
       );
@@ -162,6 +193,7 @@ export async function runPrepareAudiobookWorkflow({
         readyOutcome: {
           title: sourceMaterial.title,
           audiobookReference,
+          ...(coverImage === undefined ? {} : { hasCoverImage: true as const }),
           measurements: {
             narrationTextCharacters,
             narrationChunks: synchronizationUnits.length,
@@ -172,6 +204,10 @@ export async function runPrepareAudiobookWorkflow({
         },
       };
     } catch (error) {
+      // Let a cover image step that is still running finish first, so it cannot write into the
+      // conversion's prefix after the owner has started cleaning up the failed conversion.
+      await coverImagePromise;
+
       const failedOutcome = await step.do(
         "create failed conversion outcome",
         PROCESSING_STEP_CONFIG,
@@ -220,6 +256,64 @@ export async function runPrepareAudiobookWorkflow({
   });
 
   return result.audiobookReference;
+}
+
+/**
+ * Keeps the declared cover image when it can be loaded. Every failure leaves the audiobook without
+ * one instead of failing the conversion, so this never rejects.
+ */
+async function storeDeclaredCoverImage({
+  artifactPrefix,
+  bucket,
+  conversionId,
+  declaration,
+  loadCoverImage,
+  sourceUrl,
+  step,
+}: {
+  artifactPrefix: string;
+  bucket: CoverImageStorage;
+  conversionId: string;
+  declaration: CoverImageDeclaration | undefined;
+  loadCoverImage: CoverImageLoader;
+  sourceUrl: string;
+  step: WorkflowStep;
+}): Promise<CoverImage | undefined> {
+  if (declaration === undefined) return undefined;
+
+  try {
+    const outcome = await step.do("store cover image", COVER_IMAGE_STEP_CONFIG, async () => {
+      const loaded = await loadCoverImage(declaration, sourceUrl);
+      if (loaded.result === "refused") return loaded;
+
+      // The bytes are stored inside the step because a step result cannot carry them.
+      const coverImage = await storeCoverImage({
+        artifactPrefix,
+        bucket,
+        bytes: loaded.bytes,
+        contentType: loaded.contentType,
+        conversionId,
+        ...(declaration.alternativeText === undefined
+          ? {}
+          : { alternativeText: declaration.alternativeText }),
+      });
+      return { result: "stored" as const, coverImage };
+    });
+    if (outcome.result === "stored") return outcome.coverImage;
+
+    logMissingCoverImage(conversionId, outcome.reason);
+  } catch (error) {
+    logMissingCoverImage(
+      conversionId,
+      error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+    );
+  }
+
+  return undefined;
+}
+
+function logMissingCoverImage(conversionId: string, reason: string) {
+  console.warn(JSON.stringify({ event: "cover-image-unavailable", conversionId, reason }));
 }
 
 class ContentLimitError extends Error {

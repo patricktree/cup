@@ -4,6 +4,7 @@ import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 import { selectNarrationContent } from "@cup/narration-content-selection";
 import { prepareSourceMaterial } from "@cup/prepare-source-material";
+import { loadCoverImage } from "@cup/prepare-source-material/cover-image";
 
 import {
   runPrepareAudiobookWorkflow,
@@ -35,6 +36,17 @@ export class PrepareAudiobookWorkflow extends WorkflowEntrypoint<
 
           try {
             return await prepareSourceMaterial({ browser, cookies, url: sourceUrl });
+          } finally {
+            await browser.close();
+          }
+        },
+        // A second browser session, opened after source preparation closed the first, so the cover
+        // image step is self-contained and safe to retry.
+        loadCoverImage: async (declaration, sourceUrl) => {
+          const browser = await launch(this.env.BROWSER);
+
+          try {
+            return await loadCoverImage({ browser, cookies, declaration, sourceUrl });
           } finally {
             await browser.close();
           }

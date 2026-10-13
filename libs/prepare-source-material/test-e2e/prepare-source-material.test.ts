@@ -4,6 +4,7 @@ import { format } from "oxfmt";
 import { parseFragment, serializeOuter } from "parse5";
 import type { DefaultTreeAdapterMap } from "parse5";
 
+import { type CoverImageBrowser, loadCoverImage } from "#src/load-cover-image.ts";
 import {
   type Browser as SourceMaterialBrowser,
   prepareSourceMaterial,
@@ -12,6 +13,10 @@ import {
 
 const SOURCE_PAGES = [
   {
+    coverImage: {
+      url: "https://www-cdn.anthropic.com/images/4zrzovbb/website/412be842c5c6bae6b4bcd515c191b0aa5015e05f-2400x1260.png",
+      alternativeText: "Demystifying evals for AI agents",
+    },
     snapshotFilename: "anthropic.html",
     stabilizeSourceMaterial: (html: string) =>
       html.replace(
@@ -21,11 +26,17 @@ const SOURCE_PAGES = [
     url: "https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents",
   },
   {
+    coverImage: {
+      url: "https://blog.cloudflare.com/_emdash/api/media/file/01KZBWYMKT77FDVB07PHA3R5WM.png",
+    },
     snapshotFilename: "cloudflare.html",
     stabilizeSourceMaterial: (html: string) => html,
     url: "https://blog.cloudflare.com/kitesurf/",
   },
   {
+    coverImage: {
+      url: "https://images.gatesnotes.com/12514eb8-7b51-008e-41a9-512542cf683b/f93f0cc8-be6d-4e33-870b-ab6d546576f1/AI-Article-08.19.2026-Share-Image-1200x630.jpg",
+    },
     snapshotFilename: "gates-notes.html",
     stabilizeSourceMaterial: (html: string) =>
       extractElementById(html, "a_turbulent_ai_era_and_critical_choices_to_make_a").replace(
@@ -36,7 +47,7 @@ const SOURCE_PAGES = [
   },
 ] as const;
 
-for (const { snapshotFilename, stabilizeSourceMaterial, url } of SOURCE_PAGES) {
+for (const { coverImage, snapshotFilename, stabilizeSourceMaterial, url } of SOURCE_PAGES) {
   test(`prepares source material for ${url}`, async ({ browser: playwrightBrowser, request }) => {
     const missingRecordings: string[] = [];
     const browser = createFixtureBrowser(playwrightBrowser, request, missingRecordings);
@@ -48,6 +59,8 @@ for (const { snapshotFilename, stabilizeSourceMaterial, url } of SOURCE_PAGES) {
         "a_turbulent_ai_era_and_critical_choices_to_make_a",
       );
       expect(staticPage.documentTitle).toBe("");
+      // The shell declares no metadata; the cover image exists only in the rendered head.
+      expect(staticPage.coverImage).toBeUndefined();
     }
 
     const sourceMaterial = await prepareSourceMaterial({ browser, url });
@@ -56,9 +69,71 @@ for (const { snapshotFilename, stabilizeSourceMaterial, url } of SOURCE_PAGES) {
     const { code: formattedFullHtml } = await format(snapshotFilename, stableFullHtml);
 
     expect(missingRecordings).toEqual([]);
+    expect(sourceMaterial.coverImage).toEqual(coverImage);
     expect(formattedFullHtml).toMatchSnapshot(snapshotFilename);
   });
 }
+
+// A one-pixel PNG, served in place of the publisher's image.
+const COVER_IMAGE_BYTES = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAX+XDSwAAAABJRU5ErkJggg==",
+  "base64",
+);
+
+test("loads a cover image as a browser navigation carrying the source page as referrer", async ({
+  browser: playwrightBrowser,
+}) => {
+  const sourceUrl = "https://www.gatesnotes.com/a-turbulent-ai-era-and-critical-choices-to-make";
+  const coverImageUrl = "https://images.gatesnotes.com/cover.png";
+  const requests: Array<{ url: string; referer: string | undefined; accept: string | undefined }> =
+    [];
+  const browser: CoverImageBrowser = {
+    newPage: async ({ javaScriptEnabled }) => {
+      const page = await playwrightBrowser.newPage({ javaScriptEnabled });
+
+      return {
+        route: (pattern, handler) =>
+          page.route(pattern, (route) =>
+            handler({
+              request: () => route.request(),
+              abort: (errorCode) => route.abort(errorCode),
+              // The loader approved the request; answer it locally instead of reaching the internet.
+              continue: async () => {
+                const headers = route.request().headers();
+                requests.push({
+                  url: route.request().url(),
+                  referer: headers["referer"],
+                  accept: headers["accept"],
+                });
+                await route.fulfill({
+                  body: COVER_IMAGE_BYTES,
+                  // Deliberately wrong: the type must come from the bytes.
+                  contentType: "image/jpeg",
+                });
+              },
+            }),
+          ),
+        context: () => page.context(),
+        setExtraHTTPHeaders: (headers) => page.setExtraHTTPHeaders(headers),
+        goto: (url, options) => page.goto(url, options),
+        close: () => page.close(),
+      };
+    },
+  };
+
+  const result = await loadCoverImage({ browser, declaration: { url: coverImageUrl }, sourceUrl });
+
+  expect(result).toEqual({
+    result: "loaded",
+    bytes: COVER_IMAGE_BYTES,
+    contentType: "image/png",
+  });
+  expect(requests[0]).toEqual({
+    url: coverImageUrl,
+    referer: sourceUrl,
+    accept: expect.stringContaining("image/avif"),
+  });
+});
 
 // Retain public page URLs so production URL checks and relative resource resolution still run.
 // Only the test transport redirects requests to the local recording server.

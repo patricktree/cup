@@ -38,6 +38,8 @@ export type ReadyConversion = Omit<PendingConversion, "status"> & {
   completedAtMs: number;
   title: string;
   audiobookReference: AudiobookReference;
+  /** Recorded only when the audiobook has one, so a replayed outcome without it still matches. */
+  hasCoverImage?: true;
   measurements?: ConversionMeasurements;
   providerUsage?: Record<string, unknown>;
 };
@@ -57,6 +59,7 @@ export type TerminalOutcome =
       completedAtMs: number;
       title: string;
       audiobookReference: AudiobookReference;
+      hasCoverImage?: true;
       measurements?: ConversionMeasurements;
       providerUsage?: Record<string, unknown>;
     }

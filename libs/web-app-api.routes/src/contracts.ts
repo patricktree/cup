@@ -108,10 +108,17 @@ export const audioSegmentSchema = z.discriminatedUnion("status", [
   audioSegmentBaseSchema.extend({ status: z.literal("failed"), explanation: z.string() }),
 ]);
 export type AudioSegment = z.infer<typeof audioSegmentSchema>;
+/** Where to request the audiobook's cover image; the bytes are served with audio-file authorization. */
+export const coverImageSchema = z
+  .object({ url: z.url(), alternativeText: z.string().min(1).optional() })
+  .strict();
+export type CoverImage = z.infer<typeof coverImageSchema>;
 const readerBase = { originalUrl: sourceUrlSchema, canGenerate: z.boolean() };
 const preparedBase = {
   ...readerBase,
   title: z.string().min(1),
+  // Absent when the audiobook has no cover image.
+  coverImage: coverImageSchema.optional(),
   narrationDocument: z
     .object({
       html: z.string().min(1),
@@ -190,7 +197,13 @@ export const historyItemSchema = z.object({
   createdAtMs: z.number(),
   status: z.enum(["pending", "insufficient-duration", "synthesizing", "ready", "failed"]),
   outcome: z.union([
-    z.object({ status: z.literal("ready"), title: z.string() }).passthrough(),
+    z
+      .object({
+        status: z.literal("ready"),
+        title: z.string(),
+        hasCoverImage: z.literal(true).optional(),
+      })
+      .passthrough(),
     z.object({ status: z.literal("failed"), explanation: z.string() }).passthrough(),
     z.null(),
   ]),

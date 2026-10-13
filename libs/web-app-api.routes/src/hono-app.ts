@@ -362,6 +362,26 @@ const audioRoute = createRoute({
   },
 });
 const audioHeadRoute = createRoute({ ...audioRoute, method: "head" });
+const coverImageRoute = createRoute({
+  method: "get",
+  path: "/api/files/audiobooks/{conversionId}/cover-image",
+  request: { params: conversionParamsSchema },
+  responses: {
+    200: {
+      content: {
+        "image/jpeg": { schema: binarySchema },
+        "image/png": { schema: binarySchema },
+        "image/webp": { schema: binarySchema },
+        "image/avif": { schema: binarySchema },
+        "image/gif": { schema: binarySchema },
+      },
+      description: "Cover image.",
+    },
+    304: { description: "Not modified." },
+    404: errorResponse("Cover image unavailable."),
+  },
+});
+const coverImageHeadRoute = createRoute({ ...coverImageRoute, method: "head" });
 
 type WebAppApiEnvironment<Bindings extends object> = {
   Bindings: Bindings;
@@ -395,6 +415,8 @@ export type WebAppApiHandlers<Bindings extends object> = {
   savePosition: WebAppApiRouteHandler<typeof savePositionRoute, Bindings>;
   getAudio: WebAppApiRouteHandler<typeof audioRoute, Bindings>;
   headAudio: WebAppApiRouteHandler<typeof audioHeadRoute, Bindings>;
+  getCoverImage: WebAppApiRouteHandler<typeof coverImageRoute, Bindings>;
+  headCoverImage: WebAppApiRouteHandler<typeof coverImageHeadRoute, Bindings>;
 };
 
 /** Creates the typed HTTP interface used by the web application. */
@@ -417,7 +439,9 @@ export function createWebAppApi<Bindings extends object>(handlers: WebAppApiHand
     .openapi(retryConversionRoute, handlers.retryConversion)
     .openapi(savePositionRoute, handlers.savePosition)
     .openapi(audioRoute, handlers.getAudio)
-    .openapi(audioHeadRoute, handlers.headAudio);
+    .openapi(audioHeadRoute, handlers.headAudio)
+    .openapi(coverImageRoute, handlers.getCoverImage)
+    .openapi(coverImageHeadRoute, handlers.headCoverImage);
 }
 
 const unavailable = (): never => {
@@ -443,6 +467,8 @@ export function createWebAppContractApp() {
     getAudiobook: unavailable,
     getAudio: unavailable,
     headAudio: unavailable,
+    getCoverImage: unavailable,
+    headCoverImage: unavailable,
     retryConversion: unavailable,
     savePosition: unavailable,
   });

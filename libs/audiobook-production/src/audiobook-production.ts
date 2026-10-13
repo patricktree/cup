@@ -26,3 +26,11 @@ export {
 
 export { SPEECH_CONFIG, type SpeechConfig } from "#src/speech-synthesis-config.ts";
 export { getStoredSpeechConfig, createAudioSegmentKey } from "#src/audio-segment-storage.ts";
+export {
+  createCoverImageKey,
+  storeCoverImage,
+  type CoverImage,
+  type CoverImageContentType,
+  type CoverImageStorage,
+  type StoreCoverImageOptions,
+} from "#src/store-cover-image.ts";

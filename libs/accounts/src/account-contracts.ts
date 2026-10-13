@@ -25,7 +25,13 @@ export type AccountConversion = {
   status: "pending" | "ready" | "failed";
 };
 export type AccountConversionOutcome =
-  | { status: "ready"; title: string; audiobookReference: AudiobookReference }
+  | {
+      status: "ready";
+      title: string;
+      audiobookReference: AudiobookReference;
+      /** Recorded only when the audiobook has one, so outcomes without it keep their fingerprint. */
+      hasCoverImage?: true | undefined;
+    }
   | { status: "failed"; failureCategory: string; explanation: string };
 
 export const startAccountConversionSchema = z
@@ -55,6 +61,7 @@ export const accountOutcomeSchema = z.discriminatedUnion("status", [
           etag: z.string().min(1),
         })
         .strict(),
+      hasCoverImage: z.literal(true).optional(),
     })
     .strict(),
   z

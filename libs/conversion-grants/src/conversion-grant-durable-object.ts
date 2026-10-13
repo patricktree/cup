@@ -499,6 +499,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
     input: {
       title: string;
       audiobookReference: AudiobookReference;
+      hasCoverImage?: true;
       measurements?: ConversionMeasurements;
       providerUsage?: Record<string, unknown>;
       completedAtMs?: number;
@@ -512,6 +513,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
         completedAtMs: input.completedAtMs ?? Temporal.Now.instant().epochMilliseconds,
         title: input.title,
         audiobookReference: input.audiobookReference,
+        ...(input.hasCoverImage === undefined ? {} : { hasCoverImage: true }),
         ...(input.measurements === undefined ? {} : { measurements: input.measurements }),
         ...(input.providerUsage === undefined ? {} : { providerUsage: input.providerUsage }),
       },

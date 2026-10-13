@@ -1,4 +1,9 @@
-import { createAudioSegmentKey, loadAudiobook, type Audiobook } from "@cup/audiobook-production";
+import {
+  createAudioSegmentKey,
+  createCoverImageKey,
+  loadAudiobook,
+  type Audiobook,
+} from "@cup/audiobook-production";
 import type { RegistryDurableObject } from "@cup/registry";
 import type { ErrorResponse } from "@cup/web-app-api.routes";
 
@@ -90,6 +95,36 @@ export async function serveAudio(
   return new Response(isHead ? null : ranged.body, { status: 206, headers });
 }
 
+/** Serves the stored cover image of a prepared audiobook; request authorization happens before. */
+export async function serveCoverImage(
+  env: ApiServerEnvironment,
+  request: Request,
+  conversionId: string,
+  isHead: boolean,
+  requestId: string,
+): Promise<Response> {
+  const owner = await getRegistryStub(env).findConversionOwner(conversionId);
+  if (!owner) return coverImageNotFound(requestId);
+  const reader = resolveConversionReader(env, conversionId, owner);
+  const audiobook = await loadReadyAudiobookFromEnvironment(env, conversionId, reader);
+  // The manifest decides: an object left by an earlier preparation attempt is not served.
+  if (audiobook?.coverImage === undefined) return coverImageNotFound(requestId);
+
+  const key = createCoverImageKey(conversionId, reader.artifactPrefix);
+  const object = await env.AUDIO_BUCKET.get(key);
+  if (object === null) return coverImageNotFound(requestId);
+
+  const headers = new Headers({
+    "Content-Type": audiobook.coverImage.contentType,
+    ETag: object.httpEtag,
+  });
+  if (request.headers.get("If-None-Match") === object.httpEtag)
+    return new Response(null, { status: 304, headers });
+
+  headers.set("Content-Length", object.size.toString());
+  return new Response(isHead ? null : object.body, { status: 200, headers });
+}
+
 function getRegistryStub(env: ApiServerEnvironment): RegistryStub {
   return env.REGISTRY.get(env.REGISTRY.idFromName("registry"));
 }
@@ -117,6 +152,13 @@ function audiobookNotFound(requestId: string): Response {
   return Response.json(createErrorBody(requestId, "audiobook-not-found", "Audiobook not found."), {
     status: 404,
   });
+}
+
+function coverImageNotFound(requestId: string): Response {
+  return Response.json(
+    createErrorBody(requestId, "cover-image-not-found", "Cover image not found."),
+    { status: 404 },
+  );
 }
 
 function createErrorBody(requestId: string, code: string, message: string): ErrorResponse {

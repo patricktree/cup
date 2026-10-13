@@ -33,6 +33,26 @@ test("publishes prepared narration without requiring any audio and fixes the spe
   });
   expect(audiobook).not.toHaveProperty("audio");
 });
+test("records the stored cover image in the manifest", async () => {
+  const { bucket } = createTestBucket();
+  const coverImage = {
+    contentType: "image/jpeg",
+    byteLength: 2048,
+    alternativeText: "A lighthouse at dusk",
+  } as const;
+  const reference = await storeAudiobook({
+    bucket,
+    conversionId: "conversion-id",
+    title: "Title",
+    originalUrl: "https://example.com",
+    narrationDocument: document,
+    coverImage,
+  });
+
+  await expect(loadAudiobook({ bucket, audiobookReference: reference })).resolves.toMatchObject({
+    coverImage,
+  });
+});
 test("rejects invalid narration before publishing a prepared artifact", async () => {
   const { bucket, storedObjects } = createTestBucket();
   await expect(
