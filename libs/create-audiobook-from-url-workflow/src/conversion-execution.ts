@@ -66,7 +66,7 @@ export function resolveConversionExecution(
             status: "ready",
             title: outcome.title,
             audiobookReference: outcome.audiobookReference,
-            ...(outcome.hasHeroImage === undefined ? {} : { hasHeroImage: true }),
+            ...(outcome.hasCoverImage === undefined ? {} : { hasCoverImage: true }),
           },
           undefined,
           executionEpoch,

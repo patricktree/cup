@@ -30,7 +30,7 @@ export type AccountConversionOutcome =
       title: string;
       audiobookReference: AudiobookReference;
       /** Recorded only when the audiobook has one, so outcomes without it keep their fingerprint. */
-      hasHeroImage?: true | undefined;
+      hasCoverImage?: true | undefined;
     }
   | { status: "failed"; failureCategory: string; explanation: string };
 
@@ -61,7 +61,7 @@ export const accountOutcomeSchema = z.discriminatedUnion("status", [
           etag: z.string().min(1),
         })
         .strict(),
-      hasHeroImage: z.literal(true).optional(),
+      hasCoverImage: z.literal(true).optional(),
     })
     .strict(),
   z

@@ -198,11 +198,11 @@ The adaptation produced from source content, comprising a prepared narration doc
 
 _Avoid_: audio file, audio output, workflow output
 
-## hero image
+## cover image
 
-The single image a source page designates to represent its source content, kept with the audiobook. An audiobook may have none. It is not part of the narration text and has no visual description.
+The single image a source page designates to represent its source content, kept with the audiobook as its cover. An audiobook may have none. It is not part of the narration text and has no visual description.
 
-_Avoid_: cover, thumbnail, preview image
+_Avoid_: hero image, thumbnail, preview image
 
 ## listening position
 

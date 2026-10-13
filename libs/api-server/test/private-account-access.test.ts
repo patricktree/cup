@@ -71,8 +71,8 @@ test("anonymous range, HEAD and conditional requests cannot touch private storag
     ["GET", { Range: "bytes=0-10" }, "segments/0/audio.mp3"],
     ["HEAD", {}, "segments/0/audio.mp3"],
     ["GET", { "If-None-Match": "known" }, "segments/0/audio.mp3"],
-    ["GET", {}, "hero-image"],
-    ["HEAD", {}, "hero-image"],
+    ["GET", {}, "cover-image"],
+    ["HEAD", {}, "cover-image"],
   ] as const) {
     const response = await app.request(
       `https://cup.audio/api/files/audiobooks/${conversionId}/${resource}`,
@@ -91,7 +91,7 @@ test("non-owners and blocked accounts cannot touch private storage", async () =>
     [accountId, "deletion_scheduled", 403],
   ] as const) {
     const { app, env, token, bucketRead } = await fixture(owner, state);
-    for (const resource of ["segments/1/audio.mp3", "hero-image"]) {
+    for (const resource of ["segments/1/audio.mp3", "cover-image"]) {
       const response = await app.request(
         `https://cup.audio/api/files/audiobooks/${conversionId}/${resource}`,
         { headers: { Cookie: `cup_media=${token}` } },
@@ -143,7 +143,7 @@ test("percent-encoded owner identifiers cannot bypass media authorization", asyn
     "/segments/0/audio.mp3",
     "/segments/2/audio.mp3",
     "/segments/1/audio.mp3",
-    "/hero-image",
+    "/cover-image",
   ]) {
     const response = await app.request(
       `https://cup.audio/api/${resource ? "files/audiobooks" : "audiobooks"}/%66${conversionId.slice(1)}${resource}`,

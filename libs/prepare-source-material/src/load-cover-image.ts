@@ -1,41 +1,41 @@
 import {
   assertPublicSourceUrl,
-  type HeroImageDeclaration,
+  type CoverImageDeclaration,
   type SourcePageCookie,
 } from "#src/prepare-source-material.ts";
 
-export const HERO_IMAGE_CONTENT_TYPES = [
+export const COVER_IMAGE_CONTENT_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
   "image/avif",
   "image/gif",
 ] as const;
-export type HeroImageContentType = (typeof HERO_IMAGE_CONTENT_TYPES)[number];
+export type CoverImageContentType = (typeof COVER_IMAGE_CONTENT_TYPES)[number];
 
-/** Why a hero image that could be requested is deliberately not kept. Retrying cannot change it. */
-export type HeroImageRefusalReason =
+/** Why a cover image that could be requested is deliberately not kept. Retrying cannot change it. */
+export type CoverImageRefusalReason =
   | "non-public-destination"
   | "http-error"
   | "too-large"
   | "unsupported-type";
 
 /** A refusal is an expected outcome; transport failures and timeouts throw instead. */
-export type LoadHeroImageResult =
-  | { result: "loaded"; bytes: Uint8Array; contentType: HeroImageContentType }
-  | { result: "refused"; reason: HeroImageRefusalReason };
+export type LoadCoverImageResult =
+  | { result: "loaded"; bytes: Uint8Array; contentType: CoverImageContentType }
+  | { result: "refused"; reason: CoverImageRefusalReason };
 
-/** Loads the declared hero image of the source page at the given URL. */
-export type HeroImageLoader = (
-  declaration: HeroImageDeclaration,
+/** Loads the declared cover image of the source page at the given URL. */
+export type CoverImageLoader = (
+  declaration: CoverImageDeclaration,
   sourceUrl: string,
-) => Promise<LoadHeroImageResult>;
+) => Promise<LoadCoverImageResult>;
 
 type RedirectedRequest = {
   url(): string;
   redirectedFrom(): RedirectedRequest | null;
 };
-type HeroImageResponse = {
+type CoverImageResponse = {
   status(): number;
   headers(): Record<string, string>;
   body(): Promise<Uint8Array>;
@@ -46,7 +46,7 @@ type InterceptedRoute = {
   continue(): Promise<void>;
   abort(errorCode: "blockedbyclient"): Promise<void>;
 };
-type HeroImagePage = {
+type CoverImagePage = {
   route(pattern: string, handler: (route: InterceptedRoute) => Promise<void>): Promise<unknown>;
   context(): {
     addCookies(cookies: SourcePageCookie[]): Promise<void>;
@@ -55,36 +55,36 @@ type HeroImagePage = {
   goto(
     url: string,
     options: { referer: string; timeout: number; waitUntil: "commit" },
-  ): Promise<HeroImageResponse | null>;
+  ): Promise<CoverImageResponse | null>;
   close(): Promise<void>;
 };
 
-/** Supplies browser pages used to request a hero image as a browser navigation. */
-export type HeroImageBrowser = {
-  newPage(options: { javaScriptEnabled: boolean }): Promise<HeroImagePage>;
+/** Supplies browser pages used to request a cover image as a browser navigation. */
+export type CoverImageBrowser = {
+  newPage(options: { javaScriptEnabled: boolean }): Promise<CoverImagePage>;
 };
 
-/** Supplies the browser, declaration, and source page used to load one hero image. */
-export type LoadHeroImageOptions = {
-  browser: HeroImageBrowser;
+/** Supplies the browser, declaration, and source page used to load one cover image. */
+export type LoadCoverImageOptions = {
+  browser: CoverImageBrowser;
   cookies?: SourcePageCookie[];
-  declaration: HeroImageDeclaration;
+  declaration: CoverImageDeclaration;
   sourceUrl: string;
 };
 
-export const MAX_HERO_IMAGE_BYTES = 10 * 1024 * 1024;
-const HERO_IMAGE_TIMEOUT_MS = 10_000;
+export const MAX_COVER_IMAGE_BYTES = 10 * 1024 * 1024;
+const COVER_IMAGE_TIMEOUT_MS = 10_000;
 
 /**
- * Requests the declared hero image through a browser, so the request carries the browser's network
+ * Requests the declared cover image through a browser, so the request carries the browser's network
  * identity, the source page as referrer, and the cookies configured for the image's host.
  */
-export async function loadHeroImage({
+export async function loadCoverImage({
   browser,
   cookies = [],
   declaration,
   sourceUrl,
-}: LoadHeroImageOptions): Promise<LoadHeroImageResult> {
+}: LoadCoverImageOptions): Promise<LoadCoverImageResult> {
   if (!isPublicUrl(declaration.url)) {
     return { result: "refused", reason: "non-public-destination" };
   }
@@ -103,18 +103,18 @@ export async function loadHeroImage({
       await page.context().addCookies(cookies);
     }
     // A navigation asks for a document by default; publishers that negotiate should send an image.
-    await page.setExtraHTTPHeaders({ Accept: `${HERO_IMAGE_CONTENT_TYPES.join(",")},*/*;q=0.5` });
+    await page.setExtraHTTPHeaders({ Accept: `${COVER_IMAGE_CONTENT_TYPES.join(",")},*/*;q=0.5` });
 
     // Resolving at commit leaves the body unread, so an oversized image is refused by its
     // declared length before the browser has buffered it.
     const response = await page.goto(declaration.url, {
       referer: sourceUrl,
-      timeout: HERO_IMAGE_TIMEOUT_MS,
+      timeout: COVER_IMAGE_TIMEOUT_MS,
       waitUntil: "commit",
     });
 
     if (!response) {
-      throw new Error("Expected hero-image navigation to return an HTTP response");
+      throw new Error("Expected cover-image navigation to return an HTTP response");
     }
 
     // Request interception does not see redirect hops, so they are checked once the chain is known.
@@ -126,18 +126,18 @@ export async function loadHeroImage({
       return { result: "refused", reason: "http-error" };
     }
 
-    if (Number(response.headers()["content-length"]) > MAX_HERO_IMAGE_BYTES) {
+    if (Number(response.headers()["content-length"]) > MAX_COVER_IMAGE_BYTES) {
       return { result: "refused", reason: "too-large" };
     }
 
-    const bytes = await rejectAfterTimeout(response.body(), HERO_IMAGE_TIMEOUT_MS);
+    const bytes = await rejectAfterTimeout(response.body(), COVER_IMAGE_TIMEOUT_MS);
 
     // The declared length is optional and unverified.
-    if (bytes.byteLength > MAX_HERO_IMAGE_BYTES) {
+    if (bytes.byteLength > MAX_COVER_IMAGE_BYTES) {
       return { result: "refused", reason: "too-large" };
     }
 
-    const contentType = detectHeroImageContentType(bytes);
+    const contentType = detectCoverImageContentType(bytes);
 
     return contentType === undefined
       ? { result: "refused", reason: "unsupported-type" }
@@ -152,7 +152,7 @@ export async function loadHeroImage({
  * trusted, and SVG is deliberately left out because it can carry scripts. Animation is not a reason
  * to refuse an image: the original is kept, and a surface decides how to show it.
  */
-export function detectHeroImageContentType(bytes: Uint8Array): HeroImageContentType | undefined {
+export function detectCoverImageContentType(bytes: Uint8Array): CoverImageContentType | undefined {
   if (startsWith(bytes, [0xff, 0xd8, 0xff])) {
     return "image/jpeg";
   }
@@ -210,7 +210,7 @@ async function rejectAfterTimeout<Value>(
       promise,
       new Promise<never>((_resolve, reject) => {
         timeoutId = setTimeout(() => {
-          reject(new Error(`Hero image was not received within ${timeoutMilliseconds} ms`));
+          reject(new Error(`Cover image was not received within ${timeoutMilliseconds} ms`));
         }, timeoutMilliseconds);
       }),
     ]);

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "47eb7544-5095-45c1-be40-b374e8527bdc",
+  "id": "e78d0487-b362-4221-875c-a6843320f49d",
   "prevId": "84199bfa-4049-420d-8f9f-0d1b2d81b9f2",
   "tables": {
     "conversions": {
@@ -77,8 +77,8 @@
           "notNull": false,
           "autoincrement": false
         },
-        "has_hero_image": {
-          "name": "has_hero_image",
+        "has_cover_image": {
+          "name": "has_cover_image",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,

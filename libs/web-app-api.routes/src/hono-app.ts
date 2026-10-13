@@ -362,9 +362,9 @@ const audioRoute = createRoute({
   },
 });
 const audioHeadRoute = createRoute({ ...audioRoute, method: "head" });
-const heroImageRoute = createRoute({
+const coverImageRoute = createRoute({
   method: "get",
-  path: "/api/files/audiobooks/{conversionId}/hero-image",
+  path: "/api/files/audiobooks/{conversionId}/cover-image",
   request: { params: conversionParamsSchema },
   responses: {
     200: {
@@ -375,13 +375,13 @@ const heroImageRoute = createRoute({
         "image/avif": { schema: binarySchema },
         "image/gif": { schema: binarySchema },
       },
-      description: "Hero image.",
+      description: "Cover image.",
     },
     304: { description: "Not modified." },
-    404: errorResponse("Hero image unavailable."),
+    404: errorResponse("Cover image unavailable."),
   },
 });
-const heroImageHeadRoute = createRoute({ ...heroImageRoute, method: "head" });
+const coverImageHeadRoute = createRoute({ ...coverImageRoute, method: "head" });
 
 type WebAppApiEnvironment<Bindings extends object> = {
   Bindings: Bindings;
@@ -415,8 +415,8 @@ export type WebAppApiHandlers<Bindings extends object> = {
   savePosition: WebAppApiRouteHandler<typeof savePositionRoute, Bindings>;
   getAudio: WebAppApiRouteHandler<typeof audioRoute, Bindings>;
   headAudio: WebAppApiRouteHandler<typeof audioHeadRoute, Bindings>;
-  getHeroImage: WebAppApiRouteHandler<typeof heroImageRoute, Bindings>;
-  headHeroImage: WebAppApiRouteHandler<typeof heroImageHeadRoute, Bindings>;
+  getCoverImage: WebAppApiRouteHandler<typeof coverImageRoute, Bindings>;
+  headCoverImage: WebAppApiRouteHandler<typeof coverImageHeadRoute, Bindings>;
 };
 
 /** Creates the typed HTTP interface used by the web application. */
@@ -440,8 +440,8 @@ export function createWebAppApi<Bindings extends object>(handlers: WebAppApiHand
     .openapi(savePositionRoute, handlers.savePosition)
     .openapi(audioRoute, handlers.getAudio)
     .openapi(audioHeadRoute, handlers.headAudio)
-    .openapi(heroImageRoute, handlers.getHeroImage)
-    .openapi(heroImageHeadRoute, handlers.headHeroImage);
+    .openapi(coverImageRoute, handlers.getCoverImage)
+    .openapi(coverImageHeadRoute, handlers.headCoverImage);
 }
 
 const unavailable = (): never => {
@@ -467,8 +467,8 @@ export function createWebAppContractApp() {
     getAudiobook: unavailable,
     getAudio: unavailable,
     headAudio: unavailable,
-    getHeroImage: unavailable,
-    headHeroImage: unavailable,
+    getCoverImage: unavailable,
+    headCoverImage: unavailable,
     retryConversion: unavailable,
     savePosition: unavailable,
   });

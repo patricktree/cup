@@ -6,9 +6,9 @@ import {
   countNarrationTextCharactersBySegment,
   SPEECH_CONFIG,
   storeAudiobook,
-  storeHeroImage,
-  type HeroImage,
-  type HeroImageStorage,
+  storeCoverImage,
+  type CoverImage,
+  type CoverImageStorage,
 } from "@cup/audiobook-production";
 import { ConversionPhase, type ConversionFailureCategory } from "@cup/conversion-contracts";
 import { conversionParamsSchema, type ConversionParams } from "@cup/conversion-contracts";
@@ -17,8 +17,8 @@ import type {
   SelectionChunkRunner,
 } from "@cup/narration-content-selection";
 import { createNarrationDocument } from "@cup/narration-document-creation";
-import type { HeroImageDeclaration, SourceMaterialPreparer } from "@cup/prepare-source-material";
-import type { HeroImageLoader } from "@cup/prepare-source-material/hero-image";
+import type { CoverImageDeclaration, SourceMaterialPreparer } from "@cup/prepare-source-material";
+import type { CoverImageLoader } from "@cup/prepare-source-material/cover-image";
 
 import { resolveConversionExecution } from "#src/conversion-execution.ts";
 import type { AudiobookWorkflowEnvironment } from "#src/workflow-environment.ts";
@@ -50,7 +50,7 @@ const PROCESSING_STEP_CONFIG = {
 } as const satisfies WorkflowStepConfig;
 
 // One retry covers a browser launch or connection that failed transiently; a refusal does not throw.
-const HERO_IMAGE_STEP_CONFIG = {
+const COVER_IMAGE_STEP_CONFIG = {
   retries: {
     limit: 1,
     delay: "2 seconds",
@@ -72,7 +72,7 @@ const MAX_NARRATION_CHUNKS = 200;
 
 export type PrepareAudiobookWorkflowServices = {
   prepareSourceMaterial: SourceMaterialPreparer;
-  loadHeroImage: HeroImageLoader;
+  loadCoverImage: CoverImageLoader;
   selectNarrationContent(
     sourceMaterialHtml: string,
     options: { conversionId: string; runChunk: SelectionChunkRunner },
@@ -120,12 +120,12 @@ export async function runPrepareAudiobookWorkflow({
 
       // Started beside content selection and awaited only before the manifest is stored, so a
       // slow image host does not delay selection.
-      const heroImagePromise = storeDeclaredHeroImage({
+      const coverImagePromise = storeDeclaredCoverImage({
         artifactPrefix,
         bucket,
         conversionId,
-        declaration: sourceMaterial.heroImage,
-        loadHeroImage: services.loadHeroImage,
+        declaration: sourceMaterial.coverImage,
+        loadCoverImage: services.loadCoverImage,
         sourceUrl,
         step,
       });
@@ -165,7 +165,7 @@ export async function runPrepareAudiobookWorkflow({
         throw new ContentLimitError();
       }
 
-      const heroImage = await heroImagePromise;
+      const coverImage = await coverImagePromise;
       const audiobookReference = await step.do(
         "store audiobook",
         PROCESSING_STEP_CONFIG,
@@ -179,7 +179,7 @@ export async function runPrepareAudiobookWorkflow({
             originalUrl: sourceUrl,
             narrationDocument,
             speechConfig: SPEECH_CONFIG,
-            ...(heroImage === undefined ? {} : { heroImage }),
+            ...(coverImage === undefined ? {} : { coverImage }),
           });
         },
       );
@@ -190,7 +190,7 @@ export async function runPrepareAudiobookWorkflow({
         readyOutcome: {
           title: sourceMaterial.title,
           audiobookReference,
-          ...(heroImage === undefined ? {} : { hasHeroImage: true as const }),
+          ...(coverImage === undefined ? {} : { hasCoverImage: true as const }),
           measurements: {
             narrationTextCharacters,
             narrationChunks: synchronizationUnits.length,
@@ -252,35 +252,35 @@ export async function runPrepareAudiobookWorkflow({
 }
 
 /**
- * Keeps the declared hero image when it can be loaded. Every failure leaves the audiobook without
+ * Keeps the declared cover image when it can be loaded. Every failure leaves the audiobook without
  * one instead of failing the conversion, so this never rejects.
  */
-async function storeDeclaredHeroImage({
+async function storeDeclaredCoverImage({
   artifactPrefix,
   bucket,
   conversionId,
   declaration,
-  loadHeroImage,
+  loadCoverImage,
   sourceUrl,
   step,
 }: {
   artifactPrefix: string;
-  bucket: HeroImageStorage;
+  bucket: CoverImageStorage;
   conversionId: string;
-  declaration: HeroImageDeclaration | undefined;
-  loadHeroImage: HeroImageLoader;
+  declaration: CoverImageDeclaration | undefined;
+  loadCoverImage: CoverImageLoader;
   sourceUrl: string;
   step: WorkflowStep;
-}): Promise<HeroImage | undefined> {
+}): Promise<CoverImage | undefined> {
   if (declaration === undefined) return undefined;
 
   try {
-    const outcome = await step.do("store hero image", HERO_IMAGE_STEP_CONFIG, async () => {
-      const loaded = await loadHeroImage(declaration, sourceUrl);
+    const outcome = await step.do("store cover image", COVER_IMAGE_STEP_CONFIG, async () => {
+      const loaded = await loadCoverImage(declaration, sourceUrl);
       if (loaded.result === "refused") return loaded;
 
       // The bytes are stored inside the step because a step result cannot carry them.
-      const heroImage = await storeHeroImage({
+      const coverImage = await storeCoverImage({
         artifactPrefix,
         bucket,
         bytes: loaded.bytes,
@@ -290,20 +290,20 @@ async function storeDeclaredHeroImage({
           ? {}
           : { alternativeText: declaration.alternativeText }),
       });
-      return { result: "stored" as const, heroImage };
+      return { result: "stored" as const, coverImage };
     });
-    if (outcome.result === "stored") return outcome.heroImage;
+    if (outcome.result === "stored") return outcome.coverImage;
 
-    logMissingHeroImage(conversionId, outcome.reason);
+    logMissingCoverImage(conversionId, outcome.reason);
   } catch (error) {
-    logMissingHeroImage(conversionId, error instanceof Error ? error.message : "Unknown error");
+    logMissingCoverImage(conversionId, error instanceof Error ? error.message : "Unknown error");
   }
 
   return undefined;
 }
 
-function logMissingHeroImage(conversionId: string, reason: string) {
-  console.warn(JSON.stringify({ event: "hero-image-unavailable", conversionId, reason }));
+function logMissingCoverImage(conversionId: string, reason: string) {
+  console.warn(JSON.stringify({ event: "cover-image-unavailable", conversionId, reason }));
 }
 
 class ContentLimitError extends Error {

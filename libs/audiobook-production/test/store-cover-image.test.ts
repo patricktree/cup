@@ -1,13 +1,13 @@
 import { expect, test } from "vitest";
 
-import { createHeroImageKey, storeHeroImage } from "#src/audiobook-production.ts";
+import { createCoverImageKey, storeCoverImage } from "#src/audiobook-production.ts";
 
 const BYTES = Uint8Array.of(0xff, 0xd8, 0xff, 0xe0);
 
 test("stores the original bytes under the conversion prefix with their content type", async () => {
   const puts: Array<{ key: string; value: Uint8Array; contentType: string }> = [];
 
-  const heroImage = await storeHeroImage({
+  const coverImage = await storeCoverImage({
     artifactPrefix: "accounts/account-id/conversions/conversion-id/",
     bucket: {
       put: async (key, value, { httpMetadata }) => {
@@ -23,12 +23,12 @@ test("stores the original bytes under the conversion prefix with their content t
 
   expect(puts).toEqual([
     {
-      key: "accounts/account-id/conversions/conversion-id/hero-image",
+      key: "accounts/account-id/conversions/conversion-id/cover-image",
       value: BYTES,
       contentType: "image/jpeg",
     },
   ]);
-  expect(heroImage).toEqual({
+  expect(coverImage).toEqual({
     contentType: "image/jpeg",
     byteLength: 4,
     alternativeText: "A lighthouse at dusk",
@@ -36,11 +36,11 @@ test("stores the original bytes under the conversion prefix with their content t
 });
 
 test("uses the trial layout when no artifact prefix is supplied", () => {
-  expect(createHeroImageKey("conversion-id")).toBe("conversions/conversion-id/hero-image");
+  expect(createCoverImageKey("conversion-id")).toBe("conversions/conversion-id/cover-image");
 });
 
 test("describes the object storage kept when a repeated write is answered with an earlier one", async () => {
-  const heroImage = await storeHeroImage({
+  const coverImage = await storeCoverImage({
     bucket: {
       put: async () => ({ size: 9000, httpMetadata: { contentType: "image/png" } }),
     },
@@ -49,12 +49,12 @@ test("describes the object storage kept when a repeated write is answered with a
     conversionId: "conversion-id",
   });
 
-  expect(heroImage).toEqual({ contentType: "image/png", byteLength: 9000 });
+  expect(coverImage).toEqual({ contentType: "image/png", byteLength: 9000 });
 });
 
 test("fails when storage produces no object", async () => {
   await expect(
-    storeHeroImage({
+    storeCoverImage({
       bucket: { put: async () => null },
       bytes: BYTES,
       contentType: "image/jpeg",

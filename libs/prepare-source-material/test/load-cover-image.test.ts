@@ -1,14 +1,14 @@
 import { expect, test } from "vitest";
 
 import {
-  detectHeroImageContentType,
-  type HeroImageBrowser,
-  loadHeroImage,
-  MAX_HERO_IMAGE_BYTES,
-} from "#src/load-hero-image.ts";
+  detectCoverImageContentType,
+  type CoverImageBrowser,
+  loadCoverImage,
+  MAX_COVER_IMAGE_BYTES,
+} from "#src/load-cover-image.ts";
 
 const SOURCE_URL = "https://publisher.example/story";
-const HERO_IMAGE_URL = "https://cdn.publisher.example/hero.jpg";
+const COVER_IMAGE_URL = "https://cdn.publisher.example/cover.jpg";
 const JPEG_BYTES = Uint8Array.of(0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10);
 const PNG_BYTES = Uint8Array.of(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00);
 
@@ -62,7 +62,7 @@ function createBrowser(response: FakeResponse) {
         },
       };
     },
-  } satisfies HeroImageBrowser;
+  } satisfies CoverImageBrowser;
 
   return { browser, observed };
 }
@@ -81,10 +81,10 @@ test("requests the declared image as a navigation from the source page", async (
   const { browser, observed } = createBrowser({});
 
   await expect(
-    loadHeroImage({
+    loadCoverImage({
       browser,
       cookies,
-      declaration: { url: HERO_IMAGE_URL },
+      declaration: { url: COVER_IMAGE_URL },
       sourceUrl: SOURCE_URL,
     }),
   ).resolves.toEqual({ result: "loaded", bytes: JPEG_BYTES, contentType: "image/jpeg" });
@@ -92,7 +92,7 @@ test("requests the declared image as a navigation from the source page", async (
   expect(observed.javaScriptEnabled).toBe(false);
   expect(observed.cookies).toEqual(cookies);
   expect(observed.navigation).toEqual({
-    url: HERO_IMAGE_URL,
+    url: COVER_IMAGE_URL,
     referer: SOURCE_URL,
     waitUntil: "commit",
   });
@@ -107,17 +107,17 @@ test("identifies the image type from its bytes rather than the response header",
   });
 
   await expect(
-    loadHeroImage({ browser, declaration: { url: HERO_IMAGE_URL }, sourceUrl: SOURCE_URL }),
+    loadCoverImage({ browser, declaration: { url: COVER_IMAGE_URL }, sourceUrl: SOURCE_URL }),
   ).resolves.toMatchObject({ result: "loaded", contentType: "image/png" });
 });
 
 test("refuses a non-public image URL without opening a page", async () => {
   const browser = {
     newPage: () => Promise.reject(new Error("No page should be opened")),
-  } satisfies HeroImageBrowser;
+  } satisfies CoverImageBrowser;
 
   await expect(
-    loadHeroImage({
+    loadCoverImage({
       browser,
       declaration: { url: "http://169.254.169.254/latest/meta-data" },
       sourceUrl: SOURCE_URL,
@@ -127,11 +127,11 @@ test("refuses a non-public image URL without opening a page", async () => {
 
 test("refuses an image reached through a non-public redirect hop", async () => {
   const { browser, observed } = createBrowser({
-    redirectedFromUrls: [HERO_IMAGE_URL, "http://10.0.0.5/internal.jpg"],
+    redirectedFromUrls: [COVER_IMAGE_URL, "http://10.0.0.5/internal.jpg"],
   });
 
   await expect(
-    loadHeroImage({ browser, declaration: { url: HERO_IMAGE_URL }, sourceUrl: SOURCE_URL }),
+    loadCoverImage({ browser, declaration: { url: COVER_IMAGE_URL }, sourceUrl: SOURCE_URL }),
   ).resolves.toEqual({ result: "refused", reason: "non-public-destination" });
   expect(observed.wasBodyRead).toBe(false);
   expect(observed.isPageClosed).toBe(true);
@@ -141,23 +141,23 @@ test("refuses an HTTP error response", async () => {
   const { browser } = createBrowser({ status: 403 });
 
   await expect(
-    loadHeroImage({ browser, declaration: { url: HERO_IMAGE_URL }, sourceUrl: SOURCE_URL }),
+    loadCoverImage({ browser, declaration: { url: COVER_IMAGE_URL }, sourceUrl: SOURCE_URL }),
   ).resolves.toEqual({ result: "refused", reason: "http-error" });
 });
 
 test("refuses an image whose declared length exceeds the limit without reading it", async () => {
   const { browser, observed } = createBrowser({
-    headers: { "content-length": String(MAX_HERO_IMAGE_BYTES + 1) },
+    headers: { "content-length": String(MAX_COVER_IMAGE_BYTES + 1) },
   });
 
   await expect(
-    loadHeroImage({ browser, declaration: { url: HERO_IMAGE_URL }, sourceUrl: SOURCE_URL }),
+    loadCoverImage({ browser, declaration: { url: COVER_IMAGE_URL }, sourceUrl: SOURCE_URL }),
   ).resolves.toEqual({ result: "refused", reason: "too-large" });
   expect(observed.wasBodyRead).toBe(false);
 });
 
 test("refuses an image that exceeds the limit despite an understated length", async () => {
-  const oversizedBytes = new Uint8Array(MAX_HERO_IMAGE_BYTES + 1);
+  const oversizedBytes = new Uint8Array(MAX_COVER_IMAGE_BYTES + 1);
   oversizedBytes.set(JPEG_BYTES);
   const { browser } = createBrowser({
     body: async () => oversizedBytes,
@@ -165,7 +165,7 @@ test("refuses an image that exceeds the limit despite an understated length", as
   });
 
   await expect(
-    loadHeroImage({ browser, declaration: { url: HERO_IMAGE_URL }, sourceUrl: SOURCE_URL }),
+    loadCoverImage({ browser, declaration: { url: COVER_IMAGE_URL }, sourceUrl: SOURCE_URL }),
   ).resolves.toEqual({ result: "refused", reason: "too-large" });
 });
 
@@ -176,7 +176,7 @@ test("refuses a response that is not an accepted image type", async () => {
   });
 
   await expect(
-    loadHeroImage({ browser, declaration: { url: HERO_IMAGE_URL }, sourceUrl: SOURCE_URL }),
+    loadCoverImage({ browser, declaration: { url: COVER_IMAGE_URL }, sourceUrl: SOURCE_URL }),
   ).resolves.toEqual({ result: "refused", reason: "unsupported-type" });
 });
 
@@ -186,7 +186,7 @@ test("fails rather than refuses when the body cannot be read, and closes the pag
   });
 
   await expect(
-    loadHeroImage({ browser, declaration: { url: HERO_IMAGE_URL }, sourceUrl: SOURCE_URL }),
+    loadCoverImage({ browser, declaration: { url: COVER_IMAGE_URL }, sourceUrl: SOURCE_URL }),
   ).rejects.toThrow("Connection reset");
   expect(observed.isPageClosed).toBe(true);
 });
@@ -203,7 +203,7 @@ test.each([
   ["image/gif", asciiBytes("GIF89a")],
   ["image/gif", asciiBytes("GIF87a")],
 ] as const)("detects %s", (contentType, bytes) => {
-  expect(detectHeroImageContentType(bytes)).toBe(contentType);
+  expect(detectCoverImageContentType(bytes)).toBe(contentType);
 });
 
 test.each([
@@ -216,7 +216,7 @@ test.each([
   ],
   ["an empty file", new Uint8Array()],
 ])("does not accept %s", (_description, bytes) => {
-  expect(detectHeroImageContentType(bytes)).toBeUndefined();
+  expect(detectCoverImageContentType(bytes)).toBeUndefined();
 });
 
 function asciiBytes(text: string): Uint8Array {

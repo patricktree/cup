@@ -33,9 +33,9 @@ test("publishes prepared narration without requiring any audio and fixes the spe
   });
   expect(audiobook).not.toHaveProperty("audio");
 });
-test("records the stored hero image in the manifest", async () => {
+test("records the stored cover image in the manifest", async () => {
   const { bucket } = createTestBucket();
-  const heroImage = {
+  const coverImage = {
     contentType: "image/jpeg",
     byteLength: 2048,
     alternativeText: "A lighthouse at dusk",
@@ -46,11 +46,11 @@ test("records the stored hero image in the manifest", async () => {
     title: "Title",
     originalUrl: "https://example.com",
     narrationDocument: document,
-    heroImage,
+    coverImage,
   });
 
   await expect(loadAudiobook({ bucket, audiobookReference: reference })).resolves.toMatchObject({
-    heroImage,
+    coverImage,
   });
 });
 test("rejects invalid narration before publishing a prepared artifact", async () => {

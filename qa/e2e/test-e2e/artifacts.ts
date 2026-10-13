@@ -4,8 +4,8 @@ import { analyzeMp3 } from "@cup/audiobook-production";
 
 import { getTrialSessionHeaders } from "#test-e2e/journey.ts";
 
-/** Follows the audiobook's hero image pointer and checks what the delivery route serves. */
-export async function validateHeroImage({
+/** Follows the audiobook's cover image pointer and checks what the delivery route serves. */
+export async function validateCoverImage({
   conversionId,
   origin,
   page,
@@ -19,12 +19,12 @@ export async function validateHeroImage({
   const audiobook: unknown = await (
     await request.get(`${origin}/api/audiobooks/${conversionId}`, { headers })
   ).json();
-  const heroImageUrl = `${origin}/api/files/audiobooks/${conversionId}/hero-image`;
+  const coverImageUrl = `${origin}/api/files/audiobooks/${conversionId}/cover-image`;
   expect(audiobook).toMatchObject({
-    heroImage: { url: heroImageUrl, alternativeText: "A deterministic hero image" },
+    coverImage: { url: coverImageUrl, alternativeText: "A deterministic cover image" },
   });
 
-  const imageResponse = await request.get(heroImageUrl, { headers });
+  const imageResponse = await request.get(coverImageUrl, { headers });
   expect(imageResponse.status()).toBe(200);
   expect(imageResponse.headers()["content-type"]).toBe("image/png");
   const image = await imageResponse.body();
@@ -33,13 +33,13 @@ export async function validateHeroImage({
   expect(Number(imageResponse.headers()["content-length"])).toBe(image.byteLength);
 
   const imageEtag = imageResponse.headers()["etag"];
-  if (imageEtag === undefined) throw new Error("Hero image response did not include an ETag");
-  const unchangedImage = await request.get(heroImageUrl, {
+  if (imageEtag === undefined) throw new Error("Cover image response did not include an ETag");
+  const unchangedImage = await request.get(coverImageUrl, {
     headers: { ...headers, "If-None-Match": imageEtag },
   });
   expect(unchangedImage.status()).toBe(304);
 
-  return heroImageUrl;
+  return coverImageUrl;
 }
 
 export async function validateAudioSegment({

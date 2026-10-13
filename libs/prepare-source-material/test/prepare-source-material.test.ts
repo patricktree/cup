@@ -4,7 +4,7 @@ import {
   assertPublicSourceUrl,
   type Browser,
   cleanAudiobookSourceMaterialHtml,
-  extractHeroImageDeclaration,
+  extractCoverImageDeclaration,
   loadPublicSourcePage,
   prepareSourceMaterial,
 } from "#src/prepare-source-material.ts";
@@ -304,29 +304,29 @@ test.each([
 
 test("prefers the secure Open Graph image and reads its alternative text", () => {
   expect(
-    extractHeroImageDeclaration(
+    extractCoverImageDeclaration(
       `
         <meta name="twitter:image" content="https://cdn.publisher.example/twitter.jpg" />
-        <meta property="og:image" content="http://cdn.publisher.example/hero.jpg" />
-        <meta property="og:image:secure_url" content="https://cdn.publisher.example/hero.jpg" />
+        <meta property="og:image" content="http://cdn.publisher.example/cover.jpg" />
+        <meta property="og:image:secure_url" content="https://cdn.publisher.example/cover.jpg" />
         <meta property="og:image:alt" content="  A lighthouse   at dusk " />
         <meta property="og:image" content="https://cdn.publisher.example/second.jpg" />
       `,
       SOURCE_URL,
     ),
   ).toEqual({
-    url: "https://cdn.publisher.example/hero.jpg",
+    url: "https://cdn.publisher.example/cover.jpg",
     alternativeText: "A lighthouse at dusk",
   });
 });
 
 test("falls back to the Twitter card image and resolves it against the source page", () => {
   expect(
-    extractHeroImageDeclaration(
-      '<meta name="twitter:image" content="/images/hero.png"><meta name="twitter:image:alt" content="A chart">',
+    extractCoverImageDeclaration(
+      '<meta name="twitter:image" content="/images/cover.png"><meta name="twitter:image:alt" content="A chart">',
       SOURCE_URL,
     ),
-  ).toEqual({ url: "https://publisher.example/images/hero.png", alternativeText: "A chart" });
+  ).toEqual({ url: "https://publisher.example/images/cover.png", alternativeText: "A chart" });
 });
 
 test.each([
@@ -338,18 +338,18 @@ test.each([
     "an oversized URL",
     `<meta property="og:image" content="https://cdn.publisher.example/${"a".repeat(2048)}">`,
   ],
-])("declares no hero image for %s", (_description, headHtml) => {
-  expect(extractHeroImageDeclaration(headHtml, SOURCE_URL)).toBeUndefined();
+])("declares no cover image for %s", (_description, headHtml) => {
+  expect(extractCoverImageDeclaration(headHtml, SOURCE_URL)).toBeUndefined();
 });
 
-test("takes the hero image from the rendered load even when the static load wins on text", async () => {
+test("takes the cover image from the rendered load even when the static load wins on text", async () => {
   const sourceMaterial = await prepareSourceMaterial({
     browser: UNUSED_BROWSER,
     url: SOURCE_URL,
     loadSourcePage: async ({ javaScriptEnabled }) => ({
       bodyHtml: "<main><h1>Source title</h1><p>Complete source text.</p></main>",
       documentTitle: "Source title | Publisher",
-      heroImage: {
+      coverImage: {
         url: javaScriptEnabled
           ? "https://cdn.publisher.example/article.jpg"
           : "https://cdn.publisher.example/site-default.jpg",
@@ -361,11 +361,11 @@ test("takes the hero image from the rendered load even when the static load wins
   expect(sourceMaterial).toEqual({
     html: "<main><h1>Source title</h1><p>Complete source text.</p></main>",
     title: "Source title",
-    heroImage: { url: "https://cdn.publisher.example/article.jpg" },
+    coverImage: { url: "https://cdn.publisher.example/article.jpg" },
   });
 });
 
-test("keeps the static load's hero image when the rendered load declares none", async () => {
+test("keeps the static load's cover image when the rendered load declares none", async () => {
   const sourceMaterial = await prepareSourceMaterial({
     browser: UNUSED_BROWSER,
     url: SOURCE_URL,
@@ -374,15 +374,15 @@ test("keeps the static load's hero image when the rendered load declares none", 
       documentTitle: "Source title | Publisher",
       ...(javaScriptEnabled
         ? {}
-        : { heroImage: { url: "https://cdn.publisher.example/static.jpg" } }),
+        : { coverImage: { url: "https://cdn.publisher.example/static.jpg" } }),
       responseStatus: 200,
     }),
   });
 
-  expect(sourceMaterial.heroImage).toEqual({ url: "https://cdn.publisher.example/static.jpg" });
+  expect(sourceMaterial.coverImage).toEqual({ url: "https://cdn.publisher.example/static.jpg" });
 });
 
-test("reads the hero image declaration from the loaded page's head", async () => {
+test("reads the cover image declaration from the loaded page's head", async () => {
   const browser = {
     newPage: async () => ({
       route: async () => {},
@@ -392,7 +392,7 @@ test("reads the hero image declaration from the loaded page's head", async () =>
       locator: (selector) => ({
         innerHTML: async () =>
           selector === "head"
-            ? '<meta property="og:image" content="https://cdn.publisher.example/hero.jpg">'
+            ? '<meta property="og:image" content="https://cdn.publisher.example/cover.jpg">'
             : "<p>Source content</p>",
       }),
       title: async () => "Source title",
@@ -405,7 +405,7 @@ test("reads the hero image declaration from the loaded page's head", async () =>
   ).resolves.toEqual({
     bodyHtml: "<p>Source content</p>",
     documentTitle: "Source title",
-    heroImage: { url: "https://cdn.publisher.example/hero.jpg" },
+    coverImage: { url: "https://cdn.publisher.example/cover.jpg" },
     responseStatus: 200,
   });
 });

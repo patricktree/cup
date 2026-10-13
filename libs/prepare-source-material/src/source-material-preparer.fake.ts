@@ -1,21 +1,21 @@
 import {
   assertPublicSourceUrl,
   prepareLoadedSourcePage,
-  type HeroImageDeclaration,
+  type CoverImageDeclaration,
   type SourceMaterialPreparer,
 } from "#src/prepare-source-material.ts";
 
 export type ControlledSourceMaterialPreparerOptions = {
   url: string;
   html: string;
-  heroImage?: HeroImageDeclaration;
+  coverImage?: CoverImageDeclaration;
 };
 
 /** Creates a deterministic source preparer backed by controlled HTML and production cleanup. */
 export function createControlledSourceMaterialPreparer({
   url: controlledUrl,
   html,
-  heroImage,
+  coverImage,
 }: ControlledSourceMaterialPreparerOptions): SourceMaterialPreparer {
   assertPublicSourceUrl(controlledUrl);
 
@@ -27,7 +27,7 @@ export function createControlledSourceMaterialPreparer({
     return prepareLoadedSourcePage({
       bodyHtml: html,
       documentTitle: "Controlled source fixture",
-      ...(heroImage === undefined ? {} : { heroImage }),
+      ...(coverImage === undefined ? {} : { coverImage }),
       responseStatus: 200,
     });
   };

@@ -65,8 +65,8 @@ export const conversions = sqliteTable(
     audiobookReference: text("audiobook_reference_json", {
       mode: "json",
     }).$type<AudiobookReference>(),
-    // Set only for a ready conversion whose audiobook has a hero image; null otherwise.
-    hasHeroImage: integer("has_hero_image", { mode: "boolean" }),
+    // Set only for a ready conversion whose audiobook has a cover image; null otherwise.
+    hasCoverImage: integer("has_cover_image", { mode: "boolean" }),
     measurements: text("measurements_json", { mode: "json" }).$type<ConversionMeasurements>(),
     providerUsage: text("provider_usage_json", { mode: "json" }).$type<Record<string, unknown>>(),
     failureCategory: text("failure_category", { enum: FAILURE_CATEGORIES }),

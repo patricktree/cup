@@ -1,4 +1,4 @@
-import { validateAudioSegment, validateHeroImage } from "#test-e2e/artifacts.ts";
+import { validateAudioSegment, validateCoverImage } from "#test-e2e/artifacts.ts";
 import { expect, test } from "#test-e2e/fixtures.ts";
 import {
   getTrialSessionHeaders,
@@ -55,7 +55,7 @@ test("trial article links require the owning grant session for reading and repla
   await waitForAudiobook(page);
   const id = new URL(page.url()).pathname.split("/").at(-1)!;
   const segment = (await waitForGeneratedAudio(page, id))[0]!;
-  const heroImageUrl = await validateHeroImage({
+  const coverImageUrl = await validateCoverImage({
     conversionId: id,
     origin: workerEnvironment.origin,
     page,
@@ -73,7 +73,7 @@ test("trial article links require the owning grant session for reading and repla
     (await anonymous.request.get(workerEnvironment.origin + `/api/audiobooks/${id}`)).status(),
   ).toBe(401);
   expect((await anonymous.request.get(segment.url)).status()).toBe(401);
-  expect((await anonymous.request.get(heroImageUrl)).status()).toBe(401);
+  expect((await anonymous.request.get(coverImageUrl)).status()).toBe(401);
   const response = await anonymous.request.post(
     workerEnvironment.origin + `/api/audiobooks/${id}/retry`,
     {
@@ -96,9 +96,9 @@ test("trial article links require the owning grant session for reading and repla
   expect((await anonymous.request.get(segment.url, { headers: otherGrantHeaders })).status()).toBe(
     401,
   );
-  expect((await anonymous.request.get(heroImageUrl, { headers: otherGrantHeaders })).status()).toBe(
-    401,
-  );
+  expect(
+    (await anonymous.request.get(coverImageUrl, { headers: otherGrantHeaders })).status(),
+  ).toBe(401);
   expect(
     (await page.request.get(segment.url, { headers: await getTrialSessionHeaders(page) })).status(),
   ).toBe(200);

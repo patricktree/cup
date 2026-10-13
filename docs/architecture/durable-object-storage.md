@@ -147,7 +147,7 @@ erDiagram
         integer completed_at_ms "nullable"
         text title "nullable"
         text audiobook_reference_json "nullable"
-        integer has_hero_image "nullable"
+        integer has_cover_image "nullable"
         text measurements_json "nullable"
         text provider_usage_json "nullable"
         text failure_category "nullable"

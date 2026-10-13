@@ -34,7 +34,7 @@ import { isDevelopmentOperatorRequest } from "#src/operator-access.ts";
 import {
   loadReadyAudiobookFromEnvironment,
   serveAudio,
-  serveHeroImage,
+  serveCoverImage,
 } from "#src/serve-audiobook.ts";
 import { createConversionGrant } from "#src/use-cases/create-conversion-grant.ts";
 import { getGrantConversion as loadGrantConversion } from "#src/use-cases/get-grant-conversion.ts";
@@ -650,14 +650,14 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
         ...base,
         ...synthesis,
         title: audiobook.title,
-        ...(audiobook.heroImage === undefined
+        ...(audiobook.coverImage === undefined
           ? {}
           : {
-              heroImage: {
-                url: `${new URL(context.req.url).origin}/api/files/audiobooks/${conversionId}/hero-image`,
-                ...(audiobook.heroImage.alternativeText === undefined
+              coverImage: {
+                url: `${new URL(context.req.url).origin}/api/files/audiobooks/${conversionId}/cover-image`,
+                ...(audiobook.coverImage.alternativeText === undefined
                   ? {}
-                  : { alternativeText: audiobook.heroImage.alternativeText }),
+                  : { alternativeText: audiobook.coverImage.alternativeText }),
               },
             }),
         narrationDocument: audiobook.narrationDocument,
@@ -751,9 +751,9 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
       context.get("requestId"),
     );
   },
-  async getHeroImage(context) {
+  async getCoverImage(context) {
     const { conversionId } = context.req.valid("param");
-    return serveHeroImage(
+    return serveCoverImage(
       context.env,
       context.req.raw,
       conversionId,
@@ -761,9 +761,9 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
       context.get("requestId"),
     );
   },
-  async headHeroImage(context) {
+  async headCoverImage(context) {
     const { conversionId } = context.req.valid("param");
-    return serveHeroImage(
+    return serveCoverImage(
       context.env,
       context.req.raw,
       conversionId,
@@ -1381,7 +1381,7 @@ function allowedMethodsForApiPath(pathname: string): string[] | undefined {
     [/^\/api\/audiobooks\/[^/]+\/retry$/, ["POST"]],
     [/^\/api\/audiobooks\/[^/]+\/position$/, ["PUT"]],
     [/^\/api\/files\/audiobooks\/[^/]+\/segments\/[^/]+\/audio\.mp3$/, ["GET", "HEAD"]],
-    [/^\/api\/files\/audiobooks\/[^/]+\/hero-image$/, ["GET", "HEAD"]],
+    [/^\/api\/files\/audiobooks\/[^/]+\/cover-image$/, ["GET", "HEAD"]],
     [/^\/api\/operator\/grants$/, ["GET", "POST"]],
     [/^\/api\/operator\/grants\/[^/]+$/, ["GET"]],
     [/^\/api\/operator\/grants\/[^/]+\/allowance$/, ["PUT"]],

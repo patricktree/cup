@@ -108,17 +108,17 @@ export const audioSegmentSchema = z.discriminatedUnion("status", [
   audioSegmentBaseSchema.extend({ status: z.literal("failed"), explanation: z.string() }),
 ]);
 export type AudioSegment = z.infer<typeof audioSegmentSchema>;
-/** Where to request the audiobook's hero image; the bytes are served with audio-file authorization. */
-export const heroImageSchema = z
+/** Where to request the audiobook's cover image; the bytes are served with audio-file authorization. */
+export const coverImageSchema = z
   .object({ url: z.url(), alternativeText: z.string().min(1).optional() })
   .strict();
-export type HeroImage = z.infer<typeof heroImageSchema>;
+export type CoverImage = z.infer<typeof coverImageSchema>;
 const readerBase = { originalUrl: sourceUrlSchema, canGenerate: z.boolean() };
 const preparedBase = {
   ...readerBase,
   title: z.string().min(1),
-  // Absent when the audiobook has no hero image.
-  heroImage: heroImageSchema.optional(),
+  // Absent when the audiobook has no cover image.
+  coverImage: coverImageSchema.optional(),
   narrationDocument: z
     .object({
       html: z.string().min(1),
@@ -201,7 +201,7 @@ export const historyItemSchema = z.object({
       .object({
         status: z.literal("ready"),
         title: z.string(),
-        hasHeroImage: z.literal(true).optional(),
+        hasCoverImage: z.literal(true).optional(),
       })
       .passthrough(),
     z.object({ status: z.literal("failed"), explanation: z.string() }).passthrough(),
