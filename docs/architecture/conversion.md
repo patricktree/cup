@@ -24,7 +24,7 @@ sequenceDiagram
     par Beside content selection
         Preparation->>AI: Select narration content
     and When the source page declares one
-        Preparation->>R2: Fetch and store cover image
+        Preparation->>R2: Store fetched cover image
     end
     Preparation->>R2: Store document and speech configuration
     Preparation->>Owner: Set ready outcome with every segment's text length
@@ -62,15 +62,15 @@ Preparation outcomes record narration text size, chunk count, and content-select
 
 ## Cover image
 
-Preparation keeps the cover image a source page declares, when it can. Nothing displays it yet: this change stores it, records it, and serves it, so a later surface needs only client work.
+Preparation keeps the cover image a source page declares, when it can. No client displays it yet: it is stored, recorded, and served, so a surface that shows it needs only client work.
 
-Source preparation reads the declaration from page metadata, never from images in the article body: the first `og:image` (preferring `og:image:secure_url`), then `twitter:image`, with `og:image:alt` or `twitter:image:alt` as alternative text when declared. The declaration is chosen independently of which page load supplies the text. The rendered load's declaration wins when it has one, otherwise the static load's, because a static shell often declares nothing or only a site-wide image. The Gates Notes fixture is such a page: its static HTML carries no image metadata at all. Embedded `data:` images and URLs longer than 2,048 characters are ignored, since the declaration travels in a workflow step result.
+Source preparation reads the declaration from page metadata, never from images in the article body: the first `og:image` (preferring its `og:image:secure_url`), then `twitter:image`, each with its own `og:image:alt` or `twitter:image:alt` as alternative text when declared. When a page declares several Open Graph images, only the first one and its properties count. The declaration is chosen independently of which page load supplies the text. The rendered load's declaration wins when it has one, otherwise the static load's, because a static shell often declares nothing or only a site-wide image. The Gates Notes fixture is such a page: its static HTML carries no image metadata at all. Embedded `data:` images and URLs longer than 2,048 characters are unusable, since the declaration travels in a workflow step result; an unusable declaration falls through to the next candidate.
 
 A separate workflow step fetches the image while narration content is selected, and the manifest is stored only after both finish. The step opens its own browser session after source preparation has closed the first, navigates to the image with JavaScript disabled, and sends the source page as referrer and the configured source-page cookies. A browser is used instead of a Worker `fetch` because publishers refuse non-browser clients: on 2026-10-13 Gates Notes answered a plain request carrying a browser user agent with `403 Access Denied`. A second session, rather than keeping the first alive, keeps the step self-contained and retryable, and the two sessions never overlap.
 
 The image is stored unchanged. It must be a JPEG, PNG, WebP, AVIF, or GIF as identified from its leading bytes, not from the response header, and at most 10 MiB. SVG is refused because it can carry scripts. Animation is not a reason for refusal, since the original is kept and a surface decides how to show it; AVIF image sequences are the exception only because their file type is not recognized. The size limit is checked against the declared length before the body is read and again on the received bytes, because the browser hands over a body only once it is fully buffered. The URL and every redirect hop must be public destinations. Request interception does not see redirect hops, so a hop to a non-public host is detected after the response and the result discarded; the request to that hop has been made by then. The same limitation applies to source pages.
 
-Keeping the image is best-effort. A refusal, a timeout, or a browser failure after one retry leaves the audiobook without a cover image and is logged as `cover-image-unavailable` with its reason; it never fails or delays the conversion beyond the step's bounds, and no client is told why. Audiobooks prepared before this behavior have none and are not backfilled.
+Keeping the image is best-effort. A refusal, a timeout, or a browser failure after one retry leaves the audiobook without a cover image and is logged as `cover-image-unavailable` with its reason; it never fails or delays the conversion beyond the step's bounds, and no client is told why. When preparation fails for another reason, the failure is recorded only after a running cover image step has finished, so the step cannot write into a conversion that is already being cleaned up. Audiobooks prepared before this behavior have none and are not backfilled.
 
 The manifest records the stored image's content type, byte length, and alternative text, and the owner's ready outcome records that one exists. The audiobook response then carries a pointer to the [delivery route](#delivery-positions-and-lifecycle), and account history items carry the owner's flag. The image is copied rather than linked from the publisher so that opening a private audiobook does not disclose the reader to the publisher, the content security policy can keep images same-origin, and the copy is erased with the account.
 

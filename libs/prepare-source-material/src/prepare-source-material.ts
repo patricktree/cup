@@ -58,8 +58,12 @@ const SOURCE_PAGE_JAVASCRIPT_MODES = [false, true] as const;
 const MAX_COVER_IMAGE_URL_LENGTH = 2048;
 const MAX_COVER_IMAGE_ALTERNATIVE_TEXT_LENGTH = 500;
 // In order of preference; the secure variant names the same image as `og:image`.
-const OPEN_GRAPH_IMAGE_PROPERTIES = ["og:image:secure_url", "og:image", "og:image:url"] as const;
-const TWITTER_IMAGE_PROPERTIES = ["twitter:image", "twitter:image:src"] as const;
+const OPEN_GRAPH_IMAGE_URL_PROPERTIES = [
+  "og:image:secure_url",
+  "og:image",
+  "og:image:url",
+] as const;
+const TWITTER_IMAGE_URL_PROPERTIES = ["twitter:image", "twitter:image:src"] as const;
 const RENDERED_SOURCE_PAGE_READY_TIMEOUT_MS = 30_000;
 const RENDERED_SOURCE_PAGE_READINESS = {
   minimumBlockCount: 2,
@@ -168,8 +172,9 @@ export async function prepareSourceMaterial({
 
   if (sourceMaterials.length > 0) {
     const { html, title } = selectBetterSourceMaterial(sourceMaterials);
-    // Independent of which load has more text: the rendered load comes last, and its metadata is
-    // the fuller declaration because a static shell often carries none or only a site-wide image.
+    // Independent of which load has more text: `SOURCE_PAGE_JAVASCRIPT_MODES` puts the rendered
+    // load last, and its metadata is the fuller declaration because a static shell often carries
+    // none or only a site-wide image.
     const coverImage = sourceMaterials.at(-1)?.coverImage ?? sourceMaterials[0]?.coverImage;
 
     return { html, title, ...(coverImage === undefined ? {} : { coverImage }) };
@@ -288,27 +293,50 @@ export function extractCoverImageDeclaration(
   sourcePageUrl: string,
 ): CoverImageDeclaration | undefined {
   const metadata = collectMetadata(parseFragment(headHtml));
-  const openGraphImage = findFirstMetadataContent(metadata, OPEN_GRAPH_IMAGE_PROPERTIES);
-  const declaredUrl =
-    openGraphImage ?? findFirstMetadataContent(metadata, TWITTER_IMAGE_PROPERTIES);
+  const openGraphImage = selectFirstOpenGraphImage(metadata);
+  // Each candidate keeps the alternative text declared for it. An unusable declaration, such as
+  // an embedded image, falls through to the next candidate.
+  const candidates = [
+    ...OPEN_GRAPH_IMAGE_URL_PROPERTIES.map((property) => ({
+      declaredUrl: findMetadataContent(openGraphImage, property),
+      alternativeText: findMetadataContent(openGraphImage, "og:image:alt"),
+    })),
+    ...TWITTER_IMAGE_URL_PROPERTIES.map((property) => ({
+      declaredUrl: findMetadataContent(metadata, property),
+      alternativeText: findMetadataContent(metadata, "twitter:image:alt"),
+    })),
+  ];
 
+  for (const { declaredUrl, alternativeText } of candidates) {
+    const url = resolveCoverImageUrl(declaredUrl, sourcePageUrl);
+
+    if (url !== undefined) {
+      return {
+        url,
+        ...(alternativeText === undefined
+          ? {}
+          : { alternativeText: alternativeText.slice(0, MAX_COVER_IMAGE_ALTERNATIVE_TEXT_LENGTH) }),
+      };
+    }
+  }
+
+  return undefined;
+}
+
+function resolveCoverImageUrl(
+  declaredUrl: string | undefined,
+  sourcePageUrl: string,
+): string | undefined {
   if (declaredUrl === undefined || !URL.canParse(declaredUrl, sourcePageUrl)) {
     return undefined;
   }
 
   const url = new URL(declaredUrl, sourcePageUrl);
-  if (
-    (url.protocol !== "http:" && url.protocol !== "https:") ||
-    url.href.length > MAX_COVER_IMAGE_URL_LENGTH
-  ) {
-    return undefined;
-  }
 
-  const alternativeText = findFirstMetadataContent(metadata, [
-    openGraphImage === undefined ? "twitter:image:alt" : "og:image:alt",
-  ])?.slice(0, MAX_COVER_IMAGE_ALTERNATIVE_TEXT_LENGTH);
-
-  return { url: url.href, ...(alternativeText === undefined ? {} : { alternativeText }) };
+  return (url.protocol === "http:" || url.protocol === "https:") &&
+    url.href.length <= MAX_COVER_IMAGE_URL_LENGTH
+    ? url.href
+    : undefined;
 }
 
 type Metadata = { property: string; content: string };
@@ -327,31 +355,45 @@ function collectMetadata(parentNode: DefaultTreeAdapterMap["parentNode"]): Metad
       childNode.attrs.find((attribute) => attribute.name === name)?.value;
     // Open Graph uses `property`; Twitter cards and many publishers use `name` for either.
     const property = (getAttribute("property") ?? getAttribute("name"))?.trim().toLowerCase();
-    const content = normalizeTitleText(getAttribute("content") ?? "");
+    const content = normalizeWhitespace(getAttribute("content") ?? "");
 
     return property && content.length > 0 ? [{ property, content }] : [];
   });
 }
 
-function findFirstMetadataContent(
-  metadata: readonly Metadata[],
-  properties: readonly string[],
-): string | undefined {
-  for (const property of properties) {
-    const content = metadata.find((item) => item.property === property)?.content;
+/**
+ * Open Graph attaches structured properties such as `og:image:secure_url` and `og:image:alt` to the
+ * `og:image` they accompany. A page can declare several images; only the first one's properties are
+ * returned, so a later image's properties never describe the first.
+ */
+function selectFirstOpenGraphImage(metadata: readonly Metadata[]): Metadata[] {
+  const isImageProperty = (item: Metadata) =>
+    item.property === "og:image" || item.property.startsWith("og:image:");
+  const firstIndex = metadata.findIndex(isImageProperty);
 
-    if (content !== undefined) {
-      return content;
-    }
+  if (firstIndex === -1) {
+    return [];
   }
 
-  return undefined;
+  const imageIndex = metadata.findIndex(
+    (item, index) => index >= firstIndex && item.property === "og:image",
+  );
+  const nextImageIndex =
+    imageIndex === -1
+      ? -1
+      : metadata.findIndex((item, index) => index > imageIndex && item.property === "og:image");
+
+  return metadata.slice(firstIndex, nextImageIndex === -1 ? undefined : nextImageIndex);
+}
+
+function findMetadataContent(metadata: readonly Metadata[], property: string): string | undefined {
+  return metadata.find((item) => item.property === property)?.content;
 }
 
 function extractSourceTitle(bodyHtml: string, documentTitle: string): string {
   const documentFragment = parseFragment(bodyHtml);
   const heading = findFirstElement(documentFragment, "h1");
-  const title = normalizeTitleText(heading ? extractNodeText(heading) : documentTitle);
+  const title = normalizeWhitespace(heading ? extractNodeText(heading) : documentTitle);
 
   if (title.length === 0) {
     throw new Error("Expected the source page to have a title");
@@ -405,7 +447,7 @@ function getSourceMaterialTextLength(sourceMaterial: SourceMaterial): number {
   const contentRoot = findFirstElement(documentFragment, "article") ?? documentFragment;
   const narrationText = extractNarrationText(contentRoot);
 
-  return normalizeTitleText(narrationText || extractNodeText(contentRoot)).length;
+  return normalizeWhitespace(narrationText || extractNodeText(contentRoot)).length;
 }
 
 function extractNarrationText(parentNode: DefaultTreeAdapterMap["parentNode"]): string {
@@ -434,7 +476,7 @@ function extractNodeText(parentNode: DefaultTreeAdapterMap["parentNode"]): strin
     .join("");
 }
 
-function normalizeTitleText(text: string): string {
+function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/gu, " ").trim();
 }
 

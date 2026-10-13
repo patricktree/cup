@@ -107,6 +107,9 @@ export async function runPrepareAudiobookWorkflow({
   const { artifactPrefix, artifactBucket: bucket } = execution;
   let stage: ConversionFailureCategory = "source-preparation";
 
+  // Assigned once source preparation has finished; it never rejects.
+  let coverImagePromise: Promise<CoverImage | undefined> | undefined;
+
   const result = await (async () => {
     try {
       const sourceMaterial = await step.do(
@@ -120,7 +123,7 @@ export async function runPrepareAudiobookWorkflow({
 
       // Started beside content selection and awaited only before the manifest is stored, so a
       // slow image host does not delay selection.
-      const coverImagePromise = storeDeclaredCoverImage({
+      coverImagePromise = storeDeclaredCoverImage({
         artifactPrefix,
         bucket,
         conversionId,
@@ -201,6 +204,10 @@ export async function runPrepareAudiobookWorkflow({
         },
       };
     } catch (error) {
+      // Let a cover image step that is still running finish first, so it cannot write into the
+      // conversion's prefix after the owner has started cleaning up the failed conversion.
+      await coverImagePromise;
+
       const failedOutcome = await step.do(
         "create failed conversion outcome",
         PROCESSING_STEP_CONFIG,
@@ -296,7 +303,10 @@ async function storeDeclaredCoverImage({
 
     logMissingCoverImage(conversionId, outcome.reason);
   } catch (error) {
-    logMissingCoverImage(conversionId, error instanceof Error ? error.message : "Unknown error");
+    logMissingCoverImage(
+      conversionId,
+      error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+    );
   }
 
   return undefined;

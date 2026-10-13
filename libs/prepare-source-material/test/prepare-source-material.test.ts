@@ -329,6 +329,34 @@ test("falls back to the Twitter card image and resolves it against the source pa
   ).toEqual({ url: "https://publisher.example/images/cover.png", alternativeText: "A chart" });
 });
 
+test("uses only the first Open Graph image's own properties", () => {
+  expect(
+    extractCoverImageDeclaration(
+      `
+        <meta property="og:image" content="https://cdn.publisher.example/first.jpg" />
+        <meta property="og:image" content="http://cdn.publisher.example/second.jpg" />
+        <meta property="og:image:secure_url" content="https://cdn.publisher.example/second.jpg" />
+        <meta property="og:image:alt" content="The second image" />
+      `,
+      SOURCE_URL,
+    ),
+  ).toEqual({ url: "https://cdn.publisher.example/first.jpg" });
+});
+
+test("falls through to the Twitter card image when the Open Graph image is unusable", () => {
+  expect(
+    extractCoverImageDeclaration(
+      `
+        <meta property="og:image" content="data:image/png;base64,iVBORw0KGgo=" />
+        <meta property="og:image:alt" content="An embedded image" />
+        <meta name="twitter:image" content="https://cdn.publisher.example/card.jpg" />
+        <meta name="twitter:image:alt" content="A card image" />
+      `,
+      SOURCE_URL,
+    ),
+  ).toEqual({ url: "https://cdn.publisher.example/card.jpg", alternativeText: "A card image" });
+});
+
 test.each([
   ["no image metadata", '<meta property="og:title" content="A title">'],
   ["an empty declaration", '<meta property="og:image" content=" ">'],
