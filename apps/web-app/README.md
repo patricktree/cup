@@ -63,4 +63,4 @@ pnpm --filter '@cup/web-app' test:components --update-snapshots
 
 Each run starts its own gallery server on a port the operating system assigns. It never attaches to a gallery that is already running, so runs in several checkouts do not interfere with each other or with an interactive gallery.
 
-Explore the stories with `pnpm --filter '@cup/web-app' dev:gallery`, which serves the gallery at <http://127.0.0.1:3100/ui-gallery/index.html>.
+Explore the stories with `pnpm --filter '@cup/web-app' dev:gallery`, which serves the gallery at <http://127.0.0.1:3100/ui-gallery/index.html>. The gallery opens on a grid with a live thumbnail of every story, grouped by story file; select a thumbnail to open that story at full size. An opened story shows a strip of thumbnails for the other stories in the same file, which switches between them in place.
