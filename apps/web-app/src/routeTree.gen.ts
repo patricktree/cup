@@ -8,13 +8,13 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as ShellRouteImport } from './routes/_shell'
-import { Route as ShellAccountRouteImport } from './routes/_shell.account'
-import { Route as ShellHistoryRouteImport } from './routes/_shell.history'
-import { Route as TrialsGrantIdRouteImport } from './routes/trials.$grantId'
-import { Route as ShellAudiobooksConversionIdRouteImport } from './routes/_shell.audiobooks.$conversionId'
+import { Route as rootRouteImport } from './routes/__root.js'
+import { Route as IndexRouteImport } from './routes/index.js'
+import { Route as ShellRouteImport } from './routes/_shell.js'
+import { Route as ShellAccountRouteImport } from './routes/_shell.account.js'
+import { Route as ShellHistoryRouteImport } from './routes/_shell.history.js'
+import { Route as TrialsGrantIdRouteImport } from './routes/trials.$grantId.js'
+import { Route as ShellAudiobooksConversionIdRouteImport } from './routes/_shell.audiobooks.$conversionId.js'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',

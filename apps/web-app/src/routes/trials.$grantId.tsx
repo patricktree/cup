@@ -30,7 +30,7 @@ export const Route = createFileRoute("/trials/$grantId")({
       new URLSearchParams(location.searchStr).has("code") ||
       (await getResourceAccountSession())
     ) {
-      return redirect({ to: "/", search: true, replace: true });
+      throw redirect({ to: "/", search: true, replace: true });
     }
 
     const access = readCredentialFromFragment(location.hash);
@@ -45,7 +45,7 @@ export const Route = createFileRoute("/trials/$grantId")({
       const snapshot = await exchangeCredential(params.grantId, access.credential);
       context.queryClient.setQueryData(createGrantQueryKey(params.grantId), snapshot);
       trialBrowserState.setLastGrantId(params.grantId);
-      return redirect({ to: ".", hash: "" });
+      throw redirect({ to: ".", hash: "" });
     }
 
     if (access.kind === "session") {

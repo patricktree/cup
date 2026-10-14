@@ -9,7 +9,7 @@ import { routeTree } from "#src/routeTree.gen.js";
 export function createAppRouter(history?: RouterHistory) {
   return createRouter({
     basepath: "/app",
-    history,
+    ...(history && { history }),
     context: {
       queryClient,
     },
