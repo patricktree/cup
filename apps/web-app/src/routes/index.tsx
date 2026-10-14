@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import React from "react";
 
-import { ConversionEntryPage } from "#src/app/components/conversion-entry-page.js";
+import { ConversionShell } from "#src/app/components/conversion-shell.jsx";
 import { StartConversionForm } from "#src/app/components/start-conversion-form.js";
 
 export const Route = createFileRoute("/")({
@@ -10,8 +10,8 @@ export const Route = createFileRoute("/")({
 
 function IndexPage(): React.JSX.Element {
   return (
-    <ConversionEntryPage>
+    <ConversionShell>
       <StartConversionForm mode="account" />
-    </ConversionEntryPage>
+    </ConversionShell>
   );
 }

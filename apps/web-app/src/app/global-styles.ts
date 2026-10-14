@@ -95,7 +95,6 @@ export const cssBase = css`
       --color-fg: var(--color-black);
       --color-bg: var(--color-white);
       --color-input-bg: #fff;
-      --color-surface-translucent: rgb(255 255 255 / 24%);
       --color-error: #b42318;
       --color-primary-hsl: var(--color-black-hsl);
       --color-primary: hsl(var(--color-primary-hsl));
@@ -113,10 +112,9 @@ export const cssBase = css`
       --line-height-display: 55px;
 
       --spacing-base: 8px;
-      --app-padding-block: var(--spacing-base);
+      --app-padding-block: calc(2 * var(--spacing-base));
       --app-padding-inline: calc(2 * var(--spacing-base));
       --app-max-width: 800px;
-      --player-controls-height: 150px;
 
       --border-radius-sm: 4px;
       --border-radius-lg: 24px;

@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-router";
 import React from "react";
 
-import { ConversionEntryPage } from "#src/app/components/conversion-entry-page.js";
+import { ConversionShell } from "#src/app/components/conversion-shell.jsx";
 import { ErrorMessage } from "#src/app/components/error-message.js";
 import { StartConversionForm } from "#src/app/components/start-conversion-form.js";
 import { DSButton } from "#src/app/design-system/button.js";
@@ -62,8 +62,7 @@ export const Route = createFileRoute("/trials/$grantId")({
 
 function TrialPage(): React.JSX.Element {
   const session = useAccountSession();
-  if (session) return <Navigate to="/" replace />;
-  return <TrialConversionPage />;
+  return session ? <Navigate to="/" replace /> : <TrialConversionPage />;
 }
 
 function TrialConversionPage(): React.JSX.Element {
@@ -71,9 +70,9 @@ function TrialConversionPage(): React.JSX.Element {
   const grantQuery = useSuspenseQuery(createGrantQuery(grantId));
 
   return (
-    <ConversionEntryPage>
+    <ConversionShell>
       <StartConversionForm mode="trial" grant={grantQuery.data} />
-    </ConversionEntryPage>
+    </ConversionShell>
   );
 }
 

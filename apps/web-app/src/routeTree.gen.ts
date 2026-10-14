@@ -10,58 +10,65 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AccountRouteImport } from './routes/account'
-import { Route as HistoryRouteImport } from './routes/history'
-import { Route as AudiobooksConversionIdRouteImport } from './routes/audiobooks.$conversionId'
+import { Route as ShellRouteImport } from './routes/_shell'
+import { Route as ShellAccountRouteImport } from './routes/_shell.account'
+import { Route as ShellHistoryRouteImport } from './routes/_shell.history'
 import { Route as TrialsGrantIdRouteImport } from './routes/trials.$grantId'
+import { Route as ShellAudiobooksConversionIdRouteImport } from './routes/_shell.audiobooks.$conversionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AccountRoute = AccountRouteImport.update({
+const ShellRoute = ShellRouteImport.update({
+  id: '/_shell',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShellAccountRoute = ShellAccountRouteImport.update({
   id: '/account',
   path: '/account',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => ShellRoute,
 } as any)
-const HistoryRoute = HistoryRouteImport.update({
+const ShellHistoryRoute = ShellHistoryRouteImport.update({
   id: '/history',
   path: '/history',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AudiobooksConversionIdRoute = AudiobooksConversionIdRouteImport.update({
-  id: '/audiobooks/$conversionId',
-  path: '/audiobooks/$conversionId',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => ShellRoute,
 } as any)
 const TrialsGrantIdRoute = TrialsGrantIdRouteImport.update({
   id: '/trials/$grantId',
   path: '/trials/$grantId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShellAudiobooksConversionIdRoute =
+  ShellAudiobooksConversionIdRouteImport.update({
+    id: '/audiobooks/$conversionId',
+    path: '/audiobooks/$conversionId',
+    getParentRoute: () => ShellRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/account': typeof AccountRoute
-  '/history': typeof HistoryRoute
-  '/audiobooks/$conversionId': typeof AudiobooksConversionIdRoute
+  '/account': typeof ShellAccountRoute
+  '/history': typeof ShellHistoryRoute
   '/trials/$grantId': typeof TrialsGrantIdRoute
+  '/audiobooks/$conversionId': typeof ShellAudiobooksConversionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/account': typeof AccountRoute
-  '/history': typeof HistoryRoute
-  '/audiobooks/$conversionId': typeof AudiobooksConversionIdRoute
+  '/account': typeof ShellAccountRoute
+  '/history': typeof ShellHistoryRoute
   '/trials/$grantId': typeof TrialsGrantIdRoute
+  '/audiobooks/$conversionId': typeof ShellAudiobooksConversionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/account': typeof AccountRoute
-  '/history': typeof HistoryRoute
-  '/audiobooks/$conversionId': typeof AudiobooksConversionIdRoute
+  '/_shell': typeof ShellRouteWithChildren
+  '/_shell/account': typeof ShellAccountRoute
+  '/_shell/history': typeof ShellHistoryRoute
   '/trials/$grantId': typeof TrialsGrantIdRoute
+  '/_shell/audiobooks/$conversionId': typeof ShellAudiobooksConversionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -69,29 +76,28 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/history'
-    | '/audiobooks/$conversionId'
     | '/trials/$grantId'
+    | '/audiobooks/$conversionId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/account'
     | '/history'
-    | '/audiobooks/$conversionId'
     | '/trials/$grantId'
+    | '/audiobooks/$conversionId'
   id:
     | '__root__'
     | '/'
-    | '/account'
-    | '/history'
-    | '/audiobooks/$conversionId'
+    | '/_shell'
+    | '/_shell/account'
+    | '/_shell/history'
     | '/trials/$grantId'
+    | '/_shell/audiobooks/$conversionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AccountRoute: typeof AccountRoute
-  HistoryRoute: typeof HistoryRoute
-  AudiobooksConversionIdRoute: typeof AudiobooksConversionIdRoute
+  ShellRoute: typeof ShellRouteWithChildren
   TrialsGrantIdRoute: typeof TrialsGrantIdRoute
 }
 
@@ -104,26 +110,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/account': {
-      id: '/account'
+    '/_shell': {
+      id: '/_shell'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof ShellRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_shell/account': {
+      id: '/_shell/account'
       path: '/account'
       fullPath: '/account'
-      preLoaderRoute: typeof AccountRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof ShellAccountRouteImport
+      parentRoute: typeof ShellRoute
     }
-    '/history': {
-      id: '/history'
+    '/_shell/history': {
+      id: '/_shell/history'
       path: '/history'
       fullPath: '/history'
-      preLoaderRoute: typeof HistoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/audiobooks/$conversionId': {
-      id: '/audiobooks/$conversionId'
-      path: '/audiobooks/$conversionId'
-      fullPath: '/audiobooks/$conversionId'
-      preLoaderRoute: typeof AudiobooksConversionIdRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof ShellHistoryRouteImport
+      parentRoute: typeof ShellRoute
     }
     '/trials/$grantId': {
       id: '/trials/$grantId'
@@ -132,14 +138,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrialsGrantIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_shell/audiobooks/$conversionId': {
+      id: '/_shell/audiobooks/$conversionId'
+      path: '/audiobooks/$conversionId'
+      fullPath: '/audiobooks/$conversionId'
+      preLoaderRoute: typeof ShellAudiobooksConversionIdRouteImport
+      parentRoute: typeof ShellRoute
+    }
   }
 }
 
+interface ShellRouteChildren {
+  ShellAccountRoute: typeof ShellAccountRoute
+  ShellHistoryRoute: typeof ShellHistoryRoute
+  ShellAudiobooksConversionIdRoute: typeof ShellAudiobooksConversionIdRoute
+}
+
+const ShellRouteChildren: ShellRouteChildren = {
+  ShellAccountRoute: ShellAccountRoute,
+  ShellHistoryRoute: ShellHistoryRoute,
+  ShellAudiobooksConversionIdRoute: ShellAudiobooksConversionIdRoute,
+}
+
+const ShellRouteWithChildren = ShellRoute._addFileChildren(ShellRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AccountRoute: AccountRoute,
-  HistoryRoute: HistoryRoute,
-  AudiobooksConversionIdRoute: AudiobooksConversionIdRoute,
+  ShellRoute: ShellRouteWithChildren,
   TrialsGrantIdRoute: TrialsGrantIdRoute,
 }
 export const routeTree = rootRouteImport

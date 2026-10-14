@@ -121,9 +121,6 @@ function ConversionForm({
           gap: calc(3 * var(--spacing-base));
           padding-block: calc(5 * var(--spacing-base));
           padding-inline: calc(2 * var(--spacing-base));
-
-          background: var(--color-surface-translucent);
-          border-radius: var(--border-radius-lg);
         `}
         onSubmit={(event) => {
           event.preventDefault();

@@ -1,4 +1,3 @@
-import { css } from "@linaria/core";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import React from "react";
@@ -24,32 +23,5 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 });
 
 function RootLayout(): React.JSX.Element {
-  return (
-    <main
-      // stable key under which the router's scroll restoration stores this container's position
-      data-scroll-restoration-id="main"
-      className={css`
-        /* fixed app shell: fills the viewport and scrolls its content instead of the document */
-        height: 100dvh;
-        overflow-y: auto;
-
-        /* stacking context to put it above the background gradient */
-        isolation: isolate;
-      `}
-    >
-      <div
-        className={css`
-          display: grid;
-          align-content: center;
-          max-width: var(--app-max-width);
-          min-height: 100%;
-          padding-block: var(--app-padding-block);
-          padding-inline: var(--app-padding-inline);
-          margin-inline: auto;
-        `}
-      >
-        <Outlet />
-      </div>
-    </main>
-  );
+  return <Outlet />;
 }

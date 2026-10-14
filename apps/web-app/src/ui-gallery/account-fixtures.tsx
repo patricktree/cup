@@ -1,5 +1,5 @@
 import { createMemoryHistory } from "@tanstack/react-router";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, type RequestHandler } from "msw";
 import React from "react";
 
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
@@ -21,12 +21,14 @@ export function accountStory({
   history = { items: [], nextCursor: null },
   confirmation,
   setupFailure = false,
+  handlers = [],
 }: {
   path: string;
   state?: "active" | "deletion_scheduled" | "deleting";
   history?: { items: Record<string, unknown>[]; nextCursor: string | null };
   confirmation?: "delete" | "restore";
   setupFailure?: boolean | "once";
+  handlers?: RequestHandler[];
 }): Story {
   let setupFailed = false;
   function AccountStory(): React.ReactNode {
@@ -51,6 +53,7 @@ export function accountStory({
   return {
     component: AccountStory,
     handlers: [
+      ...handlers,
       http.get("/api/auth/config", () =>
         HttpResponse.json({
           supabaseUrl: window.location.origin + "/__story",

@@ -14,7 +14,7 @@ import {
 import { createAppApiClient } from "#src/api-client.js";
 import { getResourceAccountSession } from "#src/auth/account-session.js";
 
-const POLL_INTERVAL_MS = 2_000;
+const POLL_INTERVAL_MS = 1_000;
 const rpcClient = createAppApiClient();
 
 export const createGrantQueryKey = (grantId: string) => ["conversion-grant", grantId] as const;

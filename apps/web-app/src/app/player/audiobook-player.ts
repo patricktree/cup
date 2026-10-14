@@ -14,7 +14,10 @@ import {
 import { savePlaybackPosition } from "#src/data-fetching/reader.js";
 
 /** A conversion whose narration document is prepared, whatever the state of its audio. */
-export type PreparedAudiobook = Extract<Audiobook, { title: string }>;
+export type PreparedAudiobook = Extract<
+  Audiobook,
+  { status: "insufficient-duration" | "synthesizing" | "ready" }
+>;
 /** An audiobook whose every segment has audio or a final failure. */
 export type PlayableAudiobook = Extract<Audiobook, { status: "ready" }>;
 
