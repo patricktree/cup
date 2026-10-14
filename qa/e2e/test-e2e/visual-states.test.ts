@@ -159,14 +159,14 @@ test("disables duplicate submission while a conversion start is pending", async 
 
   finishStart?.();
   await expect(page).toHaveURL(`${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
-  await expect(page.getByRole("status").filter({ hasText: "Preparing article…" })).toBeVisible();
+  await expect(page.getByLabel("Preparing article")).toHaveAttribute("aria-busy", "true");
 });
 
 test("shows a deterministic pending conversion", async ({ page, workerEnvironment }) => {
   await mockConversion(page, workerEnvironment.origin, createPendingConversion());
   await gotoPage(page, `${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
 
-  await expect(page.getByRole("status").filter({ hasText: "Preparing article…" })).toBeVisible();
+  await expect(page.getByLabel("Preparing article")).toHaveAttribute("aria-busy", "true");
 });
 
 test("shows a deterministic failed conversion", async ({ page, workerEnvironment }) => {
@@ -200,7 +200,7 @@ test("retries a conversion loading failure", async ({
     page.getByRole("heading", { name: "The article could not be loaded." }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Preparing article…" })).toBeVisible();
+  await expect(page.getByLabel("Preparing article")).toHaveAttribute("aria-busy", "true");
   expect(attempts).toBeGreaterThanOrEqual(2);
 });
 
