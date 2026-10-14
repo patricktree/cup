@@ -7,19 +7,19 @@ import { parseEnv } from "node:util";
 import { $ } from "zx";
 
 const program = new Command()
-  .name("auth:local")
-  .description("Manage local Supabase authentication")
+  .name("dev:services")
+  .description("Manage the local services used for development")
   .showHelpAfterError()
   .exitOverride();
 
 program
   .command("start", { isDefault: true })
-  .description("Start local Supabase and configure the Worker environment")
+  .description("Start local services and configure the Worker environment")
   .action(async () => run("start"));
 
 program
   .command("stop")
-  .description("Stop local Supabase and restore the Worker environment")
+  .description("Stop local services and restore the Worker environment")
   .action(async () => run("stop"));
 
 try {
@@ -27,7 +27,7 @@ try {
 } catch (error) {
   if (error instanceof CommanderError) process.exitCode = error.exitCode;
   else {
-    console.error(error instanceof Error ? error.message : "Local auth configuration failed.");
+    console.error(error instanceof Error ? error.message : "Local development services failed.");
     process.exitCode = 1;
   }
 }
@@ -146,6 +146,6 @@ async function run(action: "start" | "stop") {
       { mode: 0o600 },
     );
 
-    console.log("Local auth configured. Restart the Cup development server.");
+    console.log("Local development services started. Restart the Cup development server.");
   }
 }
