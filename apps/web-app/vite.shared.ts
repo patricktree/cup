@@ -19,6 +19,8 @@ export function createWebAppViteConfig() {
     publicDir: path.join(WEB_APP_DIRECTORY, "public"),
     plugins: [
       tanstackRouter({
+        // The app typechecks with `moduleResolution: node16`, which cannot resolve extensionless imports; the generated tree carries `@ts-nocheck`, so unresolved route imports would silently degrade every route type to `any`.
+        addExtensions: ".js",
         autoCodeSplitting: true,
         generatedRouteTree: path.join(WEB_APP_DIRECTORY, "src/routeTree.gen.ts"),
         routesDirectory: path.join(WEB_APP_DIRECTORY, "src/routes"),
