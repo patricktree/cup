@@ -10,7 +10,7 @@ import {
 } from "#src/app/player/player-host.js";
 import { refreshPlaybackAuthorization } from "#src/auth/account-session.js";
 import { useAccountAuthState } from "#src/auth/hooks.js";
-import { createAudiobookQuery } from "#src/data-fetching/trial-link.js";
+import { createAudiobookQuery } from "#src/data-fetching/reader.js";
 import { createPlayer, registerPlayerMediaSession, type Player } from "#src/platform/player.js";
 import { STOP_PLAYBACK_EVENT_NAME } from "#src/playback-events.js";
 

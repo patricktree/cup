@@ -16,7 +16,7 @@
 - Prefer `DSButton` over raw buttons for app UI.
 - Define all `useMutation` hooks in `src/data-fetching/*` files and import those hooks into components and routes.
 - Use `useAppForm` for forms; follow `src/app/components/start-conversion-form.tsx`.
-- Use `WebAppApiClient` from `@cup/web-app-api.client` for API calls, including its authenticated RPC client for account requests; follow `libs/web-app-api.client/src/rpc-client.ts` from the repo root.
+- Send API calls through `requestApi` in `src/data-fetching/api-request.ts`: choose `"none"`, `"optional"`, or `{ subject }` account authorization and call a `WebAppApiClient` or `AuthenticatedRpcClient` method from `@cup/web-app-api.client` (see `libs/web-app-api.client/src/rpc-client.ts` from the repo root). Handle failed responses as `RpcError`, matching on `status` and `code`.
 
 ## Commands
 

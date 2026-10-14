@@ -104,6 +104,30 @@ export const GrantLoadError = {
   ],
 } satisfies Story;
 
+function grantSessionStory(code: "grant-session-required" | "grant-session-invalid") {
+  return {
+    component: () => <TrialRoute />,
+    handlers: [
+      http.get(`*/api/grants/${GRANT_ID}`, () =>
+        HttpResponse.json(
+          {
+            error: {
+              requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
+              code,
+              message: "This browser no longer has access. Open the original trial link again.",
+            },
+          } satisfies ErrorResponse,
+          { status: 401 },
+        ),
+      ),
+    ],
+  } satisfies Story;
+}
+
+export const GrantSessionRequired = grantSessionStory("grant-session-required");
+
+export const GrantSessionInvalid = grantSessionStory("grant-session-invalid");
+
 export const StartPending = {
   component: () => <TrialRoute />,
   handlers: [

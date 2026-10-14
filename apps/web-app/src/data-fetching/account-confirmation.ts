@@ -1,13 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
 import React from "react";
 
-import { parseOkResponse } from "@cup/web-app-api.client";
 import { deletionChallengeSchema } from "@cup/web-app-api.routes";
 
 import {
-  getAuthenticatedRpcClient,
   getFreshAccountSession,
-  sessionSnapshot,
+  isSignedInAs,
   signInGoogle,
   signOut,
 } from "#src/auth/account-session.js";
@@ -17,6 +15,7 @@ import {
   clearAccountChallenge,
 } from "#src/data-fetching/account-confirmation-storage.js";
 import { invalidateAccountQueries } from "#src/data-fetching/account.js";
+import { requestApi } from "#src/data-fetching/api-request.js";
 
 export function useAccountConfirmation(subject: string) {
   const [challenge, setChallenge] = React.useState(readPendingAccountChallenge);
@@ -26,18 +25,16 @@ export function useAccountConfirmation(subject: string) {
     ) => {
       if (command.type === "begin") {
         const issued = deletionChallengeSchema.parse(
-          await parseOkResponse(
-            (await getAuthenticatedRpcClient(subject)).createDeletionChallenge(),
-          ),
+          await requestApi({ subject }, (client) => client.createDeletionChallenge()),
         );
-        if (issued.subject !== subject || sessionSnapshot()?.user.id !== subject)
+        if (issued.subject !== subject || !isSignedInAs(subject))
           throw new Error("Use the same Google account that requested confirmation.");
         const next = { ...issued, action: command.action };
         storeAccountChallenge(next);
         setChallenge(next);
         // Supabase AMR timestamps have whole-second precision; authenticate strictly after issuance.
         await new Promise<void>((resolve) => window.setTimeout(resolve, 1_100));
-        if (sessionSnapshot()?.user.id !== subject) throw new Error("Use the same Google account.");
+        if (!isSignedInAs(subject)) throw new Error("Use the same Google account.");
         await signInGoogle(true);
         return null;
       }
@@ -45,22 +42,24 @@ export function useAccountConfirmation(subject: string) {
       const pending = readPendingAccountChallenge();
       if (!pending || pending.subject !== subject)
         throw new Error("Use the same Google account that requested confirmation.");
+      // The Google provider token lives only on the session; requestApi below re-resolves its own
+      // token and guard, so this check exists to name the account mismatch and narrow `session`.
       const session = await getFreshAccountSession();
       if (session?.user.id !== subject) throw new Error("Use the same Google account.");
-      const rpcClient = await getAuthenticatedRpcClient(subject);
       const input = {
         challengeId: pending.challengeId,
         ...(session.provider_token ? { providerToken: session.provider_token } : {}),
       };
-      if (pending.action === "delete") await parseOkResponse(rpcClient.scheduleDeletion(input));
-      else await parseOkResponse(rpcClient.restoreAccount(input));
-      if (sessionSnapshot()?.user.id !== subject) return null;
+      if (pending.action === "delete")
+        await requestApi({ subject }, (client) => client.scheduleDeletion(input));
+      else await requestApi({ subject }, (client) => client.restoreAccount(input));
+      if (!isSignedInAs(subject)) return null;
       if (readPendingAccountChallenge()?.challengeId === pending.challengeId) {
         clearAccountChallenge();
         setChallenge(null);
       }
       await invalidateAccountQueries(subject);
-      if (sessionSnapshot()?.user.id !== subject) return null;
+      if (!isSignedInAs(subject)) return null;
       // signOut owns playback/media cleanup; the auth lifecycle clears account queries.
       if (pending.action === "delete") {
         await signOut();

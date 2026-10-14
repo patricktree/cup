@@ -1,20 +1,32 @@
-import { useMutation, type QueryClient } from "@tanstack/react-query";
+import { queryOptions, useMutation, type QueryClient } from "@tanstack/react-query";
 
 import {
+  audiobookSchema,
   playbackPositionSchema,
   retryConversionResponseSchema,
+  type Audiobook,
   type PlaybackPosition,
 } from "@cup/web-app-api.routes";
 
-import { createAppApiClient } from "#src/api-client.js";
-import { getResourceAccountSession } from "#src/auth/account-session.js";
-import { createAudiobookQuery } from "#src/data-fetching/trial-link.js";
-import { parseResponse } from "#src/data-fetching/trial-link.js";
+import { requestApi } from "#src/data-fetching/api-request.js";
 
-const client = createAppApiClient();
-async function readerClient() {
-  const session = await getResourceAccountSession();
-  return session ? client.createAuthenticatedRpcClient(session.access_token) : client;
+const POLL_INTERVAL_MS = 1_000;
+
+export function createAudiobookQuery(conversionId: string) {
+  return queryOptions({
+    queryKey: ["audiobook", conversionId],
+    queryFn: ({ signal }) => getAudiobook(conversionId, signal),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === "pending" || status === "synthesizing" ? POLL_INTERVAL_MS : false;
+    },
+    refetchIntervalInBackground: true,
+  });
+}
+async function getAudiobook(conversionId: string, signal: AbortSignal): Promise<Audiobook> {
+  return audiobookSchema.parse(
+    await requestApi("optional", (client) => client.getAudiobook({ conversionId }, signal)),
+  );
 }
 /** Retries preparation, or synthesis of the segments still lacking audio once prepared. */
 export function useRetryConversion(conversionId: string, queryClient: QueryClient) {
@@ -25,8 +37,8 @@ export function useRetryConversion(conversionId: string, queryClient: QueryClien
   });
 }
 async function retryConversion(conversionId: string) {
-  return parseResponse(await (await readerClient()).retryConversion({ conversionId }), (body) =>
-    retryConversionResponseSchema.parse(body),
+  return retryConversionResponseSchema.parse(
+    await requestApi("optional", (client) => client.retryConversion({ conversionId })),
   );
 }
 export function getLocalPlaybackPosition(conversionId: string): PlaybackPosition | null {
@@ -49,11 +61,5 @@ export async function savePlaybackPosition(
     localStorage.setItem(`cup:position:v1:${conversionId}`, JSON.stringify(position));
     return;
   }
-  const session = await getResourceAccountSession();
-  if (session?.user.id !== subject)
-    throw new Error("Listening position belongs to a different signed-in user.");
-  const response = await client
-    .createAuthenticatedRpcClient(session.access_token)
-    .savePosition({ conversionId }, position);
-  if (!response.ok) await parseResponse(response, () => undefined);
+  await requestApi({ subject }, (client) => client.savePosition({ conversionId }, position));
 }

@@ -1,9 +1,9 @@
+import { check } from "@patricktree-stack/utils-ecma/assert.utils";
 import { infiniteQueryOptions } from "@tanstack/react-query";
 
-import { parseOkResponse } from "@cup/web-app-api.client";
 import { accountHistorySchema } from "@cup/web-app-api.routes";
 
-import { getAuthenticatedRpcClient } from "#src/auth/account-session.js";
+import { requestApi } from "#src/data-fetching/api-request.js";
 import { queryClient } from "#src/data-fetching/query-client.js";
 
 export function createAccountHistoryQuery(subject?: string) {
@@ -11,12 +11,12 @@ export function createAccountHistoryQuery(subject?: string) {
     queryKey: ["account-history", subject],
     enabled: !!subject,
     initialPageParam: null as string | null,
-    queryFn: async ({ pageParam }) =>
-      accountHistorySchema.parse(
-        await parseOkResponse(
-          (await getAuthenticatedRpcClient(subject)).getHistory(pageParam ?? undefined),
-        ),
-      ),
+    queryFn: async ({ pageParam }) => {
+      check.assert(subject, "The history query runs only for a signed-in account.");
+      return accountHistorySchema.parse(
+        await requestApi({ subject }, (client) => client.getHistory(pageParam ?? undefined)),
+      );
+    },
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     refetchInterval: (query) =>
       query.state.status !== "error" &&
