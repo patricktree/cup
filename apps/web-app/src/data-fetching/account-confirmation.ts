@@ -20,6 +20,8 @@ import { requestApi } from "#src/data-fetching/api-request.js";
 export function useAccountConfirmation(subject: string) {
   const [challenge, setChallenge] = React.useState(readPendingAccountChallenge);
   const change = useMutation({
+    // The confirmation flow shows its failure next to the step the user is taking.
+    meta: { errorDisplay: "inline" },
     mutationFn: async (
       command: { type: "begin"; action: "delete" | "restore" } | { type: "confirm" },
     ) => {

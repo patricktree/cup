@@ -10,18 +10,27 @@ import {
 import React from "react";
 
 import { ConversionShell } from "#src/app/components/conversion-shell.jsx";
-import { ErrorMessage } from "#src/app/components/error-message.js";
+import { ErrorScreen } from "#src/app/components/error-message.js";
 import { StartConversionForm } from "#src/app/components/start-conversion-form.js";
-import { DSButton } from "#src/app/design-system/button.js";
 import { getResourceAccountSession } from "#src/auth/account-session.js";
 import { useAccountSession } from "#src/auth/hooks.js";
-import { RpcError } from "#src/data-fetching/api-request.js";
+import type { RpcError } from "#src/data-fetching/api-request.js";
 import {
   createGrantQuery,
   createGrantQueryKey,
   exchangeCredential,
 } from "#src/data-fetching/trial-link.js";
+import { UserFacingError } from "#src/errors.js";
 import { trialBrowserState } from "#src/trial-browser-state.js";
+
+const TRIAL_LINK_INVALID = {
+  title: "This trial link is invalid.",
+  detail: "Check that you opened the complete trial link.",
+};
+const TRIAL_SESSION_LOST = {
+  title: "This browser no longer has access.",
+  detail: "Open the original trial link again.",
+};
 
 export const Route = createFileRoute("/trials/$grantId")({
   component: TrialPage,
@@ -36,9 +45,7 @@ export const Route = createFileRoute("/trials/$grantId")({
     const access = readCredentialFromFragment(location.hash);
 
     if (access.kind === "malformed") {
-      throw new TrialLinkMalformedError(
-        "This trial link is invalid. Check that you opened the complete trial link.",
-      );
+      throw new UserFacingError(TRIAL_LINK_INVALID);
     }
 
     if (access.kind === "credential") {
@@ -76,63 +83,29 @@ function TrialConversionPage(): React.JSX.Element {
   );
 }
 
+/** Opening a trial link words its refusals in terms of the link rather than the grant. */
+function describeTrialLinkRefusal(error: RpcError): { title: string; detail: string } {
+  if (error.code === "grant-session-required" || error.code === "grant-session-invalid")
+    return TRIAL_SESSION_LOST;
+  if (error.code === "grant-revoked")
+    return {
+      title: "This trial link was revoked.",
+      detail: "Check that you opened the complete trial link.",
+    };
+  return TRIAL_LINK_INVALID;
+}
+
 function RouteErrorComponent({ error }: ErrorComponentProps): React.JSX.Element {
   const navigate = useNavigate();
 
-  if (error instanceof TrialLinkMalformedError) {
-    return (
-      <ErrorMessage title="This trial link is invalid.">
-        Check that you opened the complete trial link.
-      </ErrorMessage>
-    );
-  }
-
-  if (error instanceof RpcError && error.status < 500 && error.code === "grant-revoked") {
-    return (
-      <ErrorMessage title="This trial link was revoked.">
-        Check that you opened the complete trial link.
-      </ErrorMessage>
-    );
-  }
-
-  // The API answers missing and invalid grant sessions with 401, so check them before other 4xx.
-  if (
-    error instanceof RpcError &&
-    (error.code === "grant-session-required" || error.code === "grant-session-invalid")
-  ) {
-    return (
-      <ErrorMessage title="This browser no longer has access.">
-        Open the original trial link again.
-      </ErrorMessage>
-    );
-  }
-
-  if (error instanceof RpcError && error.status < 500) {
-    return (
-      <ErrorMessage title="This trial link is invalid.">
-        Check that you opened the complete trial link.
-      </ErrorMessage>
-    );
-  }
-
   return (
-    <ErrorMessage title="The trial link could not be opened.">
-      <DSButton
-        type="button"
-        variant="contained"
-        onClick={() => navigate({ to: ".", reloadDocument: true })}
-      >
-        Try again
-      </DSButton>
-    </ErrorMessage>
+    <ErrorScreen
+      error={error}
+      fallbackTitle="The trial link could not be opened."
+      describeApiRefusal={describeTrialLinkRefusal}
+      onRetry={() => navigate({ to: ".", reloadDocument: true })}
+    />
   );
-}
-
-class TrialLinkMalformedError extends Error {
-  constructor(message: string, options?: ErrorOptions) {
-    super(message, options);
-    this.name = "TrialLinkInvalidError";
-  }
 }
 
 type InitialAccess =

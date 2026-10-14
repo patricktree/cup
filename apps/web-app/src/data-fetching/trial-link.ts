@@ -16,6 +16,7 @@ export function createGrantQuery(grantId: string) {
   return queryOptions({
     queryKey: createGrantQueryKey(grantId),
     queryFn: ({ signal }) => getGrant(grantId, signal),
+    meta: { errorTitle: "The trial could not be updated." },
   });
 }
 
@@ -29,6 +30,8 @@ export function useStartTrialConversionMutation(
     idempotencyKey: string;
   } | null>(null);
   return useMutation({
+    // The start form shows refusals and the rate-limit countdown next to the submitted URL.
+    meta: { errorDisplay: "inline" },
     mutationFn: async (sourceUrl: string) => {
       if (pending.current?.grantId !== grantId || pending.current.sourceUrl !== sourceUrl)
         pending.current = { grantId, sourceUrl, idempotencyKey: crypto.randomUUID() };

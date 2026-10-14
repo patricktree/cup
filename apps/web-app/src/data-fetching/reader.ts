@@ -16,6 +16,7 @@ export function createAudiobookQuery(conversionId: string) {
   return queryOptions({
     queryKey: ["audiobook", conversionId],
     queryFn: ({ signal }) => getAudiobook(conversionId, signal),
+    meta: { errorTitle: "The article could not be updated." },
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       return status === "pending" || status === "synthesizing" ? POLL_INTERVAL_MS : false;
@@ -31,6 +32,7 @@ async function getAudiobook(conversionId: string, signal: AbortSignal): Promise<
 /** Retries preparation, or synthesis of the segments still lacking audio once prepared. */
 export function useRetryConversion(conversionId: string, queryClient: QueryClient) {
   return useMutation({
+    meta: { errorTitle: "The retry could not start." },
     mutationFn: () => retryConversion(conversionId),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: createAudiobookQuery(conversionId).queryKey }),
