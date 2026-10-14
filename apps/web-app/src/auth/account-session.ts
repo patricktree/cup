@@ -4,7 +4,10 @@ import { parseOkResponse } from "@cup/web-app-api.client";
 import { authConfigResponseSchema } from "@cup/web-app-api.routes";
 
 import { createAppApiClient } from "#src/api-client.js";
-import { ACCOUNT_SESSION_STORAGE_KEY } from "#src/auth/account-session-storage.js";
+import {
+  ACCOUNT_SESSION_CODE_VERIFIER_STORAGE_KEY,
+  ACCOUNT_SESSION_STORAGE_KEY,
+} from "#src/auth/account-session-storage.js";
 import { queryClient } from "#src/data-fetching/query-client.js";
 import {
   initializeAuthStorage,
@@ -87,7 +90,10 @@ async function initializeAuth() {
     await parseOkResponse(createAppApiClient().getAuthConfig()),
   );
   googleClientId = config.googleWebClientId;
-  const platformStorage = await initializeAuthStorage();
+  const platformStorage = await initializeAuthStorage([
+    ACCOUNT_SESSION_STORAGE_KEY,
+    ACCOUNT_SESSION_CODE_VERIFIER_STORAGE_KEY,
+  ]);
   clearStoredSession = platformStorage.clearStoredSession;
   const client = createClient(config.supabaseUrl, config.publishableKey, {
     auth: {

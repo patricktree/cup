@@ -1,18 +1,13 @@
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 
-import {
-  ACCOUNT_SESSION_STORAGE_KEY,
-  ACCOUNT_SESSION_CODE_VERIFIER_STORAGE_KEY,
-} from "#src/auth/account-session-storage.js";
-
-export async function initializeAuthStorage() {
+/** Prepares storage for the account session, which is kept under `storageKeys`. */
+export async function initializeAuthStorage(storageKeys: readonly string[]) {
   const storage = window.localStorage;
   return {
     storage,
     detectSessionInUrl: true,
     clearStoredSession: async () => {
-      storage.removeItem(ACCOUNT_SESSION_STORAGE_KEY);
-      storage.removeItem(ACCOUNT_SESSION_CODE_VERIFIER_STORAGE_KEY);
+      for (const key of storageKeys) storage.removeItem(key);
     },
   };
 }

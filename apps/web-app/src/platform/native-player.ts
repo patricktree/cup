@@ -1,20 +1,28 @@
 import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 
-import type { PlaybackPosition } from "@cup/web-app-api.routes";
+import type { Audiobook, PlaybackPosition } from "@cup/web-app-api.routes";
 
-import type { PlayableAudiobook, PlayerSnapshot } from "#src/app/player/audiobook-player.js";
-import {
-  createAudiobookTimeline,
-  findTimelineEntryIndex,
-  type AudiobookTimeline,
-} from "#src/app/player/audiobook-timeline.js";
-import { getResourceAccountSession } from "#src/auth/account-session.js";
+import type { PlayerSnapshot, ReportedPosition, TimelineLocation } from "#src/platform/player.js";
+
+/** What the native engine needs from the loaded audiobook's playback session. */
+export type NativePlayerSession = {
+  conversionId: string;
+  audiobook: Extract<Audiobook, { status: "ready" }>;
+  subject: string | null;
+  timeline: { durationMilliseconds: number };
+  initialLocation: TimelineLocation;
+  reportedPositionAt(location: TimelineLocation): ReportedPosition;
+  listeningPositionOf(position: ReportedPosition): PlaybackPosition | null;
+  adjacentUnitIndex(unitIndex: number, direction: 1 | -1): number | undefined;
+  /** The subject's bearer token, or `null` for anonymous and trial listeners. */
+  getAccessToken(): Promise<string | null>;
+};
 
 const native = registerPlugin<{
   configure(input: {
     playerId: string;
     conversionId: string;
-    audiobook: PlayableAudiobook;
+    audiobook: NativePlayerSession["audiobook"];
     position: PlaybackPosition | null;
     token: string | null;
     isSignedIn: boolean;
@@ -36,41 +44,26 @@ export function stopNativePlayback() {
   if (Capacitor.isNativePlatform()) void native.command({ action: "pause" });
 }
 
-/** Native engines own audio and listening positions while the WebView is suspended. */
+/**
+ * Native engines own audio and listening positions while the WebView is suspended: they restore the
+ * position they are given by the session's rule and save positions themselves.
+ */
 export class NativePlayer {
   private readonly playerId = crypto.randomUUID();
   private snapshot: PlayerSnapshot;
   private readonly listeners = new Set<() => void>();
   private initialization: Promise<void> | undefined;
   private listener: PluginListenerHandle | undefined;
-  private readonly conversionId: string;
-  private readonly audiobook: PlayableAudiobook;
-  private readonly position: PlaybackPosition | null;
-  private readonly isSignedIn: boolean;
-  private readonly timeline: AudiobookTimeline;
-  constructor(
-    conversionId: string,
-    audiobook: PlayableAudiobook,
-    position: PlaybackPosition | null,
-    isSignedIn: boolean,
-  ) {
-    this.conversionId = conversionId;
-    this.audiobook = audiobook;
-    this.position = position;
-    this.isSignedIn = isSignedIn;
-    // The native engine reports the restored position; until then show the start of the unit.
-    const timeline = createAudiobookTimeline(audiobook.segments);
-    this.timeline = timeline;
-    const unitIndex = position
-      ? audiobook.narrationDocument.synchronizationUnits.findIndex(
-          (unit) => unit.id === position.synchronizationUnitId,
-        )
-      : 0;
-    const entry = timeline.entries[Math.max(0, findTimelineEntryIndex(timeline, unitIndex))];
+  private readonly session: NativePlayerSession;
+  private readonly initialPosition: ReportedPosition;
+
+  constructor(session: NativePlayerSession) {
+    this.session = session;
+    // The native engine reports the restored position once it runs; until then show the session's.
+    this.initialPosition = session.reportedPositionAt(session.initialLocation);
     this.snapshot = {
-      currentUnitIndex: entry?.unitIndex ?? 0,
-      positionMilliseconds: entry?.startMilliseconds ?? 0,
-      durationMilliseconds: timeline.durationMilliseconds,
+      ...this.initialPosition,
+      durationMilliseconds: session.timeline.durationMilliseconds,
       isPlaying: false,
       isBuffering: false,
       error: null,
@@ -96,15 +89,17 @@ export class NativePlayer {
   };
   private async initialize() {
     this.listener = await native.addListener("state", this.update);
-    const session = await getResourceAccountSession();
+    // A refused token must not leave the engine unconfigured: Play hands it a current one.
+    const token = await this.session.getAccessToken().catch(() => null);
     this.update(
       await native.configure({
         playerId: this.playerId,
-        conversionId: this.conversionId,
-        audiobook: this.audiobook,
-        position: this.position,
-        token: session?.access_token ?? null,
-        isSignedIn: this.isSignedIn,
+        conversionId: this.session.conversionId,
+        audiobook: this.session.audiobook,
+        // Already resolved by the session's rule, which the native engine applies again unchanged.
+        position: this.session.listeningPositionOf(this.initialPosition),
+        token,
+        isSignedIn: this.session.subject !== null,
       }),
     );
   }
@@ -118,12 +113,14 @@ export class NativePlayer {
   ) {
     void this.initialization
       ?.then(async () => {
-        const session = action === "play" ? await getResourceAccountSession() : undefined;
+        // Play hands the engine a current token, which it sends with its media and position requests.
+        // The media cookie the host issues on Play is only for the WebView, so Play does not wait for it.
+        const token = action === "play" ? await this.session.getAccessToken() : undefined;
         return native.command({
           action,
           playerId: this.playerId,
           ...target,
-          ...(session === undefined ? {} : { token: session?.access_token ?? null }),
+          ...(token === undefined ? {} : { token }),
         });
       })
       .catch((error) =>
@@ -140,10 +137,7 @@ export class NativePlayer {
   seekToUnit = (unitIndex: number) => this.command("seekToUnit", { unitIndex });
   seekTo = (positionMilliseconds: number) => this.command("seekTo", { positionMilliseconds });
   skip = (direction: 1 | -1) => {
-    const entryIndex = this.timeline.entries.findIndex(
-      (entry) => entry.unitIndex === this.snapshot.currentUnitIndex,
-    );
-    const destination = this.timeline.entries[entryIndex + direction];
-    if (entryIndex >= 0 && destination) this.seekToUnit(destination.unitIndex);
+    const unitIndex = this.session.adjacentUnitIndex(this.snapshot.currentUnitIndex, direction);
+    if (unitIndex !== undefined) this.seekToUnit(unitIndex);
   };
 }

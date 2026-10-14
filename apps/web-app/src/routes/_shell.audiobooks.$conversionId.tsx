@@ -12,8 +12,8 @@ import React from "react";
 import { ErrorMessage } from "#src/app/components/error-message.js";
 import { QueryBoundary } from "#src/app/components/query-boundary.js";
 import { DSButton } from "#src/app/design-system/button.js";
-import type { PreparedAudiobook } from "#src/app/player/audiobook-player.js";
 import { formatDuration } from "#src/app/player/playback-format.js";
+import type { PreparedAudiobook } from "#src/app/player/playback-session.js";
 import {
   usePlayerState,
   useShownAudiobook,

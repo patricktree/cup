@@ -2,20 +2,21 @@ import { check } from "@patricktree-stack/utils-ecma/assert.utils";
 import { QueryObserver, useQueryClient } from "@tanstack/react-query";
 import React from "react";
 
-import type { PlayerSnapshot, PreparedAudiobook } from "#src/app/player/audiobook-player.js";
+import { createPlaybackSession, createPlayer } from "#src/app/player/create-playback.js";
+import type { PreparedAudiobook } from "#src/app/player/playback-session.js";
 import {
   PlayerHost,
   type LoadedAudiobook,
   type PlayerHostAccount,
   type PlayerHostSnapshot,
 } from "#src/app/player/player-host.js";
-import {
-  authStateSnapshot,
-  refreshPlaybackAuthorization,
-  subscribeAuthState,
-} from "#src/auth/account-session.js";
+import { authStateSnapshot, subscribeAuthState } from "#src/auth/account-session.js";
 import { createAudiobookQuery, getLocalPlaybackPosition } from "#src/data-fetching/reader.js";
-import { createPlayer, registerPlayerMediaSession, type Player } from "#src/platform/player.js";
+import {
+  registerPlayerMediaSession,
+  type Player,
+  type PlayerSnapshot,
+} from "#src/platform/player.js";
 import { STOP_PLAYBACK_EVENT_NAME } from "#src/playback-events.js";
 
 const PlayerHostContext = React.createContext<PlayerHost | null>(null);
@@ -28,9 +29,9 @@ export function PlayerHostProvider({ children }: { children: React.ReactNode }) 
   const [host] = React.useState(
     () =>
       new PlayerHost({
+        createSession: createPlaybackSession,
         createPlayer,
         registerMediaSession: registerPlayerMediaSession,
-        authorize: () => refreshPlaybackAuthorization(),
         getAccount: readPlayerHostAccount,
         getLocalPosition: getLocalPlaybackPosition,
       }),
