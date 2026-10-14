@@ -9,7 +9,7 @@ You need Docker, pnpm, the existing Cloudflare development credentials, and a Go
 Set `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` and `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET` in your shell, or use the existing ignored `terraform/.env.local` entries `TF_VAR_google_web_client_id` and `TF_VAR_google_web_client_secret`.
 
 ```sh
-pnpm auth:local
+pnpm dev:services
 pnpm --filter @cup/cloudflare-worker dev
 ```
 
@@ -18,7 +18,7 @@ The helper generates an ignored ES256 signing key, starts the local Supabase sta
 Stop the stack and restore the previous Worker environment:
 
 ```sh
-pnpm auth:local stop
+pnpm dev:services stop
 ```
 
 Restart the development server after either command. Android continues to use the production API origin; this helper configures web development. The API server requires all bindings and authentication settings in its [environment contract](../libs/api-server/src/api-server-environment.ts); missing configuration is not a supported reduced-functionality mode. Wrangler defaults `LOCAL_DEVELOPMENT` to `false`. Local fixture bypasses require `LOCAL_DEVELOPMENT=true`; never enable that flag in production.
