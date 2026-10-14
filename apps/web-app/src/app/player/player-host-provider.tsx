@@ -2,21 +2,28 @@ import { check } from "@patricktree-stack/utils-ecma/assert.utils";
 import { QueryObserver, useQueryClient } from "@tanstack/react-query";
 import React from "react";
 
-import type { PlayerSnapshot } from "#src/app/player/audiobook-player.js";
+import type { PlayerSnapshot, PreparedAudiobook } from "#src/app/player/audiobook-player.js";
 import {
   PlayerHost,
   type LoadedAudiobook,
+  type PlayerHostAccount,
   type PlayerHostSnapshot,
 } from "#src/app/player/player-host.js";
-import { refreshPlaybackAuthorization } from "#src/auth/account-session.js";
-import { useAccountAuthState } from "#src/auth/hooks.js";
-import { createAudiobookQuery } from "#src/data-fetching/reader.js";
+import {
+  authStateSnapshot,
+  refreshPlaybackAuthorization,
+  subscribeAuthState,
+} from "#src/auth/account-session.js";
+import { createAudiobookQuery, getLocalPlaybackPosition } from "#src/data-fetching/reader.js";
 import { createPlayer, registerPlayerMediaSession, type Player } from "#src/platform/player.js";
 import { STOP_PLAYBACK_EVENT_NAME } from "#src/playback-events.js";
 
 const PlayerHostContext = React.createContext<PlayerHost | null>(null);
 
-/** Provides the app's single player to every page below it; unmounting it stops playback. */
+/**
+ * Provides the app's single player to every page below it and feeds it the account and the loaded
+ * audiobook's latest version; unmounting it stops playback.
+ */
 export function PlayerHostProvider({ children }: { children: React.ReactNode }) {
   const [host] = React.useState(
     () =>
@@ -24,12 +31,14 @@ export function PlayerHostProvider({ children }: { children: React.ReactNode }) 
         createPlayer,
         registerMediaSession: registerPlayerMediaSession,
         authorize: () => refreshPlaybackAuthorization(),
+        getAccount: readPlayerHostAccount,
+        getLocalPosition: getLocalPlaybackPosition,
       }),
   );
-  const { loaded } = React.useSyncExternalStore(host.subscribe, host.getSnapshot);
-  const authState = useAccountAuthState();
-  const isRestoringAccount = authState.status === "loading";
-  const subject = authState.status === "signed-in" ? authState.session.user.id : null;
+  const loadedConversionId = React.useSyncExternalStore(
+    host.subscribe,
+    () => host.getSnapshot().loaded?.conversionId,
+  );
   const queryClient = useQueryClient();
 
   React.useEffect(
@@ -48,40 +57,28 @@ export function PlayerHostProvider({ children }: { children: React.ReactNode }) 
   );
 
   React.useEffect(
-    function unloadForAnotherUser() {
-      // Media authorization and the listening position belong to the user the audiobook was loaded for.
-      if (loaded && !isRestoringAccount && loaded.subject !== subject) host.unload();
+    function reportAccountChanges() {
+      host.accountChanged();
+      // Deferred, because the auth store can publish while a page renders.
+      return subscribeAuthState(() => queueMicrotask(host.accountChanged));
     },
-    [host, loaded, isRestoringAccount, subject],
+    [host],
   );
 
   React.useEffect(
-    function swapInNewAudioWhilePaused() {
-      if (!loaded) return undefined;
+    function reportLatestVersionOfLoadedAudiobook() {
+      if (loadedConversionId === undefined) return undefined;
 
       // Observing the query keeps it polling while a retry synthesizes and the listener is elsewhere.
-      const observer = new QueryObserver(queryClient, createAudiobookQuery(loaded.conversionId));
-      const swapWhenNewAudioIsPlayable = () => {
+      const observer = new QueryObserver(queryClient, createAudiobookQuery(loadedConversionId));
+      const reportLatestVersion = () => {
         const latest = observer.getCurrentResult().data;
-        if (
-          host.getSnapshot().loaded !== loaded ||
-          loaded.player.getSnapshot().isPlaying ||
-          latest?.status !== "ready" ||
-          countReadySegments(latest.segments) <= countReadySegments(loaded.audiobook.segments)
-        )
-          return;
-
-        host.replaceAudiobook(latest);
+        if (latest) host.updateLoadedAudiobook(loadedConversionId, latest);
       };
-      const unsubscribeFromQuery = observer.subscribe(swapWhenNewAudioIsPlayable);
-      // A swap waits for playback to pause; a new player could start only from a user gesture.
-      const unsubscribeFromPlayer = loaded.player.subscribe(swapWhenNewAudioIsPlayable);
-      return () => {
-        unsubscribeFromQuery();
-        unsubscribeFromPlayer();
-      };
+      reportLatestVersion();
+      return observer.subscribe(reportLatestVersion);
     },
-    [host, loaded, queryClient],
+    [host, loadedConversionId, queryClient],
   );
 
   return <PlayerHostContext value={host}>{children}</PlayerHostContext>;
@@ -93,10 +90,63 @@ export function usePlayerHost(): PlayerHost {
   return host;
 }
 
-/** Re-renders when another audiobook is loaded, its consent changes, or authorization fails. */
+/** Re-renders when another audiobook is loaded or shown, consent changes, or authorization fails. */
 export function usePlayerHostSnapshot(): PlayerHostSnapshot {
   const host = usePlayerHost();
   return React.useSyncExternalStore(host.subscribe, host.getSnapshot);
+}
+
+/** Reports that the listener is on this conversion's page, whether or not its audiobook is prepared. */
+export function useShownConversion(conversionId: string): void {
+  const host = usePlayerHost();
+
+  // Layout effects report the page before the first paint, so its controls never flash.
+  React.useLayoutEffect(
+    function showWhileOnThePage() {
+      host.showConversion(conversionId);
+      return () => host.hideConversion(conversionId);
+    },
+    [host, conversionId],
+  );
+}
+
+type ShownAudiobookPlayback = {
+  /** This page's audiobook, while it is the loaded one. */
+  loaded: LoadedAudiobook | null;
+  canPlay: boolean;
+  /** Must be called from a user gesture. */
+  play: () => void;
+  /** Must be called from a user gesture. */
+  playFromUnit: (unitIndex: number) => void;
+  playWithoutFailedSegments: () => void;
+};
+
+/**
+ * Reports the prepared audiobook a page shows, below `useShownConversion`, and describes its
+ * playback. Play and taps load the audiobook first when another one is loaded.
+ */
+export function useShownAudiobook(
+  conversionId: string,
+  audiobook: PreparedAudiobook,
+): ShownAudiobookPlayback {
+  const host = usePlayerHost();
+  const { loaded, shown } = usePlayerHostSnapshot();
+
+  React.useLayoutEffect(
+    function showLatestVersion() {
+      host.showConversion(conversionId, audiobook);
+    },
+    [host, conversionId, audiobook],
+  );
+
+  return {
+    loaded: loaded?.conversionId === conversionId ? loaded : null,
+    canPlay: shown?.conversionId === conversionId && shown.canPlay,
+    // Wrapped so that a click event is not taken for a unit index.
+    play: () => host.playShown(),
+    playFromUnit: host.playShown,
+    playWithoutFailedSegments: host.consentToSkippingSegmentsWithoutAudio,
+  };
 }
 
 /**
@@ -111,6 +161,12 @@ export function usePlayerState<Selected>(
   return React.useSyncExternalStore(player.subscribe, () => select(player.getSnapshot()));
 }
 
-function countReadySegments(segments: LoadedAudiobook["audiobook"]["segments"]) {
-  return segments.filter((segment) => segment.status === "ready").length;
+function readPlayerHostAccount(): PlayerHostAccount {
+  const authState = authStateSnapshot();
+  if (authState.status === "loading") return { status: "restoring" };
+
+  return {
+    status: "known",
+    subject: authState.status === "signed-in" ? authState.session.user.id : null,
+  };
 }

@@ -15,25 +15,23 @@ import { DSButton } from "#src/app/design-system/button.js";
 import type { PreparedAudiobook } from "#src/app/player/audiobook-player.js";
 import { formatDuration } from "#src/app/player/playback-format.js";
 import {
-  usePlayerHost,
-  usePlayerHostSnapshot,
   usePlayerState,
+  useShownAudiobook,
+  useShownConversion,
 } from "#src/app/player/player-host-provider.js";
-import type { LoadRequest } from "#src/app/player/player-host.js";
+import type { LoadedAudiobook } from "#src/app/player/player-host.js";
 import { composeClassnames } from "#src/app/utils.ts";
-import { useAccountAuthState, useAccountSession } from "#src/auth/hooks.js";
-import {
-  createAudiobookQuery,
-  getLocalPlaybackPosition,
-  useRetryConversion,
-} from "#src/data-fetching/reader.js";
-import type { Player } from "#src/platform/player.js";
+import { useAccountSession } from "#src/auth/hooks.js";
+import { createAudiobookQuery, useRetryConversion } from "#src/data-fetching/reader.js";
 
 export const Route = createFileRoute("/_shell/audiobooks/$conversionId")({
   component: AudiobookBoundary,
 });
 
 function AudiobookBoundary() {
+  // Outside the boundary, so the page counts as shown while it loads, fails, or is still preparing.
+  useShownConversion(Route.useParams().conversionId);
+
   return (
     <QueryBoundary pending={<ReaderSkeleton />} errorComponent={ReaderQueryError}>
       <AudiobookPage />
@@ -98,8 +96,8 @@ function AudiobookPage(): React.JSX.Element {
 }
 
 /**
- * Shows the narration document. Its audio plays in the shell's player: opening the page loads the
- * audiobook when nothing else is loaded, and Play or a segment tap replaces another loaded one.
+ * Shows the narration document. Its audio plays in the shell's player, whose host decides when the
+ * audiobook is loaded and whether Play or a segment tap can start it.
  */
 function PreparedReader({
   conversionId,
@@ -108,13 +106,9 @@ function PreparedReader({
   conversionId: string;
   audiobook: PreparedAudiobook;
 }) {
-  const host = usePlayerHost();
-  const { loaded } = usePlayerHostSnapshot();
-  const session = useAccountSession();
-  const isRestoringAccount = useAccountAuthState().status === "loading";
+  const playback = useShownAudiobook(conversionId, audiobook);
+  const { loaded, canPlay } = playback;
   const narrationDocumentRef = React.useRef<HTMLDivElement>(null);
-  const [shouldPlayWithoutFailedSegments, setShouldPlayWithoutFailedSegments] =
-    React.useState(false);
   const failedUnitIndexes = React.useMemo(
     () =>
       audiobook.segments
@@ -122,44 +116,10 @@ function PreparedReader({
         .map((segment) => segment.sequence),
     [audiobook.segments],
   );
-
   const hasAudio = audiobook.segments.some((segment) => segment.status === "ready");
-  const isPlayable = audiobook.status === "ready" && hasAudio;
-  const isLoaded = loaded?.conversionId === conversionId;
-  const hasPlaybackConsent =
-    failedUnitIndexes.length === 0 ||
-    (isLoaded ? loaded.hasPlaybackConsent : shouldPlayWithoutFailedSegments);
-  const canPlay = isPlayable && hasPlaybackConsent;
-
-  function createLoadRequest(): LoadRequest {
-    check.assert(audiobook.status === "ready", "Only a ready audiobook can be loaded.");
-    return {
-      conversionId,
-      audiobook,
-      position: session ? audiobook.playbackPosition : getLocalPlaybackPosition(conversionId),
-      subject: session?.user.id ?? null,
-      hasPlaybackConsent,
-    };
-  }
-
-  function playWithoutFailedSegments() {
-    if (isLoaded) host.consentToSkippingSegmentsWithoutAudio();
-    else setShouldPlayWithoutFailedSegments(true);
-  }
-
-  function playFromUnit(unitIndex: number) {
-    if (isLoaded) host.playFromUnit(unitIndex);
-    else host.loadAndPlay(createLoadRequest(), unitIndex);
-  }
 
   return (
     <>
-      {/* Loading never starts playback, so it needs no consent to skip segments without audio. */}
-      {/* Waits for the account, whose listening position and media authorization it needs. */}
-      {loaded === null && isPlayable && !isRestoringAccount ? (
-        <LoadIntoEmptyPlayer createRequest={createLoadRequest} />
-      ) : null}
-
       <div
         className={css`
           display: flex;
@@ -170,13 +130,8 @@ function PreparedReader({
       >
         <BackLink />
         {/* The player below the page has the controls of the loaded audiobook. */}
-        {isLoaded ? null : (
-          <DSButton
-            variant="text"
-            aria-label="Play"
-            disabled={!canPlay}
-            onClick={() => host.loadAndPlay(createLoadRequest())}
-          >
+        {loaded ? null : (
+          <DSButton variant="text" aria-label="Play" disabled={!canPlay} onClick={playback.play}>
             <Play size={48} />
           </DSButton>
         )}
@@ -188,18 +143,18 @@ function PreparedReader({
         failedUnitIndexes={failedUnitIndexes}
         hasAudio={hasAudio}
         canPlay={canPlay}
-        onPlayWithoutFailedSegments={playWithoutFailedSegments}
+        onPlayWithoutFailedSegments={playback.playWithoutFailedSegments}
       />
 
       <NarrationDocument
         ref={narrationDocumentRef}
         audiobook={audiobook}
         failedUnitIndexes={failedUnitIndexes}
-        onSelectUnit={canPlay ? playFromUnit : undefined}
+        onSelectUnit={canPlay ? playback.playFromUnit : undefined}
       />
-      {isLoaded ? (
+      {loaded ? (
         <CurrentSegmentHighlight
-          player={loaded.player}
+          loaded={loaded}
           units={audiobook.narrationDocument.synchronizationUnits}
           narrationDocumentRef={narrationDocumentRef}
         />
@@ -307,29 +262,17 @@ function ReaderNotices({
   );
 }
 
-/** Loads the audiobook when it mounts; rendered only while the player is empty. */
-function LoadIntoEmptyPlayer({ createRequest }: { createRequest: () => LoadRequest }) {
-  const host = usePlayerHost();
-  const load = React.useEffectEvent(() => host.load(createRequest()));
-
-  React.useEffect(function loadOnMount() {
-    load();
-  }, []);
-
-  return null;
-}
-
 /** Marks the segment being played; rendered only while this page's audiobook is loaded. */
 function CurrentSegmentHighlight({
-  player,
+  loaded,
   units,
   narrationDocumentRef,
 }: {
-  player: Player;
+  loaded: LoadedAudiobook;
   units: PreparedAudiobook["narrationDocument"]["synchronizationUnits"];
   narrationDocumentRef: React.RefObject<HTMLDivElement | null>;
 }) {
-  const currentUnitIndex = usePlayerState(player, (state) => state.currentUnitIndex);
+  const currentUnitIndex = usePlayerState(loaded.player, (state) => state.currentUnitIndex);
   const currentUnitId = units[currentUnitIndex]?.id;
 
   React.useEffect(
