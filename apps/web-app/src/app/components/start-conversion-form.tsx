@@ -9,8 +9,8 @@ import { type GrantSnapshot, startConversionRequestSchema } from "@cup/listener-
 import { SignInDialog } from "#src/app/components/sign-in-dialog.js";
 import { useAppForm } from "#src/app/form.js";
 import { useAccountConversionSubmission } from "#src/app/use-cases/account-conversions.js";
+import { useStartTrialConversionMutation } from "#src/data-fetching/conversion-grant.js";
 import { useRateLimitCountdown } from "#src/data-fetching/rate-limit.js";
-import { useStartTrialConversionMutation } from "#src/data-fetching/trial-link.js";
 import { summarizeError } from "#src/errors.js";
 import { subscribeToSharedUrl } from "#src/platform/share-intake.js";
 

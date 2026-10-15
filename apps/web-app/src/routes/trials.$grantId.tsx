@@ -19,7 +19,7 @@ import {
   createGrantQuery,
   createGrantQueryKey,
   exchangeCredential,
-} from "#src/data-fetching/trial-link.js";
+} from "#src/data-fetching/conversion-grant.js";
 import { UserFacingError, type ErrorCopy } from "#src/errors.js";
 import { trialBrowserState } from "#src/trial-browser-state.js";
 
