@@ -6,6 +6,7 @@ import { ShellContent } from "#src/app/components/main.tsx";
 import { DSButton } from "#src/app/design-system/button.js";
 import { useAccountSession, useAccountAuthState } from "#src/auth/hooks.js";
 import { createAccountHistoryQuery } from "#src/data-fetching/account-history.js";
+import { describeError } from "#src/errors.js";
 
 export const Route = createFileRoute("/_shell/history")({
   component: HistoryPage,
@@ -25,9 +26,10 @@ function HistoryPage(): React.ReactNode {
           {authState.status === "error" && <p role="alert">{authState.error.message}</p>}
           {authState.status === "signed-out" && <p>Sign in to see your conversions.</p>}
           {history.isLoading && <output>Loading conversions…</output>}
-          {history.error && (
+          {/* Once conversions are listed, a failed refresh or "Load more" is reported with a toast. */}
+          {history.error && !history.data && (
             <>
-              <p role="alert">{history.error.message}</p>
+              <HistoryLoadError error={history.error} />
               <DSButton disabled={history.isFetching} onClick={() => void history.refetch()}>
                 Retry history
               </DSButton>
@@ -90,5 +92,15 @@ function HistoryPage(): React.ReactNode {
         </>
       }
     ></ShellContent>
+  );
+}
+
+function HistoryLoadError({ error }: { error: unknown }): React.ReactNode {
+  const description = describeError(error, "Your conversions could not be loaded.");
+
+  return (
+    <p role="alert">
+      {description.title} {description.detail}
+    </p>
   );
 }

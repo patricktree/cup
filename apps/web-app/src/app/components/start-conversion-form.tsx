@@ -11,6 +11,7 @@ import { useAppForm } from "#src/app/form.js";
 import { useAccountConversionSubmission } from "#src/app/use-cases/account-conversions.js";
 import { useRateLimitCountdown } from "#src/data-fetching/rate-limit.js";
 import { useStartTrialConversionMutation } from "#src/data-fetching/trial-link.js";
+import { summarizeError } from "#src/errors.js";
 import { subscribeToSharedUrl } from "#src/platform/share-intake.js";
 
 type StartConversionFormProps =
@@ -74,7 +75,7 @@ function TrialConversionForm({ grant }: { grant: GrantSnapshot }): React.ReactNo
       initialSourceUrl=""
       isPending={start.isPending}
       retryIn={retryIn}
-      error={start.error?.message}
+      error={start.error}
       onSubmit={async ({ sourceUrl }) => {
         await start.mutateAsync(sourceUrl).catch(() => {});
       }}
@@ -94,7 +95,7 @@ function ConversionForm({
   initialSourceUrl: string;
   isPending: boolean;
   retryIn: number;
-  error: string | undefined;
+  error: unknown;
   onSubmit: (value: { sourceUrl: string }) => Promise<void>;
 }): React.ReactNode {
   const form = useAppForm({
@@ -174,7 +175,9 @@ function ConversionForm({
         </form.AppForm>
       </form>
       {retryIn > 0 && <output>Try again in {retryIn} seconds.</output>}
-      {error && <p role="alert">{error}</p>}
+      {error ? (
+        <p role="alert">{summarizeError(error, "The conversion could not start.")}</p>
+      ) : null}
     </>
   );
 }

@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 
 import { accountStartResponseSchema } from "@cup/web-app-api.routes";
 
-import { isSignedInAs } from "#src/auth/account-session.js";
+import { isSignedInAs, signInGoogle } from "#src/auth/account-session.js";
 import {
   readPendingAccountConversion,
   storePendingAccountConversion,
@@ -24,6 +24,8 @@ export const accountQuery = (subject?: string) =>
       return requestApi({ subject }, (client) => client.getAccount());
     },
     retry: false,
+    // Account settings replace themselves with the setup error, which explains rate limiting.
+    meta: { errorDisplay: "inline" },
   });
 
 export function invalidateAccountQueries(subject?: string) {
@@ -32,10 +34,20 @@ export function invalidateAccountQueries(subject?: string) {
   });
 }
 
+export function useSignInMutation() {
+  return useMutation({
+    // The sign-in dialog keeps its failure next to the button that tries again.
+    meta: { errorDisplay: "inline" },
+    mutationFn: () => signInGoogle(),
+  });
+}
+
 export function useStartAccountConversionMutation(
   onSuccess: (conversionId: string) => Promise<void>,
 ) {
   return useMutation({
+    // The start form shows refusals and the rate-limit countdown next to the submitted URL.
+    meta: { errorDisplay: "inline" },
     onError: (failure, request) => {
       if (!isSignedInAs(request.subject)) return;
       if (failure instanceof RpcError && failure.status === 429) {

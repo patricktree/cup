@@ -1,17 +1,13 @@
 import { css } from "@linaria/core";
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
-import {
-  useSuspenseQuery,
-  useQueryClient,
-  useQueryErrorResetBoundary,
-} from "@tanstack/react-query";
+import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, type ErrorComponentProps } from "@tanstack/react-router";
 import { ArrowLeft, Play } from "lucide-react";
 import React from "react";
 
 import { ErrorMessage } from "#src/app/components/error-message.js";
 import { ShellContent } from "#src/app/components/main.tsx";
-import { QueryBoundary } from "#src/app/components/query-boundary.js";
+import { QueryBoundary, QueryErrorScreen } from "#src/app/components/query-boundary.js";
 import { DSButton } from "#src/app/design-system/button.js";
 import { formatDuration } from "#src/app/player/playback-format.js";
 import type { PreparedAudiobook } from "#src/app/player/playback-session.js";
@@ -45,34 +41,15 @@ function AudiobookBoundary() {
   );
 }
 
-function ReaderQueryError({ reset }: ErrorComponentProps) {
-  const queryBoundary = useQueryErrorResetBoundary();
-  return (
-    <ErrorMessage title="The article could not be loaded.">
-      <DSButton
-        onClick={() => {
-          queryBoundary.reset();
-          reset();
-        }}
-      >
-        Try again
-      </DSButton>
-    </ErrorMessage>
-  );
+function ReaderQueryError(props: ErrorComponentProps) {
+  return <QueryErrorScreen {...props} fallbackTitle="The article could not be loaded." />;
 }
+
 function AudiobookPage(): React.JSX.Element {
   const { conversionId } = Route.useParams();
   const session = useAccountSession();
   const query = useSuspenseQuery(createAudiobookQuery(conversionId));
   const retry = useRetryConversion(conversionId, useQueryClient());
-
-  if (query.isError) {
-    return (
-      <ErrorMessage title="The article could not be loaded.">
-        <DSButton onClick={() => query.refetch()}>Try again</DSButton>
-      </ErrorMessage>
-    );
-  }
 
   if (query.data.status === "pending") {
     return <ReaderSkeleton />;
@@ -81,7 +58,7 @@ function AudiobookPage(): React.JSX.Element {
   if (query.data.status === "failed") {
     return (
       <ErrorMessage title="The article could not be prepared.">
-        <p>{retry.error?.message ?? query.data.explanation}</p>
+        <p>{query.data.explanation}</p>
         <DSButton
           disabled={retry.isPending || !query.data.canGenerate}
           onClick={() => retry.mutate()}
@@ -192,20 +169,17 @@ function ReaderNotices({
     </DSButton>
   );
 
-  // A refused retry of failed segments changes nothing in the audiobook, so it is reported here.
-  const retryOutcomeNotice = retry.error ? (
-    <ReaderNotice>
-      <p>{retry.error.message}</p>
-    </ReaderNotice>
-  ) : retry.data?.result === "insufficient-duration" && audiobook.status === "ready" ? (
-    <ReaderNotice>
-      <p>
-        Not enough audio duration to retry. The missing audio needs about{" "}
-        {formatDuration(retry.data.requiredMilliseconds)}, and{" "}
-        {formatDuration(retry.data.availableMilliseconds)} is available.
-      </p>
-    </ReaderNotice>
-  ) : null;
+  // A retry refused for lack of duration changes nothing in the audiobook, so it is reported here.
+  const retryOutcomeNotice =
+    retry.data?.result === "insufficient-duration" && audiobook.status === "ready" ? (
+      <ReaderNotice>
+        <p>
+          Not enough audio duration to retry. The missing audio needs about{" "}
+          {formatDuration(retry.data.requiredMilliseconds)}, and{" "}
+          {formatDuration(retry.data.availableMilliseconds)} is available.
+        </p>
+      </ReaderNotice>
+    ) : null;
 
   return (
     <>

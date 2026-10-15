@@ -230,6 +230,9 @@ test("renders audiobook-not-found", async ({ mount }) => {
   await expect(
     component.getByRole("heading", { name: "The article could not be loaded." }),
   ).toBeVisible();
+  await expect(component.getByText("The audiobook was not found.")).toBeVisible();
+  // Trying again cannot find an audiobook that does not exist.
+  await expect(component.getByRole("button", { name: "Try again" })).toHaveCount(0);
   await expect(component).toHaveScreenshot("audiobook-not-found.png");
 });
 
@@ -262,4 +265,45 @@ test("preparation failure replaces skeletons with Retry", async ({ mount }) => {
   ).toBeVisible();
   await expect(component.getByRole("button", { name: "Retry", exact: true })).toBeEnabled();
   await expect(component).toHaveScreenshot("failed-conversion.png");
+});
+
+test("a refused retry is reported with a toast and leaves the reader in place", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/RetryRefused");
+  await component.getByRole("button", { name: "Retry", exact: true }).click();
+
+  // Base UI announces urgent toasts through an alert and hides the toast itself until focused.
+  await expect(page.getByRole("alert")).toHaveText(
+    "The retry could not start.This trial no longer permits new speech generation.",
+  );
+  await expect(
+    component.getByText("Audio could not be generated for this article.", { exact: true }),
+  ).toBeVisible();
+  await expect(page).toHaveScreenshot("retry-refused-toast.png");
+
+  await page.getByRole("button", { name: "Dismiss", includeHidden: true }).click();
+  await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(0);
+});
+
+test("failed polling keeps the article and shows one toast until polling recovers", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/PollingInterrupted");
+  const toasts = page.getByRole("alertdialog", { includeHidden: true });
+  await expect(toasts).toHaveCount(1);
+  await expect(toasts).toContainText("The article could not be updated.");
+
+  // Three failed polls replace one toast, which closes once polling succeeds again.
+  const toastCounts: number[] = [];
+  await expect
+    .poll(async () => {
+      toastCounts.push(await toasts.count());
+      return toastCounts.at(-1);
+    })
+    .toBe(0);
+  expect(Math.max(...toastCounts)).toBe(1);
+  await expect(component.getByText("Keep the important boundaries real.")).toBeVisible();
 });

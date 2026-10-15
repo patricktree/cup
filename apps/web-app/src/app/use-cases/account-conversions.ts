@@ -1,13 +1,14 @@
-import { useMutation } from "@tanstack/react-query";
 import React from "react";
 
-import { signInGoogle } from "#src/auth/account-session.js";
 import { useAccountSession, useAccountAuthState } from "#src/auth/hooks.js";
 import {
   readPendingAccountConversion,
   storePendingAccountConversion,
 } from "#src/data-fetching/account-conversion-storage.js";
-import { useStartAccountConversionMutation } from "#src/data-fetching/account.js";
+import {
+  useSignInMutation,
+  useStartAccountConversionMutation,
+} from "#src/data-fetching/account.js";
 import { useRateLimitCountdown } from "#src/data-fetching/rate-limit.js";
 
 export function useAccountConversionSubmission({
@@ -17,7 +18,7 @@ export function useAccountConversionSubmission({
 }) {
   const session = useAccountSession();
   const authState = useAccountAuthState();
-  const signIn = useMutation({ mutationFn: () => signInGoogle() });
+  const signIn = useSignInMutation();
   const start = useStartAccountConversionMutation(onStarted);
   const retryIn = useRateLimitCountdown(start.error);
 
@@ -36,7 +37,7 @@ export function useAccountConversionSubmission({
     initialSourceUrl: readPendingAccountConversion()?.sourceUrl ?? "",
     isPending: start.isPending || authState.status === "loading",
     retryIn,
-    error: start.error?.message,
+    error: start.error,
     requiresSignIn: requiresSignIn && !session,
     signIn,
     submit: async ({ sourceUrl: input }: { sourceUrl: string }) => {

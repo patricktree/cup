@@ -16,10 +16,13 @@ import {
 } from "#src/data-fetching/account-confirmation-storage.js";
 import { invalidateAccountQueries } from "#src/data-fetching/account.js";
 import { requestApi } from "#src/data-fetching/api-request.js";
+import { summarizeError, UserFacingError } from "#src/errors.js";
 
 export function useAccountConfirmation(subject: string) {
   const [challenge, setChallenge] = React.useState(readPendingAccountChallenge);
   const change = useMutation({
+    // The confirmation flow shows its failure next to the step the user is taking.
+    meta: { errorDisplay: "inline" },
     mutationFn: async (
       command: { type: "begin"; action: "delete" | "restore" } | { type: "confirm" },
     ) => {
@@ -28,24 +31,30 @@ export function useAccountConfirmation(subject: string) {
           await requestApi({ subject }, (client) => client.createDeletionChallenge()),
         );
         if (issued.subject !== subject || !isSignedInAs(subject))
-          throw new Error("Use the same Google account that requested confirmation.");
+          throw new UserFacingError({
+            title: "Use the same Google account that requested confirmation.",
+          });
         const next = { ...issued, action: command.action };
         storeAccountChallenge(next);
         setChallenge(next);
         // Supabase AMR timestamps have whole-second precision; authenticate strictly after issuance.
         await new Promise<void>((resolve) => window.setTimeout(resolve, 1_100));
-        if (!isSignedInAs(subject)) throw new Error("Use the same Google account.");
+        if (!isSignedInAs(subject))
+          throw new UserFacingError({ title: "Use the same Google account." });
         await signInGoogle(true);
         return null;
       }
 
       const pending = readPendingAccountChallenge();
       if (!pending || pending.subject !== subject)
-        throw new Error("Use the same Google account that requested confirmation.");
+        throw new UserFacingError({
+          title: "Use the same Google account that requested confirmation.",
+        });
       // The Google provider token lives only on the session; requestApi below re-resolves its own
       // token and guard, so this check exists to name the account mismatch and narrow `session`.
       const session = await getFreshAccountSession();
-      if (session?.user.id !== subject) throw new Error("Use the same Google account.");
+      if (session?.user.id !== subject)
+        throw new UserFacingError({ title: "Use the same Google account." });
       const input = {
         challengeId: pending.challengeId,
         ...(session.provider_token ? { providerToken: session.provider_token } : {}),
@@ -71,7 +80,9 @@ export function useAccountConfirmation(subject: string) {
   return {
     challenge,
     isPending: change.isPending,
-    error: change.error?.message,
+    error: change.error
+      ? summarizeError(change.error, "The confirmation could not be completed.")
+      : undefined,
     result: change.data,
     begin: (action: "delete" | "restore") => change.mutate({ type: "begin", action }),
     confirm: () => change.mutate({ type: "confirm" }),

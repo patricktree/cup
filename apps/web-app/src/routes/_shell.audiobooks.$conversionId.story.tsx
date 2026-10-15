@@ -251,3 +251,69 @@ export const FailedConversion = {
     ),
   ],
 } satisfies Story;
+
+export const RetryRefused = {
+  component: () => <GlobalProviders router={router} />,
+  handlers: [
+    http.get(`/api/audiobooks/${CONVERSION_ID}`, () =>
+      HttpResponse.json({
+        ...PREPARED_AUDIOBOOK,
+        status: "ready",
+        segments: [0, 1, 2].map((sequence) => ({
+          sequence,
+          status: "failed" as const,
+          explanation: "The provider is unavailable.",
+        })),
+      } satisfies Audiobook),
+    ),
+    http.post(`/api/audiobooks/${CONVERSION_ID}/retry`, () =>
+      HttpResponse.json(
+        {
+          error: {
+            requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
+            code: "grant-expired",
+            message: "This trial no longer permits new speech generation.",
+          },
+        } satisfies ErrorResponse,
+        { status: 403 },
+      ),
+    ),
+  ],
+} satisfies Story;
+
+/**
+ * Polling an audiobook whose audio is generated fails three times, then recovers. The count spans
+ * the page's lifetime, so the failures play out only once per page load.
+ */
+export const PollingInterrupted = {
+  component: () => <GlobalProviders router={router} />,
+  handlers: (() => {
+    let requestCount = 0;
+    return [
+      http.get(`/api/audiobooks/${CONVERSION_ID}`, () => {
+        requestCount += 1;
+        if (requestCount >= 2 && requestCount <= 4) {
+          return HttpResponse.json(
+            {
+              error: {
+                requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
+                code: "operational-error",
+                message: "The audiobook could not be loaded.",
+              },
+            } satisfies ErrorResponse,
+            { status: 500 },
+          );
+        }
+        return HttpResponse.json({
+          ...PREPARED_AUDIOBOOK,
+          status: "synthesizing",
+          segments: [
+            createReadySegment(0),
+            { sequence: 1, status: "generating" },
+            { sequence: 2, status: "generating" },
+          ],
+        } satisfies Audiobook);
+      }),
+    ];
+  })(),
+} satisfies Story;

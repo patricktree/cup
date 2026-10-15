@@ -38,7 +38,7 @@ test("rejects malformed and invalid trial links", async ({
   page,
   workerEnvironment,
 }) => {
-  expectConsoleError(/^TrialLinkInvalidError: This trial link is invalid\./);
+  expectConsoleError(/^UserFacingError: This trial link is invalid\./);
   await gotoPage(page, `${workerEnvironment.origin}/app/trials/${GRANT_ID}#credential=malformed`);
   await expect(page.getByRole("heading", { name: "This trial link is invalid." })).toBeVisible();
 
@@ -231,7 +231,9 @@ test("shows an article not-found state", async ({
   await expect(
     page.getByRole("heading", { name: "The article could not be loaded." }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+  await expect(page.getByText("The audiobook was not found.")).toBeVisible();
+  // Trying again cannot find an audiobook that does not exist.
+  await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
 });
 
 test("retries an audiobook loading failure", async ({
