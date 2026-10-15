@@ -6,6 +6,7 @@ import {
   type PlaybackSessionRequest,
   type PlaybackSessionServices,
 } from "#src/app/player/playback-session.js";
+import silenceUrl from "#src/app/player/silence.wav?no-inline";
 import {
   getResourceAccountSession,
   refreshPlaybackAuthorization,
@@ -31,5 +32,18 @@ export function createPlaybackSession(request: PlaybackSessionRequest): Playback
 
 /** Selects the engine for this platform: the browser's audio elements or the native player. */
 export function createPlayer(session: PlaybackSession): Player {
-  return Capacitor.isNativePlatform() ? new NativePlayer(session) : new AudiobookPlayer(session);
+  return Capacitor.isNativePlatform()
+    ? new NativePlayer(session)
+    : new AudiobookPlayer(session, {
+        createAudioElement: createCredentialedAudioElement,
+        silenceUrl,
+      });
+}
+
+function createCredentialedAudioElement() {
+  const element = new Audio();
+  element.preload = "auto";
+  // Sends the media cookie, or a trial's grant cookie, with every segment request.
+  element.crossOrigin = "use-credentials";
+  return element;
 }

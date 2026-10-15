@@ -1,10 +1,9 @@
 import {
   findTimelineEntryIndex,
   locateTimelinePosition,
-} from "#src/app/player/audiobook-timeline.js";
-import type { PlaybackSession } from "#src/app/player/playback-session.js";
-import silenceUrl from "#src/app/player/silence.wav?no-inline";
-import type { PlayerSnapshot } from "#src/platform/player.js";
+} from "#src/app/player/audiobook-timeline.ts";
+import type { PlaybackSession } from "#src/app/player/playback-session.ts";
+import type { PlayerSnapshot } from "#src/platform/player.ts";
 
 /** What the browser engine needs from the loaded audiobook's playback session. */
 export type AudiobookPlayerSession = Pick<
@@ -18,6 +17,32 @@ export type AudiobookPlayerSession = Pick<
   | "saveIfDue"
 >;
 
+/** The members of an audio element the engine uses. */
+export type AudiobookAudioElement = Pick<
+  HTMLAudioElement,
+  | "addEventListener"
+  | "removeEventListener"
+  | "play"
+  | "pause"
+  | "load"
+  | "removeAttribute"
+  | "src"
+  | "currentTime"
+  | "duration"
+  | "muted"
+  | "paused"
+  | "ended"
+  | "seeking"
+>;
+
+/** The browser facilities the engine plays with, supplied by its caller so tests can fake them. */
+export type AudiobookPlayerEnvironment = {
+  /** Creates one of the two audio elements, configured to send media credentials. */
+  createAudioElement: () => AudiobookAudioElement;
+  /** A short same-origin silence that unlocks an element which has no segment loaded yet. */
+  silenceUrl: string;
+};
+
 /**
  * Plays an audiobook's audio segments as one continuous timeline.
  *
@@ -26,11 +51,11 @@ export type AudiobookPlayerSession = Pick<
  */
 export class AudiobookPlayer {
   private readonly session: AudiobookPlayerSession;
-  private readonly createAudioElement: () => HTMLAudioElement;
+  private readonly environment: AudiobookPlayerEnvironment;
   private readonly listeners = new Set<() => void>();
   private snapshot: PlayerSnapshot;
 
-  private elements: [HTMLAudioElement, HTMLAudioElement] | null = null;
+  private elements: [AudiobookAudioElement, AudiobookAudioElement] | null = null;
   private activeElementIndex: 0 | 1 = 0;
   private readonly loadedEntryIndexes: [number | null, number | null] = [null, null];
   private entryIndex: number;
@@ -41,12 +66,9 @@ export class AudiobookPlayer {
   private initialAuthorization: Promise<void> = Promise.resolve();
   private isAwaitingInitialAuthorization = false;
 
-  constructor(
-    session: AudiobookPlayerSession,
-    createAudioElement = createCredentialedAudioElement,
-  ) {
+  constructor(session: AudiobookPlayerSession, environment: AudiobookPlayerEnvironment) {
     this.session = session;
-    this.createAudioElement = createAudioElement;
+    this.environment = environment;
     this.entryIndex = session.initialLocation.entryIndex;
     this.offsetMilliseconds = session.initialLocation.offsetMilliseconds;
     this.snapshot = {
@@ -72,9 +94,9 @@ export class AudiobookPlayer {
       return;
     }
 
-    const elements: [HTMLAudioElement, HTMLAudioElement] = [
-      this.createAudioElement(),
-      this.createAudioElement(),
+    const elements: [AudiobookAudioElement, AudiobookAudioElement] = [
+      this.environment.createAudioElement(),
+      this.environment.createAudioElement(),
     ];
     this.elements = elements;
     this.activeElementIndex = 0;
@@ -342,7 +364,7 @@ export class AudiobookPlayer {
 
     this.hasUnlockedElement[elementIndex] = true;
     if (this.loadedEntryIndexes[elementIndex] === null) {
-      element.src = silenceUrl;
+      element.src = this.environment.silenceUrl;
     }
     element.muted = true;
     void element
@@ -420,7 +442,7 @@ export class AudiobookPlayer {
     this.preloadFollowingEntry();
   }
 
-  private onTimeUpdate(element: HTMLAudioElement) {
+  private onTimeUpdate(element: AudiobookAudioElement) {
     if (this.loadedEntryIndexes[this.activeElementIndex] !== this.entryIndex || element.seeking) {
       return;
     }
@@ -431,7 +453,7 @@ export class AudiobookPlayer {
   }
 
   /** Follows pauses made outside the player, such as an audio interruption by the system. */
-  private onElementPaused(element: HTMLAudioElement) {
+  private onElementPaused(element: AudiobookAudioElement) {
     // A seek pauses and restarts the element; by the time this event arrives it plays again.
     if (this.snapshot.isPlaying && !this.snapshot.isBuffering && element.paused && !element.ended) {
       this.pause();
@@ -463,12 +485,4 @@ export class AudiobookPlayer {
       }
     });
   }
-}
-
-function createCredentialedAudioElement() {
-  const element = new Audio();
-  element.preload = "auto";
-  // Sends the media cookie, or a trial's grant cookie, with every segment request.
-  element.crossOrigin = "use-credentials";
-  return element;
 }
