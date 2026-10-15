@@ -6,7 +6,7 @@ import type { Audiobook, ErrorResponse, RetryConversionResponse } from "@cup/web
 
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
 import { queryClient } from "#src/data-fetching/query-client.js";
-import { createAudiobookQuery } from "#src/data-fetching/trial-link.js";
+import { createAudiobookQuery } from "#src/data-fetching/reader.js";
 import { accountStory } from "#src/ui-gallery/account-fixtures.jsx";
 import gatesNotesAudiobook from "#src/ui-gallery/gates-notes-audiobook.json" with { type: "json" };
 import type { Story } from "#src/ui-gallery/story.js";

@@ -42,6 +42,22 @@ test("renders grant-load-error", async ({ mount }) => {
   await expect(component).toHaveScreenshot("grant-load-error.png");
 });
 
+test("renders grant-session-invalid", async ({ mount }) => {
+  const component = await mount("routes/trials.$grantId/GrantSessionInvalid");
+  await expect(
+    component.getByRole("heading", { name: "This browser no longer has access." }),
+  ).toBeVisible();
+  await expect(component.getByText("Open the original trial link again.")).toBeVisible();
+  await expect(component).toHaveScreenshot("grant-session-invalid.png");
+});
+
+test("explains a missing grant session as lost access", async ({ mount }) => {
+  const component = await mount("routes/trials.$grantId/GrantSessionRequired");
+  await expect(
+    component.getByRole("heading", { name: "This browser no longer has access." }),
+  ).toBeVisible();
+});
+
 test("renders an invalid source URL", async ({ mount }) => {
   const component = await mount("routes/trials.$grantId/OpenGrant");
   await component.getByRole("textbox", { name: /^URL/ }).fill("not a URL");

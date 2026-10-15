@@ -2,10 +2,9 @@ import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import React from "react";
 
-import { RpcError } from "@cup/web-app-api.client";
-
 import { QueryBoundary } from "#src/app/components/query-boundary.js";
 import { DSButton } from "#src/app/design-system/button.js";
+import { RpcError } from "#src/data-fetching/api-request.js";
 import { useRateLimitCountdown } from "#src/data-fetching/rate-limit.js";
 
 export function AccountQueryBoundary({ children }: { children: React.ReactNode }): React.ReactNode {

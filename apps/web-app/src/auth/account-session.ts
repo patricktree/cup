@@ -35,6 +35,8 @@ let mediaUpdates: Promise<void> = Promise.resolve();
 
 export const authStateSnapshot = () => authState;
 export const sessionSnapshot = () => (authState.status === "signed-in" ? authState.session : null);
+/** Whether `subject` is still the signed-in account, e.g. before applying a late response. */
+export const isSignedInAs = (subject: string) => sessionSnapshot()?.user.id === subject;
 export const subscribeAuthState = (listener: () => void) => {
   listeners.add(listener);
   return () => {
@@ -142,14 +144,6 @@ function stopPlayback() {
   stopNativePlayback();
   window.dispatchEvent(new Event(STOP_PLAYBACK_EVENT_NAME));
   for (const audio of document.querySelectorAll("audio")) audio.pause();
-}
-
-/** Resolve a fresh token for each operation and reject a changed account before dispatch. */
-export async function getAuthenticatedRpcClient(expectedSubject?: string) {
-  const current = await getFreshAccountSession();
-  if (!current || (expectedSubject !== undefined && current.user.id !== expectedSubject))
-    throw new Error("Sign in to continue.");
-  return createAppApiClient().createAuthenticatedRpcClient(current.access_token);
 }
 
 export function refreshPlaybackAuthorization(current: Session | null = sessionSnapshot()) {

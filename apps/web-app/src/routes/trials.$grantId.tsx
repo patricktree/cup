@@ -15,8 +15,8 @@ import { StartConversionForm } from "#src/app/components/start-conversion-form.j
 import { DSButton } from "#src/app/design-system/button.js";
 import { getResourceAccountSession } from "#src/auth/account-session.js";
 import { useAccountSession } from "#src/auth/hooks.js";
+import { RpcError } from "#src/data-fetching/api-request.js";
 import {
-  ApiError,
   createGrantQuery,
   createGrantQueryKey,
   exchangeCredential,
@@ -87,7 +87,7 @@ function RouteErrorComponent({ error }: ErrorComponentProps): React.JSX.Element 
     );
   }
 
-  if (error instanceof ApiError && error.status < 500 && error.code === "grant-revoked") {
+  if (error instanceof RpcError && error.status < 500 && error.code === "grant-revoked") {
     return (
       <ErrorMessage title="This trial link was revoked.">
         Check that you opened the complete trial link.
@@ -95,21 +95,22 @@ function RouteErrorComponent({ error }: ErrorComponentProps): React.JSX.Element 
     );
   }
 
-  if (error instanceof ApiError && error.status < 500) {
-    return (
-      <ErrorMessage title="This trial link is invalid.">
-        Check that you opened the complete trial link.
-      </ErrorMessage>
-    );
-  }
-
+  // The API answers missing and invalid grant sessions with 401, so check them before other 4xx.
   if (
-    error instanceof ApiError &&
+    error instanceof RpcError &&
     (error.code === "grant-session-required" || error.code === "grant-session-invalid")
   ) {
     return (
       <ErrorMessage title="This browser no longer has access.">
         Open the original trial link again.
+      </ErrorMessage>
+    );
+  }
+
+  if (error instanceof RpcError && error.status < 500) {
+    return (
+      <ErrorMessage title="This trial link is invalid.">
+        Check that you opened the complete trial link.
       </ErrorMessage>
     );
   }
