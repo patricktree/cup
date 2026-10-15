@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import type { AudioSegment } from "@cup/web-app-api.routes";
+import type { AudioSegment } from "@cup/listener-api.routes";
 
 import {
   createAudiobookTimeline,

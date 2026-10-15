@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { sourceUrlSchema } from "@cup/web-app-api.routes";
+import { sourceUrlSchema } from "@cup/listener-api.routes";
 
 const PENDING_CONVERSION_KEY = "cup_pending_conversion";
 

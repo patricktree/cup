@@ -133,7 +133,7 @@ The operator CLI authenticates through Cloudflare Access. The Worker validates t
 
 Deletion and recovery require an additional one-use challenge and Google authentication after that challenge was issued. They also enforce request origin and content-type constraints. See [account deletion](account-deletion.md) for why ordinary sign-in does not restore access.
 
-Sources: [operator guide](../../apps/operator/README.md), [Access verification and routing](../../libs/api-server/src/api-server.ts), [development access](../../libs/api-server/src/operator-access.ts), and [lifecycle handlers](../../libs/api-server/src/api-server.ts). Provider configuration and outstanding rollout verification belong in [signup operations](../social-signup-operations.md) and the [Terraform guide](../../terraform/README.md).
+Sources: [operator guide](../../apps/operator/README.md), [Access verification and routing](../../libs/api-server/src/api-server.ts), [development access](../../libs/api-server/src/operator-access.ts), and [lifecycle handlers](../../libs/api-server/src/api-server.ts). Provider configuration and outstanding rollout verification belong in [production configuration](../production-configuration.md) and the [Terraform guide](../../terraform/README.md).
 
 ## Historical evidence and deferred work
 

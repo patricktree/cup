@@ -5,12 +5,12 @@ import type {
   ExchangeCredentialRequest,
   GrantParams,
   StartConversionRequest,
-} from "@cup/web-app-api.routes";
+} from "@cup/listener-api.routes";
 
 import { createHonoClient, type HonoClient } from "#src/hono-client.ts";
 
 /** Typed public API client; account requests use an authenticated scoped client. */
-export class WebAppApiClient {
+export class ListenerApiClient {
   #honoClient: HonoClient;
   #baseUrl: string;
 

@@ -3,7 +3,7 @@ import type { ResolveParams } from "@tanstack/react-router";
 import { delay, http, HttpResponse } from "msw";
 import React from "react";
 
-import type { ErrorResponse, GrantSnapshot } from "@cup/web-app-api.routes";
+import type { ErrorResponse, GrantSnapshot } from "@cup/listener-api.routes";
 
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
 import { Route as trialRoute } from "#src/routes/trials.$grantId.js";

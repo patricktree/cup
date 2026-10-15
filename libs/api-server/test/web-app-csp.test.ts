@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { WEB_APP_CSP_NONCE_PLACEHOLDER } from "@cup/web-app-api.routes/web-app-csp";
+import { WEB_APP_CSP_NONCE_PLACEHOLDER } from "@cup/listener-api.routes/web-app-csp";
 
 import { applyWebAppCspNonce } from "#src/web-app-csp.ts";
 

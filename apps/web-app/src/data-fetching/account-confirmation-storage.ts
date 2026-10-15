@@ -1,7 +1,7 @@
 import { Temporal } from "temporal-polyfill";
 import { z } from "zod";
 
-import { deletionChallengeSchema } from "@cup/web-app-api.routes";
+import { deletionChallengeSchema } from "@cup/listener-api.routes";
 
 export const ACCOUNT_CONFIRMATION_STORAGE_KEY = "cup_account_confirmation";
 const challengeSchema = deletionChallengeSchema.extend({ action: z.enum(["delete", "restore"]) });

@@ -1,4 +1,4 @@
-import type { AudioSegment } from "@cup/web-app-api.routes";
+import type { AudioSegment } from "@cup/listener-api.routes";
 
 /** One audio segment's interval on the whole-audiobook timeline. */
 type TimelineEntry = {

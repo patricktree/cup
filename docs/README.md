@@ -19,7 +19,8 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 | Guide                                                                | Purpose                                                                                |
 | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | [Repository setup and validation](../AGENTS.md)                      | Prepare a checkout and run checks                                                      |
-| [Social signup operations](social-signup-operations.md)              | Configure local authentication, supply production configuration, and inspect accounts  |
+| [Local development](local-development.md)                            | Run the web application against local services                                         |
+| [Production configuration](production-configuration.md)              | Supply Worker secrets and provider settings, and track the pending rollout             |
 | [Mobile development](../apps/mobile-app/README.md)                   | Build native shells and configure platform links and sharing                           |
 | [Account migrations](../libs/accounts/README.md#database-migrations) | Change account Drizzle schemas and validate account storage                            |
 | [Grant migrations](../libs/conversion-grants/README.md)              | Change trial Drizzle schemas and validate grant storage                                |

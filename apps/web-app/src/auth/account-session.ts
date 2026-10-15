@@ -1,10 +1,10 @@
 import { createClient, type Session } from "@supabase/supabase-js";
 import { createActor, fromPromise, waitFor } from "xstate";
 
-import { parseOkResponse } from "@cup/web-app-api.client";
-import { authConfigResponseSchema } from "@cup/web-app-api.routes";
+import { parseOkResponse } from "@cup/listener-api.client";
+import { authConfigResponseSchema } from "@cup/listener-api.routes";
 
-import { createAppApiClient } from "#src/api-client.js";
+import { createListenerApiClient } from "#src/api-client.js";
 import {
   accountSessionMachine,
   selectAuthState,
@@ -39,14 +39,14 @@ const accountSessionActor = createActor(
       loadConnection: fromPromise(loadConnection),
       registerResumeListener: fromPromise(({ input }) => addAuthResumeListener(input.onResume)),
       createMediaCookie: fromPromise(async ({ input }) => {
-        const response = await createAppApiClient()
+        const response = await createListenerApiClient()
           .createAuthenticatedRpcClient(input.session.access_token)
           .createFilesSession();
         return { isAccepted: response.ok };
       }),
       installNativeMediaSession: fromPromise(({ input }) => setNativeMediaSession(input.session)),
       clearMediaSessions: fromPromise(async () => {
-        await createAppApiClient()
+        await createListenerApiClient()
           .clearFilesSession()
           .catch(() => undefined);
         await clearNativeAuthSession();
@@ -148,7 +148,7 @@ export function signOut() {
 
 async function loadConnection(): Promise<AccountAuthConnection> {
   const config = authConfigResponseSchema.parse(
-    await parseOkResponse(createAppApiClient().getAuthConfig()),
+    await parseOkResponse(createListenerApiClient().getAuthConfig()),
   );
   const platformStorage = await initializeAuthStorage([
     ACCOUNT_SESSION_STORAGE_KEY,

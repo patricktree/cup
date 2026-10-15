@@ -55,7 +55,7 @@ A concurrent lock-contention test has not been performed.
 The production backend manages the existing cup-production GCP project, imported on 2026-09-22 with deletion protection.
 The project currently has no organization parent and billing is disabled; adoption preserves those settings.
 Terraform created the Supabase project named cup-production in Ireland (eu-west-1), with a five-minute JWT lifetime. Its site URL is <https://cup.audio/app>, applied on 2026-10-12 together with a replacement Google OAuth client secret. This project was created through Terraform; the Google Cloud projects, state bucket, and Resend domain were adopted by importing existing resources.
-The Google OAuth client and Cloudflare DNS records remain outside Terraform state. Terraform configures Supabase to use the manually created Google OAuth client. Application deployment and Cloudflare Worker secrets are managed separately with Wrangler; see [production configuration](../docs/social-signup-operations.md#configure-production).
+The Google OAuth client and Cloudflare DNS records remain outside Terraform state. Terraform configures Supabase to use the manually created Google OAuth client. Application deployment and Cloudflare Worker secrets are managed separately with Wrangler; see [production configuration](../docs/production-configuration.md).
 Supabase uses a management access token; Resend uses a separate full-access management credential.
 Keep secrets outside committed files.
 Select and lock application providers when adding their resources, then review imports and plans before applying configuration changes.
