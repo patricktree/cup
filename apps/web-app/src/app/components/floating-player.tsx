@@ -1,5 +1,5 @@
 import { css } from "@linaria/core";
-import { Link, useMatch } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { Pause, Play } from "lucide-react";
 import React from "react";
 
@@ -18,11 +18,11 @@ import type { Player } from "#src/platform/player.js";
  * page they expand to its full controls; elsewhere they stay compact.
  */
 export function FloatingPlayer(): React.ReactNode {
-  const { loaded, authorizationError } = usePlayerHostSnapshot();
-  const readerMatch = useMatch({ from: "/_shell/audiobooks/$conversionId", shouldThrow: false });
+  const { loaded, shown, authorizationError } = usePlayerHostSnapshot();
   if (!loaded) return null;
 
-  const isOnLoadedAudiobookPage = readerMatch?.params.conversionId === loaded.conversionId;
+  // The reader page reports the audiobook it shows to the host.
+  const isOnLoadedAudiobookPage = shown?.conversionId === loaded.conversionId;
 
   return (
     <footer
