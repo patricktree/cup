@@ -149,7 +149,7 @@ export class AccountLifecycle {
       .all()
       .map((row) => ({ ...deletionAttemptSchema.parse(JSON.parse(row.json)), state: row.state }));
   }
-  delivered(attemptId: string, state: DeletionAttempt["state"]) {
+  delivered(attemptId: string, state: (typeof deletionAttempts.$inferSelect)["state"]) {
     this.database.transaction(() => {
       const row = this.database
         .select({ json: deletionAttempts.json })

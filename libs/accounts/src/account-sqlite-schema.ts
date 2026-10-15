@@ -195,21 +195,37 @@ export const artifactWriters = sqliteTable(
   ],
 );
 
-export const deletionChallenges = sqliteTable("deletion_challenges", {
-  challengeId: text("challenge_id").primaryKey(),
-  executionEpoch: integer("execution_epoch").notNull(),
-  state: text().notNull(),
-  issuedAtMs: integer("issued_at_ms").notNull(),
-  expiresAtMs: integer("expires_at_ms").notNull(),
-  used: integer({ mode: "boolean" }).notNull().default(false),
-});
+export const deletionChallenges = sqliteTable(
+  "deletion_challenges",
+  {
+    challengeId: text("challenge_id").primaryKey(),
+    executionEpoch: integer("execution_epoch").notNull(),
+    // Challenges are refused once deletion has started, so they never record `deleting`.
+    state: text({ enum: ["active", "deletion_scheduled"] }).notNull(),
+    issuedAtMs: integer("issued_at_ms").notNull(),
+    expiresAtMs: integer("expires_at_ms").notNull(),
+    used: integer({ mode: "boolean" }).notNull().default(false),
+  },
+  (table) => [
+    check("deletion_challenge_state", sql`${table.state} IN ('active', 'deletion_scheduled')`),
+    check("deletion_challenge_used", sql`${table.used} IN (0, 1)`),
+  ],
+);
 
-export const deletionAttempts = sqliteTable("deletion_attempts", {
-  attemptId: text("attempt_id").primaryKey(),
-  json: text("payload_json").notNull(),
-  state: text({ enum: ["scheduled", "restored", "deleting", "erased"] }).notNull(),
-  delivered: integer({ mode: "boolean" }).notNull().default(false),
-});
+export const deletionAttempts = sqliteTable(
+  "deletion_attempts",
+  {
+    attemptId: text("attempt_id").primaryKey(),
+    json: text("payload_json").notNull(),
+    // Account erasure deletes these rows, so the stored state never becomes `erased`.
+    state: text({ enum: ["scheduled", "restored", "deleting"] }).notNull(),
+    delivered: integer({ mode: "boolean" }).notNull().default(false),
+  },
+  (table) => [
+    check("deletion_attempt_state", sql`${table.state} IN ('scheduled', 'restored', 'deleting')`),
+    check("deletion_attempt_delivered", sql`${table.delivered} IN (0, 1)`),
+  ],
+);
 
 export const accountTombstone = sqliteTable(
   "account_tombstone",

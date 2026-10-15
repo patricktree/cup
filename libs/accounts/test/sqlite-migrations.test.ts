@@ -69,3 +69,47 @@ test("removing writer purpose preserves outstanding storage effects", () => {
     database.close();
   }
 });
+
+test("deletion state checks preserve stored rows and reject unsupported values", () => {
+  const database = new sqlite.DatabaseSync(":memory:");
+  try {
+    for (const [key, migration] of Object.entries(accountMigrations.migrations)) {
+      if (key === "m0004") {
+        break;
+      }
+      database.exec(migration);
+    }
+    database.exec(
+      "INSERT INTO deletion_attempts (attempt_id, payload_json, state) VALUES ('scheduled', '{}', 'scheduled')",
+    );
+    database.exec("INSERT INTO deletion_attempts VALUES ('restored', '{}', 'restored', 1)");
+    database.exec("INSERT INTO deletion_attempts VALUES ('deleting', '{}', 'deleting', 0)");
+    database.exec(
+      "INSERT INTO deletion_challenges (challenge_id, execution_epoch, state, issued_at_ms, expires_at_ms) VALUES ('active', 1, 'active', 1, 2)",
+    );
+    database.exec(
+      "INSERT INTO deletion_challenges VALUES ('scheduled', 1, 'deletion_scheduled', 1, 2, 1)",
+    );
+    const attempts = database.prepare("SELECT * FROM deletion_attempts ORDER BY rowid").all();
+    const challenges = database.prepare("SELECT * FROM deletion_challenges ORDER BY rowid").all();
+
+    database.exec(accountMigrations.migrations.m0004);
+
+    expect(database.prepare("SELECT * FROM deletion_attempts ORDER BY rowid").all()).toEqual(
+      attempts,
+    );
+    expect(database.prepare("SELECT * FROM deletion_challenges ORDER BY rowid").all()).toEqual(
+      challenges,
+    );
+    for (const statement of [
+      "UPDATE deletion_attempts SET state = 'erased'",
+      "UPDATE deletion_attempts SET delivered = 2",
+      "UPDATE deletion_challenges SET state = 'deleting'",
+      "UPDATE deletion_challenges SET used = 2",
+    ]) {
+      expect(() => database.exec(statement)).toThrow(/CHECK constraint failed/);
+    }
+  } finally {
+    database.close();
+  }
+});

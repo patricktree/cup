@@ -29,6 +29,13 @@
       "when": 1791104851927,
       "tag": "0003_remove_artifact_writer_purpose",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792066092752,
+      "tag": "0004_deletion_state_checks",
+      "breakpoints": true
     }
   ]
 }
