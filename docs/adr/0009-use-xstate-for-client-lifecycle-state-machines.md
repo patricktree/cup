@@ -9,7 +9,7 @@ Two web app modules had grown into hand-rolled state machines. The account auth 
 ## Decision
 
 - Use XState for client lifecycles with real modes and cancellable async work: states that accept different commands, and async work that becomes irrelevant when the mode changes.
-- Run async work as actors invoked or spawned by the state that needs it. Leaving the state stops them and discards their results; no generation counters or "is still current" flags.
+- Run async work as actors invoked or spawned by the state that needs it. Leaving the state stops them and discards their results; no generation counters or "is still current" flags. Work that cannot be recalled, such as a provider sign-in, settles its caller's promise itself, so the caller still learns the real outcome after the state is left.
 - Keep effects that touch the network, the platform, the query cache, or playback injectable through `machine.provide(...)`, so tests drive the real machine with fakes.
 - Keep the modules' existing APIs as thin facades over the actor where callers, route loaders, and React already depend on them. A facade exposes a referentially stable snapshot for `useSyncExternalStore` and resolves promises from replies or from `waitFor`.
 - The first two adopters are the [account auth lifecycle](../architecture/authentication.md#client-session-lifecycle) and the browser audio engine `AudiobookPlayer`, which a sibling change ports.

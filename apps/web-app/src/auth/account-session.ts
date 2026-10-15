@@ -37,12 +37,7 @@ const accountSessionActor = createActor(
   accountSessionMachine.provide({
     actors: {
       loadConnection: fromPromise(loadConnection),
-      // The machine decides whether a resume authorizes media; any failure stops playback.
-      registerResumeListener: fromPromise(() =>
-        addAuthResumeListener(() => {
-          refreshPlaybackAuthorization().catch(stopPlayback);
-        }),
-      ),
+      registerResumeListener: fromPromise(({ input }) => addAuthResumeListener(input.onResume)),
       createMediaCookie: fromPromise(async ({ input }) => {
         const response = await createAppApiClient()
           .createAuthenticatedRpcClient(input.session.access_token)
@@ -102,8 +97,12 @@ export async function ensureAuthInitialized(): Promise<AccountAuthClient> {
     accountSessionActor,
     (current) => current.hasTag("initialized") || current.matches({ session: "error" }),
   );
-  if (!snapshot.context.connection || snapshot.matches({ session: "error" })) {
-    throw snapshot.context.initializationError ?? new Error("Sign-in is temporarily unavailable.");
+  const state = selectAuthState(snapshot);
+  if (state.status === "error") {
+    throw state.error;
+  }
+  if (!snapshot.context.connection) {
+    throw new Error("Account auth finished initializing without a connection.");
   }
   return snapshot.context.connection.client;
 }
@@ -128,7 +127,7 @@ export async function getResourceAccountSession() {
   }
 }
 
-/** Refused while signing out. */
+/** Refused while signing out or while another sign-in is in progress. */
 export async function signInGoogle(fresh = false) {
   await ensureAuthInitialized();
   return request<void>((reply) => accountSessionActor.send({ type: "SIGN_IN", fresh, reply }));
@@ -139,8 +138,11 @@ export function refreshPlaybackAuthorization() {
   return request<void>((reply) => accountSessionActor.send({ type: "AUTHORIZE_MEDIA", reply }));
 }
 
-export async function signOut() {
-  await ensureAuthInitialized();
+/**
+ * Shows signed-out and stops audio immediately, then initializes account auth if needed to clear
+ * the stored session. Concurrent calls share one sign-out.
+ */
+export function signOut() {
   return request<void>((reply) => accountSessionActor.send({ type: "SIGN_OUT", reply }));
 }
 

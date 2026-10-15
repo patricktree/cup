@@ -253,12 +253,25 @@ function toSessionResult(session: Session | null) {
 function startMachine({
   restored = null,
   revocationError = null,
-}: { restored?: Session | null; revocationError?: AuthError | null } = {}) {
+  connectionError = null,
+}: {
+  restored?: Session | null;
+  revocationError?: AuthError | null;
+  connectionError?: Error | null;
+} = {}) {
   const effects: string[] = [];
   const authListeners = new Set<(event: AuthChangeEvent, session: Session | null) => void>();
   const pendingSessionReads: Array<(session: Session | null) => void> = [];
   const pendingMediaCookies: Array<(result: { isAccepted: boolean }) => void> = [];
-  const fakes = { session: restored, shouldHoldSessionReads: false, shouldHoldMediaCookies: false };
+  const pendingSignIns: Array<() => void> = [];
+  const resumeListeners: Array<() => void> = [];
+  const fakes = {
+    session: restored,
+    shouldHoldSessionReads: false,
+    shouldHoldMediaCookies: false,
+    shouldHoldSignIns: false,
+    isMediaCookieAccepted: true,
+  };
 
   const fakeAuth: AccountAuthClient["auth"] = {
     getSession: async () => {
@@ -293,6 +306,11 @@ function startMachine({
     client: { auth: fakeAuth },
     signInWithGoogle: async (fresh) => {
       effects.push(`signInWithGoogle(fresh: ${String(fresh)})`);
+      if (fakes.shouldHoldSignIns) {
+        await new Promise<void>((resolve) => {
+          pendingSignIns.push(resolve);
+        });
+      }
     },
     clearStoredSession: async () => {
       effects.push("clearStoredSession");
@@ -302,12 +320,19 @@ function startMachine({
   const actor = createActor(
     accountSessionMachine.provide({
       actors: {
-        loadConnection: fromPromise(async () => connection),
-        registerResumeListener: fromPromise<void>(async () => {}),
+        loadConnection: fromPromise(async () => {
+          if (connectionError) {
+            throw connectionError;
+          }
+          return connection;
+        }),
+        registerResumeListener: fromPromise(async ({ input }) => {
+          resumeListeners.push(input.onResume);
+        }),
         createMediaCookie: fromPromise(async ({ input }) => {
           effects.push(`createMediaCookie(${input.session.user.id})`);
           if (!fakes.shouldHoldMediaCookies) {
-            return { isAccepted: true };
+            return { isAccepted: fakes.isMediaCookieAccepted };
           }
           return new Promise<{ isAccepted: boolean }>((resolve) => {
             pendingMediaCookies.push(resolve);
@@ -340,6 +365,7 @@ function startMachine({
     authListeners,
     pendingSessionReads,
     pendingMediaCookies,
+    pendingSignIns,
     initialize: async () => {
       actor.send({ type: "INITIALIZE" });
       await waitFor(actor, (snapshot) => snapshot.hasTag("initialized"));
@@ -351,6 +377,11 @@ function startMachine({
         listener(session ? "SIGNED_IN" : "SIGNED_OUT", session);
       }
     },
+    resumeApp: () => {
+      for (const listener of resumeListeners) {
+        listener();
+      }
+    },
     readSession: () => request<Session | null>((reply) => ({ type: "READ_SESSION", reply })),
     signIn: (fresh = false) => request<void>((reply) => ({ type: "SIGN_IN", fresh, reply })),
     signOut: () => request<void>((reply) => ({ type: "SIGN_OUT", reply })),
@@ -360,7 +391,11 @@ function startMachine({
 
 type AccountSessionEvent = EventFromLogic<typeof accountSessionMachine>;
 
-/** Lets fake promises settle and the machine take the transitions they cause. */
+/**
+ * Lets fake promises settle and the machine take the transitions they cause. Each await in a fake
+ * and each actor completion costs a microtask; the longest chain in these tests needs fewer than
+ * ten.
+ */
 async function settle() {
   for (let turn = 0; turn < 10; turn += 1) {
     await Promise.resolve();
@@ -461,6 +496,8 @@ test("an account session reported during sign-in signs in without clearing queri
   const signIn = machine.signIn();
   machine.emitAuthChange(createSession("reader"));
   await signIn;
+  // The sign-in actor settles the caller's reply before the machine takes its completion.
+  await settle();
 
   expect(machine.effects).toEqual([
     "stopPlayback",
@@ -469,7 +506,9 @@ test("an account session reported during sign-in signs in without clearing queri
     "clearLastGrantId",
     "signInWithGoogle(fresh: false)",
   ]);
-  expect(machine.actor.getSnapshot().matches({ session: { ready: "signedIn" } })).toBe(true);
+  expect(
+    machine.actor.getSnapshot().matches({ session: { connected: { ready: "signedIn" } } }),
+  ).toBe(true);
 });
 
 test("sign-out runs its steps in order after the in-flight media cookie issuance", async () => {
@@ -507,7 +546,6 @@ test("auth changes reported during sign-out are ignored", async () => {
   const issuance = machine.authorizeMedia();
   await settle();
   const signOut = machine.signOut();
-  expect(machine.authListeners.size).toBe(0);
   machine.emitAuthChange(createSession("reader"));
   expect(selectAuthState(machine.actor.getSnapshot())).toEqual({ status: "signed-out" });
 
@@ -592,5 +630,102 @@ test("media authorization without a signed-in account does nothing", async () =>
   await machine.initialize();
 
   await machine.authorizeMedia();
+  expect(machine.effects).toEqual([]);
+});
+
+test("sign-out before initialization shows signed-out and stops audio before it initializes", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+
+  const signOut = machine.signOut();
+  expect(selectAuthState(machine.actor.getSnapshot())).toEqual({ status: "signed-out" });
+  expect(machine.effects).toEqual(["stopPlayback", "unloadAudio"]);
+
+  await signOut;
+  // The restored session is discarded rather than shown, so it does not stop playback again.
+  expect(machine.effects).toEqual([
+    "stopPlayback",
+    "unloadAudio",
+    "supabase.signOut",
+    "supabase.stopAutoRefresh",
+    "clearStoredSession",
+    "clearLastGrantId",
+    "clearMediaSessions",
+  ]);
+  expect(selectAuthState(machine.actor.getSnapshot())).toEqual({ status: "signed-out" });
+});
+
+test("sign-out stops audio and reports the failure when initialization fails", async () => {
+  const machine = startMachine({ connectionError: new Error("Configuration unavailable") });
+
+  const signOut = machine.signOut();
+  expect(selectAuthState(machine.actor.getSnapshot())).toEqual({ status: "signed-out" });
+
+  await expect(signOut).rejects.toThrow("Configuration unavailable");
+  expect(machine.effects).toEqual(["stopPlayback", "unloadAudio"]);
+  expect(selectAuthState(machine.actor.getSnapshot())).toMatchObject({ status: "error" });
+});
+
+test("the auth change subscription lasts across sign-in, account switches, and sign-out", async () => {
+  const machine = startMachine();
+  await machine.initialize();
+  expect(machine.authListeners.size).toBe(1);
+  const [listener] = machine.authListeners;
+
+  machine.emitAuthChange(createSession("first"));
+  machine.emitAuthChange(createSession("second"));
+  await machine.signOut();
+
+  expect([...machine.authListeners]).toEqual([listener]);
+});
+
+test("a sign-in interrupted by sign-out settles when the provider call finishes", async () => {
+  const machine = startMachine();
+  await machine.initialize();
+  machine.fakes.shouldHoldSignIns = true;
+
+  let isSignInSettled = false;
+  const signIn = machine.signIn().finally(() => {
+    isSignInSettled = true;
+  });
+  await settle();
+  await machine.signOut();
+  await settle();
+  expect(isSignInSettled).toBe(false);
+
+  machine.pendingSignIns[0]?.();
+  await signIn;
+});
+
+test("an app resume refreshes the media cookie of the signed-in account", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+  await machine.initialize();
+
+  machine.resumeApp();
+  await settle();
+
+  expect(machine.effects).toEqual([
+    "createMediaCookie(reader)",
+    "installNativeMediaSession(reader)",
+  ]);
+});
+
+test("an app resume whose media cookie is rejected stops playback", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+  await machine.initialize();
+  machine.fakes.isMediaCookieAccepted = false;
+
+  machine.resumeApp();
+  await settle();
+
+  expect(machine.effects).toEqual(["createMediaCookie(reader)", "stopPlayback", "stopPlayback"]);
+});
+
+test("an app resume without a signed-in account does nothing", async () => {
+  const machine = startMachine();
+  await machine.initialize();
+
+  machine.resumeApp();
+  await settle();
+
   expect(machine.effects).toEqual([]);
 });

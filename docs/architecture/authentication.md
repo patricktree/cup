@@ -54,29 +54,33 @@ The web client models account auth as an [XState machine](../../apps/web-app/src
 ```mermaid
 stateDiagram-v2
     [*] --> uninitialized
-    uninitialized --> initializing: INITIALIZE
-    initializing --> error: config, client, or restore fails
-    error --> initializing: INITIALIZE
-    initializing --> ready: session restored
-    state ready {
-        [*] --> signedOut
-        [*] --> signedIn
-        signedOut --> signingIn: SIGN_IN
-        signedIn --> signingIn: SIGN_IN (fresh authentication)
-        signingIn --> signedIn: provider session
-        signingIn --> signedOut: ended without a session
-        signedOut --> signedIn: SESSION_CHANGED
+    uninitialized --> initializing: INITIALIZE or SIGN_OUT
+    initializing --> error: config, resume listener, or restore fails
+    error --> initializing: INITIALIZE or SIGN_OUT
+    initializing --> connected: session restored
+    state connected {
+        [*] --> ready
+        [*] --> signingOut: SIGN_OUT queued during initialization
+        state ready {
+            [*] --> signedOut
+            [*] --> signedIn
+            signedOut --> signingIn: SIGN_IN
+            signedIn --> signingIn: SIGN_IN (fresh authentication)
+            signingIn --> signedIn: provider session
+            signingIn --> signedOut: ended without a session
+            signedOut --> signedIn: SESSION_CHANGED
+        }
+        ready --> ready: SESSION_CHANGED to another subject
+        ready --> signingOut: SIGN_OUT
+        signingOut --> ready: media sessions cleared
     }
-    ready --> ready: SESSION_CHANGED to another subject
-    ready --> signingOut: SIGN_OUT
-    signingOut --> ready: media sessions cleared
 ```
 
-Initialization loads the public auth configuration, creates the Supabase client, restores the stored session, and registers the native app-resume listener. Every change of the signed-in subject stops playback, and signing into an account forgets the remembered trial. Replacing or removing a signed-in account also clears the query cache; the initial restoration does not, because route loaders may be awaiting it.
+Initialization loads the public auth configuration, creates the Supabase client, registers the native app-resume listener, and restores the stored session. When the app resumes with an account signed in, the media cookie is issued again; if that fails, playback stops. Every change of the signed-in subject stops playback, and signing into an account forgets the remembered trial. Replacing or removing a signed-in account also clears the query cache; the initial restoration does not, because route loaders may be awaiting it.
 
-The `ready` state is one session scope. It owns the Supabase auth-change subscription and in-flight session reads. Starting a sign-in, starting a sign-out, or replacing the signed-in subject ends the scope, and a session read that has not finished then resolves to no session rather than one that may belong to another account. Sign-in is refused while signing out. Auth changes that Supabase reports during sign-out are ignored because the subscription belongs to the ended scope.
+The `connected` state subscribes to Supabase auth changes once. The `ready` state is one session scope that owns in-flight session reads. Starting a sign-in, starting a sign-out, or replacing the signed-in subject ends the scope, and a session read that has not finished then resolves to no session rather than one that may belong to another account. Auth changes that Supabase reports during sign-out are ignored because only `ready` handles them. Sign-in is refused while signing out and while another sign-in is in progress, because concurrent OAuth flows would overwrite each other's PKCE code verifier. A sign-in interrupted by a sign-out or an account switch still settles with the provider's outcome, because the provider call cannot be recalled. Concurrent sign-outs share one run.
 
-A parallel region serializes media cookie issuance across scopes. Ending a scope discards queued requests and the result of the request in flight, but still waits for that request's response. Sign-out shows the signed-out state first, stops and unloads audio, signs out of Supabase locally, stops token refresh, clears the stored session and the remembered trial, waits for media cookie issuance to settle, and then clears the web and native media sessions. If Supabase could not confirm server revocation, sign-out still completes locally and reports the failure. When account auth cannot initialize and no account is signed in, requests that accept either authorization, such as trial pages and audiobook reads, continue with the grant session alone.
+A parallel region serializes media cookie issuance across scopes. Ending a scope discards queued requests and the result of the request in flight, but still waits for that request's response. Sign-out shows the signed-out state, stops and unloads audio, initializes account auth if it has not finished, signs out of Supabase locally, stops token refresh, clears the stored session and the remembered trial, waits for media cookie issuance to settle, and then clears the web and native media sessions. If Supabase could not confirm server revocation, sign-out still completes locally and reports the failure. If initialization fails, sign-out reports that failure after stopping audio, and the UI shows the auth error because the stored session could not be cleared. When account auth cannot initialize and no account is signed in, requests that accept either authorization, such as trial pages and audiobook reads, continue with the grant session alone.
 
 ## Resuming a conversion after sign-in
 

@@ -42,6 +42,7 @@ export type AccountAuthState =
 export type AccountSessionSnapshot = SnapshotFrom<typeof accountSessionMachine>;
 
 const SIGN_IN_UNAVAILABLE = new Error("Sign-in is temporarily unavailable.");
+const NOT_INITIALIZED_MESSAGE = "Account auth is not initialized.";
 
 const INITIAL_CONTEXT: AccountSessionContext = {
   connection: undefined,
@@ -57,12 +58,13 @@ const INITIAL_CONTEXT: AccountSessionContext = {
 /**
  * The account auth lifecycle of the web app.
  *
- * The `session` region moves through uninitialized → initializing → ready (signedOut ⇄ signingIn →
- * signedIn) → signingOut, with a retryable `error` state when initialization fails. `ready` is one
- * session scope: its invoked actors (the Supabase auth listener and session reads) stop when the
- * scope ends, which happens when a sign-in starts, a sign-out starts, or a signed-in subject
- * changes. A read that is still in flight then resolves to `null` instead of returning a stale
- * session.
+ * The `session` region moves through uninitialized → initializing → connected, with a retryable
+ * `error` state when initialization fails. `connected` subscribes to Supabase auth changes once and
+ * alternates between ready (signedOut ⇄ signingIn → signedIn) and signingOut. A sign-out requested
+ * before initialization finishes is queued and runs as soon as the client is connected. `ready` is
+ * one session scope: its session reads stop when the scope ends, which happens when a sign-in
+ * starts, a sign-out starts, or a signed-in subject changes. A read that is still in flight then
+ * resolves to `null` instead of returning a stale session.
  *
  * The parallel `mediaAuthorization` region serializes media cookie issuance across scopes. Ending a
  * scope discards queued requests and the result of the one in flight, but the region still waits
@@ -74,12 +76,12 @@ const INITIAL_CONTEXT: AccountSessionContext = {
  */
 export const accountSessionMachine = setup({
   // `setup` reads the types from these values; it does not use them at runtime.
-  types: { context: INITIAL_CONTEXT, events: exampleEvent() },
+  types: { context: INITIAL_CONTEXT, events: eventTypeWitness() },
   actors: {
     loadConnection: fromPromise<AccountAuthConnection>(() =>
       Promise.reject(missingImplementation("loadConnection")),
     ),
-    registerResumeListener: fromPromise<void>(() =>
+    registerResumeListener: fromPromise<void, { onResume: () => void }>(() =>
       Promise.reject(missingImplementation("registerResumeListener")),
     ),
     createMediaCookie: fromPromise<{ isAccepted: boolean }, { session: Session }>(() =>
@@ -119,12 +121,21 @@ export const accountSessionMachine = setup({
         };
       },
     ),
-    signIn: fromPromise<void, { connection: AccountAuthConnection; fresh: boolean }>(
-      async ({ input }) => {
+    // The provider call cannot be recalled, so the caller learns its real outcome even when the
+    // session scope ends first and this actor is stopped.
+    signIn: fromPromise<
+      void,
+      { connection: AccountAuthConnection; fresh: boolean; reply: Reply<void> }
+    >(async ({ input }) => {
+      try {
         await input.connection.client.auth.startAutoRefresh();
         await input.connection.signInWithGoogle(input.fresh);
-      },
-    ),
+        input.reply.resolve();
+      } catch (error) {
+        input.reply.reject(error);
+        throw error;
+      }
+    }),
     revokeSession: fromPromise<{ isRevocationConfirmed: boolean }, AccountAuthConnection>(
       async ({ input }) => {
         const response = await input.client.auth.signOut({ scope: "local" });
@@ -153,8 +164,18 @@ export const accountSessionMachine = setup({
         return event.session;
       },
     }),
-    resolveInterruptedSignIn: ({ context }) => context.signIn?.reply.resolve(),
     forgetSignIn: assign({ signIn: undefined }),
+    queueSignOut: assign({
+      session: null,
+      isRevocationConfirmed: false,
+      signOutReplies: ({ context, event }) => {
+        assertEvent(event, "SIGN_OUT");
+        return [...context.signOutReplies, event.reply];
+      },
+    }),
+    rejectSignOuts: ({ context }, params: { error: unknown }) =>
+      rejectAll(context.signOutReplies, params.error),
+    forgetSignOuts: assign({ signOutReplies: [] }),
     resolveCurrentMediaRequest: ({ context }) => context.mediaRequests[0]?.resolve(),
     rejectCurrentMediaRequest: ({ context }, params: { error: unknown }) =>
       context.mediaRequests[0]?.reject(params.error),
@@ -173,6 +194,7 @@ export const accountSessionMachine = setup({
   },
   guards: {
     hasSession: ({ context }) => context.session !== null,
+    hasQueuedSignOut: ({ context }) => context.signOutReplies.length > 0,
     isSameSubject: ({ context, event }) => {
       assertEvent(event, "SESSION_CHANGED");
       return (event.session?.user.id ?? null) === (context.session?.user.id ?? null);
@@ -199,29 +221,57 @@ export const accountSessionMachine = setup({
         // Sign-out is clearing the session, or there is none yet; there is no session to read.
         READ_SESSION: { actions: ({ event }) => event.reply.resolve(null) },
         SIGN_IN: {
-          actions: ({ event }) => event.reply.reject(new Error("Account auth is not initialized.")),
-        },
-        SIGN_OUT: {
-          actions: ({ event }) => event.reply.reject(new Error("Account auth is not initialized.")),
+          actions: ({ event }) => event.reply.reject(new Error(NOT_INITIALIZED_MESSAGE)),
         },
       },
       states: {
         uninitialized: {
-          on: { INITIALIZE: "initializing" },
+          on: {
+            INITIALIZE: "initializing",
+            // Sign-out shows signed-out and stops audio before it waits for initialization.
+            SIGN_OUT: {
+              target: "initializing",
+              actions: ["queueSignOut", "stopPlayback", "unloadAudio"],
+            },
+          },
         },
         initializing: {
           initial: "connecting",
+          on: {
+            SIGN_OUT: { actions: ["queueSignOut", "stopPlayback", "unloadAudio"] },
+          },
           states: {
             connecting: {
               invoke: {
                 src: "loadConnection",
                 onDone: {
-                  target: "restoringSession",
+                  target: "listeningForAppResume",
                   actions: assign({ connection: ({ event }) => event.output }),
                 },
                 onError: {
                   target: "#accountSession.session.error",
-                  actions: assign({ initializationError: ({ event }) => toError(event.error) }),
+                  actions: [
+                    assign({ initializationError: ({ event }) => toError(event.error) }),
+                    { type: "rejectSignOuts", params: ({ event }) => ({ error: event.error }) },
+                    "forgetSignOuts",
+                  ],
+                },
+              },
+            },
+            // Registered before the session is restored, so the restored state shows without
+            // waiting for the platform.
+            listeningForAppResume: {
+              invoke: {
+                src: "registerResumeListener",
+                input: ({ self }) => ({ onResume: () => self.send({ type: "APP_RESUMED" }) }),
+                onDone: "restoringSession",
+                onError: {
+                  target: "#accountSession.session.error",
+                  actions: [
+                    assign({ initializationError: ({ event }) => toError(event.error) }),
+                    { type: "rejectSignOuts", params: ({ event }) => ({ error: event.error }) },
+                    "forgetSignOuts",
+                  ],
                 },
               },
             },
@@ -229,32 +279,30 @@ export const accountSessionMachine = setup({
               invoke: {
                 src: "readSession",
                 input: ({ context }) => ({ client: requireConnection(context).client }),
-                onDone: {
-                  target: "listeningForAppResume",
-                  // Route loaders can await the initial restoration, so it keeps cached queries.
+                onDone: [
+                  // A sign-out requested during initialization discards the restored session.
+                  { guard: "hasQueuedSignOut", target: "#accountSession.session.connected" },
+                  {
+                    target: "#accountSession.session.connected",
+                    // Route loaders can await the initial restoration, so it keeps cached queries.
+                    actions: [
+                      "stopPlayback",
+                      enqueueActions(({ event, enqueue }) => {
+                        if (event.output) {
+                          enqueue("clearLastGrantId");
+                        }
+                      }),
+                      assign({ session: ({ event }) => event.output }),
+                    ],
+                  },
+                ],
+                onError: {
+                  target: "#accountSession.session.error",
                   actions: [
-                    "stopPlayback",
-                    enqueueActions(({ event, enqueue }) => {
-                      if (event.output) {
-                        enqueue("clearLastGrantId");
-                      }
-                    }),
-                    assign({ session: ({ event }) => event.output }),
+                    assign({ initializationError: ({ event }) => toError(event.error) }),
+                    { type: "rejectSignOuts", params: ({ event }) => ({ error: event.error }) },
+                    "forgetSignOuts",
                   ],
-                },
-                onError: {
-                  target: "#accountSession.session.error",
-                  actions: assign({ initializationError: ({ event }) => toError(event.error) }),
-                },
-              },
-            },
-            listeningForAppResume: {
-              invoke: {
-                src: "registerResumeListener",
-                onDone: "#accountSession.session.ready",
-                onError: {
-                  target: "#accountSession.session.error",
-                  actions: assign({ initializationError: ({ event }) => toError(event.error) }),
                 },
               },
             },
@@ -266,191 +314,191 @@ export const accountSessionMachine = setup({
               target: "initializing",
               actions: assign({ initializationError: undefined }),
             },
+            SIGN_OUT: {
+              target: "initializing",
+              actions: [
+                assign({ initializationError: undefined }),
+                "queueSignOut",
+                "stopPlayback",
+                "unloadAudio",
+              ],
+            },
           },
         },
-        ready: {
+        connected: {
           tags: ["initialized"],
-          initial: "routing",
-          invoke: [
-            {
-              src: "watchSessionChanges",
-              input: ({ context }) => ({ client: requireConnection(context).client }),
-            },
-            {
-              id: "sessionReads",
-              src: "sessionReads",
-              input: ({ context }) => ({ client: requireConnection(context).client }),
-            },
-          ],
-          exit: raise({ type: "SESSION_SCOPE_ENDED" }),
-          on: {
-            READ_SESSION: { actions: sendTo("sessionReads", ({ event }) => event) },
-            SESSION_CHANGED: [
-              { guard: "isSameSubject", actions: "assignSessionFromEvent" },
-              {
-                guard: "hasSession",
-                // A different subject, or none, replaces the signed-in account: end its scope.
-                target: "#accountSession.session.ready",
-                reenter: true,
-                actions: [
-                  "resolveInterruptedSignIn",
-                  "forgetSignIn",
-                  "clearQueries",
-                  "stopPlayback",
-                  enqueueActions(({ event, enqueue }) => {
-                    if (event.session) {
-                      enqueue("clearLastGrantId");
-                    }
-                  }),
-                  "assignSessionFromEvent",
-                ],
-              },
-            ],
-            SIGN_IN: {
-              target: ".signingIn",
-              reenter: true,
-              actions: [
-                "stopPlayback",
-                assign({ signIn: ({ event }) => ({ fresh: event.fresh, reply: event.reply }) }),
-              ],
-            },
-            SIGN_OUT: {
-              target: "signingOut",
-              actions: [
-                "resolveInterruptedSignIn",
-                "forgetSignIn",
-                enqueueActions(({ context, enqueue }) => {
-                  if (context.session) {
-                    enqueue("clearQueries");
-                  }
-                }),
-                assign({
-                  session: null,
-                  isRevocationConfirmed: false,
-                  signOutReplies: ({ event }) => [event.reply],
-                }),
-              ],
-            },
+          initial: "starting",
+          // Subscribed once per client: auth changes reach only the states that handle them, so
+          // changes reported during sign-out are ignored without unsubscribing.
+          invoke: {
+            src: "watchSessionChanges",
+            input: ({ context }) => ({ client: requireConnection(context).client }),
           },
           states: {
-            routing: {
-              always: [{ guard: "hasSession", target: "signedIn" }, { target: "signedOut" }],
+            starting: {
+              always: [{ guard: "hasQueuedSignOut", target: "signingOut" }, { target: "ready" }],
             },
-            signedOut: {
-              on: {
-                SESSION_CHANGED: {
-                  guard: "startsSession",
-                  target: "signedIn",
-                  actions: ["stopPlayback", "clearLastGrantId", "assignSessionFromEvent"],
-                },
-              },
-            },
-            signingIn: {
+            ready: {
+              initial: "routing",
               invoke: {
-                src: "signIn",
-                input: ({ context }) => ({
-                  connection: requireConnection(context),
-                  fresh: requireSignIn(context).fresh,
-                }),
-                onDone: {
-                  target: "routing",
+                id: "sessionReads",
+                src: "sessionReads",
+                input: ({ context }) => ({ client: requireConnection(context).client }),
+              },
+              exit: raise({ type: "SESSION_SCOPE_ENDED" }),
+              on: {
+                READ_SESSION: { actions: sendTo("sessionReads", ({ event }) => event) },
+                SESSION_CHANGED: [
+                  { guard: "isSameSubject", actions: "assignSessionFromEvent" },
+                  {
+                    guard: "hasSession",
+                    // A different subject, or none, replaces the signed-in account: end its scope.
+                    target: "#accountSession.session.connected.ready",
+                    reenter: true,
+                    actions: [
+                      "forgetSignIn",
+                      "clearQueries",
+                      "stopPlayback",
+                      enqueueActions(({ event, enqueue }) => {
+                        if (event.session) {
+                          enqueue("clearLastGrantId");
+                        }
+                      }),
+                      "assignSessionFromEvent",
+                    ],
+                  },
+                ],
+                SIGN_IN: {
+                  target: ".signingIn",
+                  reenter: true,
                   actions: [
-                    ({ context }) => requireSignIn(context).reply.resolve(),
-                    assign({ signIn: undefined }),
+                    "stopPlayback",
+                    assign({
+                      signIn: ({ event }) => ({ fresh: event.fresh, reply: event.reply }),
+                    }),
                   ],
                 },
-                onError: {
-                  target: "routing",
+                SIGN_OUT: {
+                  target: "#accountSession.session.connected.signingOut",
                   actions: [
-                    ({ context, event }) => requireSignIn(context).reply.reject(event.error),
-                    assign({ signIn: undefined }),
+                    "forgetSignIn",
+                    enqueueActions(({ context, enqueue }) => {
+                      if (context.session) {
+                        enqueue("clearQueries");
+                      }
+                    }),
+                    "queueSignOut",
+                    "stopPlayback",
+                    "unloadAudio",
                   ],
                 },
               },
+              states: {
+                routing: {
+                  always: [{ guard: "hasSession", target: "signedIn" }, { target: "signedOut" }],
+                },
+                signedOut: {
+                  on: {
+                    SESSION_CHANGED: {
+                      guard: "startsSession",
+                      target: "signedIn",
+                      actions: ["stopPlayback", "clearLastGrantId", "assignSessionFromEvent"],
+                    },
+                  },
+                },
+                signingIn: {
+                  invoke: {
+                    src: "signIn",
+                    input: ({ context }) => ({
+                      connection: requireConnection(context),
+                      ...requireSignIn(context),
+                    }),
+                    // The actor settles the caller's reply itself.
+                    onDone: { target: "routing", actions: "forgetSignIn" },
+                    onError: { target: "routing", actions: "forgetSignIn" },
+                  },
+                  on: {
+                    // Concurrent OAuth flows would overwrite each other's PKCE code verifier.
+                    SIGN_IN: {
+                      actions: ({ event }) =>
+                        event.reply.reject(new Error("Wait for the current sign-in to finish.")),
+                    },
+                    SESSION_CHANGED: {
+                      // The provider reports the new session before the sign-in call returns.
+                      guard: "startsSession",
+                      actions: ["stopPlayback", "clearLastGrantId", "assignSessionFromEvent"],
+                    },
+                  },
+                },
+                signedIn: {},
+              },
+            },
+            signingOut: {
+              initial: "revokingSession",
               on: {
                 SIGN_IN: {
                   actions: ({ event }) =>
-                    event.reply.reject(new Error("Wait for the current sign-in to finish.")),
+                    event.reply.reject(new Error("Wait for sign-out to finish before signing in.")),
                 },
-                SESSION_CHANGED: {
-                  // The provider reports the new session before the sign-in call returns.
-                  guard: "startsSession",
-                  actions: ["stopPlayback", "clearLastGrantId", "assignSessionFromEvent"],
-                },
+                // Joins the sign-out in progress; playback was stopped when it started.
+                SIGN_OUT: { actions: "queueSignOut" },
               },
-            },
-            signedIn: {},
-          },
-        },
-        signingOut: {
-          tags: ["initialized"],
-          initial: "revokingSession",
-          entry: ["stopPlayback", "unloadAudio"],
-          on: {
-            SIGN_IN: {
-              actions: ({ event }) =>
-                event.reply.reject(new Error("Wait for sign-out to finish before signing in.")),
-            },
-            SIGN_OUT: {
-              actions: assign({
-                signOutReplies: ({ context, event }) => [...context.signOutReplies, event.reply],
-              }),
-            },
-          },
-          states: {
-            revokingSession: {
-              invoke: {
-                src: "revokeSession",
-                input: ({ context }) => requireConnection(context),
-                onDone: {
-                  target: "awaitingMediaIssuance",
-                  actions: [
-                    assign({
-                      isRevocationConfirmed: ({ event }) => event.output.isRevocationConfirmed,
-                    }),
-                    "clearLastGrantId",
-                  ],
-                },
-                onError: {
-                  target: "#accountSession.session.ready",
-                  actions: [
-                    ({ context, event }) => rejectAll(context.signOutReplies, event.error),
-                    assign({ signOutReplies: [] }),
-                  ],
-                },
-              },
-            },
-            awaitingMediaIssuance: {
-              // A late issuance response may set a cookie; clearing must follow every prior issuance.
-              always: { guard: "isMediaAuthorizationIdle", target: "clearingMediaSessions" },
-            },
-            clearingMediaSessions: {
-              invoke: {
-                src: "clearMediaSessions",
-                onDone: {
-                  target: "#accountSession.session.ready",
-                  actions: [
-                    ({ context }) => {
-                      if (context.isRevocationConfirmed) {
-                        resolveAll(context.signOutReplies);
-                      } else {
-                        rejectAll(
-                          context.signOutReplies,
-                          new Error(
-                            "Signed out on this device. Server session revocation could not be confirmed.",
-                          ),
-                        );
-                      }
+              states: {
+                revokingSession: {
+                  invoke: {
+                    src: "revokeSession",
+                    input: ({ context }) => requireConnection(context),
+                    onDone: {
+                      target: "awaitingMediaIssuance",
+                      actions: [
+                        assign({
+                          isRevocationConfirmed: ({ event }) => event.output.isRevocationConfirmed,
+                        }),
+                        "clearLastGrantId",
+                      ],
                     },
-                    assign({ signOutReplies: [] }),
-                  ],
+                    onError: {
+                      target: "#accountSession.session.connected.ready",
+                      actions: [
+                        { type: "rejectSignOuts", params: ({ event }) => ({ error: event.error }) },
+                        "forgetSignOuts",
+                      ],
+                    },
+                  },
                 },
-                onError: {
-                  target: "#accountSession.session.ready",
-                  actions: [
-                    ({ context, event }) => rejectAll(context.signOutReplies, event.error),
-                    assign({ signOutReplies: [] }),
-                  ],
+                awaitingMediaIssuance: {
+                  // A late issuance response may set a cookie; clearing must follow every prior issuance.
+                  always: { guard: "isMediaAuthorizationIdle", target: "clearingMediaSessions" },
+                },
+                clearingMediaSessions: {
+                  invoke: {
+                    src: "clearMediaSessions",
+                    onDone: {
+                      target: "#accountSession.session.connected.ready",
+                      actions: [
+                        ({ context }) => {
+                          if (context.isRevocationConfirmed) {
+                            resolveAll(context.signOutReplies);
+                          } else {
+                            rejectAll(
+                              context.signOutReplies,
+                              new Error(
+                                "Signed out on this device. Server session revocation could not be confirmed.",
+                              ),
+                            );
+                          }
+                        },
+                        "forgetSignOuts",
+                      ],
+                    },
+                    onError: {
+                      target: "#accountSession.session.connected.ready",
+                      actions: [
+                        { type: "rejectSignOuts", params: ({ event }) => ({ error: event.error }) },
+                        "forgetSignOuts",
+                      ],
+                    },
+                  },
                 },
               },
             },
@@ -470,6 +518,20 @@ export const accountSessionMachine = setup({
           },
           { actions: ({ event }) => event.reply.resolve() },
         ],
+        // The app returns to the foreground: refresh the media cookie, which may have expired.
+        APP_RESUMED: {
+          guard: "hasSession",
+          actions: assign({
+            mediaRequests: ({ context, self }) => [
+              ...context.mediaRequests,
+              {
+                resolve: () => undefined,
+                reject: () => self.send({ type: "RESUMED_MEDIA_AUTHORIZATION_FAILED" }),
+              },
+            ],
+          }),
+        },
+        RESUMED_MEDIA_AUTHORIZATION_FAILED: { actions: "stopPlayback" },
         SESSION_SCOPE_ENDED: {
           actions: ["resolveWaitingMediaRequests", "keepOnlyCurrentMediaRequest"],
         },
@@ -603,6 +665,10 @@ export function selectAuthState(snapshot: AccountSessionSnapshot): AccountAuthSt
       error: snapshot.context.initializationError ?? SIGN_IN_UNAVAILABLE,
     };
   }
+  // A sign-out requested during initialization shows signed-out before initialization finishes.
+  if (snapshot.context.signOutReplies.length > 0) {
+    return { status: "signed-out" };
+  }
   if (!snapshot.hasTag("initialized")) {
     return { status: "loading" };
   }
@@ -631,10 +697,12 @@ type AccountSessionEvent =
   | { type: "SIGN_IN"; fresh: boolean; reply: Reply<void> }
   | { type: "SIGN_OUT"; reply: Reply<void> }
   | { type: "AUTHORIZE_MEDIA"; reply: Reply<void> }
+  | { type: "APP_RESUMED" }
+  | { type: "RESUMED_MEDIA_AUTHORIZATION_FAILED" }
   | { type: "SESSION_SCOPE_ENDED" };
 
 /** Typed as the whole union; a constant would narrow to the one event it holds. */
-function exampleEvent(): AccountSessionEvent {
+function eventTypeWitness(): AccountSessionEvent {
   return { type: "INITIALIZE" };
 }
 
@@ -665,7 +733,7 @@ async function settleRead(
 
 function requireConnection(context: AccountSessionContext) {
   if (!context.connection) {
-    throw new Error("Account auth is not initialized.");
+    throw new Error(NOT_INITIALIZED_MESSAGE);
   }
   return context.connection;
 }
