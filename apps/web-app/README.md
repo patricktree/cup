@@ -5,6 +5,7 @@
 - provides the React UI for submitting a source URL
 - keeps the web source in `src/`
 - uses TanStack Form for typed form state and URL validation
+- models client lifecycles with real modes and cancellable async work, such as account auth, as XState machines ([ADR 0009](../../docs/adr/0009-use-xstate-for-client-lifecycle-state-machines.md))
 - initializes native listeners and renders the app from `src/bootstrap.tsx`
 - builds the shared SPA bundle consumed by `apps/cloudflare-worker` and `apps/mobile-app`
 
