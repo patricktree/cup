@@ -32,7 +32,7 @@ The account persists lifecycle changes and delivery intent together, then delive
 
 Account erasure removes the account's R2 prefix, conversion-owner routes, and account records, retaining a constant erasure marker to reject late execution. The registry deletes the exact old Supabase identity and removes its mapping only after both identity and account cleanup succeed. Original trial conversions and other accounts remain separate.
 
-Failures retain durable progress and retry with backoff. Operators can inspect overdue cleanup through [signup operations](../social-signup-operations.md); there is no force-complete action that discards uncertain writers.
+Failures retain durable progress and retry with backoff. Operators can inspect overdue cleanup with the [operator CLI](../../apps/operator/README.md#list-account-deletions); there is no force-complete action that discards uncertain writers.
 
 Sources: [account cleanup](../../libs/accounts/src/account-durable-object.ts), [writer reconciliation](../../libs/accounts/src/account-artifact-writers.ts), [registry alarms](../../libs/registry/src/registry-durable-object.ts), and [coordinator](../../libs/registry/src/deletion-coordinator.ts).
 
@@ -42,6 +42,6 @@ Scheduled and completed notices have durable intent and distinct immutable idemp
 
 Terminal notification payloads are redacted. After cleanup and notification processing finish, receipts retain identifiers, timestamps, and outcomes for 90 days, excluding email, tokens, and provider response bodies. The account's erasure marker carries no deletion-attempt identifier. These application rules do not establish retention in external provider logs or backups.
 
-Source: [notification and receipt implementation](../../libs/registry/src/deletion-coordinator.ts), including retry timing. See [signup operations](../social-signup-operations.md) for configuration and inspection.
+Source: [notification and receipt implementation](../../libs/registry/src/deletion-coordinator.ts), including retry timing. See [production configuration](../production-configuration.md#email) for configuration and the [operator CLI](../../apps/operator/README.md#list-account-deletions) for inspection.
 
 Related research: [provider deletion](../research/social-signup/account-deletion-research.md), [transactional email](../research/social-signup/transactional-email-research.md), and [telemetry retention](../research/social-signup/telemetry-retention-research.md).
