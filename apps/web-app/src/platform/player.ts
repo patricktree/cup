@@ -1,14 +1,24 @@
 import { Capacitor } from "@capacitor/core";
 
-import type { PlaybackPosition } from "@cup/web-app-api.routes";
+/** A place on the timeline: an entry, that is a segment with audio, and an offset in its audio. */
+export type TimelineLocation = { entryIndex: number; offsetMilliseconds: number };
 
-import {
-  AudiobookPlayer,
-  type PlayableAudiobook,
-  type PlayerSnapshot,
-} from "#src/app/player/audiobook-player.js";
-import { NativePlayer } from "#src/platform/native-player.js";
+/** A place as players report it: the current unit and the position on the whole audiobook. */
+export type ReportedPosition = { currentUnitIndex: number; positionMilliseconds: number };
 
+/** A player's state, on the whole-audiobook timeline. */
+export type PlayerSnapshot = ReportedPosition & {
+  /** Duration of the whole-audiobook timeline. */
+  durationMilliseconds: number;
+  isPlaying: boolean;
+  isBuffering: boolean;
+  error: string | null;
+};
+
+/**
+ * An engine playing one loaded audiobook: the browser's audio elements or the native player. Its
+ * playback session supplies the timeline, the restored position, authorization, and saves.
+ */
 export type Player = {
   subscribe: (listener: () => void) => () => void;
   getSnapshot: () => PlayerSnapshot;
@@ -21,17 +31,6 @@ export type Player = {
   /** Moves to the next or previous segment that has audio. */
   skip: (direction: 1 | -1) => void;
 };
-
-export function createPlayer(
-  conversionId: string,
-  audiobook: PlayableAudiobook,
-  position: PlaybackPosition | null,
-  subject: string | null,
-): Player {
-  return Capacitor.isNativePlatform()
-    ? new NativePlayer(conversionId, audiobook, position, subject !== null)
-    : AudiobookPlayer.forConversion(conversionId, audiobook, position, subject);
-}
 
 const MEDIA_SESSION_ACTIONS = ["play", "pause", "nexttrack", "previoustrack", "seekto"] as const;
 

@@ -2,13 +2,15 @@ import { expect, test } from "@playwright/test";
 
 import type { PlaybackPosition } from "@cup/web-app-api.routes";
 
-import type {
-  PlayableAudiobook,
-  PlayerSnapshot,
-  PreparedAudiobook,
-} from "#src/app/player/audiobook-player.ts";
+import {
+  PlaybackSession,
+  type PlayableAudiobook,
+  type PlaybackSessionRequest,
+  type PlaybackSessionServices,
+  type PreparedAudiobook,
+} from "#src/app/player/playback-session.ts";
 import { PlayerHost, type PlayerHostAccount } from "#src/app/player/player-host.ts";
-import type { Player } from "#src/platform/player.ts";
+import type { Player, PlayerSnapshot } from "#src/platform/player.ts";
 
 type FakePlayer = Player & {
   calls: string[];
@@ -64,20 +66,40 @@ function createFakePlayer(options: FakePlayerOptions): FakePlayer {
 }
 
 function createHost({
-  authorize = () => Promise.resolve(),
+  issueMediaCookie = (): Promise<void> => Promise.resolve(),
   localPositions = new Map<string, PlaybackPosition>(),
   subject = null as string | null,
 } = {}) {
   const players: FakePlayer[] = [];
   const mediaSessions: string[] = [];
   let account: PlayerHostAccount = { status: "known", subject };
+  const sessionServices: PlaybackSessionServices = {
+    getAccount: () => {
+      const signedIn = account.status === "known" ? account.subject : null;
+      return Promise.resolve(
+        signedIn === null ? null : { subject: signedIn, accessToken: "token" },
+      );
+    },
+    issueMediaCookie,
+    savePosition: () => Promise.resolve(),
+    now: () => 0,
+  };
+  // The fake players record what the host asked to load, before the session resolves it.
+  const requests = new WeakMap<PlaybackSession, PlaybackSessionRequest>();
   const host = new PlayerHost({
-    createPlayer: (conversionId, audiobook, position, playerSubject) => {
+    createSession: (request) => {
+      const session = new PlaybackSession(request, sessionServices);
+      requests.set(session, request);
+      return session;
+    },
+    createPlayer: (session) => {
+      const request = requests.get(session);
+      if (!request) throw new Error("The session was not created by this host.");
       const player = createFakePlayer({
-        conversionId,
-        audiobook,
-        position,
-        subject: playerSubject,
+        conversionId: request.conversionId,
+        audiobook: request.audiobook,
+        position: request.position,
+        subject: request.subject,
       });
       players.push(player);
       return player;
@@ -86,7 +108,6 @@ function createHost({
       mediaSessions.push(`register:${title}`);
       return () => mediaSessions.push(`unregister:${title}`);
     },
-    authorize,
     getAccount: () => account,
     getLocalPosition: (conversionId) => localPositions.get(conversionId) ?? null,
   });
@@ -439,7 +460,8 @@ test("unloading closes the player and empties the host", () => {
 
 test("a failed authorization pauses playback and is reported", async () => {
   const { host, players } = createHost({
-    authorize: () => Promise.reject(new Error("Sign in again to continue playback.")),
+    subject: "listener",
+    issueMediaCookie: () => Promise.reject(new Error("Sign in again to continue playback.")),
   });
 
   host.showConversion("first", FIRST);
@@ -449,4 +471,34 @@ test("a failed authorization pauses playback and is reported", async () => {
     .poll(() => host.getSnapshot().authorizationError)
     .toBe("Sign in again to continue playback.");
   expect(players[0]?.calls).toEqual(["open", "play", "pause"]);
+});
+
+/** Lets pending authorizations settle. */
+function settle() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+test("loading and playing in one gesture authorizes once, and each later Play again", async () => {
+  let authorizationCount = 0;
+  const { host } = createHost({
+    subject: "listener",
+    issueMediaCookie: () => {
+      authorizationCount += 1;
+      return Promise.resolve();
+    },
+  });
+  host.showConversion("first", FIRST);
+  await settle();
+  authorizationCount = 0;
+
+  // Playing another audiobook loads and plays it in one gesture.
+  host.showConversion("second", SECOND);
+  host.playShown();
+  await settle();
+  expect(authorizationCount).toBe(1);
+
+  host.pause();
+  host.play();
+  await settle();
+  expect(authorizationCount).toBe(2);
 });

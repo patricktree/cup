@@ -3,24 +3,19 @@ import { registerPlugin } from "@capacitor/core";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { Temporal } from "temporal-polyfill";
 
-import {
-  ACCOUNT_SESSION_STORAGE_KEY,
-  ACCOUNT_SESSION_CODE_VERIFIER_STORAGE_KEY,
-} from "#src/auth/account-session-storage.js";
-
 const nativeMedia = registerPlugin<{
   setSession(input: { token: string; maxAge: number }): Promise<void>;
   clearSession(): Promise<void>;
 }>("AccountMedia");
 
-export async function initializeAuthStorage() {
+/** Prepares storage for the account session, which is kept under `storageKeys`. */
+export async function initializeAuthStorage(storageKeys: readonly string[]) {
   const storage = (await import("@aparajita/capacitor-secure-storage")).SecureStorage;
   return {
     storage,
     detectSessionInUrl: false,
     clearStoredSession: async () => {
-      await storage.removeItem(ACCOUNT_SESSION_STORAGE_KEY);
-      await storage.removeItem(ACCOUNT_SESSION_CODE_VERIFIER_STORAGE_KEY);
+      for (const key of storageKeys) await storage.removeItem(key);
     },
   };
 }

@@ -1,10 +1,11 @@
 import type { Audiobook, PlaybackPosition } from "@cup/web-app-api.routes";
 
-import type { PlayableAudiobook, PreparedAudiobook } from "#src/app/player/audiobook-player.ts";
-import {
-  createAudiobookTimeline,
-  findTimelineEntryIndex,
-} from "#src/app/player/audiobook-timeline.ts";
+import type {
+  PlayableAudiobook,
+  PlaybackSession,
+  PlaybackSessionRequest,
+  PreparedAudiobook,
+} from "#src/app/player/playback-session.ts";
 import type { Player } from "#src/platform/player.ts";
 
 /** The one audiobook the app's player holds, with the engine playing it. */
@@ -13,6 +14,8 @@ export type LoadedAudiobook = {
   audiobook: PlayableAudiobook;
   /** The signed-in user the audiobook was loaded for; `null` for anonymous and trial listeners. */
   subject: string | null;
+  /** Authorizes the audiobook's media for the subject and converts listening positions. */
+  session: PlaybackSession;
   player: Player;
   /** Playing an audiobook with segments whose synthesis finally failed needs the listener's consent. */
   hasPlaybackConsent: boolean;
@@ -43,14 +46,9 @@ export type PlayerHostAccount =
   | { status: "known"; subject: string | null };
 
 export type PlayerHostServices = {
-  createPlayer(
-    conversionId: string,
-    audiobook: PlayableAudiobook,
-    position: PlaybackPosition | null,
-    subject: string | null,
-  ): Player;
+  createSession(request: PlaybackSessionRequest): PlaybackSession;
+  createPlayer(session: PlaybackSession): Player;
   registerMediaSession(player: Player, title: string): (() => void) | undefined;
-  authorize(): Promise<void>;
   /** Read at load time, so a load never uses an account state the host was not told about yet. */
   getAccount(): PlayerHostAccount;
   /** The listening position stored on this device, used for listeners without an account. */
@@ -158,11 +156,12 @@ export class PlayerHost {
     const loaded = this.snapshot.loaded;
     if (!loaded?.hasPlaybackConsent) return;
 
-    const { player } = loaded;
+    const { player, session } = loaded;
     // Start within the user gesture; browsers refuse audio that starts after awaiting.
     player.play();
-    void this.services
-      .authorize()
+    // Issued again on every Play, so access revoked while paused is noticed promptly.
+    void session
+      .authorizeMedia()
       .then(() => {
         if (this.snapshot.loaded?.player === player) this.update({ authorizationError: null });
         return undefined;
@@ -220,12 +219,9 @@ export class PlayerHost {
   private load(request: LoadRequest) {
     this.closeLoadedPlayer();
 
-    const player = this.services.createPlayer(
-      request.conversionId,
-      request.audiobook,
-      request.position,
-      request.subject,
-    );
+    const session = this.services.createSession(request);
+    const player = this.services.createPlayer(session);
+    // Opening starts the media authorization that the report below shares with the engine.
     player.open();
     const unregisterMediaSession = this.services.registerMediaSession(
       player,
@@ -242,14 +238,15 @@ export class PlayerHost {
         conversionId: request.conversionId,
         audiobook: request.audiobook,
         subject: request.subject,
+        session,
         player,
         hasPlaybackConsent: request.hasPlaybackConsent,
       },
       authorizationError: null,
     });
 
-    void this.services
-      .authorize()
+    void session
+      .authorizeMedia()
       .catch((error: unknown) =>
         this.reportAuthorizationError(player, error, "Playback authorization failed."),
       );
@@ -295,10 +292,14 @@ export class PlayerHost {
     const audiobook = this.pendingVersion;
     if (!loaded || !audiobook || loaded.player.getSnapshot().isPlaying) return;
 
+    const position = loaded.session.listeningPositionOf(loaded.player.getSnapshot());
+    // Only audiobooks with audio are loaded, so a player always reports a unit with audio.
+    if (!position) throw new Error("The loaded player reports no unit with audio.");
+
     this.load({
       conversionId: loaded.conversionId,
       audiobook,
-      position: describeListeningPosition(loaded),
+      position,
       subject: loaded.subject,
       // With every segment's audio now present, nothing is left to skip and so nothing to consent to.
       hasPlaybackConsent: loaded.hasPlaybackConsent || !hasSegmentsWithoutAudio(audiobook),
@@ -355,22 +356,6 @@ type LoadRequest = {
  */
 function hasLoadableAudio(audiobook: PreparedAudiobook): audiobook is PlayableAudiobook {
   return audiobook.status === "ready" && countReadySegments(audiobook) > 0;
-}
-
-/** The loaded player's current unit and offset within that unit's audio. */
-function describeListeningPosition(loaded: LoadedAudiobook): PlaybackPosition {
-  const { currentUnitIndex, positionMilliseconds } = loaded.player.getSnapshot();
-  const timeline = createAudiobookTimeline(loaded.audiobook.segments);
-  const entry = timeline.entries[findTimelineEntryIndex(timeline, currentUnitIndex)];
-  const unit = loaded.audiobook.narrationDocument.synchronizationUnits[currentUnitIndex];
-  // A player only reports units of its own audiobook that have audio.
-  if (!entry || !unit)
-    throw new Error(`The loaded player reports unit ${currentUnitIndex}, which has no audio.`);
-
-  return {
-    synchronizationUnitId: unit.id,
-    offsetMilliseconds: Math.max(0, positionMilliseconds - entry.startMilliseconds),
-  };
 }
 
 function hasSegmentsWithoutAudio(audiobook: PreparedAudiobook) {
