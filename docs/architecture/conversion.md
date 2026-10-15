@@ -116,30 +116,32 @@ Players load the following segment before the current one ends, so a segment bou
 
 Mobile Safari starts an audio element only after a user gesture, so the browser player starts playback synchronously within the Play action and starts the other element muted in the same action. An element that has no segment loaded yet plays a short same-origin silence file for this, because the content security policy does not allow data or blob media. A seek to a segment neither element has loaded loads it into the standby element and swaps to it, as at a segment boundary, because replacing the playing element's source makes Android browsers remove and recreate their media notification. This behavior and lock-screen continuity need verification on physical devices; component tests and native builds do not establish them.
 
-The browser engine's modes are an XState [state machine](../../apps/web-app/src/app/player/audiobook-player-machine.ts) behind the `Player` contract. Media authorization for the first segment request is pending in `authorizing`, which remembers a Play pressed meanwhile; `ready` has the position loaded and is paused, or playing and possibly buffering. Element events such as `ended`, `timeupdate`, `waiting`, `playing`, `pause`, and `error` become machine events that count only in the states where they apply and only from the element playing the position, except that an error on either element marks its segment for reloading. Element work runs as actions of the transition that handles Play, synchronously within the gesture, never in invoked or asynchronous actors. Play during authorization unlocks both elements with silence; the active element starts its segment once authorization finishes, which the unlock permits.
+The browser engine's modes are an XState [state machine](../../apps/web-app/src/app/player/audiobook-player-machine.ts) behind the `Player` contract; an [element pair](../../apps/web-app/src/app/player/audio-element-pair.ts) performs the element work the machine schedules. While `open`, the engine is `authorizing`, waiting for the media authorization the first segment request needs and remembering a Play pressed meanwhile, or `ready`, with the current segment and offset loaded, either paused or playing and possibly buffering. Element events such as `ended`, `timeupdate`, `waiting`, `playing`, `pause`, and `error` become machine events that count only in the states where they apply and only from the active element holding the current segment; an error on either element still marks its segment for reloading. The element starts that need the Play gesture run as actions of the transition handling Play, synchronously within the gesture, never in invoked or asynchronous actors. Play during authorization unlocks both elements with silence; the active element starts its segment once authorization finishes, which the unlock permits.
 
 ```mermaid
 stateDiagram-v2
   [*] --> closed
-  closed --> authorizing: open
-  state authorizing {
-    [*] --> idle
-    idle --> playRequested: Play (unlock both elements)
-    playRequested --> idle: Pause or media error
-  }
-  authorizing --> ready: authorized (load position, preload following segment)
-  state ready {
-    [*] --> paused
-    paused --> playing: Play (unlock standby, start active)
-    playing --> paused: Pause, external pause, media error, end of last segment
-    state playing {
-      [*] --> streaming
-      streaming --> buffering: waiting
-      buffering --> streaming: playing
+  closed --> open: open
+  state open {
+    [*] --> authorizing
+    state authorizing {
+      [*] --> idle
+      idle --> playRequested: Play (unlock both elements)
+      playRequested --> idle: Pause or media error
+    }
+    authorizing --> ready: authorized (load, preload following segment)
+    state ready {
+      [*] --> paused
+      paused --> playing: Play (unlock standby, start active)
+      playing --> paused: Pause, external pause, media error, end of last segment
+      state playing {
+        [*] --> streaming
+        streaming --> buffering: waiting
+        buffering --> streaming: playing
+      }
     }
   }
-  authorizing --> closed: close
-  ready --> closed: close
+  open --> closed: close
 ```
 
 Authorization after a Play request enters `playing` directly. An audiobook without audio opens straight into `ready`, where Play is ignored.

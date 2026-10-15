@@ -1,8 +1,8 @@
 import { createActor, type SnapshotFrom } from "xstate";
 
+import type { AudiobookPlayerEnvironment } from "#src/app/player/audio-element-pair.ts";
 import {
   audiobookPlayerMachine,
-  type AudiobookPlayerEnvironment,
   type AudiobookPlayerSession,
 } from "#src/app/player/audiobook-player-machine.ts";
 import {
@@ -28,7 +28,7 @@ export class AudiobookPlayer implements Player {
   constructor(session: AudiobookPlayerSession, environment: AudiobookPlayerEnvironment) {
     this.session = session;
     this.actor = createActor(audiobookPlayerMachine, { input: { session, environment } });
-    this.snapshot = this.describe(this.actor.getSnapshot());
+    this.snapshot = this.toPlayerSnapshot(this.actor.getSnapshot());
     this.actor.subscribe((state) => {
       this.publish(state);
     });
@@ -98,7 +98,7 @@ export class AudiobookPlayer implements Player {
    * object.
    */
   private publish(state: SnapshotFrom<typeof audiobookPlayerMachine>) {
-    const next = this.describe(state);
+    const next = this.toPlayerSnapshot(state);
     if (isSameSnapshot(next, this.snapshot)) {
       return;
     }
@@ -109,13 +109,14 @@ export class AudiobookPlayer implements Player {
     }
   }
 
-  private describe(state: SnapshotFrom<typeof audiobookPlayerMachine>): PlayerSnapshot {
+  private toPlayerSnapshot(state: SnapshotFrom<typeof audiobookPlayerMachine>): PlayerSnapshot {
     return {
       ...this.session.reportedPositionAt(state.context.location),
       durationMilliseconds: this.session.timeline.durationMilliseconds,
       isPlaying:
-        state.matches({ ready: "playing" }) || state.matches({ authorizing: "playRequested" }),
-      isBuffering: state.matches({ ready: { playing: "buffering" } }),
+        state.matches({ open: { ready: "playing" } }) ||
+        state.matches({ open: { authorizing: "playRequested" } }),
+      isBuffering: state.matches({ open: { ready: { playing: "buffering" } } }),
       error: state.context.error,
     };
   }

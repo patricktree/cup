@@ -1,9 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-import type {
-  AudiobookAudioElement,
-  AudiobookPlayerSession,
-} from "#src/app/player/audiobook-player-machine.ts";
+import type { AudiobookAudioElement } from "#src/app/player/audio-element-pair.ts";
+import type { AudiobookPlayerSession } from "#src/app/player/audiobook-player-machine.ts";
 import { AudiobookPlayer } from "#src/app/player/audiobook-player.ts";
 import { createAudiobookTimeline } from "#src/app/player/audiobook-timeline.ts";
 import type { ReportedPosition, TimelineLocation } from "#src/platform/player.ts";
@@ -521,6 +519,38 @@ test("a media error on the active element stops playback with a message", async 
   expect(player.getSnapshot()).toMatchObject({ isPlaying: true, error: null });
   expect(element(0).sources.at(-1)).toBe(segmentUrl(0));
   expect(element(0).calls.at(-1)).toBe("play");
+});
+
+test("a media error while Play waits for authorization cancels the start", async () => {
+  const { player, element, pendingAuthorizations } = createFixture({
+    shouldHoldAuthorization: true,
+  });
+  player.open();
+  player.play();
+
+  element(0).fire("error");
+
+  expect(player.getSnapshot()).toMatchObject({ isPlaying: false, error: MEDIA_ERROR_MESSAGE });
+  pendingAuthorizations.shift()?.resolve();
+  await settle();
+  expect(element(0).src).toBe(segmentUrl(0));
+  expect(element(0).calls.filter((call) => call === "play")).toEqual([]);
+});
+
+test("a preload authorized after close loads nothing", async () => {
+  const { player, element, pendingAuthorizations, state } = createFixture();
+  player.open();
+  await settle();
+  player.play();
+  await settle();
+  state.shouldHoldAuthorization = true;
+  element(0).fire("ended");
+
+  player.close();
+  pendingAuthorizations.shift()?.resolve();
+  await settle();
+
+  expect(element(0).sources).toEqual([segmentUrl(0)]);
 });
 
 test("a media error on the standby element reloads its segment when playback reaches it", async () => {
