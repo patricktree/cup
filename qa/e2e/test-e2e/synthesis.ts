@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { audiobookSchema, type Audiobook } from "@cup/web-app-api.routes";
+import { audiobookSchema, type Audiobook } from "@cup/listener-api.routes";
 
 import { expect } from "#test-e2e/fixtures.ts";
 import { getTrialSessionHeaders } from "#test-e2e/journey.ts";

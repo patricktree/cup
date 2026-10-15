@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { accountSnapshotSchema } from "@cup/web-app-api.routes";
+import { accountSnapshotSchema } from "@cup/listener-api.routes";
 
 import { expect, test } from "#test-e2e/fixtures.ts";
 import { waitForAudiobook } from "#test-e2e/journey.ts";

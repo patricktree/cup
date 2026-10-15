@@ -1,9 +1,9 @@
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 
-import { parseOkResponse } from "@cup/web-app-api.client";
-import { authConfigResponseSchema } from "@cup/web-app-api.routes";
+import { parseOkResponse } from "@cup/listener-api.client";
+import { authConfigResponseSchema } from "@cup/listener-api.routes";
 
-import { createAppApiClient } from "#src/api-client.js";
+import { createListenerApiClient } from "#src/api-client.js";
 import {
   ACCOUNT_SESSION_CODE_VERIFIER_STORAGE_KEY,
   ACCOUNT_SESSION_STORAGE_KEY,
@@ -91,7 +91,7 @@ export async function ensureAuthInitialized(): Promise<SupabaseClient> {
 
 async function initializeAuth() {
   const config = authConfigResponseSchema.parse(
-    await parseOkResponse(createAppApiClient().getAuthConfig()),
+    await parseOkResponse(createListenerApiClient().getAuthConfig()),
   );
   googleClientId = config.googleWebClientId;
   const platformStorage = await initializeAuthStorage([
@@ -186,7 +186,7 @@ export function refreshPlaybackAuthorization(current: Session | null = sessionSn
       if (!latest || isSigningOut || generation !== sessionGeneration) {
         return undefined;
       }
-      const response = await createAppApiClient()
+      const response = await createListenerApiClient()
         .createAuthenticatedRpcClient(latest.access_token)
         .createFilesSession();
       if (!response.ok) {
@@ -230,7 +230,7 @@ async function finishSignOut() {
   trialBrowserState.clearLastGrantId();
   // A late POST response may set a cookie; deletion must follow all prior issuance.
   await mediaUpdates.catch(() => undefined);
-  await createAppApiClient()
+  await createListenerApiClient()
     .clearFilesSession()
     .catch(() => undefined);
   await clearNativeAuthSession();

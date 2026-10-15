@@ -1,5 +1,5 @@
 {
-  "name": "@cup/web-app-api.routes",
+  "name": "@cup/listener-api.routes",
   "private": true,
   "files": [
     "src/**"

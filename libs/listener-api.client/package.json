@@ -1,5 +1,5 @@
 {
-  "name": "@cup/web-app-api.client",
+  "name": "@cup/listener-api.client",
   "private": true,
   "files": [
     "src/**"
@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@cup/api-rpc.client": "workspace:*",
-    "@cup/web-app-api.routes": "workspace:*",
+    "@cup/listener-api.routes": "workspace:*",
     "hono": "catalog:hono"
   },
   "devDependencies": {

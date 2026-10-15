@@ -8,7 +8,7 @@ Cup turns source content behind a URL into an audiobook. A shared web applicatio
 flowchart TD
     Operator[Operator CLI] --> Access[Cloudflare Access]
     Access --> Worker
-    Web[Web browser] --> Worker[Cloudflare Worker: Web App API, Operator API, assets]
+    Web[Web browser] --> Worker[Cloudflare Worker: Listener API, Operator API, assets]
     Native[Capacitor mobile app] --> Worker
     Registry --> Auth
     Worker --> Auth
@@ -76,7 +76,7 @@ flowchart TD
 
 ## API definitions
 
-The [application contracts](../../libs/web-app-api.routes/src/hono-app.ts) and [operator contracts](../../libs/operator-api.routes/src/hono-app.ts) define HTTP methods, paths, and schemas; [server composition](../../libs/api-server/src/api-server.ts) mounts their handlers. Account deletion and recovery handlers are implemented directly in the server composition. The [OpenAPI export](../../libs/web-app-api.client/scripts/export-openapi-json.ts) covers the application contracts, not the operator API. The [application client](../../libs/web-app-api.client/src/rpc-client.ts) and [operator client](../../libs/operator-api.client/src/rpc-client.ts) share [response handling](../../libs/api-rpc.client/src/rpc-response.ts): every unsuccessful response rejects with one error type carrying the API error code, HTTP status, and retry delay. See [authentication and authorization](authentication.md) for access rules. Durable Object RPC and Workflow invocation are internal platform interfaces.
+The listener API serves the web and mobile apps that listeners use; the operator API serves the operator CLI. The [listener contracts](../../libs/listener-api.routes/src/hono-app.ts) and [operator contracts](../../libs/operator-api.routes/src/hono-app.ts) define HTTP methods, paths, and schemas; [server composition](../../libs/api-server/src/api-server.ts) mounts their handlers. Account deletion and recovery handlers are implemented directly in the server composition. The [OpenAPI export](../../libs/listener-api.client/scripts/export-openapi-json.ts) covers the listener contracts, not the operator API. The [listener client](../../libs/listener-api.client/src/rpc-client.ts) and [operator client](../../libs/operator-api.client/src/rpc-client.ts) share [response handling](../../libs/api-rpc.client/src/rpc-response.ts): every unsuccessful response rejects with one error type carrying the API error code, HTTP status, and retry delay. See [authentication and authorization](authentication.md) for access rules. Durable Object RPC and Workflow invocation are internal platform interfaces.
 
 ## Storage ownership
 
@@ -106,6 +106,6 @@ Cloudflare Workflows owns execution state; the account or grant object owns the 
 
 ## Development and test view
 
-Local web development uses Wrangler and can use a local Supabase stack through `pnpm dev:services`. Native Android uses the production API origin; starting local Supabase does not redirect the native app. See [signup operations](../social-signup-operations.md) for environment setup.
+Local web development uses Wrangler and can use a local Supabase stack through `pnpm dev:services`. Native Android uses the production API origin; starting local Supabase does not redirect the native app. See [local development](../local-development.md) for environment setup.
 
 Tests use [account test bindings](../../libs/accounts/wrangler.test.jsonc), [grant test bindings](../../libs/conversion-grants/wrangler.test.jsonc), [application E2E bindings](../../qa/e2e/wrangler.jsonc), and [source-page fixtures](../../libs/prepare-source-material/test-e2e/fixtures/README.md). Browser tests run through Docker. Fixtures and local-development authentication paths are test infrastructure, not production identity providers. The [validation guide](../../AGENTS.md#validation) distinguishes free checks from paid narration evals.

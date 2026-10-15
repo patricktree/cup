@@ -4,8 +4,8 @@ import {
   loadAudiobook,
   type Audiobook,
 } from "@cup/audiobook-production";
+import type { ErrorResponse } from "@cup/listener-api.routes";
 import type { RegistryDurableObject } from "@cup/registry";
-import type { ErrorResponse } from "@cup/web-app-api.routes";
 
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
 import { resolveConversionReader, type ConversionReader } from "#src/conversion-reader.ts";

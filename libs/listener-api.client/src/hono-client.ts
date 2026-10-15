@@ -1,10 +1,11 @@
 import { hc } from "hono/client";
 
 import { trimTrailingSlash } from "@cup/api-rpc.client";
-import type { WebAppApiApp, WebAppApiClient } from "@cup/web-app-api.routes";
+import type { ListenerApiApp, ListenerApiClient } from "@cup/listener-api.routes";
 
 // This indirection preserves inferred routes and works around TypeScript issue 47663.
-const hcWithType = (...args: Parameters<typeof hc>): WebAppApiClient => hc<WebAppApiApp>(...args);
+const hcWithType = (...args: Parameters<typeof hc>): ListenerApiClient =>
+  hc<ListenerApiApp>(...args);
 
 /** Typed Hono client inferred from the create-audiobook-from-url API routes. */
 export type HonoClient = ReturnType<typeof hcWithType>;
