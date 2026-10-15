@@ -46,7 +46,7 @@ export type IdentityAccount = {
 };
 
 /** The account's duration usage as last projected into the registry. */
-export type AccountUsage = Omit<AccountUsageProjection, "accountId">;
+type AccountUsage = Omit<AccountUsageProjection, "accountId">;
 
 export type ListedAccount = IdentityAccount & {
   usage?: AccountUsage & { availableMilliseconds: number };
