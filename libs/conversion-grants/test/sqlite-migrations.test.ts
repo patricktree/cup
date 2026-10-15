@@ -6,8 +6,9 @@ import { z } from "zod";
 
 import * as grantSchema from "#src/grant-sqlite-schema.ts";
 import grantMigrations from "#src/migrations/grant.ts";
+import { rateEvents } from "#src/rate-limit-schema.ts";
 
-const stores = [{ name: "grant", schema: grantSchema, bundle: grantMigrations }];
+const stores = [{ name: "grant", schema: { ...grantSchema, rateEvents }, bundle: grantMigrations }];
 
 for (const { name, schema, bundle } of stores) {
   test(`${name} migration bundle matches the checked-in SQL and journal`, async () => {
