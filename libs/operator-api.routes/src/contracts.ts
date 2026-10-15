@@ -258,6 +258,16 @@ export const listAccountsResponseSchema = z
           subject: z.uuid(),
           createdAt: z.iso.datetime(),
           phase: z.enum(accountPhases),
+          // Absent until the Registry has received the account's first usage projection.
+          usage: z
+            .object({
+              allowanceMilliseconds: z.number().int().nonnegative(),
+              reservedMilliseconds: z.number().int().nonnegative(),
+              spentMilliseconds: z.number().int().nonnegative(),
+              availableMilliseconds: z.number().int().nonnegative(),
+            })
+            .strict()
+            .optional(),
         })
         .strict(),
     ),

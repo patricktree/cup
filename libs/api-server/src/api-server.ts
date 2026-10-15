@@ -900,6 +900,16 @@ const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
             subject: account.subject,
             createdAt: toIsoString(account.createdAtMs),
             phase: account.phase,
+            ...(account.usage === undefined
+              ? {}
+              : {
+                  usage: {
+                    allowanceMilliseconds: account.usage.allowanceMilliseconds,
+                    reservedMilliseconds: account.usage.reservedMilliseconds,
+                    spentMilliseconds: account.usage.spentMilliseconds,
+                    availableMilliseconds: account.usage.availableMilliseconds,
+                  },
+                }),
           })),
           ...(result.nextCursor === undefined ? {} : { nextCursor: result.nextCursor }),
         },

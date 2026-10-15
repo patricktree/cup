@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, or } from "drizzle-orm";
+import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { Temporal } from "temporal-polyfill";
 import { z } from "zod";
@@ -13,6 +13,7 @@ import { DurationLedger } from "@cup/duration-ledger";
 import { RollingLimits } from "@cup/rolling-limits";
 
 import {
+  ACCOUNT_USAGE_PROJECTION_SCHEMA_VERSION,
   accountIdentitySchema,
   accountOutcomeSchema,
   startAccountConversionSchema,
@@ -22,6 +23,7 @@ import type {
   AccountConversionOutcome,
   AccountIdentity,
   AccountSnapshot,
+  AccountUsageProjection,
 } from "#src/account-contracts.ts";
 import {
   accountPlaybackPositions,
@@ -132,6 +134,40 @@ export class AccountSqlite {
       throw new Error("Account is not initialized");
     }
     return { ...identity, balance: { unit: "audio-millisecond", ...this.duration.balance() } };
+  }
+
+  usageProjection(): AccountUsageProjection {
+    const { accountId } = this.snapshot();
+    const totals = this.duration.totals();
+    return {
+      accountId,
+      revision: this.duration.revision(),
+      allowanceMilliseconds: totals.allowanceMilliseconds,
+      reservedMilliseconds: totals.reservedMilliseconds,
+      spentMilliseconds: totals.spentMilliseconds,
+      schemaVersion: ACCOUNT_USAGE_PROJECTION_SCHEMA_VERSION,
+    };
+  }
+
+  hasUnconfirmedUsage(): boolean {
+    const confirmed = this.database
+      .select({ revision: accounts.registryConfirmedRevision })
+      .from(accounts)
+      .where(eq(accounts.id, 1))
+      .get();
+    return confirmed !== undefined && confirmed.revision < this.duration.revision();
+  }
+
+  /** Confirmations can arrive out of order, so the confirmed revision only moves forward. */
+  confirmRegistryUsage(revision: number): void {
+    z.number().int().nonnegative().safe().parse(revision);
+    this.database
+      .update(accounts)
+      .set({
+        registryConfirmedRevision: sql`max(${accounts.registryConfirmedRevision}, ${revision})`,
+      })
+      .where(eq(accounts.id, 1))
+      .run();
   }
 
   startConversion(

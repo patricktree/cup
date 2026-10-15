@@ -26,6 +26,8 @@ Existing columns that predate this convention keep their names until a migration
 
 Writers may target pending or ready conversions; account lifecycle and execution epochs fence their storage effects.
 
+`registry_confirmed_revision` records the duration ledger revision for which the registry confirmed the account's [usage projection](#registry). The revision is the number of ledger events, so every change to the allowance, reserved duration, or spent duration advances it without a separate counter.
+
 Sources: [account-sqlite-schema.ts](../../libs/accounts/src/account-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/rolling-limits/src/rate-limit-schema.ts), [duration-ledger-schema.ts](../../libs/duration-ledger/src/duration-ledger-schema.ts); [migrations](../../libs/accounts/drizzle/account/).
 
 ```mermaid
@@ -70,6 +72,7 @@ erDiagram
         text state "NOT NULL"
         integer execution_epoch "NOT NULL"
         integer recovery_deadline_ms "nullable"
+        integer registry_confirmed_revision "NOT NULL"
     }
     artifact_writers {
         text writer_id PK "NOT NULL"
@@ -243,6 +246,8 @@ Additional indexes:
 
 `RegistryDurableObject`. One preserved singleton database stores grant inventory, account identity mappings and coordination, ingress rate limits, and conversion ownership for accounts and trials. `conversion_owners` is the sole conversion ownership mapping and requires exactly the owner identifier appropriate to `owner_kind`; account identifiers refer to separate Durable Object databases. Subject and deletion-attempt identifiers are coordinated by application logic, including records that outlive erased accounts.
 
+The `projection_*` columns of `registry_grants` and `identity_accounts` are usage projections: copies of each owner's allowance, reserved duration, and spent duration that let the operator list grants and accounts from this one database instead of calling every owner object. The owner object stays authoritative. Each projection carries the owner's revision, and the registry keeps only the newest: an older revision is ignored as stale, and a repeated revision must match what is stored. The owner records the revision the registry confirmed and retries from its alarm until the registry has confirmed the current one. Grants count their own revisions; an account's revision is its duration ledger's event count. The registry also pulls usage from an account when provisioning activates it, and its alarm backfills active accounts whose projection is still missing, including accounts created before account projections existed. A projection disappears with its identity mapping when account deletion completes.
+
 Sources: [registry-sqlite-schema.ts](../../libs/registry/src/registry-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/registry/src/rate-limit-schema.ts); [migrations](../../libs/registry/drizzle/registry/).
 
 ```mermaid
@@ -271,6 +276,11 @@ erDiagram
         text account_id UK "NOT NULL"
         integer created_at_ms "NOT NULL"
         text phase "NOT NULL"
+        integer projection_revision "nullable"
+        integer projection_allowance_milliseconds "nullable"
+        integer projection_reserved_milliseconds "nullable"
+        integer projection_spent_milliseconds "nullable"
+        integer projection_schema_version "nullable"
     }
     provisioning_jobs {
         text subject PK "NOT NULL"

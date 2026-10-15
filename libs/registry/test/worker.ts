@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/durable-sqlite";
 import { AccountDurableObject as BaseAccountDurableObject } from "@cup/accounts";
 
 import { DeletionCoordinator } from "#src/deletion-coordinator.ts";
-import type { RegistryDurableObject } from "#src/registry-durable-object.ts";
+import { RegistryDurableObject as BaseRegistryDurableObject } from "#src/registry-durable-object.ts";
 import { migrateRegistry } from "#src/sqlite-migrations.ts";
 
 /** Simulates a launch acknowledgement loss followed by exhausted terminal RPC retries. */
@@ -82,7 +82,21 @@ export class AccountDurableObject extends BaseAccountDurableObject {
     });
   }
 }
-export { RegistryDurableObject } from "#src/index.ts";
+/** Simulates accounts that predate usage projections, so the alarm's backfill can be observed. */
+export class RegistryDurableObject extends BaseRegistryDurableObject {
+  forgetAccountUsageForTest(accountId: string) {
+    this.ctx.storage.sql.exec(
+      `UPDATE identity_accounts SET projection_revision = NULL,
+        projection_allowance_milliseconds = NULL, projection_reserved_milliseconds = NULL,
+        projection_spent_milliseconds = NULL, projection_schema_version = NULL
+      WHERE account_id = ?`,
+      accountId,
+    );
+  }
+  reconcileForTest() {
+    return this.alarm();
+  }
+}
 
 export { ConversionGrantDurableObject } from "@cup/conversion-grants";
 

@@ -54,6 +54,14 @@ account
             ["Subject", listed.subject],
             ["Phase", listed.phase],
             ["Created", listed.createdAt],
+            ...(listed.usage === undefined
+              ? ([["Usage", "not yet projected"]] as const)
+              : ([
+                  ["Allowance minutes", listed.usage.allowanceMilliseconds / 60_000],
+                  ["Spent minutes", listed.usage.spentMilliseconds / 60_000],
+                  ["Reserved minutes", listed.usage.reservedMilliseconds / 60_000],
+                  ["Available minutes", listed.usage.availableMilliseconds / 60_000],
+                ] as const)),
           ]);
         }
         if (result.nextCursor !== undefined) {

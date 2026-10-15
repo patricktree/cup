@@ -63,11 +63,24 @@ export const identityAccounts = sqliteTable(
     accountId: text("account_id").notNull().unique(),
     createdAtMs: integer("created_at_ms").notNull(),
     phase: text({ enum: ["provisioning", "active", "deleting_identity"] }).notNull(),
+    // The account's usage projection; all null until the registry first receives one.
+    projectionRevision: integer("projection_revision"),
+    projectionAllowanceMilliseconds: integer("projection_allowance_milliseconds"),
+    projectionReservedMilliseconds: integer("projection_reserved_milliseconds"),
+    projectionSpentMilliseconds: integer("projection_spent_milliseconds"),
+    projectionSchemaVersion: integer("projection_schema_version"),
   },
   (table) => [
     check(
       "identity_account_phase",
       sql`${table.phase} IN ('provisioning', 'active', 'deleting_identity')`,
+    ),
+    check(
+      "identity_account_projection",
+      sql`(
+        (${table.projectionRevision} IS NULL AND ${table.projectionAllowanceMilliseconds} IS NULL AND ${table.projectionReservedMilliseconds} IS NULL AND ${table.projectionSpentMilliseconds} IS NULL AND ${table.projectionSchemaVersion} IS NULL)
+        OR (${table.projectionRevision} > 0 AND ${table.projectionAllowanceMilliseconds} >= 0 AND ${table.projectionReservedMilliseconds} >= 0 AND ${table.projectionSpentMilliseconds} >= 0 AND ${table.projectionSchemaVersion} > 0)
+      )`,
     ),
   ],
 );

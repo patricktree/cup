@@ -43,6 +43,13 @@
       "when": 1792074280410,
       "tag": "0005_align_duration_ledger_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1792074463689,
+      "tag": "0006_registry_usage_projection",
+      "breakpoints": true
     }
   ]
 }
