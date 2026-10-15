@@ -10,6 +10,7 @@ import { ArrowLeft, Play } from "lucide-react";
 import React from "react";
 
 import { ErrorMessage } from "#src/app/components/error-message.js";
+import { ShellContent } from "#src/app/components/main.tsx";
 import { QueryBoundary } from "#src/app/components/query-boundary.js";
 import { DSButton } from "#src/app/design-system/button.js";
 import { formatDuration } from "#src/app/player/playback-format.js";
@@ -33,9 +34,14 @@ function AudiobookBoundary() {
   useShownConversion(Route.useParams().conversionId);
 
   return (
-    <QueryBoundary pending={<ReaderSkeleton />} errorComponent={ReaderQueryError}>
-      <AudiobookPage />
-    </QueryBoundary>
+    <ShellContent
+      headerContent={<BackLink />}
+      mainContent={
+        <QueryBoundary pending={<ReaderSkeleton />} errorComponent={ReaderQueryError}>
+          <AudiobookPage />
+        </QueryBoundary>
+      }
+    ></ShellContent>
   );
 }
 
@@ -120,22 +126,20 @@ function PreparedReader({
 
   return (
     <>
-      <div
-        className={css`
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-block-end: var(--spacing-base);
-        `}
-      >
-        <BackLink />
-        {/* The player below the page has the controls of the loaded audiobook. */}
-        {loaded ? null : (
+      {/* The player below the page has the controls of the loaded audiobook. */}
+      {loaded ? null : (
+        <div
+          className={css`
+            display: flex;
+            align-items: center;
+            margin-block-end: var(--spacing-base);
+          `}
+        >
           <DSButton variant="text" aria-label="Play" disabled={!canPlay} onClick={playback.play}>
             <Play size={48} />
           </DSButton>
-        )}
-      </div>
+        </div>
+      )}
 
       <ReaderNotices
         conversionId={conversionId}
@@ -410,8 +414,6 @@ function BackLink() {
         display: inline-flex;
         gap: var(--spacing-base);
         align-items: center;
-
-        font-size: var(--font-size-display);
       `}
     >
       {/* Only accounts have a conversion history; trial listeners return to the start. */}

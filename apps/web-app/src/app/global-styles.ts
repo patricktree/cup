@@ -112,7 +112,7 @@ export const cssBase = css`
       --line-height-display: 55px;
 
       --spacing-base: 8px;
-      --app-padding-block: calc(2 * var(--spacing-base));
+      --app-padding-block: calc(1.5 * var(--spacing-base));
       --app-padding-inline: calc(2 * var(--spacing-base));
       --app-max-width: 800px;
 

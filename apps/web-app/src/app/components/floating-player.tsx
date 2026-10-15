@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Pause, Play } from "lucide-react";
 import React from "react";
 
+import { ShellFooter } from "#src/app/components/main.tsx";
 import { DSButton } from "#src/app/design-system/button.js";
 import { formatDuration, formatTimelinePosition } from "#src/app/player/playback-format.js";
 import {
@@ -19,17 +20,24 @@ import type { Player } from "#src/platform/player.js";
  */
 export function FloatingPlayer(): React.ReactNode {
   const { loaded, shown, authorizationError } = usePlayerHostSnapshot();
-  if (!loaded) return null;
+
+  if (!loaded) {
+    return null;
+  }
 
   // The reader page reports the audiobook it shows to the host.
   const isOnLoadedAudiobookPage = shown?.conversionId === loaded.conversionId;
 
   return (
-    <footer
+    <ShellFooter
       aria-label="Player"
       className={css`
+        /* put above shell <main> */
+        z-index: 1;
+
         /* one column as wide as the page above, centered */
         display: grid;
+        grid-area: shell-floating-player;
         grid-template-columns: minmax(0, var(--app-max-width));
         gap: var(--spacing-base);
         justify-content: center;
@@ -46,7 +54,7 @@ export function FloatingPlayer(): React.ReactNode {
         <CompactControls loaded={loaded} />
       )}
       <PlaybackError player={loaded.player} authorizationError={authorizationError} />
-    </footer>
+    </ShellFooter>
   );
 }
 
@@ -55,7 +63,6 @@ function FullControls({ loaded }: { loaded: LoadedAudiobook }) {
     <div
       className={css`
         display: grid;
-        gap: calc(2 * var(--spacing-base));
         justify-items: center;
 
         & > :first-child {
@@ -141,33 +148,50 @@ function PlaybackProgress({ player, title }: { player: Player; title: string }) 
   return (
     <div
       className={css`
-        display: flex;
-        gap: var(--spacing-base);
+        display: grid;
+        grid-template-rows: max-content max-content;
         align-items: center;
 
         font-size: var(--font-size-sm);
         font-variant-numeric: tabular-nums;
         color: var(--color-fg-emphasized-sm);
-
-        input {
-          flex: 1;
-          min-width: 0;
-          accent-color: var(--color-primary);
-        }
       `}
     >
-      <span>{formatTimelinePosition(positionMilliseconds)}</span>
-      <input
-        type="range"
-        aria-label={`Position in ${title}`}
-        aria-valuetext={`${formatDuration(positionMilliseconds)} of ${formatDuration(durationMilliseconds)}`}
-        min={0}
-        max={durationMilliseconds}
-        step={1_000}
-        value={positionMilliseconds}
-        onChange={(event) => player.seekTo(event.currentTarget.valueAsNumber)}
-      />
-      <span>{formatTimelinePosition(durationMilliseconds)}</span>
+      <div
+        className={css`
+          display: flex;
+          align-items: center;
+
+          & > input {
+            flex: 1;
+            min-width: 0;
+            accent-color: var(--color-primary);
+          }
+        `}
+      >
+        <input
+          type="range"
+          aria-label={`Position in ${title}`}
+          aria-valuetext={`${formatDuration(positionMilliseconds)} of ${formatDuration(durationMilliseconds)}`}
+          min={0}
+          max={durationMilliseconds}
+          step={1_000}
+          value={positionMilliseconds}
+          onChange={(event) => player.seekTo(event.currentTarget.valueAsNumber)}
+        />
+      </div>
+
+      <div
+        className={css`
+          display: flex;
+          gap: var(--spacing-base);
+          align-items: center;
+          justify-content: space-between;
+        `}
+      >
+        <span>{formatTimelinePosition(positionMilliseconds)}</span>
+        <span>{formatTimelinePosition(durationMilliseconds)}</span>
+      </div>
     </div>
   );
 }
