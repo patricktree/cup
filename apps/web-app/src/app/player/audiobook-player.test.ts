@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-import {
-  AudiobookPlayer,
-  type AudiobookAudioElement,
-  type AudiobookPlayerSession,
-} from "#src/app/player/audiobook-player.ts";
+import type {
+  AudiobookAudioElement,
+  AudiobookPlayerSession,
+} from "#src/app/player/audiobook-player-machine.ts";
+import { AudiobookPlayer } from "#src/app/player/audiobook-player.ts";
 import { createAudiobookTimeline } from "#src/app/player/audiobook-timeline.ts";
 import type { ReportedPosition, TimelineLocation } from "#src/platform/player.ts";
 
