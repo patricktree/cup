@@ -32,6 +32,13 @@ export default {
         tag: "0003_remove_artifact_writer_purpose",
         breakpoints: true,
       },
+      {
+        idx: 4,
+        version: "6",
+        when: 1792066092752,
+        tag: "0004_deletion_state_checks",
+        breakpoints: true,
+      },
     ],
   },
   migrations: {
@@ -42,5 +49,7 @@ export default {
     m0002:
       'PRAGMA foreign_keys=OFF;--> statement-breakpoint\nCREATE TABLE `__new_account_playback_positions` (\n\t`conversion_id` text PRIMARY KEY NOT NULL,\n\t`synchronization_unit_id` text NOT NULL,\n\t`offset_milliseconds` integer NOT NULL,\n\tCONSTRAINT "playback_offset" CHECK("__new_account_playback_positions"."offset_milliseconds" >= 0)\n);\n--> statement-breakpoint\nINSERT INTO `__new_account_playback_positions`("conversion_id", "synchronization_unit_id", "offset_milliseconds") SELECT "conversion_id", "synchronization_unit_id", "offset_milliseconds" FROM `account_playback_positions`;--> statement-breakpoint\nDROP TABLE `account_playback_positions`;--> statement-breakpoint\nALTER TABLE `__new_account_playback_positions` RENAME TO `account_playback_positions`;--> statement-breakpoint\nPRAGMA foreign_keys=ON;',
     m0003: "ALTER TABLE `artifact_writers` DROP COLUMN `purpose`;",
+    m0004:
+      'PRAGMA foreign_keys=OFF;--> statement-breakpoint\nCREATE TABLE `__new_deletion_attempts` (\n\t`attempt_id` text PRIMARY KEY NOT NULL,\n\t`payload_json` text NOT NULL,\n\t`state` text NOT NULL,\n\t`delivered` integer DEFAULT false NOT NULL,\n\tCONSTRAINT "deletion_attempt_state" CHECK("__new_deletion_attempts"."state" IN (\'scheduled\', \'restored\', \'deleting\')),\n\tCONSTRAINT "deletion_attempt_delivered" CHECK("__new_deletion_attempts"."delivered" IN (0, 1))\n);\n--> statement-breakpoint\nINSERT INTO `__new_deletion_attempts`("attempt_id", "payload_json", "state", "delivered") SELECT "attempt_id", "payload_json", "state", "delivered" FROM `deletion_attempts`;--> statement-breakpoint\nDROP TABLE `deletion_attempts`;--> statement-breakpoint\nALTER TABLE `__new_deletion_attempts` RENAME TO `deletion_attempts`;--> statement-breakpoint\nPRAGMA foreign_keys=ON;--> statement-breakpoint\nCREATE TABLE `__new_deletion_challenges` (\n\t`challenge_id` text PRIMARY KEY NOT NULL,\n\t`execution_epoch` integer NOT NULL,\n\t`state` text NOT NULL,\n\t`issued_at_ms` integer NOT NULL,\n\t`expires_at_ms` integer NOT NULL,\n\t`used` integer DEFAULT false NOT NULL,\n\tCONSTRAINT "deletion_challenge_state" CHECK("__new_deletion_challenges"."state" IN (\'active\', \'deletion_scheduled\')),\n\tCONSTRAINT "deletion_challenge_used" CHECK("__new_deletion_challenges"."used" IN (0, 1))\n);\n--> statement-breakpoint\nINSERT INTO `__new_deletion_challenges`("challenge_id", "execution_epoch", "state", "issued_at_ms", "expires_at_ms", "used") SELECT "challenge_id", "execution_epoch", "state", "issued_at_ms", "expires_at_ms", "used" FROM `deletion_challenges`;--> statement-breakpoint\nDROP TABLE `deletion_challenges`;--> statement-breakpoint\nALTER TABLE `__new_deletion_challenges` RENAME TO `deletion_challenges`;',
   },
 };

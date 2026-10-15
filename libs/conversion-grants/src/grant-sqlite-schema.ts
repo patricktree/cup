@@ -144,14 +144,8 @@ export const segmentUsage = sqliteTable(
   ],
 );
 
-export const startAttempts = sqliteTable("start_attempts", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  attemptedAtMs: integer("attempted_at_ms").notNull(),
-});
-
 export const grantSqliteSchema = {
   conversions,
   grants,
   segmentUsage,
-  startAttempts,
 };

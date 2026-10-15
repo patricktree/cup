@@ -2,7 +2,7 @@ import childProcess from "node:child_process";
 import fs from "node:fs/promises";
 
 const stores = {
-  account: "{account-sqlite-schema,sqlite-schema-shared}.ts",
+  account: "{account-sqlite-schema,rate-limit-schema}.ts",
 };
 
 for (const [store, schema] of Object.entries(stores)) {

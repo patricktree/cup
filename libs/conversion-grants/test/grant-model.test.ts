@@ -98,7 +98,6 @@ function createRecord(): GrantRecord {
     signingKeyGeneration: 1,
     registrySnapshotRevision: 1,
     registryConfirmedSnapshotRevision: 0,
-    startAttempts: [],
     conversions: [],
     segmentUsage: [],
   };

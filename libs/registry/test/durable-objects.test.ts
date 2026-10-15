@@ -47,7 +47,7 @@ describe("SQLite conversion grant Durable Object", () => {
       name: "migration",
     });
     const migrations = await storage.exec("SELECT * FROM __drizzle_migrations");
-    expect(migrations).toHaveLength(2);
+    expect(migrations).toHaveLength(3);
     expect((await grant.inspect(CREATED_AT_MS)).state).toBe("open");
   });
 
@@ -314,6 +314,40 @@ describe("SQLite conversion grant Durable Object", () => {
     expect(results.filter((result) => result.result === "rate-limited")).toHaveLength(1);
     expect(await grant.listConversions()).toHaveLength(10);
   });
+
+  test("counts start attempts recorded in the rate-event bucket that migration 0002 fills", async () => {
+    const name = "migrated-rate-limit";
+    const grant = grantStub(name);
+    await grant.initialize(grantId(name), CREATED_AT_MS, EXPIRES_AT_MS);
+    const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
+    // Mirrors the rows that migration 0002_shared_rate_events copies from `start_attempts`.
+    for (let index = 0; index < 10; index += 1) {
+      await storage.exec(
+        "INSERT INTO rate_events VALUES ('grant-conversion-start', ?, ?, ?)",
+        `start-attempt-${index}`,
+        CREATED_AT_MS - 30_000,
+        CREATED_AT_MS + 30_000,
+      );
+    }
+
+    expect(
+      await grant.startConversion(
+        "https://example.com/limited",
+        crypto.randomUUID(),
+        CREATED_AT_MS,
+      ),
+    ).toEqual({ result: "rate-limited", retryAfterSeconds: 30 });
+    expect(
+      (
+        await grant.startConversion(
+          "https://example.com/allowed",
+          crypto.randomUUID(),
+          CREATED_AT_MS + 30_000,
+        )
+      ).result,
+    ).toBe("created");
+    expect(await storage.exec("SELECT event_id FROM rate_events")).toHaveLength(1);
+  });
 });
 
 describe("SQLite conversion grant Registry Durable Object", () => {
@@ -520,7 +554,7 @@ test("replays baselines without changing grant balances or registry bindings", a
   const grant = grantStub(name);
   await grant.initialize(grantId(name), CREATED_AT_MS, EXPIRES_AT_MS);
   const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
-  expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(2);
+  expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(3);
   expect(await grant.migrate()).toBe(6);
   expect((await grant.inspect(CREATED_AT_MS)).duration.availableMilliseconds).toBe(7_200_000);
   const registry = registryStub(name);
@@ -832,12 +866,9 @@ test.each([false, true])(
     }
     const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
     const before = await storage.exec("SELECT * FROM grant");
-    await installProductionSchema(storage, "grant", [
-      "grant",
-      "conversions",
-      "segment_usage",
-      "start_attempts",
-    ]);
+    // The frozen production schema predates the shared rate-limit table.
+    await storage.exec("DROP TABLE rate_events");
+    await installProductionSchema(storage, "grant", ["grant", "conversions", "segment_usage"]);
 
     await grant.migrate();
     expect(await storage.exec("SELECT * FROM grant")).toEqual(
@@ -848,7 +879,7 @@ test.each([false, true])(
     );
     expect(await grant.listConversions()).toEqual([]);
     expect(await storage.exec("SELECT * FROM segment_usage")).toEqual([]);
-    expect(await storage.exec("SELECT * FROM start_attempts")).toEqual([]);
+    expect(await storage.exec("SELECT * FROM rate_events")).toEqual([]);
     expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual({
       availableMilliseconds: 20_000,
       spentMilliseconds: 0,
@@ -875,7 +906,7 @@ test.each([false, true])(
     await grant.migrate();
     expect(await grant.listConversions()).toHaveLength(revoked ? 0 : 1);
     expect((await grant.inspect(CREATED_AT_MS)).duration.spentMilliseconds).toBe(revoked ? 0 : 900);
-    expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(2);
+    expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(3);
   },
 );
 
@@ -987,12 +1018,9 @@ test("a failed production reset rolls back old tables and can be retried", async
   await grant.initialize(grantId(name), CREATED_AT_MS, EXPIRES_AT_MS);
   await grant.startConversion("https://example.com/old", crypto.randomUUID(), CREATED_AT_MS);
   const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
-  await installProductionSchema(storage, "grant", [
-    "grant",
-    "conversions",
-    "segment_usage",
-    "start_attempts",
-  ]);
+  // The frozen production schema predates the shared rate-limit table.
+  await storage.exec("DROP TABLE rate_events");
+  await installProductionSchema(storage, "grant", ["grant", "conversions", "segment_usage"]);
   const before = await storage.exec("SELECT * FROM grant");
   await storage.exec("CREATE TABLE migration_failure (value TEXT)");
   await storage.exec("CREATE UNIQUE INDEX grant_grant_id_unique ON migration_failure(value)");

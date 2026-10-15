@@ -2,7 +2,7 @@ import childProcess from "node:child_process";
 import fs from "node:fs/promises";
 
 const stores = {
-  grant: "grant-sqlite-schema.ts",
+  grant: "{grant-sqlite-schema,rate-limit-schema}.ts",
 };
 
 for (const [store, schema] of Object.entries(stores)) {

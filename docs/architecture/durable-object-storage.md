@@ -6,6 +6,8 @@ The diagrams use physical SQL table and column names, storage types, and nullabi
 
 When a schema changes, update its diagram alongside the generated migration. The migration tests in each owning library verify that the current Drizzle schema and checked-in snapshot agree.
 
+All three stores define `rate_events` from the [shared rate-limit schema](../../libs/rolling-limits/src/rate-limit-schema.ts) and enforce their limits through the same [rolling-window implementation](../../libs/rolling-limits/src/rolling-limits.ts), which prunes expired rows in SQL. Each store keeps its own events, separated by bucket name.
+
 ## Account object
 
 `AccountDurableObject`. Each account has an isolated database for identity and lifecycle state, conversion history, listening positions, dispatch, duration accounting, artifact writers, and deletion confirmation. The account owns the rows through its Durable Object identity; most tables therefore have no foreign key to the singleton account row.
@@ -14,7 +16,7 @@ When a schema changes, update its diagram alongside the generated migration. The
 
 Writers may target pending or ready conversions; account lifecycle and execution epochs fence their storage effects.
 
-Sources: [account-sqlite-schema.ts](../../libs/accounts/src/account-sqlite-schema.ts), [sqlite-schema-shared.ts](../../libs/accounts/src/sqlite-schema-shared.ts); [migrations](../../libs/accounts/drizzle/account/).
+Sources: [account-sqlite-schema.ts](../../libs/accounts/src/account-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/rolling-limits/src/rate-limit-schema.ts); [migrations](../../libs/accounts/drizzle/account/).
 
 ```mermaid
 erDiagram
@@ -132,7 +134,7 @@ Additional indexes:
 
 `ConversionGrantDurableObject`. Each conversion grant has an isolated database for its allowance, credentials, session signing state, conversions, duration reservations and usage, and start-rate accounting. The singleton grant row owns conversions through the Durable Object identity rather than a grant_id foreign key in the conversions table.
 
-Sources: [grant-sqlite-schema.ts](../../libs/conversion-grants/src/grant-sqlite-schema.ts); [migrations](../../libs/conversion-grants/drizzle/grant/).
+Sources: [grant-sqlite-schema.ts](../../libs/conversion-grants/src/grant-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/rolling-limits/src/rate-limit-schema.ts); [migrations](../../libs/conversion-grants/drizzle/grant/).
 
 ```mermaid
 erDiagram
@@ -178,12 +180,16 @@ erDiagram
         integer actual_milliseconds "NOT NULL"
         integer charged_milliseconds "NOT NULL"
     }
-    start_attempts {
-        integer id PK "NOT NULL; autoincrement"
-        integer attempted_at_ms "NOT NULL"
+    rate_events {
+        text bucket "NOT NULL"
+        text event_id PK "NOT NULL"
+        integer created_at_ms "NOT NULL"
+        integer expires_at_ms "NOT NULL"
     }
     conversions ||--o{ segment_usage : "conversion_id"
 ```
+
+Additional index: `rate_events_bucket` on `(bucket, created_at_ms)`.
 
 ## Registry
 

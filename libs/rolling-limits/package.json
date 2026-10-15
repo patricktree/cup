@@ -1,0 +1,48 @@
+{
+  "name": "@cup/rolling-limits",
+  "private": true,
+  "files": [
+    "src/**"
+  ],
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/types/rolling-limits.d.ts",
+      "default": "./src/rolling-limits.ts"
+    },
+    "./schema": {
+      "types": "./dist/types/rate-limit-schema.d.ts",
+      "default": "./src/rate-limit-schema.ts"
+    }
+  },
+  "scripts": {
+    "build": "turbo run turbo:build",
+    "cf-typegen": "wrangler types --config wrangler.test.jsonc --include-env=false worker-configuration.d.ts",
+    "cf-typegen:check": "pnpm run cf-typegen --check",
+    "clean": "del-cli --dot=true \"dist\" \"*.tsbuildinfo\"",
+    "lint": "turbo run turbo:lint",
+    "lint:fix": "turbo run turbo:lint:fix",
+    "turbo:build": "pnpm run cf-typegen:check && prepare-declaration-build --declaration-output-dir ./dist/types --build-info-file ./dist/tsconfig.build.tsbuildinfo --source-package-json ./src/package.json && tsc --build ./tsconfig.json",
+    "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
+    "turbo:lint:fix": "pnpm run turbo:lint --fix"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.4",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@cup/config-oxlint": "workspace:*",
+    "@cup/prepare-declaration-build": "workspace:*",
+    "@patricktree-stack/config-typescript": "workspace:*",
+    "@types/node": "catalog:",
+    "@typescript/native": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "typescript": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

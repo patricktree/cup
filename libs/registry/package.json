@@ -34,6 +34,7 @@
     "@cup/accounts": "workspace:*",
     "@cup/conversion-contracts": "workspace:*",
     "@cup/conversion-grants": "workspace:*",
+    "@cup/rolling-limits": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "temporal-polyfill": "^1.0.5",
     "zod": "^4.6.5"

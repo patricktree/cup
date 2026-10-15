@@ -16,6 +16,9 @@ export type DeletionAttempt = {
   state: "scheduled" | "restored" | "deleting" | "erased";
 };
 
+/** Stored attempts never reach `erased`: account erasure deletes their rows. */
+type StoredDeletionAttemptState = (typeof deletionAttempts.$inferSelect)["state"];
+
 export class AccountLifecycleConflictError extends Error {
   constructor(message: string) {
     super(message);
@@ -149,7 +152,7 @@ export class AccountLifecycle {
       .all()
       .map((row) => ({ ...deletionAttemptSchema.parse(JSON.parse(row.json)), state: row.state }));
   }
-  delivered(attemptId: string, state: DeletionAttempt["state"]) {
+  delivered(attemptId: string, state: StoredDeletionAttemptState) {
     this.database.transaction(() => {
       const row = this.database
         .select({ json: deletionAttempts.json })
