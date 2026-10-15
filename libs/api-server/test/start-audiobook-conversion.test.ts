@@ -13,7 +13,7 @@ const CREATED_RESULT = {
     conversionId: "conversion-id",
     idempotencyKey: "idempotency-key",
     sourceUrl: "https://example.com/source",
-    acceptedAtMs: 1_000,
+    createdAtMs: 1_000,
     status: "pending",
     lastStartedPhase: "conversion-start",
   },

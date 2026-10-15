@@ -621,7 +621,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
         conversion: {
           conversionId: result.conversion.conversionId,
           sourceUrl: result.conversion.sourceUrl,
-          acceptedAt: toIsoString(result.conversion.acceptedAtMs),
+          acceptedAt: toIsoString(result.conversion.createdAtMs),
           status: result.conversion.status,
           ...(result.conversion.status === "ready"
             ? {

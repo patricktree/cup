@@ -1,18 +1,25 @@
 import { sql } from "drizzle-orm";
-import { check, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import type {
   ConversionPhase,
   AudiobookReference,
   ConversionMeasurements,
 } from "@cup/conversion-contracts";
-import type { SegmentUsage } from "@cup/conversion-contracts/duration-accounting";
+import {
+  creditBalances,
+  creditLedger,
+  creditOperations,
+  defineAudioSegments,
+} from "@cup/duration-ledger/schema";
+
+// Re-exported so that the grant migrations create the shared duration ledger tables.
+export { creditBalances, creditLedger, creditOperations };
 
 export const grants = sqliteTable(
   "grant",
   {
     id: integer().primaryKey(),
-    allowanceMilliseconds: integer("allowance_milliseconds").notNull().default(7_200_000),
     grantId: text("grant_id").notNull().unique(),
     createdAtMs: integer("created_at_ms").notNull(),
     expiresAtMs: integer("expires_at_ms").notNull(),
@@ -25,7 +32,6 @@ export const grants = sqliteTable(
     registryConfirmedSnapshotRevision: integer("registry_confirmed_revision").notNull(),
   },
   (table) => [
-    check("grant_allowance", sql`${table.allowanceMilliseconds} > 0`),
     check("grant_singleton", sql`${table.id} = 1`),
     check("grant_expiry", sql`${table.expiresAtMs} > ${table.createdAtMs}`),
     check("grant_signing_key_generation", sql`${table.signingKeyGeneration} > 0`),
@@ -56,7 +62,7 @@ export const conversions = sqliteTable(
     conversionId: text("conversion_id").primaryKey(),
     idempotencyKey: text("idempotency_key").notNull().unique(),
     sourceUrl: text("source_url").notNull(),
-    acceptedAtMs: integer("accepted_at_ms").notNull(),
+    createdAtMs: integer("created_at_ms").notNull(),
     workflowStartedAtMs: integer("workflow_started_at_ms"),
     status: text({ enum: CONVERSION_STATUSES }).notNull(),
     lastStartedPhase: text("last_started_phase").$type<ConversionPhase>(),
@@ -113,39 +119,13 @@ export const conversions = sqliteTable(
   ],
 );
 
-export const segmentUsage = sqliteTable(
-  "segment_usage",
-  {
-    conversionId: text("conversion_id")
-      .notNull()
-      .references(() => conversions.conversionId),
-    sequence: integer().notNull(),
-    narrationTextCharacters: integer("narration_text_characters").notNull(),
-    estimatedMilliseconds: integer("estimated_milliseconds").notNull(),
-    state: text({ enum: ["reserved", "settled", "released"] })
-      .$type<SegmentUsage["state"]>()
-      .notNull(),
-    actualMilliseconds: integer("actual_milliseconds").notNull(),
-    chargedMilliseconds: integer("charged_milliseconds").notNull(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.conversionId, table.sequence] }),
-    check("segment_usage_sequence", sql`${table.sequence} >= 0`),
-    check("segment_usage_characters", sql`${table.narrationTextCharacters} > 0`),
-    check("segment_usage_estimate", sql`${table.estimatedMilliseconds} > 0`),
-    check(
-      "segment_usage_duration",
-      sql`${table.chargedMilliseconds} >= 0 AND ${table.chargedMilliseconds} <= ${table.actualMilliseconds}`,
-    ),
-    check(
-      "segment_usage_state",
-      sql`(${table.state} = 'settled' AND ${table.actualMilliseconds} > 0) OR (${table.state} IN ('reserved', 'released') AND ${table.actualMilliseconds} = 0 AND ${table.chargedMilliseconds} = 0)`,
-    ),
-  ],
-);
+export const audioSegments = defineAudioSegments(() => conversions.conversionId);
 
 export const grantSqliteSchema = {
+  audioSegments,
   conversions,
+  creditBalances,
+  creditLedger,
+  creditOperations,
   grants,
-  segmentUsage,
 };

@@ -1,0 +1,706 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "a746f4b0-3d1c-4d5c-9711-6b86028b7751",
+  "prevId": "7597e45a-8882-4fc8-86ee-0bad6344fd6f",
+  "tables": {
+    "audio_segments": {
+      "name": "audio_segments",
+      "columns": {
+        "conversion_id": {
+          "name": "conversion_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "narration_text_characters": {
+          "name": "narration_text_characters",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "estimated_milliseconds": {
+          "name": "estimated_milliseconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "actual_milliseconds": {
+          "name": "actual_milliseconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "charged_milliseconds": {
+          "name": "charged_milliseconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "operation_id": {
+          "name": "operation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "audio_segments_operation_id_unique": {
+          "name": "audio_segments_operation_id_unique",
+          "columns": ["operation_id"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "audio_segments_conversion_id_conversions_conversion_id_fk": {
+          "name": "audio_segments_conversion_id_conversions_conversion_id_fk",
+          "tableFrom": "audio_segments",
+          "tableTo": "conversions",
+          "columnsFrom": ["conversion_id"],
+          "columnsTo": ["conversion_id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "audio_segments_operation_id_credit_operations_operation_id_fk": {
+          "name": "audio_segments_operation_id_credit_operations_operation_id_fk",
+          "tableFrom": "audio_segments",
+          "tableTo": "credit_operations",
+          "columnsFrom": ["operation_id"],
+          "columnsTo": ["operation_id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "audio_segments_conversion_id_sequence_pk": {
+          "columns": ["conversion_id", "sequence"],
+          "name": "audio_segments_conversion_id_sequence_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "audio_segment_sequence": {
+          "name": "audio_segment_sequence",
+          "value": "\"audio_segments\".\"sequence\" >= 0"
+        },
+        "audio_segment_characters": {
+          "name": "audio_segment_characters",
+          "value": "\"audio_segments\".\"narration_text_characters\" > 0"
+        },
+        "audio_segment_estimate": {
+          "name": "audio_segment_estimate",
+          "value": "\"audio_segments\".\"estimated_milliseconds\" > 0"
+        },
+        "audio_segment_duration": {
+          "name": "audio_segment_duration",
+          "value": "\"audio_segments\".\"charged_milliseconds\" >= 0 AND \"audio_segments\".\"charged_milliseconds\" <= \"audio_segments\".\"actual_milliseconds\""
+        },
+        "audio_segment_state": {
+          "name": "audio_segment_state",
+          "value": "(\"audio_segments\".\"state\" = 'settled' AND \"audio_segments\".\"actual_milliseconds\" > 0) OR (\"audio_segments\".\"state\" IN ('reserved', 'released') AND \"audio_segments\".\"actual_milliseconds\" = 0 AND \"audio_segments\".\"charged_milliseconds\" = 0)"
+        }
+      }
+    },
+    "conversions": {
+      "name": "conversions",
+      "columns": {
+        "conversion_id": {
+          "name": "conversion_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at_ms": {
+          "name": "created_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "workflow_started_at_ms": {
+          "name": "workflow_started_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_started_phase": {
+          "name": "last_started_phase",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "completed_at_ms": {
+          "name": "completed_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "audiobook_reference_json": {
+          "name": "audiobook_reference_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "has_cover_image": {
+          "name": "has_cover_image",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "measurements_json": {
+          "name": "measurements_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "provider_usage_json": {
+          "name": "provider_usage_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "failure_category": {
+          "name": "failure_category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "explanation": {
+          "name": "explanation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "diagnostic_reference": {
+          "name": "diagnostic_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cleanup_state": {
+          "name": "cleanup_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "conversions_idempotency_key_unique": {
+          "name": "conversions_idempotency_key_unique",
+          "columns": ["idempotency_key"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "conversion_status": {
+          "name": "conversion_status",
+          "value": "\"conversions\".\"status\" IN ('pending', 'ready', 'failed')"
+        },
+        "conversion_phase": {
+          "name": "conversion_phase",
+          "value": "\"conversions\".\"last_started_phase\" IN ('conversion-start', 'source-material-preparation', 'narration-content-selection', 'narration-document-creation', 'audio-segment-production', 'audiobook-assembly', 'audiobook-storage', 'finalization')"
+        },
+        "conversion_failure_category": {
+          "name": "conversion_failure_category",
+          "value": "\"conversions\".\"failure_category\" IS NULL OR \"conversions\".\"failure_category\" IN ('workflow-start', 'source-preparation', 'content-selection', 'content-limit', 'narration-synthesis', 'audiobook-assembly', 'workflow-platform', 'internal')"
+        },
+        "conversion_cleanup_state": {
+          "name": "conversion_cleanup_state",
+          "value": "\"conversions\".\"cleanup_state\" IS NULL OR \"conversions\".\"cleanup_state\" IN ('pending', 'complete', 'cleanup_failed')"
+        },
+        "conversion_reference_json": {
+          "name": "conversion_reference_json",
+          "value": "\"conversions\".\"audiobook_reference_json\" IS NULL OR json_valid(\"conversions\".\"audiobook_reference_json\")"
+        },
+        "conversion_measurements_json": {
+          "name": "conversion_measurements_json",
+          "value": "\"conversions\".\"measurements_json\" IS NULL OR json_valid(\"conversions\".\"measurements_json\")"
+        },
+        "conversion_usage_json": {
+          "name": "conversion_usage_json",
+          "value": "\"conversions\".\"provider_usage_json\" IS NULL OR json_valid(\"conversions\".\"provider_usage_json\")"
+        },
+        "conversion_terminal_outcome": {
+          "name": "conversion_terminal_outcome",
+          "value": "(\n        \"conversions\".\"last_started_phase\" IS NOT NULL AND (\n          (\"conversions\".\"status\" = 'pending' AND \"conversions\".\"completed_at_ms\" IS NULL AND \"conversions\".\"audiobook_reference_json\" IS NULL AND \"conversions\".\"failure_category\" IS NULL AND \"conversions\".\"explanation\" IS NULL)\n          OR (\"conversions\".\"status\" = 'ready' AND \"conversions\".\"completed_at_ms\" IS NOT NULL AND \"conversions\".\"title\" IS NOT NULL AND \"conversions\".\"audiobook_reference_json\" IS NOT NULL AND \"conversions\".\"failure_category\" IS NULL AND \"conversions\".\"explanation\" IS NULL)\n          OR (\"conversions\".\"status\" = 'failed' AND \"conversions\".\"completed_at_ms\" IS NOT NULL AND \"conversions\".\"audiobook_reference_json\" IS NULL AND \"conversions\".\"failure_category\" IS NOT NULL AND \"conversions\".\"explanation\" IS NOT NULL)\n        )\n      )"
+        }
+      }
+    },
+    "credit_balances": {
+      "name": "credit_balances",
+      "columns": {
+        "unit": {
+          "name": "unit",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "available": {
+          "name": "available",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reserved": {
+          "name": "reserved",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "credit_balance_unit": {
+          "name": "credit_balance_unit",
+          "value": "\"credit_balances\".\"unit\" = 'audio-millisecond'"
+        },
+        "credit_balance_available": {
+          "name": "credit_balance_available",
+          "value": "\"credit_balances\".\"available\" BETWEEN -9007199254740991 AND 9007199254740991"
+        },
+        "credit_balance_reserved": {
+          "name": "credit_balance_reserved",
+          "value": "\"credit_balances\".\"reserved\" BETWEEN 0 AND 9007199254740991"
+        },
+        "credit_balance_total": {
+          "name": "credit_balance_total",
+          "value": "\"credit_balances\".\"available\" + \"credit_balances\".\"reserved\" >= 0"
+        }
+      }
+    },
+    "credit_ledger": {
+      "name": "credit_ledger",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "operation_id": {
+          "name": "operation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "event_kind": {
+          "name": "event_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "unit": {
+          "name": "unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "available_delta": {
+          "name": "available_delta",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reserved_delta": {
+          "name": "reserved_delta",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at_ms": {
+          "name": "created_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cause": {
+          "name": "cause",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "credit_terminal_settlement": {
+          "name": "credit_terminal_settlement",
+          "columns": ["operation_id"],
+          "isUnique": true,
+          "where": "\"credit_ledger\".\"event_kind\" IN ('consume', 'release')"
+        },
+        "credit_ledger_operation_id_event_kind_unique": {
+          "name": "credit_ledger_operation_id_event_kind_unique",
+          "columns": ["operation_id", "event_kind"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "credit_ledger_operation_id_credit_operations_operation_id_fk": {
+          "name": "credit_ledger_operation_id_credit_operations_operation_id_fk",
+          "tableFrom": "credit_ledger",
+          "tableTo": "credit_operations",
+          "columnsFrom": ["operation_id"],
+          "columnsTo": ["operation_id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "credit_ledger_kind": {
+          "name": "credit_ledger_kind",
+          "value": "\"credit_ledger\".\"event_kind\" IN ('grant', 'reserve', 'consume', 'release', 'adjustment')"
+        },
+        "credit_ledger_unit": {
+          "name": "credit_ledger_unit",
+          "value": "\"credit_ledger\".\"unit\" = 'audio-millisecond'"
+        },
+        "credit_ledger_amount": {
+          "name": "credit_ledger_amount",
+          "value": "\"credit_ledger\".\"amount\" BETWEEN 0 AND 9007199254740991"
+        },
+        "credit_ledger_deltas": {
+          "name": "credit_ledger_deltas",
+          "value": "(\"credit_ledger\".\"event_kind\" = 'grant' AND \"credit_ledger\".\"available_delta\" = \"credit_ledger\".\"amount\" AND \"credit_ledger\".\"reserved_delta\" = 0) OR\n    (\"credit_ledger\".\"event_kind\" = 'reserve' AND \"credit_ledger\".\"available_delta\" = -\"credit_ledger\".\"amount\" AND \"credit_ledger\".\"reserved_delta\" = \"credit_ledger\".\"amount\") OR\n    (\"credit_ledger\".\"event_kind\" = 'consume' AND \"credit_ledger\".\"available_delta\" + \"credit_ledger\".\"reserved_delta\" = -\"credit_ledger\".\"amount\" AND \"credit_ledger\".\"reserved_delta\" < 0) OR\n    (\"credit_ledger\".\"event_kind\" = 'release' AND \"credit_ledger\".\"available_delta\" = \"credit_ledger\".\"amount\" AND \"credit_ledger\".\"reserved_delta\" = -\"credit_ledger\".\"amount\") OR\n    (\"credit_ledger\".\"event_kind\" = 'adjustment' AND ABS(\"credit_ledger\".\"available_delta\") = \"credit_ledger\".\"amount\" AND \"credit_ledger\".\"reserved_delta\" = 0)"
+        }
+      }
+    },
+    "credit_operations": {
+      "name": "credit_operations",
+      "columns": {
+        "operation_id": {
+          "name": "operation_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "unit": {
+          "name": "unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cause": {
+          "name": "cause",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "credit_operations_request_id_unique": {
+          "name": "credit_operations_request_id_unique",
+          "columns": ["request_id"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "credit_operation_kind": {
+          "name": "credit_operation_kind",
+          "value": "\"credit_operations\".\"kind\" IN ('grant', 'reservation', 'adjustment')"
+        },
+        "credit_operation_unit": {
+          "name": "credit_operation_unit",
+          "value": "\"credit_operations\".\"unit\" = 'audio-millisecond'"
+        },
+        "credit_operation_amount": {
+          "name": "credit_operation_amount",
+          "value": "\"credit_operations\".\"amount\" BETWEEN 1 AND 9007199254740991"
+        },
+        "credit_operation_state": {
+          "name": "credit_operation_state",
+          "value": "\"credit_operations\".\"state\" IN ('completed', 'reserved', 'consumed', 'released')"
+        },
+        "credit_operation_transition": {
+          "name": "credit_operation_transition",
+          "value": "(\"credit_operations\".\"kind\" IN ('grant', 'adjustment') AND \"credit_operations\".\"state\" = 'completed') OR (\"credit_operations\".\"kind\" = 'reservation' AND \"credit_operations\".\"state\" IN ('reserved', 'consumed', 'released'))"
+        }
+      }
+    },
+    "grant": {
+      "name": "grant",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "grant_id": {
+          "name": "grant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at_ms": {
+          "name": "created_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at_ms": {
+          "name": "expires_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "revoked_at_ms": {
+          "name": "revoked_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "credential_verifier": {
+          "name": "credential_verifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "credential_issued_at_ms": {
+          "name": "credential_issued_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "session_signing_key": {
+          "name": "session_signing_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "signing_key_generation": {
+          "name": "signing_key_generation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "projection_revision": {
+          "name": "projection_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "registry_confirmed_revision": {
+          "name": "registry_confirmed_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "grant_grant_id_unique": {
+          "name": "grant_grant_id_unique",
+          "columns": ["grant_id"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "grant_singleton": {
+          "name": "grant_singleton",
+          "value": "\"grant\".\"id\" = 1"
+        },
+        "grant_expiry": {
+          "name": "grant_expiry",
+          "value": "\"grant\".\"expires_at_ms\" > \"grant\".\"created_at_ms\""
+        },
+        "grant_signing_key_generation": {
+          "name": "grant_signing_key_generation",
+          "value": "\"grant\".\"signing_key_generation\" > 0"
+        },
+        "grant_registry_snapshot_revision": {
+          "name": "grant_registry_snapshot_revision",
+          "value": "\"grant\".\"projection_revision\" > 0"
+        },
+        "grant_registry_confirmed_snapshot_revision": {
+          "name": "grant_registry_confirmed_snapshot_revision",
+          "value": "\"grant\".\"registry_confirmed_revision\" >= 0"
+        }
+      }
+    },
+    "rate_events": {
+      "name": "rate_events",
+      "columns": {
+        "bucket": {
+          "name": "bucket",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at_ms": {
+          "name": "created_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at_ms": {
+          "name": "expires_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "rate_events_bucket": {
+          "name": "rate_events_bucket",
+          "columns": ["bucket", "created_at_ms"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

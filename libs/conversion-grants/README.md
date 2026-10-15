@@ -30,6 +30,8 @@ From a configured repository checkout with dependencies installed:
    ```
 
 3. Review the generated SQL, snapshots, and journals under `drizzle/`, along with the generated Worker bundles under `src/migrations/`. Keep all of them in the same change. After a baseline has been deployed, add migrations instead of rewriting applied history.
+   For renames or changes that must move existing rows, pass `--custom`, write the data-preserving SQL yourself, and test it against data written by the previous migrations; see [account migrations](../accounts/README.md#database-migrations).
+
 4. Run validation:
 
    ```sh
@@ -39,4 +41,4 @@ From a configured repository checkout with dependencies installed:
 
 The generator runs Drizzle Kit for the grant store and embeds the SQL and journals in TypeScript bundles so Workers need no filesystem access or special SQL import rules. The [migration entry point](src/legacy-grant-migrations.ts) uses Drizzle's migrator and its `__drizzle_migrations` journal. Each Durable Object blocks incoming work until its migrations finish. Snapshot versions in grant RPC responses remain separate from the migration journal.
 
-Tests check schema-to-snapshot agreement and bundle-to-SQL agreement. Integration tests and frozen production-schema fixtures in [registry](../registry/README.md) cover grant preservation, accounting, allowance reset, old ownership removal, transactional rollback, and preservation of conversions created after the transition. An unchanged schema produces no new migration when you rerun the generator.
+Tests check schema-to-snapshot agreement, bundle-to-SQL agreement, and that the migrations produce the current schema. The [duration ledger adoption](drizzle/grant/0003_adopt_duration_ledger.sql) turns each deployed grant's configured allowance into a ledger grant event and each segment usage row into a reservation with its settlement or release, so allowance, reserved, and spent duration are unchanged. Integration tests and frozen production-schema fixtures in [registry](../registry/README.md) cover grant preservation, accounting, allowance reset, old ownership removal, transactional rollback, and preservation of conversions created after the transition. An unchanged schema produces no new migration when you rerun the generator.

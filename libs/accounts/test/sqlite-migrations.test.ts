@@ -1,4 +1,4 @@
-import { generateSQLiteDrizzleJson } from "drizzle-kit/api";
+import { generateSQLiteDrizzleJson, generateSQLiteMigration } from "drizzle-kit/api";
 import fs from "node:fs/promises";
 import sqlite from "node:sqlite";
 import { expect, test } from "vitest";
@@ -113,3 +113,252 @@ test("deletion state checks preserve stored rows and reject unsupported values",
     database.close();
   }
 });
+
+test("account migrations create the current schema", async () => {
+  const migrated = new sqlite.DatabaseSync(":memory:");
+  const fresh = new sqlite.DatabaseSync(":memory:");
+  try {
+    applyMigrations(migrated, Object.keys(accountMigrations.migrations));
+    const schema = await generateSQLiteDrizzleJson({ ...accountSchema, rateEvents });
+    for (const statement of await generateSQLiteMigration(
+      await generateSQLiteDrizzleJson({}),
+      schema,
+    )) {
+      fresh.exec(statement);
+    }
+    expect(readSchema(migrated)).toEqual(readSchema(fresh));
+  } finally {
+    migrated.close();
+    fresh.close();
+  }
+});
+
+test("aligning with the shared duration ledger preserves conversions, jobs, and segments", () => {
+  const database = new sqlite.DatabaseSync(":memory:");
+  try {
+    applyMigrations(database, ["m0000", "m0001", "m0002", "m0003", "m0004"]);
+    const reference = {
+      key: "accounts/account/conversions/ready/audiobook.json",
+      contentType: "application/json",
+      byteLength: 10,
+      etag: "etag",
+    };
+    const insertConversion = database.prepare(
+      "INSERT INTO account_conversions VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    );
+    insertConversion.run(
+      "pending",
+      "key-pending",
+      "https://example.com/p",
+      "{}",
+      1,
+      "pending",
+      null,
+      null,
+    );
+    insertConversion.run(
+      "ready",
+      "key-ready",
+      "https://example.com/r",
+      "{}",
+      2,
+      "ready",
+      JSON.stringify({
+        audiobookReference: reference,
+        hasCoverImage: true,
+        status: "ready",
+        title: "Ready",
+      }),
+      3,
+    );
+    insertConversion.run(
+      "plain",
+      "key-plain",
+      "https://example.com/plain",
+      "{}",
+      4,
+      "ready",
+      JSON.stringify({ audiobookReference: reference, status: "ready", title: "Plain" }),
+      5,
+    );
+    insertConversion.run(
+      "failed",
+      "key-failed",
+      "https://example.com/f",
+      "{}",
+      6,
+      "failed",
+      JSON.stringify({
+        explanation: "Stopped.",
+        failureCategory: "execution-failed",
+        status: "failed",
+      }),
+      7,
+    );
+    database.exec(
+      "INSERT INTO pending_jobs VALUES ('job', 'pending', 1, 'pending'), ('job-ready', 'ready', 1, 'delivered')",
+    );
+    const insertOperation = database.prepare(
+      "INSERT INTO credit_operations VALUES (?, ?, 'reservation', 'audio-millisecond', ?, ?, 'ready')",
+    );
+    insertOperation.run("op-0", "op-0", 1_000, "consumed");
+    insertOperation.run("op-1", "op-1", 2_000, "reserved");
+    insertOperation.run("op-2", "op-2", 3_000, "released");
+    database.exec(`INSERT INTO account_audio_segments VALUES
+      ('ready', 0, 10, 1000, 'settled', 1200, 900, 'op-0'),
+      ('ready', 1, 25, 2000, 'reserved', 0, 0, 'op-1'),
+      ('ready', 2, 38, 3000, 'released', 0, 0, 'op-2')`);
+
+    applyMigrations(database, ["m0005"]);
+
+    expect(
+      database.prepare("SELECT * FROM account_conversions ORDER BY created_at_ms").all(),
+    ).toEqual([
+      {
+        conversion_id: "pending",
+        idempotency_key: "key-pending",
+        source_url: "https://example.com/p",
+        created_at_ms: 1,
+        status: "pending",
+        completed_at_ms: null,
+        title: null,
+        audiobook_reference_json: null,
+        has_cover_image: null,
+        failure_category: null,
+        explanation: null,
+      },
+      {
+        conversion_id: "ready",
+        idempotency_key: "key-ready",
+        source_url: "https://example.com/r",
+        created_at_ms: 2,
+        status: "ready",
+        completed_at_ms: 3,
+        title: "Ready",
+        audiobook_reference_json: JSON.stringify(reference),
+        has_cover_image: 1,
+        failure_category: null,
+        explanation: null,
+      },
+      {
+        conversion_id: "plain",
+        idempotency_key: "key-plain",
+        source_url: "https://example.com/plain",
+        created_at_ms: 4,
+        status: "ready",
+        completed_at_ms: 5,
+        title: "Plain",
+        audiobook_reference_json: JSON.stringify(reference),
+        has_cover_image: null,
+        failure_category: null,
+        explanation: null,
+      },
+      {
+        conversion_id: "failed",
+        idempotency_key: "key-failed",
+        source_url: "https://example.com/f",
+        created_at_ms: 6,
+        status: "failed",
+        completed_at_ms: 7,
+        title: null,
+        audiobook_reference_json: null,
+        has_cover_image: null,
+        failure_category: "execution-failed",
+        explanation: "Stopped.",
+      },
+    ]);
+    expect(database.prepare("SELECT * FROM pending_jobs ORDER BY job_id").all()).toEqual([
+      { job_id: "job", conversion_id: "pending", execution_epoch: 1, state: "pending" },
+      { job_id: "job-ready", conversion_id: "ready", execution_epoch: 1, state: "delivered" },
+    ]);
+    expect(database.prepare("SELECT * FROM audio_segments ORDER BY sequence").all()).toEqual([
+      {
+        conversion_id: "ready",
+        sequence: 0,
+        narration_text_characters: 10,
+        estimated_milliseconds: 1_000,
+        state: "settled",
+        actual_milliseconds: 1_200,
+        charged_milliseconds: 900,
+        operation_id: "op-0",
+      },
+      {
+        conversion_id: "ready",
+        sequence: 1,
+        narration_text_characters: 25,
+        estimated_milliseconds: 2_000,
+        state: "reserved",
+        actual_milliseconds: 0,
+        charged_milliseconds: 0,
+        operation_id: "op-1",
+      },
+      {
+        conversion_id: "ready",
+        sequence: 2,
+        narration_text_characters: 38,
+        estimated_milliseconds: 3_000,
+        state: "released",
+        actual_milliseconds: 0,
+        charged_milliseconds: 0,
+        operation_id: "op-2",
+      },
+    ]);
+    expect(() =>
+      database.exec("INSERT INTO pending_jobs VALUES ('orphan', 'missing', 1, 'pending')"),
+    ).toThrow(/FOREIGN KEY constraint failed/);
+  } finally {
+    database.close();
+  }
+});
+
+/** Runs migrations in one transaction with enforced foreign keys, like the Durable Object migrator. */
+function applyMigrations(database: sqlite.DatabaseSync, keys: string[]) {
+  const migrations: Record<string, string> = accountMigrations.migrations;
+  database.exec("BEGIN");
+  for (const key of keys) {
+    for (const statement of migrations[key]!.split("--> statement-breakpoint")) {
+      database.exec(statement);
+    }
+  }
+  database.exec("COMMIT");
+}
+
+/**
+ * Compares schema objects independently of identifier quoting, whitespace, and column order;
+ * columns added by `ALTER TABLE` are appended, while a fresh baseline lists them in schema order.
+ */
+function readSchema(database: sqlite.DatabaseSync) {
+  return database
+    .prepare(
+      "SELECT type, name, tbl_name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name",
+    )
+    .all()
+    .map((row) => {
+      const sql = String(row["sql"])
+        .replaceAll("`", '"')
+        .replaceAll(/\s+/g, " ")
+        .replaceAll("( ", "(")
+        .replaceAll(" )", ")");
+      return { ...row, sql: row["type"] === "table" ? splitTableDefinition(sql) : sql };
+    });
+}
+
+/** Splits a `CREATE TABLE` statement into its sorted top-level column and constraint clauses. */
+function splitTableDefinition(sql: string) {
+  const bodyStart = sql.indexOf("(");
+  const clauses: string[] = [];
+  let depth = 0;
+  let clauseStart = bodyStart + 1;
+  for (let index = bodyStart + 1; index < sql.lastIndexOf(")"); index += 1) {
+    if (sql[index] === "(") {
+      depth += 1;
+    } else if (sql[index] === ")") {
+      depth -= 1;
+    } else if (sql[index] === "," && depth === 0) {
+      clauses.push(sql.slice(clauseStart, index).trim());
+      clauseStart = index + 1;
+    }
+  }
+  clauses.push(sql.slice(clauseStart, sql.lastIndexOf(")")).trim());
+  return { head: sql.slice(0, bodyStart).trim(), clauses: clauses.toSorted() };
+}

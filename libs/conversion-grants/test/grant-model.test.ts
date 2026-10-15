@@ -16,7 +16,7 @@ describe("conversion grant state", () => {
         conversionId: "2f94d6a9-68eb-49eb-b88e-753cf5fba041",
         idempotencyKey: "ff65f13b-5425-4fe5-a29b-21d24087b06e",
         sourceUrl: "https://example.com/pending",
-        acceptedAtMs: CREATED_AT_MS,
+        createdAtMs: CREATED_AT_MS,
         status: "pending",
         lastStartedPhase: ConversionPhase.CONVERSION_START,
       },
@@ -24,7 +24,7 @@ describe("conversion grant state", () => {
         conversionId: "09f35cd2-5609-4710-b49c-5c4fe08ef827",
         idempotencyKey: "e6b22802-5f40-4fea-89ca-90ae48e61926",
         sourceUrl: "https://example.com/ready",
-        acceptedAtMs: CREATED_AT_MS + 1,
+        createdAtMs: CREATED_AT_MS + 1,
         completedAtMs: CREATED_AT_MS + 2,
         status: "ready",
         lastStartedPhase: ConversionPhase.FINALIZATION,
@@ -40,7 +40,7 @@ describe("conversion grant state", () => {
         conversionId: "b3084710-673c-43be-a3cb-98258be258cf",
         idempotencyKey: "00cdd743-4504-4f25-84f0-40dc2557e07a",
         sourceUrl: "https://example.com/failed",
-        acceptedAtMs: CREATED_AT_MS + 3,
+        createdAtMs: CREATED_AT_MS + 3,
         completedAtMs: CREATED_AT_MS + 4,
         status: "failed",
         lastStartedPhase: ConversionPhase.FINALIZATION,
@@ -90,7 +90,6 @@ test("creates a non-recoverable credential shape and path-scoped session cookie"
 
 function createRecord(): GrantRecord {
   return {
-    allowanceMilliseconds: 5,
     grantId: "b4ad28a8-bbd7-46af-a17c-59527becd745",
     createdAtMs: CREATED_AT_MS,
     expiresAtMs: EXPIRES_AT_MS,
@@ -100,5 +99,11 @@ function createRecord(): GrantRecord {
     registryConfirmedSnapshotRevision: 0,
     conversions: [],
     segmentUsage: [],
+    duration: {
+      allowanceMilliseconds: 5,
+      availableMilliseconds: 5,
+      reservedMilliseconds: 0,
+      spentMilliseconds: 0,
+    },
   };
 }

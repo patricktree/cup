@@ -1,0 +1,56 @@
+{
+  "name": "@cup/duration-ledger",
+  "private": true,
+  "files": [
+    "src/**"
+  ],
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*",
+    "#test/*.ts": "./test/*.ts"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/types/duration-ledger.d.ts",
+      "default": "./src/duration-ledger.ts"
+    },
+    "./schema": {
+      "types": "./dist/types/duration-ledger-schema.d.ts",
+      "default": "./src/duration-ledger-schema.ts"
+    }
+  },
+  "scripts": {
+    "build": "turbo run turbo:build",
+    "cf-typegen": "wrangler types --config wrangler.test.jsonc --include-env=false worker-configuration.d.ts",
+    "cf-typegen:check": "pnpm run cf-typegen --check",
+    "clean": "del-cli --dot=true \"dist\" \"*.tsbuildinfo\"",
+    "lint": "turbo run turbo:lint",
+    "lint:fix": "turbo run turbo:lint:fix",
+    "test": "vitest run",
+    "turbo:build": "pnpm run cf-typegen:check && prepare-declaration-build --declaration-output-dir ./dist/types --build-info-file ./dist/tsconfig.build.tsbuildinfo --source-package-json ./src/package.json && tsc --build ./tsconfig.json",
+    "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
+    "turbo:lint:fix": "pnpm run turbo:lint --fix",
+    "turbo:test": "pnpm run test"
+  },
+  "dependencies": {
+    "@cup/conversion-contracts": "workspace:*",
+    "drizzle-orm": "^0.45.4",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@cup/config-oxlint": "workspace:*",
+    "@cup/prepare-declaration-build": "workspace:*",
+    "@patricktree-stack/config-typescript": "workspace:*",
+    "@patricktree-stack/config-vitest": "workspace:*",
+    "@types/node": "catalog:",
+    "@typescript/native": "catalog:",
+    "drizzle-kit": "0.31.11",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

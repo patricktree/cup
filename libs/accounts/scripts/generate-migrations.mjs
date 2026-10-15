@@ -1,11 +1,15 @@
+import { generateSQLiteDrizzleJson } from "drizzle-kit/api";
 import childProcess from "node:child_process";
 import fs from "node:fs/promises";
+import path from "node:path";
+import url from "node:url";
 
 const stores = {
-  account: "{account-sqlite-schema,rate-limit-schema}.ts",
+  account: ["account-sqlite-schema.ts", "rate-limit-schema.ts"],
 };
+const isCustomMigration = process.argv.includes("--custom");
 
-for (const [store, schema] of Object.entries(stores)) {
+for (const [store, schemaFiles] of Object.entries(stores)) {
   childProcess.execFileSync(
     "pnpm",
     [
@@ -15,7 +19,7 @@ for (const [store, schema] of Object.entries(stores)) {
       "--dialect",
       "sqlite",
       "--schema",
-      `./src/${schema}`,
+      schemaFiles.length === 1 ? `./src/${schemaFiles[0]}` : `./src/{${schemaFiles.join(",")}}`,
       "--out",
       `./drizzle/${store}`,
       ...process.argv.slice(2),
@@ -23,6 +27,9 @@ for (const [store, schema] of Object.entries(stores)) {
     { stdio: "inherit" },
   );
   const journal = JSON.parse(await fs.readFile(`drizzle/${store}/meta/_journal.json`, "utf8"));
+  if (isCustomMigration) {
+    await writeCurrentSnapshot(store, schemaFiles, journal.entries.at(-1).idx);
+  }
   const migrations = {};
   for (const entry of journal.entries) {
     migrations[`m${String(entry.idx).padStart(4, "0")}`] = await fs.readFile(
@@ -39,3 +46,27 @@ for (const [store, schema] of Object.entries(stores)) {
 childProcess.execFileSync("pnpm", ["exec", "oxfmt", "src/migrations", "drizzle"], {
   stdio: "inherit",
 });
+
+/**
+ * Drizzle Kit gives a custom migration a copy of the previous snapshot. The handwritten SQL must
+ * produce the current schema, so record that schema as the snapshot for later diffs.
+ */
+async function writeCurrentSnapshot(store, schemaFiles, idx) {
+  const snapshotPath = `drizzle/${store}/meta/${String(idx).padStart(4, "0")}_snapshot.json`;
+  const copied = JSON.parse(await fs.readFile(snapshotPath, "utf8"));
+  const schema = {};
+  for (const file of schemaFiles) {
+    Object.assign(schema, await import(url.pathToFileURL(path.resolve("src", file)).href));
+  }
+  const {
+    version,
+    dialect,
+    id: _id,
+    prevId: _prevId,
+    ...current
+  } = await generateSQLiteDrizzleJson(schema, copied.prevId);
+  await fs.writeFile(
+    snapshotPath,
+    JSON.stringify({ version, dialect, id: copied.id, prevId: copied.prevId, ...current }, null, 2),
+  );
+}

@@ -22,6 +22,13 @@
       "when": 1792066197973,
       "tag": "0002_shared_rate_events",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1792074279472,
+      "tag": "0003_adopt_duration_ledger",
+      "breakpoints": true
     }
   ]
 }
