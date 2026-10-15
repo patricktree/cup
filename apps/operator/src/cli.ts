@@ -6,6 +6,8 @@ import { z } from "zod";
 
 import { OperatorApiClient, parseOkResponse } from "@cup/operator-api.client";
 import {
+  accountPhases,
+  adjustAccountAllowanceRequestSchema,
   isDevelopmentOperatorUrl,
   isLoopbackOperatorUrl,
   LOCAL_OPERATOR_ACCESS_TOKEN,
@@ -23,14 +25,71 @@ const globalOptionsSchema = z.object({
 
 const program = new Command()
   .name("operator")
-  .description("Operate Cup conversion grants")
+  .description("Operate Cup conversion grants and accounts")
   .version("0.1.0")
   .option("--operator-url <url>", "operator service URL")
   .option("--json", "write one JSON value to stdout", false)
   .option("--debug", "include redacted diagnostic details", false)
   .showHelpAfterError();
 
-const account = program.command("account").description("Inspect account lifecycle");
+const account = program.command("account").description("Inspect and manage accounts");
+account
+  .command("list")
+  .addOption(new Option("--phase <phase>", "filter registry phase").choices(accountPhases))
+  .option("--limit <number>", "page size", String(DEFAULT_LIMIT))
+  .option("--cursor <cursor>", "opaque pagination cursor")
+  .action(async (options, command) =>
+    run(command, async (client, output) => {
+      const result = await parseOkResponse(
+        client.listAccounts({
+          phase: options.phase,
+          limit: parseInteger(options.limit),
+          cursor: options.cursor,
+        }),
+      );
+      output(result, () => {
+        for (const listed of result.accounts)
+          writeFields([
+            ["Account ID", listed.accountId],
+            ["Subject", listed.subject],
+            ["Phase", listed.phase],
+            ["Created", listed.createdAt],
+          ]);
+        if (result.nextCursor !== undefined)
+          process.stdout.write(`Next cursor: ${result.nextCursor}\n`);
+      });
+    }),
+  );
+account
+  .command("adjust-allowance")
+  .argument("<account-id>")
+  .requiredOption(
+    "--minutes <number>",
+    "signed allowance change in minutes; write reductions as --minutes=-30",
+  )
+  .requiredOption("--reason <text>", "audit reason recorded in the account ledger")
+  .option("--request-id <uuid>", "idempotency key; reuse it to retry an uncertain adjustment")
+  .action(async (accountId, options, command) => {
+    const adjustment = adjustAccountAllowanceRequestSchema.parse({
+      requestId: options.requestId ?? crypto.randomUUID(),
+      amountMilliseconds: Number(options.minutes) * 60_000,
+      reason: options.reason,
+    });
+    await run(command, async (client, output) => {
+      const result = await parseOkResponse(
+        client.adjustAccountAllowance({ accountId: parseUuid(accountId) }, adjustment),
+      );
+      output({ requestId: adjustment.requestId, ...result }, () =>
+        writeFields([
+          ["Account ID", result.accountId],
+          ["Request ID", adjustment.requestId],
+          ["Adjustment (minutes)", adjustment.amountMilliseconds / 60_000],
+          ["Available minutes", result.balance.available / 60_000],
+          ["Reserved minutes", result.balance.reserved / 60_000],
+        ]),
+      );
+    });
+  });
 account
   .command("inspect")
   .argument("<account-id>")

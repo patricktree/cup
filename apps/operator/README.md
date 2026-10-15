@@ -1,6 +1,6 @@
 # Operator runbook
 
-Use the operator CLI to create and manage production conversion grants. Each grant expires after 90 days and starts with 120 minutes of audio duration allowance.
+Use the operator CLI to create and manage production conversion grants and to inspect and manage accounts. Each grant expires after 90 days and starts with 120 minutes of audio duration allowance.
 
 Run all commands from the repository root.
 
@@ -171,9 +171,58 @@ pnpm operator grant migrate --yes
 
 The command exits with a nonzero status if any migration is incomplete.
 
+## Manage accounts
+
+### List accounts
+
+List the Registry's identity-to-account mappings, oldest first:
+
+```sh
+pnpm operator account list
+```
+
+Filter by Registry phase (`provisioning`, `active`, or `deleting_identity`), and request up to 100 results:
+
+```sh
+pnpm operator account list --phase active --limit 100
+```
+
+Use the returned opaque cursor with `--cursor` to fetch the next page. Each entry shows the account ID, the Supabase user ID (`Subject`), the Registry phase, and the creation time. The Registry does not record which sign-in provider created an account; look up the subject in Supabase for provider details.
+
+### Inspect an account
+
+Read the account's lifecycle state, balance, ledger totals, first history page, and unresolved artifact writers:
+
+```sh
+pnpm operator account inspect "ACCOUNT_ID"
+```
+
+### Adjust an account allowance
+
+Add or remove audio duration from an account's allowance with an audit reason:
+
+```sh
+pnpm operator account adjust-allowance "ACCOUNT_ID" \
+  --minutes 60 \
+  --reason "AUDIT_REASON"
+```
+
+Use a negative value such as `--minutes=-30` to reduce the allowance. Unlike a grant's total allowance, an account adjustment is a signed change recorded in the account's ledger together with its reason. A reduction cannot exceed the account's available duration, and only active accounts accept adjustments.
+
+The command prints the request ID it used. If the result is uncertain, retry with the same request ID, amount, and reason so the adjustment is recorded only once:
+
+```sh
+pnpm operator account adjust-allowance "ACCOUNT_ID" \
+  --minutes 60 \
+  --reason "AUDIT_REASON" \
+  --request-id "REQUEST_ID_FROM_OUTPUT"
+```
+
+Reusing a request ID with a different amount or reason is rejected.
+
 ## Use machine-readable output
 
-Place `--json` before the grant command to write one JSON value to standard output:
+Place `--json` before the grant or account command to write one JSON value to standard output:
 
 ```sh
 pnpm operator --json grant list

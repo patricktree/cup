@@ -120,6 +120,40 @@ test("identity deletion fences provisioning against the old identity", async () 
   expect((await registry.findIdentity(subject))?.accountId).toBe(allocation.accountId);
 });
 
+test("account listing pages ties deterministically, filters by phase, and finds accounts by ID", async () => {
+  const registry = bindings.REGISTRY.get(bindings.REGISTRY.idFromName("account-listing"));
+  const identities = [
+    await registry.reserveVerifiedIdentity(crypto.randomUUID(), nowMs + 1),
+    await registry.reserveVerifiedIdentity(crypto.randomUUID(), nowMs),
+    await registry.reserveVerifiedIdentity(crypto.randomUUID(), nowMs),
+  ];
+  const fenced = identities[0];
+  if (fenced === undefined) throw new Error("Expected reserved identity");
+  await registry.fenceIdentityDeletion(fenced.subject, fenced.accountId);
+  const expectedOrder = identities
+    .toSorted(
+      (left, right) =>
+        left.createdAtMs - right.createdAtMs || left.accountId.localeCompare(right.accountId),
+    )
+    .map((identity) => identity.accountId);
+
+  const first = await registry.listAccounts({ limit: 2 });
+  expect(first.accounts.map((account) => account.accountId)).toEqual(expectedOrder.slice(0, 2));
+  if (first.nextCursor === undefined) throw new Error("Expected another page");
+  const second = await registry.listAccounts({ limit: 2, cursor: first.nextCursor });
+  expect(second.accounts.map((account) => account.accountId)).toEqual(expectedOrder.slice(2));
+  expect(second.nextCursor).toBeUndefined();
+
+  const deleting = await registry.listAccounts({ limit: 100, phase: "deleting_identity" });
+  expect(deleting.accounts).toEqual([{ ...fenced, phase: "deleting_identity" }]);
+  expect(await registry.findAccount(fenced.accountId)).toEqual({
+    ...fenced,
+    phase: "deleting_identity",
+  });
+  expect(await registry.findAccount(crypto.randomUUID())).toBeUndefined();
+  await expectWorkerRpcRejection(registry.listAccounts({ limit: 2, cursor: "invalid" }));
+});
+
 test("concurrent segment reservations cannot exceed the available duration", async () => {
   const { account } = await createAccount();
   const starts = await Promise.all(

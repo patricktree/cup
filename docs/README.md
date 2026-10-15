@@ -25,7 +25,7 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 | [Grant migrations](../libs/conversion-grants/README.md)              | Change trial Drizzle schemas and validate grant storage                                |
 | [Registry migrations](../libs/registry/README.md)                    | Change the shared registry schema and preserve deployed registry storage               |
 | [Conversion contracts](../libs/conversion-contracts/README.md)       | Shared conversion types, schemas, and duration calculations                            |
-| [Operator CLI](../apps/operator/README.md)                           | Manage trial grants and inspect account lifecycle operations                           |
+| [Operator CLI](../apps/operator/README.md)                           | Manage trial grants, list accounts, and adjust account allowances                      |
 | [Terraform infrastructure](../terraform/README.md)                   | Manage infrastructure state, provider configuration, and manual prerequisites          |
 | [Declaration builds](declaration-builds.md)                          | Understand source and declaration package scopes, compiler settings, and build caching |
 | [Brand assets](../tooling/brand-assets/README.md)                    | Maintain generated application branding                                                |

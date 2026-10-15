@@ -239,3 +239,46 @@ export const listAccountDeletionsResponseSchema = z
   })
   .strict();
 export type ListAccountDeletionsResponse = z.infer<typeof listAccountDeletionsResponseSchema>;
+
+export const accountPhases = ["provisioning", "active", "deleting_identity"] as const;
+export const listAccountsQuerySchema = z
+  .object({
+    phase: z.enum(accountPhases).optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(50),
+    cursor: z.string().min(1).optional(),
+  })
+  .strict();
+export type ListAccountsQuery = z.input<typeof listAccountsQuerySchema>;
+export const listAccountsResponseSchema = z
+  .object({
+    accounts: z.array(
+      z
+        .object({
+          accountId: z.uuid(),
+          subject: z.uuid(),
+          createdAt: z.iso.datetime(),
+          phase: z.enum(accountPhases),
+        })
+        .strict(),
+    ),
+    nextCursor: z.string().optional(),
+  })
+  .strict();
+export type ListAccountsResponse = z.infer<typeof listAccountsResponseSchema>;
+
+export const adjustAccountAllowanceRequestSchema = z
+  .object({
+    requestId: uuidV4Schema,
+    amountMilliseconds: z
+      .number()
+      .int()
+      .safe()
+      .refine((value) => value !== 0, "Amount must not be zero"),
+    reason: z.string().trim().min(1).max(256),
+  })
+  .strict();
+export type AdjustAccountAllowanceRequest = z.infer<typeof adjustAccountAllowanceRequestSchema>;
+export const adjustAccountAllowanceResponseSchema = z
+  .object({ accountId: z.uuid(), balance: accountDurationBalanceSchema })
+  .strict();
+export type AdjustAccountAllowanceResponse = z.infer<typeof adjustAccountAllowanceResponseSchema>;

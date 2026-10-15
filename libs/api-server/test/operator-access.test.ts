@@ -2,8 +2,10 @@ import { expect, test, vi } from "vitest";
 
 import {
   LOCAL_OPERATOR_ACCESS_TOKEN,
+  adjustAccountAllowanceResponseSchema,
   inspectAccountResponseSchema,
   listAccountDeletionsResponseSchema,
+  listAccountsResponseSchema,
   type InspectAccountResponse,
   type ListAccountDeletionsResponse,
 } from "@cup/operator-api.routes";
@@ -83,9 +85,28 @@ const deletions: ListAccountDeletionsResponse = {
   ],
 };
 
+const identity = {
+  subject: "6c1f9e4a-2b7d-4e8f-9a3c-5d6e7f8a9b0c",
+  accountId,
+  createdAtMs: 1_767_225_600_000,
+  phase: "active",
+} as const;
+
 function fixture() {
   const readAccount = vi.fn<() => Promise<InspectAccountResponse["account"]>>(
     async () => inspection.account,
+  );
+  const adjustAllowance = vi.fn<
+    (requestId: string, amount: number, cause: string) => Promise<void>
+  >(async () => undefined);
+  const listAccounts = vi.fn<
+    (input: { phase?: string; limit: number; cursor?: string }) => Promise<{
+      accounts: (typeof identity)[];
+      nextCursor?: string;
+    }>
+  >(async () => ({ accounts: [identity], nextCursor: "next" }));
+  const findAccount = vi.fn<(id: string) => Promise<typeof identity | undefined>>(async (id) =>
+    id === accountId ? identity : undefined,
   );
   const env = {
     SUPABASE_URL: "https://auth.example.test",
@@ -96,6 +117,7 @@ function fixture() {
         inspectAccounting: async () => inspection.accounting,
         history: async () => inspection.history,
         inspectArtifactWriters: async () => inspection.writers,
+        adjustAllowance,
       }),
     },
     REGISTRY: {
@@ -103,11 +125,21 @@ function fixture() {
       get: () => ({
         inspectDeletions: async () => deletions.attempts,
         deletionReceipts: async () => deletions.receipts,
+        listAccounts,
+        findAccount,
       }),
     },
   };
   if (!isFixtureEnvironment(env)) throw new Error("Invalid operator fixture");
-  return { env, readAccount };
+  return { env, readAccount, adjustAllowance, listAccounts };
+}
+
+function adjustmentRequest(body: unknown, id = accountId) {
+  return new Request(`https://cup.audio/api/operator/accounts/${id}/allowance-adjustments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
 function isFixtureEnvironment(value: unknown): value is ApiServerEnvironment {
@@ -147,6 +179,146 @@ test("account routes remain behind operator authentication and reject invalid ac
     (await app.request("https://cup.audio/api/operator/accounts/invalid", {}, env)).status,
   ).toBe(404);
   expect(readAccount).not.toHaveBeenCalled();
+});
+
+test("lists registry accounts with ISO creation times and forwards pagination", async () => {
+  const { env, listAccounts } = fixture();
+  const app = createApiServer({ validateOperatorAccess: async () => true });
+  const response = await app.request(
+    "https://cup.audio/api/operator/accounts?phase=active&limit=10&cursor=abc",
+    {},
+    env,
+  );
+  expect(response.status).toBe(200);
+  expect(listAccountsResponseSchema.parse(await response.json())).toEqual({
+    accounts: [
+      {
+        accountId,
+        subject: identity.subject,
+        createdAt: "2026-01-01T00:00:00Z",
+        phase: "active",
+      },
+    ],
+    nextCursor: "next",
+  });
+  expect(listAccounts).toHaveBeenCalledWith({ phase: "active", limit: 10, cursor: "abc" });
+
+  for (const query of ["limit=0", "phase=deleted", "limit=1&limit=2"])
+    expect(
+      (await app.request(`https://cup.audio/api/operator/accounts?${query}`, {}, env)).status,
+    ).toBe(400);
+
+  listAccounts.mockRejectedValueOnce(new Error("Invalid Registry cursor"));
+  const invalidCursor = await app.request(
+    "https://cup.audio/api/operator/accounts?cursor=bad",
+    {},
+    env,
+  );
+  expect(invalidCursor.status).toBe(400);
+  expect(await invalidCursor.json()).toMatchObject({ error: { code: "invalid-cursor" } });
+});
+
+test("records account allowance adjustments and reports the resulting balance", async () => {
+  const { env, adjustAllowance } = fixture();
+  const app = createApiServer({ validateOperatorAccess: async () => true });
+  const requestId = "0b8d3e8c-7f43-4c56-8e57-30cbb1ad7b1e";
+  const response = await app.request(
+    adjustmentRequest({ requestId, amountMilliseconds: -60_000, reason: " goodwill " }),
+    {},
+    env,
+  );
+  expect(response.status).toBe(200);
+  expect(adjustAccountAllowanceResponseSchema.parse(await response.json())).toEqual({
+    accountId,
+    balance,
+  });
+  expect(adjustAllowance).toHaveBeenCalledWith(requestId, -60_000, "goodwill");
+});
+
+test("rejects account allowance adjustments for unknown accounts and invalid input", async () => {
+  const { env, adjustAllowance } = fixture();
+  const app = createApiServer({ validateOperatorAccess: async () => true });
+  const requestId = "0b8d3e8c-7f43-4c56-8e57-30cbb1ad7b1e";
+  const unknown = await app.request(
+    adjustmentRequest(
+      { requestId, amountMilliseconds: 60_000, reason: "refund" },
+      "5f0f8d0e-3a7c-4f4e-9b0e-1f2a3b4c5d6e",
+    ),
+    {},
+    env,
+  );
+  expect(unknown.status).toBe(404);
+  expect(await unknown.json()).toMatchObject({ error: { code: "account-not-found" } });
+  for (const body of [
+    { requestId, amountMilliseconds: 0, reason: "refund" },
+    { requestId, amountMilliseconds: 1.5, reason: "refund" },
+    { requestId, amountMilliseconds: 60_000, reason: " " },
+    { requestId: "not-a-uuid", amountMilliseconds: 60_000, reason: "refund" },
+  ])
+    expect((await app.request(adjustmentRequest(body), {}, env)).status).toBe(400);
+  expect(adjustAllowance).not.toHaveBeenCalled();
+});
+
+test.each([
+  ["Account is not active", "account-not-active"],
+  ["Account is not initialized", "account-not-active"],
+  ["Allowance adjustment exceeds available duration", "adjustment-exceeds-available-duration"],
+  ["Allowance adjustment idempotency conflict", "idempotency-conflict"],
+])("maps the account ledger rejection %s to a conflict", async (message, code) => {
+  const { env, adjustAllowance } = fixture();
+  adjustAllowance.mockRejectedValueOnce(new Error(message));
+  const app = createApiServer({ validateOperatorAccess: async () => true });
+  const response = await app.request(
+    adjustmentRequest({
+      requestId: "0b8d3e8c-7f43-4c56-8e57-30cbb1ad7b1e",
+      amountMilliseconds: -60_000,
+      reason: "correction",
+    }),
+    {},
+    env,
+  );
+  expect(response.status).toBe(409);
+  expect(await response.json()).toMatchObject({ error: { code } });
+});
+
+test("reports unexpected adjustment failures as JSON operational errors", async () => {
+  const { env, adjustAllowance } = fixture();
+  adjustAllowance.mockRejectedValueOnce(new Error("Storage unavailable"));
+  const app = createApiServer({ validateOperatorAccess: async () => true });
+  const response = await app.request(
+    adjustmentRequest({
+      requestId: "0b8d3e8c-7f43-4c56-8e57-30cbb1ad7b1e",
+      amountMilliseconds: 60_000,
+      reason: "refund",
+    }),
+    {},
+    env,
+  );
+  expect(response.status).toBe(500);
+  expect(await response.json()).toMatchObject({ error: { code: "operational-error" } });
+});
+
+test("account listing and adjustment remain behind operator authentication", async () => {
+  const { env, adjustAllowance, listAccounts } = fixture();
+  const denied = createApiServer({ validateOperatorAccess: async () => false });
+  expect((await denied.request("https://cup.audio/api/operator/accounts", {}, env)).status).toBe(
+    401,
+  );
+  expect(
+    (
+      await denied.request(
+        adjustmentRequest({
+          requestId: "0b8d3e8c-7f43-4c56-8e57-30cbb1ad7b1e",
+          amountMilliseconds: 60_000,
+          reason: "refund",
+        }),
+        {},
+        env,
+      )
+    ).status,
+  ).toBe(401);
+  expect(listAccounts).not.toHaveBeenCalled();
+  expect(adjustAllowance).not.toHaveBeenCalled();
 });
 
 test("accepts the local operator token on loopback URLs", () => {
