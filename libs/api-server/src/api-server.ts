@@ -773,7 +773,100 @@ const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
   },
 };
 
+// Durable Object RPC rejections carry only the thrown message, so ledger rejections are matched by it.
+const ACCOUNT_ADJUSTMENT_CONFLICTS = [
+  {
+    thrownMessage: "Account is not active",
+    code: "account-not-active",
+    message: "The account is not active.",
+  },
+  {
+    thrownMessage: "Account is not initialized",
+    code: "account-not-active",
+    message: "The account is not active.",
+  },
+  {
+    thrownMessage: "Allowance adjustment exceeds available duration",
+    code: "adjustment-exceeds-available-duration",
+    message: "The reduction exceeds the account's available duration.",
+  },
+  {
+    thrownMessage: "Allowance adjustment idempotency conflict",
+    code: "idempotency-conflict",
+    message: "The request ID is already bound to another adjustment.",
+  },
+] as const;
+
 const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
+  async listAccounts(context) {
+    const searchParameters = new URL(context.req.url).searchParams;
+    if (["phase", "limit", "cursor"].some((name) => searchParameters.getAll(name).length > 1))
+      return jsonError(
+        context.get("requestId"),
+        "invalid-input",
+        "Query parameters cannot be repeated.",
+        400,
+      );
+    const query = context.req.valid("query");
+    try {
+      const result = await getRegistryStub(context.env).listAccounts({
+        limit: query.limit,
+        ...(query.phase === undefined ? {} : { phase: query.phase }),
+        ...(query.cursor === undefined ? {} : { cursor: query.cursor }),
+      });
+      return context.json(
+        {
+          accounts: result.accounts.map((account) => ({
+            accountId: account.accountId,
+            subject: account.subject,
+            createdAt: toIsoString(account.createdAtMs),
+            phase: account.phase,
+          })),
+          ...(result.nextCursor === undefined ? {} : { nextCursor: result.nextCursor }),
+        },
+        200,
+      );
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Invalid Registry cursor"))
+        return jsonError(
+          context.get("requestId"),
+          "invalid-cursor",
+          "The Registry cursor is invalid.",
+          400,
+        );
+      return jsonError(
+        context.get("requestId"),
+        "operational-error",
+        "The Registry could not be read.",
+        500,
+      );
+    }
+  },
+  async adjustAccountAllowance(context) {
+    const { accountId } = context.req.valid("param");
+    const { requestId, amountMilliseconds, reason } = context.req.valid("json");
+    if ((await getRegistryStub(context.env).findAccount(accountId)) === undefined)
+      return jsonError(context.get("requestId"), "account-not-found", "Account not found.", 404);
+    const account = context.env.ACCOUNTS.get(context.env.ACCOUNTS.idFromName(accountId));
+    try {
+      await account.adjustAllowance(requestId, amountMilliseconds, reason);
+      const snapshot = await account.inspect();
+      return context.json({ accountId, balance: snapshot.balance }, 200);
+    } catch (error) {
+      const conflict = ACCOUNT_ADJUSTMENT_CONFLICTS.find(
+        ({ thrownMessage }) => error instanceof Error && error.message.includes(thrownMessage),
+      );
+      if (conflict !== undefined)
+        return jsonError(context.get("requestId"), conflict.code, conflict.message, 409);
+      // Retrying with the same request ID replays a recorded adjustment, so failures stay safe to retry.
+      return jsonError(
+        context.get("requestId"),
+        "operational-error",
+        "The allowance adjustment could not be confirmed.",
+        500,
+      );
+    }
+  },
   async listAccountDeletions(context) {
     const registry = context.env.REGISTRY;
     const accountRegistry = registry.get(registry.idFromName("registry"));

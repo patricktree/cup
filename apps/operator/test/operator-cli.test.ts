@@ -2,15 +2,19 @@ import { spawn } from "node:child_process";
 import http from "node:http";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { z } from "zod";
 
 import { LOCAL_OPERATOR_ACCESS_TOKEN } from "@cup/operator-api.routes";
 
 const GRANT_ID = "b4ad28a8-bbd7-46af-a17c-59527becd745";
 const REQUEST_ID = "2f94d6a9-68eb-49eb-b88e-753cf5fba041";
+const ACCOUNT_ID = "d1a52e64-3e4d-4a7f-a711-7fb11501e9af";
+const SUBJECT = "6c1f9e4a-2b7d-4e8f-9a3c-5d6e7f8a9b0c";
 const CREATED_AT = "2026-08-28T10:00:00Z";
 const EXPIRES_AT = "2026-11-26T10:00:00Z";
 const root = path.resolve(import.meta.dirname, "../../..");
 const cliPath = path.join(root, "apps/operator/src/cli.ts");
+const adjustmentBodies: unknown[] = [];
 let server: http.Server;
 let operatorUrl: string;
 
@@ -67,6 +71,72 @@ describe("actual operator CLI process", () => {
     const result = await runCli("--json", "account", "deletions");
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout) as unknown).toEqual({ attempts: [], receipts: [] });
+  });
+
+  test("lists accounts with a phase filter and next cursor", async () => {
+    const result = await runCli("account", "list", "--phase", "deleting_identity");
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(`Account ID: ${ACCOUNT_ID}`);
+    expect(result.stdout).toContain("Phase: deleting_identity");
+    expect(result.stdout).toContain("Next cursor: next");
+  });
+
+  test("adjusts an account allowance with a signed amount and a reusable request ID", async () => {
+    adjustmentBodies.length = 0;
+    const result = await runCli(
+      "--json",
+      "account",
+      "adjust-allowance",
+      ACCOUNT_ID,
+      "--minutes=-1.5",
+      "--reason",
+      "Correction",
+      "--request-id",
+      REQUEST_ID,
+    );
+    expect(result.status).toBe(0);
+    expect(adjustmentBodies).toEqual([
+      { requestId: REQUEST_ID, amountMilliseconds: -90_000, reason: "Correction" },
+    ]);
+    expect(JSON.parse(result.stdout) as unknown).toEqual({
+      requestId: REQUEST_ID,
+      accountId: ACCOUNT_ID,
+      balance: { unit: "audio-millisecond", available: 3_600_000, reserved: 0 },
+    });
+  });
+
+  test("generates a request ID when none is given", async () => {
+    adjustmentBodies.length = 0;
+    const result = await runCli(
+      "--json",
+      "account",
+      "adjust-allowance",
+      ACCOUNT_ID,
+      "--minutes",
+      "30",
+      "--reason",
+      "Goodwill",
+    );
+    expect(result.status).toBe(0);
+    const withRequestId = z.looseObject({ requestId: z.uuid() });
+    const body = withRequestId.parse(adjustmentBodies[0]);
+    expect(body).toMatchObject({ amountMilliseconds: 1_800_000, reason: "Goodwill" });
+    expect(withRequestId.parse(JSON.parse(result.stdout)).requestId).toBe(body.requestId);
+  });
+
+  test("rejects a zero allowance adjustment before contacting the API", async () => {
+    adjustmentBodies.length = 0;
+    const result = await runCli(
+      "account",
+      "adjust-allowance",
+      ACCOUNT_ID,
+      "--minutes",
+      "0",
+      "--reason",
+      "None",
+    );
+    expect(result.status).not.toBe(0);
+    expect(adjustmentBodies).toEqual([]);
   });
 
   test("reports account inspection errors through the shared RPC error handling", async () => {
@@ -128,23 +198,12 @@ async function handleRequest(request: http.IncomingMessage, response: http.Serve
     return send(response, 401, {
       error: { code: "operator-unauthorized", message: "Local authorization required." },
     });
-  if (request.method === "GET") {
-    if (url.pathname === "/api/operator/accounts/deletions")
-      return send(response, 200, { attempts: [], receipts: [] });
-    if (url.pathname === `/api/operator/accounts/${GRANT_ID}`)
-      return send(response, 404, {
-        error: {
-          code: "account-unavailable",
-          message: "Account unavailable.",
-          requestId: REQUEST_ID,
-        },
-      });
-  }
   const body = await readBody(request);
   if (body !== "" && request.headers["content-type"] !== "application/json")
     return send(response, 415, {
       error: { code: "unsupported-media-type", message: "JSON required." },
     });
+  if (handleAccountRequest(request.method, url, body, response)) return;
   if (request.method === "POST" && url.pathname === "/api/operator/grants")
     return send(response, 201, {
       result: "issued",
@@ -182,6 +241,54 @@ async function handleRequest(request: http.IncomingMessage, response: http.Serve
       grants: [{ grantId: GRANT_ID, success: false, error: "Migration failed." }],
     });
   return send(response, 404, { error: { code: "not-found", message: "Not found." } });
+}
+
+function handleAccountRequest(
+  method: string | undefined,
+  url: URL,
+  body: string,
+  response: http.ServerResponse,
+): boolean {
+  if (method === "GET") return handleAccountRead(url, response);
+  if (method === "POST") return handleAccountWrite(url, body, response);
+  return false;
+}
+
+function handleAccountRead(url: URL, response: http.ServerResponse): boolean {
+  if (url.pathname === "/api/operator/accounts")
+    send(response, 200, {
+      accounts: [
+        {
+          accountId: ACCOUNT_ID,
+          subject: SUBJECT,
+          createdAt: CREATED_AT,
+          phase: url.searchParams.get("phase") ?? "active",
+        },
+      ],
+      nextCursor: "next",
+    });
+  else if (url.pathname === "/api/operator/accounts/deletions")
+    send(response, 200, { attempts: [], receipts: [] });
+  else if (url.pathname === `/api/operator/accounts/${GRANT_ID}`)
+    send(response, 404, {
+      error: {
+        code: "account-unavailable",
+        message: "Account unavailable.",
+        requestId: REQUEST_ID,
+      },
+    });
+  else return false;
+  return true;
+}
+
+function handleAccountWrite(url: URL, body: string, response: http.ServerResponse): boolean {
+  if (url.pathname !== `/api/operator/accounts/${ACCOUNT_ID}/allowance-adjustments`) return false;
+  adjustmentBodies.push(JSON.parse(body));
+  send(response, 200, {
+    accountId: ACCOUNT_ID,
+    balance: { unit: "audio-millisecond", available: 3_600_000, reserved: 0 },
+  });
+  return true;
 }
 
 function grantFixture(state: "open" | "revoked") {

@@ -94,7 +94,7 @@ Sources: [grant-session handlers](../../libs/api-server/src/api-server.ts), [gra
 
 ## Operator access and lifecycle confirmation
 
-The operator CLI authenticates through Cloudflare Access. The Worker validates the Access assertion against its configured issuer, audience, and operator identity before admitting operator routes. Development token handling is restricted to trusted development URLs. Operator authentication is separate from customer Google/Supabase sign-in.
+The operator CLI authenticates through Cloudflare Access. The Worker validates the Access assertion against its configured issuer, audience, and operator identity before admitting operator routes. Development token handling is restricted to trusted development URLs. Operator authentication is separate from customer Google/Supabase sign-in. Operators can list accounts from the registry's identity mapping and record signed, idempotent allowance adjustments in an active account's ledger; neither action authenticates as, or changes the sign-in identity of, the account.
 
 Deletion and recovery require an additional one-use challenge and Google authentication after that challenge was issued. They also enforce request origin and content-type constraints. See [account deletion](account-deletion.md) for why ordinary sign-in does not restore access.
 

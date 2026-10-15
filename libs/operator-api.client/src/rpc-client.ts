@@ -2,8 +2,10 @@ import { hc } from "hono/client";
 
 import type {
   AccountParams,
+  AdjustAccountAllowanceRequest,
   CreateGrantRequest,
   GrantParams,
+  ListAccountsQuery,
   ListGrantsQuery,
   OperatorApiApp,
   OperatorApiClient as OperatorHonoClient,
@@ -65,6 +67,17 @@ export class OperatorApiClient {
 
   listAccountDeletions() {
     return this.#client.api.operator.accounts.deletions.$get({}, this.options());
+  }
+
+  listAccounts(query: ListAccountsQuery) {
+    return this.#client.api.operator.accounts.$get({ query }, this.options());
+  }
+
+  adjustAccountAllowance(params: AccountParams, input: AdjustAccountAllowanceRequest) {
+    return this.#client.api.operator.accounts[":accountId"]["allowance-adjustments"].$post(
+      { param: params, json: input },
+      this.options(),
+    );
   }
 
   private options() {

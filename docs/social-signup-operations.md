@@ -51,11 +51,12 @@ The operator confirmed on 2026-10-02 that the old Supabase project `oiehcntuiazv
 These commands use the existing Cloudflare Access operator authentication. Substitute actual UUIDs for the placeholders.
 
 ```sh
+pnpm operator account list
 pnpm operator account inspect ACCOUNT_UUID
 pnpm operator account deletions
 ```
 
-Account inspection includes the current balance, ledger totals, the first history page, and unresolved artifact writers. Deletion inspection includes unfinished cleanup and completed receipts.
+Account listing pages through the Registry's identity-to-account mappings. Account inspection includes the current balance, ledger totals, the first history page, and unresolved artifact writers. Deletion inspection includes unfinished cleanup and completed receipts. To change an account's allowance, see [adjust an account allowance](../apps/operator/README.md#adjust-an-account-allowance).
 
 For recovery deadlines, cleanup retries, unresolved writers, and retained receipts, see [account deletion](architecture/account-deletion.md). For the relationship between trial and account conversions, see [trial access](architecture/authentication.md#trial-access).
 

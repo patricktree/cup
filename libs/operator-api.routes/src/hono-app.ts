@@ -3,8 +3,12 @@ import type { RouteHandler } from "@hono/zod-openapi";
 
 import {
   accountParamsSchema,
+  adjustAccountAllowanceRequestSchema,
+  adjustAccountAllowanceResponseSchema,
   inspectAccountResponseSchema,
   listAccountDeletionsResponseSchema,
+  listAccountsQuerySchema,
+  listAccountsResponseSchema,
   setGrantAllowanceRequestSchema,
   createGrantRequestSchema,
   createGrantResponseSchema,
@@ -163,6 +167,39 @@ const inspectAccountRoute = createRoute({
     500: errorResponse("Operational error."),
   },
 });
+const listAccountsRoute = createRoute({
+  method: "get",
+  path: "/api/operator/accounts",
+  request: { query: listAccountsQuerySchema },
+  responses: {
+    200: {
+      content: { "application/json": { schema: listAccountsResponseSchema } },
+      description: "Registry identity mappings, oldest first.",
+    },
+    400: errorResponse("Invalid cursor or filter."),
+    500: errorResponse("Operational error."),
+  },
+});
+const adjustAccountAllowanceRoute = createRoute({
+  method: "post",
+  path: "/api/operator/accounts/{accountId}/allowance-adjustments",
+  request: {
+    params: accountParamsSchema,
+    body: {
+      required: true,
+      content: { "application/json": { schema: adjustAccountAllowanceRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: adjustAccountAllowanceResponseSchema } },
+      description: "Adjustment recorded or replayed.",
+    },
+    404: errorResponse("Account not found."),
+    409: errorResponse("Account inactive, adjustment exceeds available duration, or conflict."),
+    500: errorResponse("Operational error."),
+  },
+});
 const listAccountDeletionsRoute = createRoute({
   method: "get",
   path: "/api/operator/accounts/deletions",
@@ -190,6 +227,8 @@ type OperatorApiRouteHandler<Route, Bindings extends object> = Route extends Par
     ) => Response | Promise<Response>
   : never;
 export type OperatorApiHandlers<Bindings extends object> = {
+  listAccounts: OperatorApiRouteHandler<typeof listAccountsRoute, Bindings>;
+  adjustAccountAllowance: OperatorApiRouteHandler<typeof adjustAccountAllowanceRoute, Bindings>;
   inspectAccount: OperatorApiRouteHandler<typeof inspectAccountRoute, Bindings>;
   listAccountDeletions: OperatorApiRouteHandler<typeof listAccountDeletionsRoute, Bindings>;
   createGrant: OperatorApiRouteHandler<typeof createGrantRoute, Bindings>;
@@ -206,7 +245,9 @@ export function createOperatorApi<Bindings extends object>(
   handlers: OperatorApiHandlers<Bindings>,
 ) {
   return new OpenAPIHono<OperatorApiEnvironment<Bindings>>({ defaultHook })
+    .openapi(listAccountsRoute, handlers.listAccounts)
     .openapi(listAccountDeletionsRoute, handlers.listAccountDeletions)
+    .openapi(adjustAccountAllowanceRoute, handlers.adjustAccountAllowance)
     .openapi(inspectAccountRoute, handlers.inspectAccount, (result, context) => {
       if (!result.success)
         return context.json(

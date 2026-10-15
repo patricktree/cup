@@ -1,5 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import { and, eq, lte, min, sql } from "drizzle-orm";
+import { and, asc, eq, gt, lte, min, or, sql } from "drizzle-orm";
 import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { Temporal } from "temporal-polyfill";
 import { z } from "zod";
@@ -17,8 +17,10 @@ import type {
 import { DeletionCoordinator, type DeletionEnvironment } from "#src/deletion-coordinator.ts";
 import {
   applyGrantRegistrySnapshot,
+  decodeAccountCursor,
   decodeCursor,
   deriveProjectedState,
+  encodeAccountCursor,
   encodeCursor,
   GRANT_LIFETIME_MS,
   REGISTRY_SCHEMA_VERSION,
@@ -249,6 +251,51 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
       .from(identityAccounts)
       .where(eq(identityAccounts.subject, subject))
       .get();
+  }
+
+  findAccount(accountId: string): IdentityAccount | undefined {
+    return this.database
+      .select()
+      .from(identityAccounts)
+      .where(eq(identityAccounts.accountId, accountId))
+      .get();
+  }
+
+  /** Keyset pagination keeps pages stable while new identities are provisioned between requests. */
+  listAccounts(input: { phase?: IdentityAccount["phase"]; limit: number; cursor?: string }): {
+    accounts: IdentityAccount[];
+    nextCursor?: string;
+  } {
+    z.number().int().min(1).max(100).parse(input.limit);
+    const after = input.cursor === undefined ? undefined : decodeAccountCursor(input.cursor);
+    const rows = this.database
+      .select()
+      .from(identityAccounts)
+      .where(
+        and(
+          input.phase === undefined ? undefined : eq(identityAccounts.phase, input.phase),
+          after === undefined
+            ? undefined
+            : or(
+                gt(identityAccounts.createdAtMs, after.createdAtMs),
+                and(
+                  eq(identityAccounts.createdAtMs, after.createdAtMs),
+                  gt(identityAccounts.accountId, after.accountId),
+                ),
+              ),
+        ),
+      )
+      .orderBy(asc(identityAccounts.createdAtMs), asc(identityAccounts.accountId))
+      .limit(input.limit + 1)
+      .all();
+    const accounts = rows.slice(0, input.limit);
+    const last = accounts.at(-1);
+    return {
+      accounts,
+      ...(rows.length > accounts.length && last !== undefined
+        ? { nextCursor: encodeAccountCursor(last) }
+        : {}),
+    };
   }
 
   fenceIdentityDeletion(subject: string, accountId: string): void {
