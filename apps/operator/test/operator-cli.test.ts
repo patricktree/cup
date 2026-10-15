@@ -150,7 +150,7 @@ describe("actual operator CLI process", () => {
     });
   });
 
-  test("reports failures without an API error body as a generic operator error", async () => {
+  test("reports network failures as a generic operator error", async () => {
     const result = await runCliAt("http://127.0.0.1:1", "--json", "grant", "list");
     expect(result.status).toBe(1);
     expect(JSON.parse(result.stderr) as unknown).toEqual({

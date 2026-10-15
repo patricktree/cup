@@ -228,6 +228,8 @@ Place `--json` before the grant or account command to write one JSON value to st
 pnpm operator --json grant list
 ```
 
+On failure, the CLI exits with status 1 and writes `{ "error": { "code": "...", "message": "..." } }` to standard error. When the API refuses a request, `code` and `message` are the API's own, such as `account-unavailable`. Failures without an API error, such as an unreachable service, report `operator-error`.
+
 ## Troubleshoot access
 
 ### `cloudflared` is unavailable
