@@ -220,6 +220,16 @@ pnpm operator account adjust-allowance "ACCOUNT_ID" \
 
 Reusing a request ID with a different amount or reason is rejected.
 
+### List account deletions
+
+List unfinished deletion cleanup and completed deletion receipts. Each receipt records its notification outcomes:
+
+```sh
+pnpm operator account deletions
+```
+
+Provider acceptance of a notification is not proof of inbox delivery. For recovery deadlines, cleanup retries, unresolved writers, and retained receipts, see [account deletion](../../docs/architecture/account-deletion.md). For the relationship between trial and account conversions, see [trial access](../../docs/architecture/authentication.md#trial-access).
+
 ## Use machine-readable output
 
 Place `--json` before the grant or account command to write one JSON value to standard output:
