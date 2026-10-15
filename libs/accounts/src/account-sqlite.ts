@@ -9,6 +9,7 @@ import {
   createConversionArtifactPrefix,
 } from "@cup/conversion-contracts";
 import { derivePreparedConversionStatus } from "@cup/conversion-contracts/duration-accounting";
+import { DurationLedger } from "@cup/duration-ledger";
 import { RollingLimits } from "@cup/rolling-limits";
 
 import {
@@ -22,13 +23,12 @@ import type {
   AccountIdentity,
   AccountSnapshot,
 } from "#src/account-contracts.ts";
-import { AccountDurationLedger } from "#src/account-duration-ledger.ts";
 import {
   accountPlaybackPositions,
   accounts,
   accountConversions,
   pendingJobs,
-  accountAudioSegments,
+  audioSegments,
   artifactWriters,
   creditBalances,
   creditLedger,
@@ -42,15 +42,17 @@ import { rateEvents } from "#src/rate-limit-schema.ts";
 import { migrateAccount } from "#src/sqlite-migrations.ts";
 import { requireRow } from "#src/sqlite-row.ts";
 
+const WELCOME_ALLOWANCE_MILLISECONDS = 30 * 60 * 1_000;
+
 export class AccountSqlite {
   private readonly database: DrizzleSqliteDODatabase;
   private readonly limits: RollingLimits;
-  private readonly duration: AccountDurationLedger;
+  private readonly duration: DurationLedger;
 
   constructor(storage: DurableObjectStorage) {
     this.database = drizzle(storage);
     this.limits = new RollingLimits(storage);
-    this.duration = new AccountDurationLedger(storage);
+    this.duration = new DurationLedger(storage, audioSegments);
   }
 
   migrate(): Promise<void> {
@@ -70,7 +72,7 @@ export class AccountSqlite {
         accountPlaybackPositions,
         artifactWriters,
         pendingJobs,
-        accountAudioSegments,
+        audioSegments,
         accountConversions,
         creditLedger,
         creditOperations,
@@ -114,7 +116,12 @@ export class AccountSqlite {
           executionEpoch: 1,
         })
         .run();
-      this.duration.initialize(input.accountId, input.createdAtMs);
+      this.duration.initialize(
+        `welcome:${input.accountId}:v1`,
+        WELCOME_ALLOWANCE_MILLISECONDS,
+        "welcome-v1",
+        input.createdAtMs,
+      );
       return this.snapshot();
     });
   }
@@ -124,7 +131,7 @@ export class AccountSqlite {
     if (identity === undefined) {
       throw new Error("Account is not initialized");
     }
-    return { ...identity, balance: this.duration.balance() };
+    return { ...identity, balance: { unit: "audio-millisecond", ...this.duration.balance() } };
   }
 
   startConversion(
@@ -138,7 +145,6 @@ export class AccountSqlite {
   } {
     z.number().int().nonnegative().safe().parse(nowMs);
     const request = startAccountConversionSchema.parse(input);
-    const fingerprint = canonicalJson({ sourceUrl: request.sourceUrl });
     return this.database.transaction(() => {
       const account = this.requireActive();
       const existing = this.database
@@ -148,17 +154,15 @@ export class AccountSqlite {
           sourceUrl: accountConversions.sourceUrl,
           createdAtMs: accountConversions.createdAtMs,
           status: accountConversions.status,
-          fingerprint: accountConversions.fingerprint,
         })
         .from(accountConversions)
         .where(eq(accountConversions.idempotencyKey, request.idempotencyKey))
         .get();
       if (existing !== undefined) {
-        if (existing.fingerprint !== fingerprint) {
+        if (existing.sourceUrl !== request.sourceUrl) {
           throw new Error("Conversion idempotency conflict");
         }
-        const { fingerprint: _fingerprint, ...conversion } = existing;
-        return { result: "replayed", conversion };
+        return { result: "replayed", conversion: existing };
       }
       const retryAfter = this.limits.consume("account-conversion", startLimit, 60_000, nowMs);
       if (retryAfter) {
@@ -171,7 +175,6 @@ export class AccountSqlite {
           conversionId,
           idempotencyKey: request.idempotencyKey,
           sourceUrl: request.sourceUrl,
-          fingerprint,
           createdAtMs: nowMs,
           status: "pending",
         })
@@ -221,7 +224,7 @@ export class AccountSqlite {
     this.requireActive();
     this.database
       .update(accountConversions)
-      .set({ status: "pending", outcomeJson: null, completedAtMs: null })
+      .set({ status: "pending", completedAtMs: null, ...EMPTY_OUTCOME_COLUMNS })
       .where(
         and(
           eq(accountConversions.conversionId, conversionId),
@@ -285,7 +288,6 @@ export class AccountSqlite {
     z.number().int().nonnegative().safe().parse(nowMs);
     z.uuidv4().parse(conversionId);
     const parsed = accountOutcomeSchema.parse(outcome);
-    const fingerprint = canonicalJson(parsed);
     this.database.transaction(() => {
       const account = this.snapshot();
       if (executionEpoch !== undefined && account.executionEpoch !== executionEpoch) {
@@ -304,16 +306,12 @@ export class AccountSqlite {
       ) {
         throw new Error("Account blocks conversion settlement");
       }
-      const conversion = this.database
-        .select({ status: accountConversions.status, outcome: accountConversions.outcomeJson })
-        .from(accountConversions)
-        .where(eq(accountConversions.conversionId, conversionId))
-        .get();
+      const conversion = this.getConversion(conversionId);
       if (conversion === undefined) {
         throw new Error("Account conversion does not exist");
       }
       if (conversion.status !== "pending") {
-        if (conversion.outcome !== fingerprint) {
+        if (canonicalJson(conversion.outcome) !== canonicalJson(parsed)) {
           throw new Error("Conflicting conversion settlement");
         }
         return;
@@ -331,7 +329,7 @@ export class AccountSqlite {
       }
       this.database
         .update(accountConversions)
-        .set({ status: parsed.status, outcomeJson: fingerprint, completedAtMs: nowMs })
+        .set({ status: parsed.status, completedAtMs: nowMs, ...toOutcomeColumns(parsed) })
         .where(eq(accountConversions.conversionId, conversionId))
         .run();
       this.duration.releaseReservations(conversionId, nowMs);
@@ -430,25 +428,21 @@ export class AccountSqlite {
       })
     | undefined {
     const row = this.database
-      .select({
-        conversionId: accountConversions.conversionId,
-        idempotencyKey: accountConversions.idempotencyKey,
-        sourceUrl: accountConversions.sourceUrl,
-        createdAtMs: accountConversions.createdAtMs,
-        status: accountConversions.status,
-        completedAtMs: accountConversions.completedAtMs,
-        outcomeJson: accountConversions.outcomeJson,
-      })
+      .select()
       .from(accountConversions)
       .where(eq(accountConversions.conversionId, conversionId))
       .get();
     if (!row) {
       return undefined;
     }
-    const { outcomeJson, ...conversion } = row;
     return {
-      ...conversion,
-      outcome: outcomeJson === null ? null : accountOutcomeSchema.parse(JSON.parse(outcomeJson)),
+      conversionId: row.conversionId,
+      idempotencyKey: row.idempotencyKey,
+      sourceUrl: row.sourceUrl,
+      createdAtMs: row.createdAtMs,
+      status: row.status,
+      completedAtMs: row.completedAtMs,
+      outcome: toOutcome(row),
     };
   }
 
@@ -482,4 +476,51 @@ export class AccountSqlite {
     }
     return account;
   }
+}
+
+type ConversionRow = typeof accountConversions.$inferSelect;
+type OutcomeColumns = Pick<
+  ConversionRow,
+  "title" | "audiobookReference" | "hasCoverImage" | "failureCategory" | "explanation"
+>;
+
+const EMPTY_OUTCOME_COLUMNS = {
+  title: null,
+  audiobookReference: null,
+  hasCoverImage: null,
+  failureCategory: null,
+  explanation: null,
+} satisfies OutcomeColumns;
+
+function toOutcomeColumns(outcome: AccountConversionOutcome): OutcomeColumns {
+  if (outcome.status === "ready") {
+    return {
+      ...EMPTY_OUTCOME_COLUMNS,
+      title: outcome.title,
+      audiobookReference: outcome.audiobookReference,
+      hasCoverImage: outcome.hasCoverImage ?? null,
+    };
+  }
+  return {
+    ...EMPTY_OUTCOME_COLUMNS,
+    failureCategory: outcome.failureCategory,
+    explanation: outcome.explanation,
+  };
+}
+
+function toOutcome(row: ConversionRow): AccountConversionOutcome | null {
+  if (row.status === "pending") {
+    return null;
+  }
+  // Parsing restores the exact outcome shape, so settlement replays compare equal fingerprints.
+  return accountOutcomeSchema.parse(
+    row.status === "ready"
+      ? {
+          status: "ready",
+          title: row.title,
+          audiobookReference: row.audiobookReference,
+          ...(row.hasCoverImage === true ? { hasCoverImage: true } : {}),
+        }
+      : { status: "failed", failureCategory: row.failureCategory, explanation: row.explanation },
+  );
 }

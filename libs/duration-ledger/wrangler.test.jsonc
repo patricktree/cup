@@ -1,0 +1,7 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Generates the Durable Object runtime types the ledger compiles against; no Worker runs it.
+  "name": "duration-ledger-types",
+  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_date": "2026-08-15",
+}

@@ -100,7 +100,7 @@ A settled segment is ready, a reserved one is generating, and a released one has
 
 The reader shows the document as soon as it is prepared. While synthesizing it shows the number of generated segments and keeps Play disabled. Play is enabled when the status is ready and every segment has audio. If segments failed, the reader marks them in the text and offers Retry and an explicit choice to play without them; Retry stays available afterwards. That choice gates playing, not loading the audiobook into the player. All-segment audio availability does not assemble a full track. EPUB exports and full-track downloads have been removed.
 
-Sources: [preparation runner](../../libs/create-audiobook-from-url-workflow/src/run-prepare-audiobook-workflow.ts), [segment runner](../../libs/create-audiobook-from-url-workflow/src/run-audio-segment-workflow.ts), [segment dispatch](../../libs/conversion-contracts/src/index.ts), [account ledger](../../libs/accounts/src/account-duration-ledger.ts), [grant ownership](../../libs/conversion-grants/src/conversion-grant-durable-object.ts), and [segment reuse](../../libs/audiobook-production/src/produce-audio-segment.ts).
+Sources: [preparation runner](../../libs/create-audiobook-from-url-workflow/src/run-prepare-audiobook-workflow.ts), [segment runner](../../libs/create-audiobook-from-url-workflow/src/run-audio-segment-workflow.ts), [segment dispatch](../../libs/conversion-contracts/src/index.ts), [duration ledger](../../libs/duration-ledger/src/duration-ledger.ts), [grant ownership](../../libs/conversion-grants/src/conversion-grant-durable-object.ts), and [segment reuse](../../libs/audiobook-production/src/produce-audio-segment.ts).
 
 ## Playback
 

@@ -5,10 +5,8 @@ import type {
   ConversionPhase,
   DurationBalance,
 } from "@cup/conversion-contracts";
-import {
-  calculateDurationBalance,
-  type SegmentUsage,
-} from "@cup/conversion-contracts/duration-accounting";
+import type { SegmentUsage } from "@cup/conversion-contracts/duration-accounting";
+import type { DurationTotals } from "@cup/duration-ledger";
 
 import type {
   GrantConversionSnapshot,
@@ -27,7 +25,7 @@ export type PendingConversion = {
   conversionId: string;
   idempotencyKey: string;
   sourceUrl: string;
-  acceptedAtMs: number;
+  createdAtMs: number;
   status: "pending";
   lastStartedPhase: ConversionPhase;
   title?: string;
@@ -74,7 +72,6 @@ export type TerminalOutcome =
     };
 
 export type GrantRecord = {
-  allowanceMilliseconds: number;
   grantId: string;
   createdAtMs: number;
   expiresAtMs: number;
@@ -86,7 +83,10 @@ export type GrantRecord = {
   registrySnapshotRevision: number;
   registryConfirmedSnapshotRevision: number;
   conversions: GrantConversion[];
+  /** Read from the duration ledger; ledger operations change it, not saving the record. */
   segmentUsage: SegmentUsage[];
+  /** Read from the duration ledger; ledger operations change it, not saving the record. */
+  duration: DurationTotals;
 };
 
 export type GrantRegistrySnapshot = {
@@ -126,7 +126,7 @@ export function toGrantConversionSnapshot(conversion: GrantConversion): GrantCon
   const base = {
     conversionId: conversion.conversionId,
     sourceUrl: conversion.sourceUrl,
-    acceptedAt: toIsoString(conversion.acceptedAtMs),
+    acceptedAt: toIsoString(conversion.createdAtMs),
     ...(conversion.title === undefined ? {} : { title: conversion.title }),
   };
   if (conversion.status === "pending") {
@@ -161,7 +161,7 @@ export function createGrantSnapshot(record: GrantRecord, nowMs: number): GrantSn
 
 export function createGrantConversions(record: GrantRecord): GrantConversions {
   return record.conversions
-    .toSorted((left, right) => right.acceptedAtMs - left.acceptedAtMs)
+    .toSorted((left, right) => right.createdAtMs - left.createdAtMs)
     .map(toGrantConversionSnapshot);
 }
 
@@ -172,19 +172,19 @@ export function createOperatorGrantSnapshot(
   const snapshot = createGrantSnapshot(record, nowMs);
   return {
     ...snapshot,
-    allowanceMilliseconds: record.allowanceMilliseconds,
+    allowanceMilliseconds: record.duration.allowanceMilliseconds,
     signingKeyGeneration: record.signingKeyGeneration,
     registrySnapshotRevision: record.registrySnapshotRevision,
     registryConfirmedSnapshotRevision: record.registryConfirmedSnapshotRevision,
     conversions: record.conversions
-      .toSorted((left, right) => right.acceptedAtMs - left.acceptedAtMs)
+      .toSorted((left, right) => right.createdAtMs - left.createdAtMs)
       .map((conversion) => {
         const publicSnapshot = toGrantConversionSnapshot(conversion);
         const reconciliation = {
           state:
             conversion.workflowStartedAtMs !== undefined
               ? ("confirmed" as const)
-              : nowMs - conversion.acceptedAtMs >= RECONCILIATION_CUTOFF_MS
+              : nowMs - conversion.createdAtMs >= RECONCILIATION_CUTOFF_MS
                 ? ("cutoff-ambiguous" as const)
                 : ("unconfirmed" as const),
           ...(conversion.workflowStartedAtMs === undefined
@@ -225,7 +225,11 @@ export function createOperatorGrantSnapshot(
 }
 
 export function deriveDurationBalance(record: GrantRecord): DurationBalance {
-  return calculateDurationBalance(record.allowanceMilliseconds, record.segmentUsage);
+  return {
+    availableMilliseconds: record.duration.availableMilliseconds,
+    reservedMilliseconds: record.duration.reservedMilliseconds,
+    spentMilliseconds: record.duration.spentMilliseconds,
+  };
 }
 
 export function deriveGrantState(record: GrantRecord, nowMs: number): GrantState {
@@ -235,11 +239,10 @@ export function deriveGrantState(record: GrantRecord, nowMs: number): GrantState
   if (nowMs >= record.expiresAtMs) {
     return "expired";
   }
-  const duration = deriveDurationBalance(record);
-  if (duration.spentMilliseconds >= record.allowanceMilliseconds) {
+  if (record.duration.spentMilliseconds >= record.duration.allowanceMilliseconds) {
     return "exhausted";
   }
-  if (duration.availableMilliseconds === 0) {
+  if (record.duration.availableMilliseconds === 0) {
     return "temporarily-full";
   }
   return "open";
@@ -250,7 +253,7 @@ export function createGrantRegistrySnapshot(record: GrantRecord): GrantRegistryS
   return {
     grantId: record.grantId,
     revision: record.registrySnapshotRevision,
-    allowanceMilliseconds: record.allowanceMilliseconds,
+    allowanceMilliseconds: record.duration.allowanceMilliseconds,
     ...(record.revokedAtMs === undefined ? {} : { revokedAtMs: record.revokedAtMs }),
     reservedMilliseconds: duration.reservedMilliseconds,
     spentMilliseconds: duration.spentMilliseconds,

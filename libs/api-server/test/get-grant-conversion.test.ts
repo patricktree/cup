@@ -18,7 +18,7 @@ const CONVERSION = {
   conversionId: CONVERSION_ID,
   idempotencyKey: "9336bd9d-466f-4378-9b1f-3342e61e7d90",
   sourceUrl: "https://example.com/source",
-  acceptedAtMs: 0,
+  createdAtMs: 0,
   status: "pending",
   lastStartedPhase: ConversionPhase.NARRATION_CONTENT_SELECTION,
 } as const satisfies GrantConversion;
@@ -64,7 +64,7 @@ test.each([
       conversionId: CONVERSION_ID,
       idempotencyKey: CONVERSION.idempotencyKey,
       sourceUrl: CONVERSION.sourceUrl,
-      acceptedAtMs: 0,
+      createdAtMs: 0,
       status: "ready",
       lastStartedPhase: ConversionPhase.FINALIZATION,
       completedAtMs: 1_000,

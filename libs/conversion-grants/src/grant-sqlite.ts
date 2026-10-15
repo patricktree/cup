@@ -3,23 +3,25 @@ import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlit
 import { Temporal } from "temporal-polyfill";
 
 import { conversionPhaseSchema } from "@cup/conversion-contracts";
-import { segmentUsageSchema } from "@cup/conversion-contracts/duration-accounting";
+import { DurationLedger } from "@cup/duration-ledger";
 
 import type { GrantConversion, GrantRecord } from "#src/grant-model.ts";
 import {
+  audioSegments,
   conversions as conversionTable,
   grants as grantTable,
   grantSqliteSchema,
-  segmentUsage as segmentUsageTable,
 } from "#src/grant-sqlite-schema.ts";
 import { migrateLegacyGrant } from "#src/legacy-grant-migrations.ts";
 
 export class ConversionGrantSqlite {
+  readonly duration: DurationLedger;
   private readonly database: DrizzleSqliteDODatabase<typeof grantSqliteSchema>;
   private readonly storage: DurableObjectStorage;
 
   constructor(storage: DurableObjectStorage) {
     this.database = drizzle(storage, { schema: grantSqliteSchema });
+    this.duration = new DurationLedger(storage, audioSegments);
     this.storage = storage;
   }
 
@@ -44,21 +46,13 @@ export class ConversionGrantSqlite {
     const conversions = this.database
       .select()
       .from(conversionTable)
-      .orderBy(asc(conversionTable.acceptedAtMs), asc(conversionTable.conversionId))
+      .orderBy(asc(conversionTable.createdAtMs), asc(conversionTable.conversionId))
       .all()
       .map(conversionRowToUnknown);
     const parsed: unknown = {
       grantId: row.grantId,
-      allowanceMilliseconds: row.allowanceMilliseconds,
-      segmentUsage: segmentUsageSchema
-        .array()
-        .parse(
-          this.database
-            .select()
-            .from(segmentUsageTable)
-            .orderBy(asc(segmentUsageTable.conversionId), asc(segmentUsageTable.sequence))
-            .all(),
-        ),
+      segmentUsage: this.duration.allSegments(),
+      duration: this.duration.totals(),
       createdAtMs: row.createdAtMs,
       expiresAtMs: row.expiresAtMs,
       ...(row.revokedAtMs === null ? {} : { revokedAtMs: row.revokedAtMs }),
@@ -86,9 +80,9 @@ export class ConversionGrantSqlite {
     return record;
   }
 
-  async save(record: GrantRecord): Promise<void> {
+  /** Saves the grant and its conversions; duration changes go through `duration` instead. */
+  async save(record: Omit<GrantRecord, "segmentUsage" | "duration">): Promise<void> {
     const mutableGrant = {
-      allowanceMilliseconds: record.allowanceMilliseconds,
       revokedAtMs: record.revokedAtMs ?? null,
       credentialVerifier: record.credentialVerifier ?? null,
       credentialIssuedAtMs: record.credentialIssuedAtMs ?? null,
@@ -117,21 +111,6 @@ export class ConversionGrantSqlite {
         .onConflictDoUpdate({ target: conversionTable.conversionId, set: mutableConversion })
         .run();
     }
-    for (const segment of record.segmentUsage) {
-      this.database
-        .insert(segmentUsageTable)
-        .values(segment)
-        .onConflictDoUpdate({
-          target: [segmentUsageTable.conversionId, segmentUsageTable.sequence],
-          set: {
-            estimatedMilliseconds: segment.estimatedMilliseconds,
-            state: segment.state,
-            actualMilliseconds: segment.actualMilliseconds,
-            chargedMilliseconds: segment.chargedMilliseconds,
-          },
-        })
-        .run();
-    }
   }
 }
 
@@ -142,7 +121,7 @@ function conversionRowToUnknown(row: ConversionRow): unknown {
     conversionId: row.conversionId,
     idempotencyKey: row.idempotencyKey,
     sourceUrl: row.sourceUrl,
-    acceptedAtMs: row.acceptedAtMs,
+    createdAtMs: row.createdAtMs,
     ...(row.workflowStartedAtMs === null ? {} : { workflowStartedAtMs: row.workflowStartedAtMs }),
     lastStartedPhase: row.lastStartedPhase,
   };
@@ -220,7 +199,7 @@ function conversionToRow(conversion: GrantConversion): typeof conversionTable.$i
     conversionId: conversion.conversionId,
     idempotencyKey: conversion.idempotencyKey,
     sourceUrl: conversion.sourceUrl,
-    acceptedAtMs: conversion.acceptedAtMs,
+    createdAtMs: conversion.createdAtMs,
     workflowStartedAtMs: conversion.workflowStartedAtMs ?? null,
     status: conversion.status,
     ...values,
@@ -230,9 +209,6 @@ function conversionToRow(conversion: GrantConversion): typeof conversionTable.$i
 function isGrantRecord(value: unknown): value is GrantRecord {
   return (
     isRecord(value) &&
-    typeof value["allowanceMilliseconds"] === "number" &&
-    Number.isSafeInteger(value["allowanceMilliseconds"]) &&
-    value["allowanceMilliseconds"] > 0 &&
     typeof value["grantId"] === "string" &&
     typeof value["createdAtMs"] === "number" &&
     typeof value["expiresAtMs"] === "number" &&
@@ -252,7 +228,7 @@ function isGrantConversion(value: unknown): value is GrantConversion {
     typeof value["conversionId"] !== "string" ||
     typeof value["idempotencyKey"] !== "string" ||
     typeof value["sourceUrl"] !== "string" ||
-    typeof value["acceptedAtMs"] !== "number" ||
+    typeof value["createdAtMs"] !== "number" ||
     !conversionPhaseSchema.safeParse(value["lastStartedPhase"]).success
   ) {
     return false;

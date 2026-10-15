@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const segmentUsageSchema = z
+const segmentUsageSchema = z
   .object({
     conversionId: z.string().min(1),
     sequence: z.number().int().nonnegative(),
@@ -49,26 +49,4 @@ export function estimateAudioDuration(narrationTextCharacters: number): number {
     throw new Error("Estimated duration exceeds supported precision");
   }
   return estimate;
-}
-
-export function calculateDurationBalance(
-  allowanceMilliseconds: number,
-  usage: readonly SegmentUsage[],
-) {
-  const spentMilliseconds = usage.reduce(
-    (total, segment) => total + segment.chargedMilliseconds,
-    0,
-  );
-  const reservedMilliseconds = usage.reduce(
-    (total, segment) => total + (segment.state === "reserved" ? segment.estimatedMilliseconds : 0),
-    0,
-  );
-  return {
-    availableMilliseconds: Math.max(
-      0,
-      allowanceMilliseconds - spentMilliseconds - reservedMilliseconds,
-    ),
-    reservedMilliseconds,
-    spentMilliseconds,
-  };
 }

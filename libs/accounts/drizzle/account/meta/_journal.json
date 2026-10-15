@@ -36,6 +36,13 @@
       "when": 1792066092752,
       "tag": "0004_deletion_state_checks",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1792074280410,
+      "tag": "0005_align_duration_ledger_schema",
+      "breakpoints": true
     }
   ]
 }

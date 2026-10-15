@@ -141,7 +141,7 @@ The total includes reserved and spent duration. The command rejects totals below
 
 Newly created grants start with 120 minutes.
 
-For a manual refund after permanent audio loss, inspect the grant and increase its total allowance by the duration being refunded. Changing the total does not reset spent duration.
+For a manual refund after permanent audio loss, inspect the grant and increase its total allowance by the duration being refunded. Changing the total does not reset spent duration. The grant records the difference from its previous total as an adjustment in its duration ledger.
 
 ### Revoke a grant
 

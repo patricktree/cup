@@ -633,7 +633,7 @@ test("persists segment usage as constrained rows without resetting the balance",
   const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
   const selectUsage = `SELECT conversion_id AS conversionId, sequence, narration_text_characters AS narrationTextCharacters,
     estimated_milliseconds AS estimatedMilliseconds, state, actual_milliseconds AS actualMilliseconds,
-    charged_milliseconds AS chargedMilliseconds FROM segment_usage ORDER BY conversion_id, sequence`;
+    charged_milliseconds AS chargedMilliseconds FROM audio_segments ORDER BY conversion_id, sequence`;
   const usage = await storage.exec<SegmentUsage>(selectUsage);
   expect(usage.map((segment) => segment.state).sort()).toEqual(["released", "reserved", "settled"]);
   expect(await grant.migrate()).toBe(6);
@@ -641,7 +641,7 @@ test("persists segment usage as constrained rows without resetting the balance",
   expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual(before.duration);
   expect(
     await storage.exec<{ allowance: number }>(
-      "SELECT allowance_milliseconds AS allowance FROM grant",
+      "SELECT SUM(available_delta) AS allowance FROM credit_ledger WHERE event_kind IN ('grant', 'adjustment')",
     ),
   ).toEqual([{ allowance: 20_000 }]);
   expect((await grant.validateSession(session.sessionToken, CREATED_AT_MS)).result).toBe("valid");
@@ -651,16 +651,16 @@ test("persists segment usage as constrained rows without resetting the balance",
   expect(columns.map((column) => column.name)).not.toContain("segment_usage_json");
 
   await expect(
-    storage.exec("INSERT INTO segment_usage SELECT * FROM segment_usage LIMIT 1"),
+    storage.exec("INSERT INTO audio_segments SELECT * FROM audio_segments LIMIT 1"),
   ).rejects.toThrow(/UNIQUE constraint failed/);
   await expect(
     storage.exec(
-      "UPDATE segment_usage SET charged_milliseconds = actual_milliseconds + 1 WHERE state = 'settled'",
+      "UPDATE audio_segments SET charged_milliseconds = actual_milliseconds + 1 WHERE state = 'settled'",
     ),
   ).rejects.toThrow(/CHECK constraint failed/);
   await expect(
     storage.exec(
-      "INSERT INTO segment_usage VALUES ('missing-conversion', 0, 10, 1000, 'reserved', 0, 0)",
+      "INSERT INTO audio_segments VALUES ('missing-conversion', 0, 10, 1000, 'reserved', 0, 0, 'missing-operation')",
     ),
   ).rejects.toThrow(/FOREIGN KEY constraint failed/);
   // Continuing generation updates the existing row and leaves the other ledger entries intact.
@@ -866,6 +866,7 @@ test.each([false, true])(
     }
     const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
     const before = await storage.exec("SELECT * FROM grant");
+    await revertDurationLedgerAdoption(storage);
     // The frozen production schema predates the shared rate-limit table.
     await storage.exec("DROP TABLE rate_events");
     await installProductionSchema(storage, "grant", ["grant", "conversions", "segment_usage"]);
@@ -878,7 +879,7 @@ test.each([false, true])(
       })),
     );
     expect(await grant.listConversions()).toEqual([]);
-    expect(await storage.exec("SELECT * FROM segment_usage")).toEqual([]);
+    expect(await storage.exec("SELECT * FROM audio_segments")).toEqual([]);
     expect(await storage.exec("SELECT * FROM rate_events")).toEqual([]);
     expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual({
       availableMilliseconds: 20_000,
@@ -1018,6 +1019,7 @@ test("a failed production reset rolls back old tables and can be retried", async
   await grant.initialize(grantId(name), CREATED_AT_MS, EXPIRES_AT_MS);
   await grant.startConversion("https://example.com/old", crypto.randomUUID(), CREATED_AT_MS);
   const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
+  await revertDurationLedgerAdoption(storage);
   // The frozen production schema predates the shared rate-limit table.
   await storage.exec("DROP TABLE rate_events");
   await installProductionSchema(storage, "grant", ["grant", "conversions", "segment_usage"]);
@@ -1034,6 +1036,67 @@ test("a failed production reset rolls back old tables and can be retried", async
   await storage.exec("DROP TABLE migration_failure");
   await grant.migrate();
   expect(await grant.listConversions()).toEqual([]);
+});
+
+test("adopting the duration ledger keeps a deployed grant's balance, segments, and projection", async () => {
+  const name = "duration-ledger-adoption";
+  const grant = grantStub(name);
+  await grant.initialize(grantId(name), CREATED_AT_MS, EXPIRES_AT_MS);
+  await grant.setDurationAllowance(20_000, CREATED_AT_MS);
+  const accepted = await grant.startConversion(
+    "https://example.com/deployed",
+    crypto.randomUUID(),
+    CREATED_AT_MS,
+  );
+  if (accepted.result !== "created") {
+    throw new Error("Conversion not accepted");
+  }
+  const id = accepted.conversion.conversionId;
+  await grant.reserveAudioSegment(id, 0, 10);
+  await grant.completeAudioSegment(id, 0, 1_200);
+  await grant.reserveAudioSegment(id, 1, 10);
+  await grant.reserveAudioSegment(id, 2, 10);
+  await grant.releaseAudioSegment(id, 2);
+  await grant.reserveAudioSegment(id, 3, 25);
+  const before = await grant.inspectOperator(CREATED_AT_MS);
+  const segmentsBefore = await grant.listAudioSegments(id);
+  const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
+  const conversionsBefore = await grant.listConversions();
+
+  await revertDurationLedgerAdoption(storage);
+  await storage.exec(
+    "DELETE FROM __drizzle_migrations WHERE created_at = (SELECT MAX(created_at) FROM __drizzle_migrations)",
+  );
+  await grant.migrate();
+
+  expect(await grant.inspectOperator(CREATED_AT_MS)).toEqual(before);
+  expect(before.duration).toEqual({
+    availableMilliseconds: 15_800,
+    reservedMilliseconds: 3_000,
+    spentMilliseconds: 1_200,
+  });
+  expect(await grant.listAudioSegments(id)).toEqual(segmentsBefore);
+  expect(await grant.listConversions()).toEqual(conversionsBefore);
+  expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(3);
+
+  // The migrated reservations settle and release through the ledger like new ones.
+  expect((await grant.completeAudioSegment(id, 1, 900)).result).toBe("recorded");
+  await grant.releaseAudioSegment(id, 3);
+  expect((await grant.reserveAudioSegment(id, 2, 10)).result).toBe("reserved");
+  expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual({
+    availableMilliseconds: 16_900,
+    reservedMilliseconds: 1_000,
+    spentMilliseconds: 2_100,
+  });
+  expect(await grant.setDurationAllowance(4_000, CREATED_AT_MS)).toMatchObject({
+    result: "updated",
+    changed: true,
+    registrySnapshot: {
+      allowanceMilliseconds: 4_000,
+      reservedMilliseconds: 1_000,
+      spentMilliseconds: 2_100,
+    },
+  });
 });
 
 async function installProductionSchema(
@@ -1073,4 +1136,26 @@ async function installProductionSchema(
       );
     }
   }
+}
+
+/**
+ * Restores the grant layout that preceded the shared duration ledger, keeping the allowance and
+ * segment usage that the ledger held.
+ */
+async function revertDurationLedgerAdoption(
+  storage: Awaited<ReturnType<typeof worker.getDurableObjectStorage>>,
+) {
+  await storage.exec(
+    "ALTER TABLE grant ADD COLUMN allowance_milliseconds INTEGER NOT NULL DEFAULT 0",
+  );
+  await storage.exec(
+    "UPDATE grant SET allowance_milliseconds = (SELECT SUM(available_delta) FROM credit_ledger WHERE event_kind IN ('grant', 'adjustment'))",
+  );
+  await storage.exec(`CREATE TABLE segment_usage AS SELECT conversion_id, sequence,
+    narration_text_characters, estimated_milliseconds, state, actual_milliseconds,
+    charged_milliseconds FROM audio_segments`);
+  for (const table of ["audio_segments", "credit_ledger", "credit_balances", "credit_operations"]) {
+    await storage.exec(`DROP TABLE ${table}`);
+  }
+  await storage.exec("ALTER TABLE conversions RENAME COLUMN created_at_ms TO accepted_at_ms");
 }
