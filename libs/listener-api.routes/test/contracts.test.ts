@@ -15,7 +15,7 @@ import {
 
 const UUID = "b4ad28a8-bbd7-46af-a17c-59527becd745";
 
-describe("web application transport contracts", () => {
+describe("listener API transport contracts", () => {
   test.each([
     [grantParamsSchema, { grantId: UUID, extra: true }],
     [conversionParamsSchema, { conversionId: UUID, extra: true }],

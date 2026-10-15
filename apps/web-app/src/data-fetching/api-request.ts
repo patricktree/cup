@@ -4,7 +4,7 @@ import {
   type ListenerApiClient,
 } from "@cup/listener-api.client";
 
-import { createAppApiClient } from "#src/api-client.js";
+import { createListenerApiClient } from "#src/api-client.js";
 import { getFreshAccountSession, getResourceAccountSession } from "#src/auth/account-session.js";
 import { UserFacingError } from "#src/errors.js";
 
@@ -49,7 +49,7 @@ export async function requestApi<Response extends ApiResponse>(
       ]
     | [auth: AccountAuth, send: (client: AuthenticatedRpcClient) => Promise<Response>]
 ): ApiResult<Response> {
-  const client = createAppApiClient();
+  const client = createListenerApiClient();
   if (auth === "none") {
     return parseOkResponse(send(client));
   }

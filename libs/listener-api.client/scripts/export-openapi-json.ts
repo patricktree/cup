@@ -9,7 +9,7 @@ const OUTPUT_FILE_URL = new URL("../dist/create-audiobook-from-url-openapi.json"
 const app = createListenerContractApp();
 const openApiDocument = app.getOpenAPIDocument({
   openapi: "3.0.0",
-  info: { title: "create-audiobook-from-url trial link API", version: "1.0.0" },
+  info: { title: "create-audiobook-from-url listener API", version: "1.0.0" },
 });
 const outputPath = url.fileURLToPath(OUTPUT_FILE_URL);
 
