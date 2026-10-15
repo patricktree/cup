@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import React from "react";
 
-import { deletionChallengeSchema } from "@cup/web-app-api.routes";
+import { deletionChallengeSchema } from "@cup/listener-api.routes";
 
 import {
   getFreshAccountSession,

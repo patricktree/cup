@@ -1,4 +1,4 @@
-import type { Audiobook, PlaybackPosition } from "@cup/web-app-api.routes";
+import type { Audiobook, PlaybackPosition } from "@cup/listener-api.routes";
 
 import type {
   PlayableAudiobook,

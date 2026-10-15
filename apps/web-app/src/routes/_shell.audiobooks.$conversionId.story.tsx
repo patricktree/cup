@@ -2,7 +2,7 @@ import { createMemoryHistory } from "@tanstack/react-router";
 import { http, HttpResponse } from "msw";
 import React from "react";
 
-import type { Audiobook, ErrorResponse, RetryConversionResponse } from "@cup/web-app-api.routes";
+import type { Audiobook, ErrorResponse, RetryConversionResponse } from "@cup/listener-api.routes";
 
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
 import { queryClient } from "#src/data-fetching/query-client.js";

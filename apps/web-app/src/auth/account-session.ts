@@ -1,7 +1,7 @@
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 
-import { parseOkResponse } from "@cup/web-app-api.client";
-import { authConfigResponseSchema } from "@cup/web-app-api.routes";
+import { parseOkResponse } from "@cup/listener-api.client";
+import { authConfigResponseSchema } from "@cup/listener-api.routes";
 
 import { createAppApiClient } from "#src/api-client.js";
 import {

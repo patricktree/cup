@@ -3,7 +3,7 @@ import {
   type InsufficientDuration,
   type SegmentUsage,
 } from "@cup/conversion-contracts/duration-accounting";
-import type { AudioSegment } from "@cup/web-app-api.routes";
+import type { AudioSegment } from "@cup/listener-api.routes";
 
 export type SynthesisState =
   | { status: "synthesizing" | "ready"; segments: AudioSegment[] }

@@ -3,7 +3,7 @@ import {
   type SegmentUsage,
 } from "@cup/conversion-contracts/duration-accounting";
 import { toGrantConversionSnapshot, type GrantConversion } from "@cup/conversion-grants";
-import type { ConversionDetail } from "@cup/web-app-api.routes";
+import type { ConversionDetail } from "@cup/listener-api.routes";
 
 export type GetGrantConversionDependencies = {
   getConversion(conversionId: string): Promise<GrantConversion | undefined>;

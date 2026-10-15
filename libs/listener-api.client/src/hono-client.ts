@@ -2,7 +2,7 @@ import { hc, parseResponse, DetailedError as HonoDetailedError } from "hono/clie
 import type { ClientResponse } from "hono/client";
 import type { IsAny } from "type-fest";
 
-import type { WebAppApiApp, WebAppApiClient } from "@cup/web-app-api.routes";
+import type { ListenerApiApp, ListenerApiClient } from "@cup/listener-api.routes";
 
 /**
  * Preserve Hono's inferred successful payload and throw {@link RpcError} for every unsuccessful
@@ -45,7 +45,8 @@ export class RpcError extends Error {
 }
 
 // This indirection preserves inferred routes and works around TypeScript issue 47663.
-const hcWithType = (...args: Parameters<typeof hc>): WebAppApiClient => hc<WebAppApiApp>(...args);
+const hcWithType = (...args: Parameters<typeof hc>): ListenerApiClient =>
+  hc<ListenerApiApp>(...args);
 
 /** Typed Hono client inferred from the create-audiobook-from-url API routes. */
 export type HonoClient = ReturnType<typeof hcWithType>;

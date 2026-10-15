@@ -1,6 +1,6 @@
 import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 
-import type { Audiobook, PlaybackPosition } from "@cup/web-app-api.routes";
+import type { Audiobook, PlaybackPosition } from "@cup/listener-api.routes";
 
 import type { PlayerSnapshot, ReportedPosition, TimelineLocation } from "#src/platform/player.js";
 

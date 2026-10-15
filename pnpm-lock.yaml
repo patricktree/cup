@@ -591,12 +591,12 @@ importers:
       '@capawesome/capacitor-google-sign-in':
         specifier: 0.1.4
         version: 0.1.4(@capacitor/core@8.5.3)
-      '@cup/web-app-api.client':
+      '@cup/listener-api.client':
         specifier: workspace:*
-        version: link:../../libs/web-app-api.client
-      '@cup/web-app-api.routes':
+        version: link:../../libs/listener-api.client
+      '@cup/listener-api.routes':
         specifier: workspace:*
-        version: link:../../libs/web-app-api.routes
+        version: link:../../libs/listener-api.routes
       '@fontsource-variable/inter':
         specifier: ^5.3.0
         version: 5.3.0
@@ -776,15 +776,15 @@ importers:
       '@cup/create-audiobook-from-url-workflow':
         specifier: workspace:*
         version: link:../create-audiobook-from-url-workflow
+      '@cup/listener-api.routes':
+        specifier: workspace:*
+        version: link:../listener-api.routes
       '@cup/operator-api.routes':
         specifier: workspace:*
         version: link:../operator-api.routes
       '@cup/registry':
         specifier: workspace:*
         version: link:../registry
-      '@cup/web-app-api.routes':
-        specifier: workspace:*
-        version: link:../web-app-api.routes
       hono:
         specifier: catalog:hono
         version: 4.13.13
@@ -1063,6 +1063,101 @@ importers:
       wrangler:
         specifier: 'catalog:'
         version: 4.144.0(@types/node@26.6.5)
+
+  libs/listener-api.client:
+    dependencies:
+      '@cup/listener-api.routes':
+        specifier: workspace:*
+        version: link:../listener-api.routes
+      hono:
+        specifier: catalog:hono
+        version: 4.13.13
+      type-fest:
+        specifier: ^5.10.0
+        version: 5.10.0
+    devDependencies:
+      '@cup/config-oxlint':
+        specifier: workspace:*
+        version: link:../../tooling/config-oxlint
+      '@cup/prepare-declaration-build':
+        specifier: workspace:*
+        version: link:../../tooling/prepare-declaration-build
+      '@patricktree-stack/config-typescript':
+        specifier: workspace:*
+        version: link:../../.patricktree-stack/tooling/config-typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.5
+      '@typescript/native':
+        specifier: 'catalog:'
+        version: typescript@7.0.2
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.87.0(oxlint-tsgolint@7.0.2004)
+      oxlint-tsgolint:
+        specifier: 'catalog:'
+        version: 7.0.2004
+      typescript:
+        specifier: 'catalog:'
+        version: '@typescript/typescript6@6.0.2'
+
+  libs/listener-api.routes:
+    dependencies:
+      '@cup/conversion-contracts':
+        specifier: workspace:*
+        version: link:../conversion-contracts
+      '@cup/conversion-grants':
+        specifier: workspace:*
+        version: link:../conversion-grants
+      '@cup/narration-document-creation':
+        specifier: workspace:*
+        version: link:../narration-document-creation
+      '@hono/zod-openapi':
+        specifier: catalog:hono
+        version: 1.6.3(hono@4.13.13)(zod@4.6.5)
+      hono:
+        specifier: catalog:hono
+        version: 4.13.13
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@cup/config-oxlint':
+        specifier: workspace:*
+        version: link:../../tooling/config-oxlint
+      '@cup/prepare-declaration-build':
+        specifier: workspace:*
+        version: link:../../tooling/prepare-declaration-build
+      '@patricktree-stack/config-typescript':
+        specifier: workspace:*
+        version: link:../../.patricktree-stack/tooling/config-typescript
+      '@patricktree-stack/config-vitest':
+        specifier: workspace:*
+        version: link:../../.patricktree-stack/tooling/config-vitest
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.5
+      '@typescript/native':
+        specifier: 'catalog:'
+        version: typescript@7.0.2
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.11(vitest@4.1.11)
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.87.0(oxlint-tsgolint@7.0.2004)
+      oxlint-tsgolint:
+        specifier: 'catalog:'
+        version: 7.0.2004
+      typescript:
+        specifier: 'catalog:'
+        version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.4(@types/node@26.6.5)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@types/node@26.6.5)(@vitest/coverage-v8@4.1.11)(vite@8.3.4(@types/node@26.6.5))
 
   libs/mp3-encoding:
     devDependencies:
@@ -1412,101 +1507,6 @@ importers:
         specifier: 'catalog:'
         version: 4.144.0(@types/node@26.6.5)
 
-  libs/web-app-api.client:
-    dependencies:
-      '@cup/web-app-api.routes':
-        specifier: workspace:*
-        version: link:../web-app-api.routes
-      hono:
-        specifier: catalog:hono
-        version: 4.13.13
-      type-fest:
-        specifier: ^5.10.0
-        version: 5.10.0
-    devDependencies:
-      '@cup/config-oxlint':
-        specifier: workspace:*
-        version: link:../../tooling/config-oxlint
-      '@cup/prepare-declaration-build':
-        specifier: workspace:*
-        version: link:../../tooling/prepare-declaration-build
-      '@patricktree-stack/config-typescript':
-        specifier: workspace:*
-        version: link:../../.patricktree-stack/tooling/config-typescript
-      '@types/node':
-        specifier: 'catalog:'
-        version: 26.6.5
-      '@typescript/native':
-        specifier: 'catalog:'
-        version: typescript@7.0.2
-      oxlint:
-        specifier: 'catalog:'
-        version: 1.87.0(oxlint-tsgolint@7.0.2004)
-      oxlint-tsgolint:
-        specifier: 'catalog:'
-        version: 7.0.2004
-      typescript:
-        specifier: 'catalog:'
-        version: '@typescript/typescript6@6.0.2'
-
-  libs/web-app-api.routes:
-    dependencies:
-      '@cup/conversion-contracts':
-        specifier: workspace:*
-        version: link:../conversion-contracts
-      '@cup/conversion-grants':
-        specifier: workspace:*
-        version: link:../conversion-grants
-      '@cup/narration-document-creation':
-        specifier: workspace:*
-        version: link:../narration-document-creation
-      '@hono/zod-openapi':
-        specifier: catalog:hono
-        version: 1.6.3(hono@4.13.13)(zod@4.6.5)
-      hono:
-        specifier: catalog:hono
-        version: 4.13.13
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
-    devDependencies:
-      '@cup/config-oxlint':
-        specifier: workspace:*
-        version: link:../../tooling/config-oxlint
-      '@cup/prepare-declaration-build':
-        specifier: workspace:*
-        version: link:../../tooling/prepare-declaration-build
-      '@patricktree-stack/config-typescript':
-        specifier: workspace:*
-        version: link:../../.patricktree-stack/tooling/config-typescript
-      '@patricktree-stack/config-vitest':
-        specifier: workspace:*
-        version: link:../../.patricktree-stack/tooling/config-vitest
-      '@types/node':
-        specifier: 'catalog:'
-        version: 26.6.5
-      '@typescript/native':
-        specifier: 'catalog:'
-        version: typescript@7.0.2
-      '@vitest/coverage-v8':
-        specifier: 'catalog:'
-        version: 4.1.11(vitest@4.1.11)
-      oxlint:
-        specifier: 'catalog:'
-        version: 1.87.0(oxlint-tsgolint@7.0.2004)
-      oxlint-tsgolint:
-        specifier: 'catalog:'
-        version: 7.0.2004
-      typescript:
-        specifier: 'catalog:'
-        version: '@typescript/typescript6@6.0.2'
-      vite:
-        specifier: 'catalog:'
-        version: 8.3.4(@types/node@26.6.5)
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.11(@types/node@26.6.5)(@vitest/coverage-v8@4.1.11)(vite@8.3.4(@types/node@26.6.5))
-
   qa/e2e:
     dependencies:
       '@cup/accounts':
@@ -1530,6 +1530,9 @@ importers:
       '@cup/create-audiobook-from-url-workflow':
         specifier: workspace:*
         version: link:../../libs/create-audiobook-from-url-workflow
+      '@cup/listener-api.routes':
+        specifier: workspace:*
+        version: link:../../libs/listener-api.routes
       '@cup/narration-content-selection':
         specifier: workspace:*
         version: link:../../libs/narration-content-selection
@@ -1539,9 +1542,6 @@ importers:
       '@cup/registry':
         specifier: workspace:*
         version: link:../../libs/registry
-      '@cup/web-app-api.routes':
-        specifier: workspace:*
-        version: link:../../libs/web-app-api.routes
     devDependencies:
       '@cup/config-oxlint':
         specifier: workspace:*

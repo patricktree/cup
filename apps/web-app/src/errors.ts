@@ -1,5 +1,5 @@
 // The class api-request.ts re-exports; importing that module would cycle back to the query client.
-import { RpcError } from "@cup/web-app-api.client";
+import { RpcError } from "@cup/listener-api.client";
 
 /** The wording of a failure: what failed, and why when that is known. */
 export type ErrorCopy = { title: string; detail: string | undefined };

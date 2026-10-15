@@ -1,4 +1,4 @@
-import type { ErrorResponse } from "@cup/web-app-api.routes";
+import type { ErrorResponse } from "@cup/listener-api.routes";
 
 export function accountAuthError(
   result: "unauthorized" | "unavailable" | "blocked" | "rate-limited",
