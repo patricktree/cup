@@ -47,7 +47,7 @@ describe("SQLite conversion grant Durable Object", () => {
       name: "migration",
     });
     const migrations = await storage.exec("SELECT * FROM __drizzle_migrations");
-    expect(migrations).toHaveLength(3);
+    expect(migrations).toHaveLength(4);
     expect((await grant.inspect(CREATED_AT_MS)).state).toBe("open");
   });
 
@@ -554,7 +554,7 @@ test("replays baselines without changing grant balances or registry bindings", a
   const grant = grantStub(name);
   await grant.initialize(grantId(name), CREATED_AT_MS, EXPIRES_AT_MS);
   const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
-  expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(3);
+  expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(4);
   expect(await grant.migrate()).toBe(6);
   expect((await grant.inspect(CREATED_AT_MS)).duration.availableMilliseconds).toBe(7_200_000);
   const registry = registryStub(name);
@@ -907,7 +907,7 @@ test.each([false, true])(
     await grant.migrate();
     expect(await grant.listConversions()).toHaveLength(revoked ? 0 : 1);
     expect((await grant.inspect(CREATED_AT_MS)).duration.spentMilliseconds).toBe(revoked ? 0 : 900);
-    expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(3);
+    expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(4);
   },
 );
 
@@ -1077,7 +1077,7 @@ test("adopting the duration ledger keeps a deployed grant's balance, segments, a
   });
   expect(await grant.listAudioSegments(id)).toEqual(segmentsBefore);
   expect(await grant.listConversions()).toEqual(conversionsBefore);
-  expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(3);
+  expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(4);
 
   // The migrated reservations settle and release through the ledger like new ones.
   expect((await grant.completeAudioSegment(id, 1, 900)).result).toBe("recorded");
