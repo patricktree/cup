@@ -4,7 +4,7 @@ import process from "node:process";
 import util from "node:util";
 import { z } from "zod";
 
-import { OperatorApiClient, parseOkResponse } from "@cup/operator-api.client";
+import { OperatorApiClient, parseOkResponse, RpcError } from "@cup/operator-api.client";
 import {
   accountPhases,
   adjustAccountAllowanceRequestSchema,
@@ -310,10 +310,7 @@ async function run(
     const accessToken = await getAccessToken(url.toString());
     await action(new OperatorApiClient(url.toString(), accessToken), createOutput(global.json));
   } catch (error) {
-    const cliError =
-      error instanceof CliError
-        ? error
-        : new CliError("operator-error", "The operator request failed.", error);
+    const cliError = toCliError(error);
     process.stderr.write(
       `${global.json ? JSON.stringify({ error: { code: cliError.code, message: cliError.message } }) : `Error: ${cliError.message}`}\n`,
     );
@@ -372,6 +369,17 @@ function redact(value: string): string {
   return value
     .replace(/v1\.[A-Za-z0-9_-]{43}/g, "[REDACTED]")
     .replace(/(authorization|cookie|cf-access-token):?\s*\S+/gi, "$1: [REDACTED]");
+}
+
+/** Keeps CLI errors, reports API refusals with their own code, and hides other failures. */
+function toCliError(error: unknown): CliError {
+  if (error instanceof CliError) {
+    return error;
+  }
+  if (error instanceof RpcError) {
+    return new CliError(error.code, error.message, error);
+  }
+  return new CliError("operator-error", "The operator request failed.", error);
 }
 
 class CliError extends Error {

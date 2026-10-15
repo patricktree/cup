@@ -1,5 +1,3 @@
-import { hc } from "hono/client";
-
 import type {
   AccountParams,
   AdjustAccountAllowanceRequest,
@@ -7,80 +5,86 @@ import type {
   GrantParams,
   ListAccountsQuery,
   ListGrantsQuery,
-  OperatorApiApp,
-  OperatorApiClient as OperatorHonoClient,
 } from "@cup/operator-api.routes";
 
-const createClient = (...args: Parameters<typeof hc>): OperatorHonoClient =>
-  hc<OperatorApiApp>(...args);
+import { createHonoClient, type HonoClient } from "#src/hono-client.ts";
 
 /** Focused typed client for the operator RPC actions. */
 export class OperatorApiClient {
-  #client: ReturnType<typeof createClient>;
+  #honoClient: HonoClient;
   #accessToken: string;
 
   constructor(baseUrl: string, accessToken: string) {
-    this.#client = createClient(baseUrl.replace(/\/$/, ""), {});
+    this.#honoClient = createHonoClient(baseUrl);
     this.#accessToken = accessToken;
   }
 
-  createGrant(input: CreateGrantRequest) {
-    return this.#client.api.operator.grants.$post({ json: input }, this.options());
+  async createGrant(input: CreateGrantRequest) {
+    return this.#honoClient.api.operator.grants.$post({ json: input }, this.#options());
   }
 
-  listGrants(query: ListGrantsQuery) {
-    return this.#client.api.operator.grants.$get({ query }, this.options());
+  async listGrants(query: ListGrantsQuery, signal?: AbortSignal) {
+    return this.#honoClient.api.operator.grants.$get({ query }, this.#options(signal));
   }
 
-  inspectGrant(params: GrantParams) {
-    return this.#client.api.operator.grants[":grantId"].$get({ param: params }, this.options());
+  async inspectGrant(params: GrantParams, signal?: AbortSignal) {
+    return this.#honoClient.api.operator.grants[":grantId"].$get(
+      { param: params },
+      this.#options(signal),
+    );
   }
 
-  setGrantAllowance(params: GrantParams, allowanceMilliseconds: number) {
-    return this.#client.api.operator.grants[":grantId"].allowance.$put(
+  async setGrantAllowance(params: GrantParams, allowanceMilliseconds: number) {
+    return this.#honoClient.api.operator.grants[":grantId"].allowance.$put(
       { param: params, json: { allowanceMilliseconds } },
-      this.options(),
+      this.#options(),
     );
   }
 
-  revokeGrant(params: GrantParams) {
-    return this.#client.api.operator.grants[":grantId"].revocation.$post(
+  async revokeGrant(params: GrantParams) {
+    return this.#honoClient.api.operator.grants[":grantId"].revocation.$post(
       { param: params, json: {} },
-      this.options(),
+      this.#options(),
     );
   }
 
-  invalidateSessions(params: GrantParams, reason: string) {
-    return this.#client.api.operator.grants[":grantId"]["session-invalidations"].$post(
+  async invalidateSessions(params: GrantParams, reason: string) {
+    return this.#honoClient.api.operator.grants[":grantId"]["session-invalidations"].$post(
       { param: params, json: { reason } },
-      this.options(),
+      this.#options(),
     );
   }
 
-  migrateGrants() {
-    return this.#client.api.operator["grant-migrations"].$post({ json: {} }, this.options());
+  async migrateGrants() {
+    return this.#honoClient.api.operator["grant-migrations"].$post({ json: {} }, this.#options());
   }
 
-  inspectAccount(params: AccountParams) {
-    return this.#client.api.operator.accounts[":accountId"].$get({ param: params }, this.options());
+  async inspectAccount(params: AccountParams, signal?: AbortSignal) {
+    return this.#honoClient.api.operator.accounts[":accountId"].$get(
+      { param: params },
+      this.#options(signal),
+    );
   }
 
-  listAccountDeletions() {
-    return this.#client.api.operator.accounts.deletions.$get({}, this.options());
+  async listAccountDeletions(signal?: AbortSignal) {
+    return this.#honoClient.api.operator.accounts.deletions.$get({}, this.#options(signal));
   }
 
-  listAccounts(query: ListAccountsQuery) {
-    return this.#client.api.operator.accounts.$get({ query }, this.options());
+  async listAccounts(query: ListAccountsQuery, signal?: AbortSignal) {
+    return this.#honoClient.api.operator.accounts.$get({ query }, this.#options(signal));
   }
 
-  adjustAccountAllowance(params: AccountParams, input: AdjustAccountAllowanceRequest) {
-    return this.#client.api.operator.accounts[":accountId"]["allowance-adjustments"].$post(
+  async adjustAccountAllowance(params: AccountParams, input: AdjustAccountAllowanceRequest) {
+    return this.#honoClient.api.operator.accounts[":accountId"]["allowance-adjustments"].$post(
       { param: params, json: input },
-      this.options(),
+      this.#options(),
     );
   }
 
-  private options() {
-    return { headers: { "Cf-Access-Token": this.#accessToken } };
+  #options(signal?: AbortSignal) {
+    return {
+      headers: { "Cf-Access-Token": this.#accessToken },
+      ...(signal === undefined ? {} : { init: { signal } }),
+    };
   }
 }
