@@ -30,6 +30,10 @@
     "./rolling-limits": {
       "types": "./dist/types/rolling-limits.d.ts",
       "default": "./src/rolling-limits.ts"
+    },
+    "./sqlite-schema-shared": {
+      "types": "./dist/types/sqlite-schema-shared.d.ts",
+      "default": "./src/sqlite-schema-shared.ts"
     }
   },
   "scripts": {

@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { Temporal } from "temporal-polyfill";
 
+import { RollingLimits } from "@cup/accounts/rolling-limits";
 import {
   dispatchSegmentWorkflows,
   reconcileSegmentWorkflow,
@@ -47,6 +48,8 @@ import type { GrantRegistry } from "#src/grant-registry.ts";
 import { signSession, verifyRootCredential, verifySession } from "#src/grant-session.ts";
 import { ConversionGrantSqlite } from "#src/grant-sqlite.ts";
 
+// Migration 0002_shared_rate_events moved existing start attempts into this bucket and window.
+const START_RATE_BUCKET = "grant-conversion-start";
 const START_RATE_WINDOW_MS = 60_000;
 const RECONCILIATION_RETRY_MS = 60_000;
 const MAINTENANCE_RETRY_MS = 60 * 60 * 1_000;
@@ -62,10 +65,12 @@ type ConversionGrantEnvironment = {
 
 export class ConversionGrantDurableObject extends DurableObject<ConversionGrantEnvironment> {
   private readonly sqlite: ConversionGrantSqlite;
+  private readonly limits: RollingLimits;
 
   constructor(context: DurableObjectState, env: ConversionGrantEnvironment) {
     super(context, env);
     this.sqlite = new ConversionGrantSqlite(context.storage);
+    this.limits = new RollingLimits(context.storage);
     void context.blockConcurrencyWhile(() => this.sqlite.applyMigrations());
   }
 
@@ -95,7 +100,6 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
         signingKeyGeneration: 1,
         registrySnapshotRevision: 1,
         registryConfirmedSnapshotRevision: 0,
-        startAttempts: [],
         conversions: [],
         segmentUsage: [],
       };
@@ -198,27 +202,25 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
         };
       }
 
-      const windowStart = nowMs - START_RATE_WINDOW_MS;
-      record.startAttempts = record.startAttempts.filter((attempt) => attempt > windowStart);
       const startLimit = Number(this.env.CONVERSION_OWNER_LIMIT);
 
       if (!Number.isSafeInteger(startLimit) || startLimit <= 0) {
         throw new Error("Invalid conversion rate limit");
       }
 
-      if (record.startAttempts.length >= startLimit) {
-        await this.sqlite.save(record);
-        const retryAt = record.startAttempts[0]! + START_RATE_WINDOW_MS;
-        return {
-          result: "rate-limited",
-          retryAfterSeconds: Math.max(1, Math.ceil((retryAt - nowMs) / 1_000)),
-        };
+      // Records the attempt before checking grant state, so starts on closed grants count too.
+      const retryAfterSeconds = this.limits.consume(
+        START_RATE_BUCKET,
+        startLimit,
+        START_RATE_WINDOW_MS,
+        nowMs,
+      );
+      if (retryAfterSeconds > 0) {
+        return { result: "rate-limited", retryAfterSeconds };
       }
 
-      record.startAttempts.push(nowMs);
       const state = deriveGrantState(record, nowMs);
       if (state === "expired" || state === "revoked") {
-        await this.sqlite.save(record);
         return { result: state };
       }
       const conversion: PendingConversion = {

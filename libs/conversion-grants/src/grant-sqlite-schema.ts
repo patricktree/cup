@@ -144,14 +144,11 @@ export const segmentUsage = sqliteTable(
   ],
 );
 
-export const startAttempts = sqliteTable("start_attempts", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  attemptedAtMs: integer("attempted_at_ms").notNull(),
-});
+// Re-exported so the migration generator includes the shared rate-limit table in the grant store.
+export { rateEvents } from "@cup/accounts/sqlite-schema-shared";
 
 export const grantSqliteSchema = {
   conversions,
   grants,
   segmentUsage,
-  startAttempts,
 };

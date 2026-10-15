@@ -11,7 +11,6 @@ import {
   grants as grantTable,
   grantSqliteSchema,
   segmentUsage as segmentUsageTable,
-  startAttempts as startAttemptTable,
 } from "#src/grant-sqlite-schema.ts";
 import { migrateLegacyGrant } from "#src/legacy-grant-migrations.ts";
 
@@ -71,12 +70,6 @@ export class ConversionGrantSqlite {
       signingKeyGeneration: row.signingKeyGeneration,
       registrySnapshotRevision: row.registrySnapshotRevision,
       registryConfirmedSnapshotRevision: row.registryConfirmedSnapshotRevision,
-      startAttempts: this.database
-        .select({ attemptedAtMs: startAttemptTable.attemptedAtMs })
-        .from(startAttemptTable)
-        .orderBy(asc(startAttemptTable.attemptedAtMs), asc(startAttemptTable.id))
-        .all()
-        .map((attempt) => attempt.attemptedAtMs),
       conversions,
     };
     if (!isGrantRecord(parsed)) {
@@ -137,13 +130,6 @@ export class ConversionGrantSqlite {
             chargedMilliseconds: segment.chargedMilliseconds,
           },
         })
-        .run();
-    }
-    this.database.delete(startAttemptTable).run();
-    if (record.startAttempts.length > 0) {
-      this.database
-        .insert(startAttemptTable)
-        .values(record.startAttempts.map((attemptedAtMs) => ({ attemptedAtMs })))
         .run();
     }
   }
@@ -254,8 +240,6 @@ function isGrantRecord(value: unknown): value is GrantRecord {
     typeof value["signingKeyGeneration"] === "number" &&
     typeof value["registrySnapshotRevision"] === "number" &&
     typeof value["registryConfirmedSnapshotRevision"] === "number" &&
-    Array.isArray(value["startAttempts"]) &&
-    value["startAttempts"].every((attempt) => typeof attempt === "number") &&
     Array.isArray(value["segmentUsage"]) &&
     Array.isArray(value["conversions"]) &&
     value["conversions"].every(isGrantConversion)

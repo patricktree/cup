@@ -8,6 +8,8 @@ All Cup application SQLite access uses Drizzle's Durable Object driver. Edit the
 | ---------------- | ------------------------------------------ | ---------------------------------- |
 | Conversion grant | [Grant schema](src/grant-sqlite-schema.ts) | [Grant migrations](drizzle/grant/) |
 
+The grant schema re-exports the [shared rate-limit table](../accounts/src/sqlite-schema-shared.ts), which records conversion start attempts for the rolling start limit.
+
 Account schemas and migrations live in [accounts](../accounts/README.md); grant inventory, conversion ownership, and registry migrations live in [registry](../registry/README.md). Application reads, writes, and synchronous database transactions use Drizzle. Durable Object alarms and transactions spanning asynchronous trial operations continue to use the Cloudflare storage API.
 
 Fresh databases use these baselines directly. Existing production trial stores use a one-time [legacy transition](src/legacy-grant-migrations.ts) from handwritten grant schema version 5. The shared registry handles its own transition from legacy registry schema version 3. It preserves grant IDs, configured allowances, credentials, session signing keys, expiry, revocation, provisioning request IDs, labels, and inventory. It discards conversions, segment usage, start attempts, and conversion ownership routes; each grant regains its full configured allowance. Existing trial links and sessions remain valid under their existing expiry and revocation rules, but old audiobook links become unavailable. [ADR 0004](../../docs/adr/0004-preserve-only-grants-during-drizzle-transition.md) records this deliberate retention boundary.

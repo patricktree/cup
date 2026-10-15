@@ -85,7 +85,6 @@ export type GrantRecord = {
   signingKeyGeneration: number;
   registrySnapshotRevision: number;
   registryConfirmedSnapshotRevision: number;
-  startAttempts: number[];
   conversions: GrantConversion[];
   segmentUsage: SegmentUsage[];
 };

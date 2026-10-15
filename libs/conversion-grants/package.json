@@ -39,6 +39,7 @@
     "turbo:test": "pnpm run test"
   },
   "dependencies": {
+    "@cup/accounts": "workspace:*",
     "@cup/conversion-contracts": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "temporal-polyfill": "^1.0.5",

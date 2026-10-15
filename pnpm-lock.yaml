@@ -972,6 +972,9 @@ importers:
 
   libs/conversion-grants:
     dependencies:
+      '@cup/accounts':
+        specifier: workspace:*
+        version: link:../accounts
       '@cup/conversion-contracts':
         specifier: workspace:*
         version: link:../conversion-contracts

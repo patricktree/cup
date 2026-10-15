@@ -12,7 +12,7 @@ Shared conversion schemas and duration calculations live in [conversion-contract
 | ------- | ---------------------------------------------- | -------------------------------------- |
 | Account | [Account schema](src/account-sqlite-schema.ts) | [Account migrations](drizzle/account/) |
 
-The account database includes the [rate-limit table](src/sqlite-schema-shared.ts). Each Durable Object blocks incoming work until its generated Drizzle migrations finish. Moving these files into this library does not change SQL, migration journals, or storage ownership. Account databases use a fresh baseline; production grant and registry storage retain their own legacy transitions.
+The account database includes the [rate-limit table](src/sqlite-schema-shared.ts). Grant and registry stores reuse that table definition and the [rolling-window limiter](src/rolling-limits.ts) through the `./sqlite-schema-shared` and `./rolling-limits` exports. Each Durable Object blocks incoming work until its generated Drizzle migrations finish. Moving these files into this library does not change SQL, migration journals, or storage ownership. Account databases use a fresh baseline; production grant and registry storage retain their own legacy transitions.
 
 After editing a schema, generate migrations from the repository root:
 
