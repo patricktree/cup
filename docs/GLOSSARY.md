@@ -84,6 +84,12 @@ A portion of a duration allowance temporarily held for one audio segment’s nar
 
 _Avoid_: charge, spent allowance
 
+## duration ledger
+
+The append-only record of how an account's or conversion grant's duration allowance was granted and adjusted, and of each duration reservation and its reconciliation against generated audio duration or its release. The allowance, reserved duration, spent duration, and available duration are derived from it.
+
+_Avoid_: balance, usage table
+
 ## available duration
 
 The unspent portion of a duration allowance that is not held by active duration reservations. It is the balance shown to users and available for new duration reservations.

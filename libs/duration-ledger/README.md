@@ -1,6 +1,6 @@
 # Duration ledger
 
-This library stores one owner's duration allowance, duration reservations, and charges for generated audio duration. Accounts and conversion grants use the same tables and the same [ledger](src/duration-ledger.ts); each owner's Durable Object keeps its own copy in its SQLite database.
+This library stores one owner's [duration ledger](../../docs/GLOSSARY.md#duration-ledger): its duration allowance, duration reservations, and the generated audio duration they settle into. Accounts and conversion grants use the same tables and the same [ledger](src/duration-ledger.ts); each owner's Durable Object keeps its own copy in its SQLite database.
 
 The [schema](src/duration-ledger-schema.ts) defines three ledger tables and the owner's `audio_segments` table:
 

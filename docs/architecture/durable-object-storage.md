@@ -10,7 +10,7 @@ All three stores define `rate_events` from the [shared rate-limit schema](../../
 
 ## Naming conventions
 
-Tables that model the same concept use the same name and columns in every store; the account and conversion grant objects share their [duration ledger tables](../../libs/duration-ledger/src/duration-ledger-schema.ts). Column names end in a suffix that states the unit:
+The account and conversion grant objects share one definition of their [duration ledger and audio segment tables](../../libs/duration-ledger/src/duration-ledger-schema.ts). Their conversion tables keep owner-specific names, `account_conversions` and `conversions`, because their columns differ, but a column that records the same fact has the same name in both. Column names end in a suffix that states the unit:
 
 - A point in time is an integer of Unix epoch milliseconds whose name ends in `_at_ms`, such as `created_at_ms` or `completed_at_ms`. A row's creation time is `created_at_ms`.
 - A duration is an integer of milliseconds whose name ends in `_milliseconds`, such as `estimated_milliseconds` or `offset_milliseconds`.
