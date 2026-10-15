@@ -108,7 +108,8 @@ test("retrying a trial submission reuses its key and sends only the source URL",
   await component.getByRole("textbox", { name: "URL", exact: true }).fill(sourceUrl);
   for (const count of [1, 2]) {
     await component.getByRole("button", { name: "Load & listen" }).click();
-    await expect(component.getByRole("alert")).toHaveText("The service is unavailable.");
+    // A server failure carries no message meant for users.
+    await expect(component.getByRole("alert")).toHaveText("The conversion could not start.");
     await expect.poll(() => keys.length).toBe(count);
   }
   expect(keys[0]).toBeTruthy();

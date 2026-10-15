@@ -20,12 +20,17 @@ import {
   createGrantQueryKey,
   exchangeCredential,
 } from "#src/data-fetching/trial-link.js";
-import { UserFacingError } from "#src/errors.js";
+import { UserFacingError, type ErrorCopy } from "#src/errors.js";
 import { trialBrowserState } from "#src/trial-browser-state.js";
 
+const CHECK_COMPLETE_TRIAL_LINK = "Check that you opened the complete trial link.";
 const TRIAL_LINK_INVALID = {
   title: "This trial link is invalid.",
-  detail: "Check that you opened the complete trial link.",
+  detail: CHECK_COMPLETE_TRIAL_LINK,
+};
+const TRIAL_LINK_REVOKED = {
+  title: "This trial link was revoked.",
+  detail: CHECK_COMPLETE_TRIAL_LINK,
 };
 const TRIAL_SESSION_LOST = {
   title: "This browser no longer has access.",
@@ -84,14 +89,10 @@ function TrialConversionPage(): React.JSX.Element {
 }
 
 /** Opening a trial link words its refusals in terms of the link rather than the grant. */
-function describeTrialLinkRefusal(error: RpcError): { title: string; detail: string } {
+function describeTrialLinkRefusal(error: RpcError): ErrorCopy {
   if (error.code === "grant-session-required" || error.code === "grant-session-invalid")
     return TRIAL_SESSION_LOST;
-  if (error.code === "grant-revoked")
-    return {
-      title: "This trial link was revoked.",
-      detail: "Check that you opened the complete trial link.",
-    };
+  if (error.code === "grant-revoked") return TRIAL_LINK_REVOKED;
   return TRIAL_LINK_INVALID;
 }
 

@@ -1,7 +1,8 @@
 // The class api-request.ts re-exports; importing that module would cycle back to the query client.
 import { RpcError } from "@cup/web-app-api.client";
 
-type ErrorCopy = { title: string; detail: string | undefined };
+/** The wording of a failure: what failed, and why when that is known. */
+export type ErrorCopy = { title: string; detail: string | undefined };
 
 /** What the user is told about a failure, shared by error screens and error toasts. */
 type ErrorDescription = ErrorCopy & { isRetryable: boolean };
@@ -47,4 +48,10 @@ export function describeError(
 
   // Server failures, lost connections, and app bugs carry no message meant for users.
   return { title: fallbackTitle, detail: undefined, isRetryable: true };
+}
+
+/** One line about a failure for text shown next to the control that failed. */
+export function summarizeError(error: unknown, fallbackTitle: string): string {
+  const description = describeError(error, fallbackTitle);
+  return description.detail ?? description.title;
 }

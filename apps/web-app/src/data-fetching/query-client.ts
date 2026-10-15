@@ -24,7 +24,7 @@ declare module "@tanstack/react-query" {
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error, query) => {
-      // Without data, the page has nothing to show and its error boundary reports the failure.
+      // Without data, the page has nothing to show and reports the failure in place of its content.
       if (query.state.data === undefined || query.meta?.errorDisplay === "inline") return;
 
       // A polling query keeps failing while the connection is down; one toast covers all attempts.

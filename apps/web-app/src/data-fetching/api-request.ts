@@ -6,6 +6,7 @@ import {
 
 import { createAppApiClient } from "#src/api-client.js";
 import { getFreshAccountSession, getResourceAccountSession } from "#src/auth/account-session.js";
+import { UserFacingError } from "#src/errors.js";
 
 /** Every unsuccessful API response rejects with this error; see {@link requestApi}. */
 export { RpcError } from "@cup/web-app-api.client";
@@ -59,6 +60,7 @@ export async function requestApi<Response extends ApiResponse>(
   }
 
   const session = await getFreshAccountSession();
-  if (session?.user.id !== auth.subject) throw new Error("Sign in to continue.");
+  if (session?.user.id !== auth.subject)
+    throw new UserFacingError({ title: "Sign in to continue." });
   return parseOkResponse(send(client.createAuthenticatedRpcClient(session.access_token)));
 }
