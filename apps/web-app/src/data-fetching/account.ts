@@ -2,7 +2,7 @@ import { check } from "@patricktree-stack/utils-ecma/assert.utils";
 import { queryOptions } from "@tanstack/react-query";
 import { useMutation } from "@tanstack/react-query";
 
-import { accountStartResponseSchema } from "@cup/web-app-api.routes";
+import { accountStartResponseSchema } from "@cup/listener-api.routes";
 
 import { isSignedInAs, signInGoogle } from "#src/auth/account-session.js";
 import {

@@ -1,7 +1,7 @@
-import { WebAppApiClient } from "@cup/web-app-api.client";
+import { ListenerApiClient } from "@cup/listener-api.client";
 
 import { apiOrigin } from "#src/platform/api-origin.js";
 
-export function createAppApiClient(): WebAppApiClient {
-  return new WebAppApiClient(apiOrigin());
+export function createListenerApiClient(): ListenerApiClient {
+  return new ListenerApiClient(apiOrigin());
 }

@@ -20,7 +20,7 @@ Identity deletion and Cup storage cleanup retry independently; an identity-provi
 
 Deletion and recovery require a one-use challenge and fresh Google authentication for the same identity, as described in [authentication](authentication.md#operator-access-and-lifecycle-confirmation). Signing in alone does not restore access.
 
-Lifecycle endpoints use the shared application API contracts, request validation, and error envelope. Account transitions return explicit confirmation conflicts across Durable Object RPC; unexpected storage or registry failures remain operational errors. After scheduling, the API attempts Google token revocation when the client supplies a provider token, verifies that it belongs to the same identity, and records the outcome. Revocation failure does not undo scheduling; a failure to record the outcome is reported as an operational error, not a rejected confirmation.
+Lifecycle endpoints use the shared listener API contracts, request validation, and error envelope. Account transitions return explicit confirmation conflicts across Durable Object RPC; unexpected storage or registry failures remain operational errors. After scheduling, the API attempts Google token revocation when the client supplies a provider token, verifies that it belongs to the same identity, and records the outcome. Revocation failure does not undo scheduling; a failure to record the outcome is reported as an operational error, not a rejected confirmation.
 
 Scheduling stops playback on the requesting client and blocks subsequent private access checks. Lifecycle inspection and explicit recovery remain available until the deadline. Recovery preserves history and allowance; once the deadline is reached, recovery is refused.
 

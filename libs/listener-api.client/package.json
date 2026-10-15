@@ -1,5 +1,5 @@
 {
-  "name": "@cup/web-app-api.routes",
+  "name": "@cup/listener-api.client",
   "private": true,
   "files": [
     "src/**"
@@ -10,10 +10,6 @@
   },
   "exports": {
     "./package.json": "./package.json",
-    "./web-app-csp": {
-      "types": "./dist/types/web-app-csp.d.ts",
-      "default": "./src/web-app-csp.ts"
-    },
     ".": {
       "types": "./dist/types/index.d.ts",
       "default": "./src/index.ts"
@@ -24,33 +20,23 @@
     "clean": "del-cli --dot=true \"dist\" \"*.tsbuildinfo\"",
     "lint": "turbo run turbo:lint",
     "lint:fix": "turbo run turbo:lint:fix",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "turbo:build": "prepare-declaration-build --declaration-output-dir ./dist/types --build-info-file ./dist/tsconfig.build.tsbuildinfo --source-package-json ./src/package.json && tsc --build ./tsconfig.json",
+    "turbo:build": "prepare-declaration-build --declaration-output-dir ./dist/types --build-info-file ./dist/tsconfig.build.tsbuildinfo --build-info-file ./dist/tsconfig.scripts.tsbuildinfo --source-package-json ./src/package.json && tsc --build ./tsconfig.json && node ./scripts/export-openapi-json.ts && oxfmt ./dist/create-audiobook-from-url-openapi.json",
     "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
-    "turbo:lint:fix": "pnpm run turbo:lint --fix",
-    "turbo:test": "pnpm run test"
+    "turbo:lint:fix": "pnpm run turbo:lint --fix"
   },
   "dependencies": {
-    "@cup/conversion-contracts": "workspace:*",
-    "@cup/conversion-grants": "workspace:*",
-    "@cup/narration-document-creation": "workspace:*",
-    "@hono/zod-openapi": "catalog:hono",
+    "@cup/listener-api.routes": "workspace:*",
     "hono": "catalog:hono",
-    "zod": "^4.6.5"
+    "type-fest": "^5.10.0"
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",
     "@cup/prepare-declaration-build": "workspace:*",
     "@patricktree-stack/config-typescript": "workspace:*",
-    "@patricktree-stack/config-vitest": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
-    "typescript": "catalog:",
-    "vite": "catalog:",
-    "vitest": "catalog:"
+    "typescript": "catalog:"
   }
 }

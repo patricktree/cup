@@ -383,45 +383,47 @@ const coverImageRoute = createRoute({
 });
 const coverImageHeadRoute = createRoute({ ...coverImageRoute, method: "head" });
 
-type WebAppApiEnvironment<Bindings extends object> = {
+type ListenerApiEnvironment<Bindings extends object> = {
   Bindings: Bindings;
   Variables: { requestId: string };
 };
-type WebAppApiRouteHandler<Route, Bindings extends object> = Route extends Parameters<
+type ListenerApiRouteHandler<Route, Bindings extends object> = Route extends Parameters<
   typeof createRoute
 >[0]
   ? (
       ...args: Parameters<
-        RouteHandler<Route & { getRoutingPath(): string }, WebAppApiEnvironment<Bindings>>
+        RouteHandler<Route & { getRoutingPath(): string }, ListenerApiEnvironment<Bindings>>
       >
     ) => Response | Promise<Response>
   : never;
-export type WebAppApiHandlers<Bindings extends object> = {
-  deletionChallenge: WebAppApiRouteHandler<typeof deletionChallengeRoute, Bindings>;
-  scheduleDeletion: WebAppApiRouteHandler<typeof scheduleDeletionRoute, Bindings>;
-  restoreAccount: WebAppApiRouteHandler<typeof restoreAccountRoute, Bindings>;
-  authConfig: WebAppApiRouteHandler<typeof authConfigRoute, Bindings>;
-  getHistory: WebAppApiRouteHandler<typeof historyRoute, Bindings>;
-  filesSession: WebAppApiRouteHandler<typeof filesSessionRoute, Bindings>;
-  clearFilesSession: WebAppApiRouteHandler<typeof clearFilesSessionRoute, Bindings>;
-  getAccount: WebAppApiRouteHandler<typeof getAccountRoute, Bindings>;
-  startAccountConversion: WebAppApiRouteHandler<typeof startAccountConversionRoute, Bindings>;
-  exchangeSession: WebAppApiRouteHandler<typeof exchangeSessionRoute, Bindings>;
-  getGrant: WebAppApiRouteHandler<typeof getGrantRoute, Bindings>;
-  getConversion: WebAppApiRouteHandler<typeof getConversionRoute, Bindings>;
-  startTrialConversion: WebAppApiRouteHandler<typeof startTrialConversionRoute, Bindings>;
-  getAudiobook: WebAppApiRouteHandler<typeof audiobookRoute, Bindings>;
-  retryConversion: WebAppApiRouteHandler<typeof retryConversionRoute, Bindings>;
-  savePosition: WebAppApiRouteHandler<typeof savePositionRoute, Bindings>;
-  getAudio: WebAppApiRouteHandler<typeof audioRoute, Bindings>;
-  headAudio: WebAppApiRouteHandler<typeof audioHeadRoute, Bindings>;
-  getCoverImage: WebAppApiRouteHandler<typeof coverImageRoute, Bindings>;
-  headCoverImage: WebAppApiRouteHandler<typeof coverImageHeadRoute, Bindings>;
+export type ListenerApiHandlers<Bindings extends object> = {
+  deletionChallenge: ListenerApiRouteHandler<typeof deletionChallengeRoute, Bindings>;
+  scheduleDeletion: ListenerApiRouteHandler<typeof scheduleDeletionRoute, Bindings>;
+  restoreAccount: ListenerApiRouteHandler<typeof restoreAccountRoute, Bindings>;
+  authConfig: ListenerApiRouteHandler<typeof authConfigRoute, Bindings>;
+  getHistory: ListenerApiRouteHandler<typeof historyRoute, Bindings>;
+  filesSession: ListenerApiRouteHandler<typeof filesSessionRoute, Bindings>;
+  clearFilesSession: ListenerApiRouteHandler<typeof clearFilesSessionRoute, Bindings>;
+  getAccount: ListenerApiRouteHandler<typeof getAccountRoute, Bindings>;
+  startAccountConversion: ListenerApiRouteHandler<typeof startAccountConversionRoute, Bindings>;
+  exchangeSession: ListenerApiRouteHandler<typeof exchangeSessionRoute, Bindings>;
+  getGrant: ListenerApiRouteHandler<typeof getGrantRoute, Bindings>;
+  getConversion: ListenerApiRouteHandler<typeof getConversionRoute, Bindings>;
+  startTrialConversion: ListenerApiRouteHandler<typeof startTrialConversionRoute, Bindings>;
+  getAudiobook: ListenerApiRouteHandler<typeof audiobookRoute, Bindings>;
+  retryConversion: ListenerApiRouteHandler<typeof retryConversionRoute, Bindings>;
+  savePosition: ListenerApiRouteHandler<typeof savePositionRoute, Bindings>;
+  getAudio: ListenerApiRouteHandler<typeof audioRoute, Bindings>;
+  headAudio: ListenerApiRouteHandler<typeof audioHeadRoute, Bindings>;
+  getCoverImage: ListenerApiRouteHandler<typeof coverImageRoute, Bindings>;
+  headCoverImage: ListenerApiRouteHandler<typeof coverImageHeadRoute, Bindings>;
 };
 
 /** Creates the typed HTTP interface used by the web application. */
-export function createWebAppApi<Bindings extends object>(handlers: WebAppApiHandlers<Bindings>) {
-  return new OpenAPIHono<WebAppApiEnvironment<Bindings>>({ defaultHook })
+export function createListenerApi<Bindings extends object>(
+  handlers: ListenerApiHandlers<Bindings>,
+) {
+  return new OpenAPIHono<ListenerApiEnvironment<Bindings>>({ defaultHook })
     .openapi(deletionChallengeRoute, handlers.deletionChallenge)
     .openapi(scheduleDeletionRoute, handlers.scheduleDeletion)
     .openapi(restoreAccountRoute, handlers.restoreAccount)
@@ -449,8 +451,8 @@ const unavailable = (): never => {
 };
 
 /** Creates a handler-less application used only by local OpenAPI generation. */
-export function createWebAppContractApp() {
-  return createWebAppApi({
+export function createListenerContractApp() {
+  return createListenerApi({
     deletionChallenge: unavailable,
     scheduleDeletion: unavailable,
     restoreAccount: unavailable,

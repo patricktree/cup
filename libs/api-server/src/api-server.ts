@@ -14,13 +14,17 @@ import {
   type ConversionGrantDurableObject,
 } from "@cup/conversion-grants";
 import {
+  audiobookSchema,
+  createListenerApi,
+  type ListenerApiHandlers,
+} from "@cup/listener-api.routes";
+import {
   createOperatorApi,
   inspectAccountResponseSchema,
   listAccountDeletionsResponseSchema,
   type OperatorApiHandlers,
 } from "@cup/operator-api.routes";
 import type { RegistryDurableObject } from "@cup/registry";
-import { audiobookSchema, createWebAppApi, type WebAppApiHandlers } from "@cup/web-app-api.routes";
 
 import { authenticateAccountRequest, mediaCookie, mediaRequest } from "#src/account-auth.ts";
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
@@ -58,7 +62,7 @@ const productionDependencies: ApiServerDependencies = {
 };
 
 async function getGrantConversion(
-  context: Parameters<WebAppApiHandlers<ApiServerEnvironment>["getConversion"]>[0],
+  context: Parameters<ListenerApiHandlers<ApiServerEnvironment>["getConversion"]>[0],
   conversionId: string,
   grantId: string,
 ) {
@@ -113,7 +117,7 @@ async function getGrantConversion(
 }
 
 async function getAccountConversion(
-  context: Parameters<WebAppApiHandlers<ApiServerEnvironment>["getConversion"]>[0],
+  context: Parameters<ListenerApiHandlers<ApiServerEnvironment>["getConversion"]>[0],
   conversionId: string,
   accountId: string,
 ) {
@@ -199,7 +203,7 @@ const validateAccountLifecycleRequest: MiddlewareHandler<{
   return next();
 };
 
-const webAppApiHandlers: WebAppApiHandlers<ApiServerEnvironment> = {
+const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
   async deletionChallenge(context) {
     const auth = await authenticateAccountRequest(context.req.raw, context.env);
     if (auth.result !== "authenticated") {
@@ -1471,7 +1475,7 @@ export function createApiServer(dependencies: ApiServerDependencies = production
   app.use("/api/account/deletion/*", validateAccountLifecycleRequest);
 
   return app
-    .route("/", createWebAppApi(webAppApiHandlers))
+    .route("/", createListenerApi(listenerApiHandlers))
     .route("/", createOperatorApi(operatorApiHandlers));
 }
 

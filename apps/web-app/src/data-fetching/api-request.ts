@@ -1,15 +1,15 @@
 import {
   parseOkResponse,
   type AuthenticatedRpcClient,
-  type WebAppApiClient,
-} from "@cup/web-app-api.client";
+  type ListenerApiClient,
+} from "@cup/listener-api.client";
 
-import { createAppApiClient } from "#src/api-client.js";
+import { createListenerApiClient } from "#src/api-client.js";
 import { getFreshAccountSession, getResourceAccountSession } from "#src/auth/account-session.js";
 import { UserFacingError } from "#src/errors.js";
 
 /** Every unsuccessful API response rejects with this error; see {@link requestApi}. */
-export { RpcError } from "@cup/web-app-api.client";
+export { RpcError } from "@cup/listener-api.client";
 
 type ApiResponse = Awaited<Parameters<typeof parseOkResponse>[0]>;
 type ApiResult<Response extends ApiResponse> = ReturnType<typeof parseOkResponse<Response>>;
@@ -30,11 +30,11 @@ type AccountAuth = { subject: string };
  */
 export function requestApi<Response extends ApiResponse>(
   auth: "none",
-  send: (client: WebAppApiClient) => Promise<Response>,
+  send: (client: ListenerApiClient) => Promise<Response>,
 ): ApiResult<Response>;
 export function requestApi<Response extends ApiResponse>(
   auth: "optional",
-  send: (client: WebAppApiClient | AuthenticatedRpcClient) => Promise<Response>,
+  send: (client: ListenerApiClient | AuthenticatedRpcClient) => Promise<Response>,
 ): ApiResult<Response>;
 export function requestApi<Response extends ApiResponse>(
   auth: AccountAuth,
@@ -42,14 +42,14 @@ export function requestApi<Response extends ApiResponse>(
 ): ApiResult<Response>;
 export async function requestApi<Response extends ApiResponse>(
   ...[auth, send]:
-    | [auth: "none", send: (client: WebAppApiClient) => Promise<Response>]
+    | [auth: "none", send: (client: ListenerApiClient) => Promise<Response>]
     | [
         auth: "optional",
-        send: (client: WebAppApiClient | AuthenticatedRpcClient) => Promise<Response>,
+        send: (client: ListenerApiClient | AuthenticatedRpcClient) => Promise<Response>,
       ]
     | [auth: AccountAuth, send: (client: AuthenticatedRpcClient) => Promise<Response>]
 ): ApiResult<Response> {
-  const client = createAppApiClient();
+  const client = createListenerApiClient();
   if (auth === "none") {
     return parseOkResponse(send(client));
   }

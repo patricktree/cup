@@ -12,7 +12,7 @@ export default defineConfig({
           {
             name: "fetch",
             message:
-              "Use WebAppApiClient from @cup/web-app-api.client (libs/web-app-api.client/src/rpc-client.ts), including its authenticated RPC client for account requests.",
+              "Use ListenerApiClient from @cup/listener-api.client (libs/listener-api.client/src/rpc-client.ts), including its authenticated RPC client for account requests.",
           },
         ],
         checkGlobalObject: true,

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import type { PlaybackPosition } from "@cup/web-app-api.routes";
+import type { PlaybackPosition } from "@cup/listener-api.routes";
 
 import {
   PlaybackSession,

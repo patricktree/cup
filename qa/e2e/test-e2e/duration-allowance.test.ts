@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 import { analyzeMp3 } from "@cup/audiobook-production";
 import { estimateAudioDuration } from "@cup/conversion-contracts/duration-accounting";
 import { grantSnapshotSchema } from "@cup/conversion-grants/contracts";
-import { startConversionResponseSchema } from "@cup/web-app-api.routes";
+import { startConversionResponseSchema } from "@cup/listener-api.routes";
 
 import { expect, test, type WorkerEnvironment } from "#test-e2e/fixtures.ts";
 import {

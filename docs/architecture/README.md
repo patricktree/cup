@@ -8,7 +8,7 @@ Cup turns source content behind a URL into an audiobook. A shared web applicatio
 flowchart TD
     Operator[Operator CLI] --> Access[Cloudflare Access]
     Access --> Worker
-    Web[Web browser] --> Worker[Cloudflare Worker: Web App API, Operator API, assets]
+    Web[Web browser] --> Worker[Cloudflare Worker: Listener API, Operator API, assets]
     Native[Capacitor mobile app] --> Worker
     Registry --> Auth
     Worker --> Auth
@@ -76,7 +76,7 @@ flowchart TD
 
 ## API definitions
 
-The [application contracts](../../libs/web-app-api.routes/src/hono-app.ts) and [operator contracts](../../libs/operator-api.routes/src/hono-app.ts) define HTTP methods, paths, and schemas; [server composition](../../libs/api-server/src/api-server.ts) mounts their handlers. Account deletion and recovery handlers are implemented directly in the server composition. The [OpenAPI export](../../libs/web-app-api.client/scripts/export-openapi-json.ts) covers the application contracts, not the operator API. See [authentication and authorization](authentication.md) for access rules. Durable Object RPC and Workflow invocation are internal platform interfaces.
+The listener API serves the web and mobile apps that listeners use; the operator API serves the operator CLI. The [listener contracts](../../libs/listener-api.routes/src/hono-app.ts) and [operator contracts](../../libs/operator-api.routes/src/hono-app.ts) define HTTP methods, paths, and schemas; [server composition](../../libs/api-server/src/api-server.ts) mounts their handlers. Account deletion and recovery handlers are implemented directly in the server composition. The [OpenAPI export](../../libs/listener-api.client/scripts/export-openapi-json.ts) covers the listener contracts, not the operator API. See [authentication and authorization](authentication.md) for access rules. Durable Object RPC and Workflow invocation are internal platform interfaces.
 
 ## Storage ownership
 

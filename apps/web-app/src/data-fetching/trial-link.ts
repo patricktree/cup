@@ -6,7 +6,7 @@ import {
   startConversionResponseSchema,
   type GrantSnapshot,
   type StartConversionResponse,
-} from "@cup/web-app-api.routes";
+} from "@cup/listener-api.routes";
 
 import { requestApi } from "#src/data-fetching/api-request.js";
 

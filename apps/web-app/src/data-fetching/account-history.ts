@@ -1,7 +1,7 @@
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
 import { infiniteQueryOptions } from "@tanstack/react-query";
 
-import { accountHistorySchema } from "@cup/web-app-api.routes";
+import { accountHistorySchema } from "@cup/listener-api.routes";
 
 import { requestApi } from "#src/data-fetching/api-request.js";
 import { queryClient } from "#src/data-fetching/query-client.js";
