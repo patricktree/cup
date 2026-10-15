@@ -45,7 +45,38 @@ The API verifies Supabase JWTs locally against the issuer's signing keys and val
 
 The web client sends every API request through one [request module](../../apps/web-app/src/data-fetching/api-request.ts). Each call states its account authorization: none, the signed-in account's token if there is one (audiobook reads and retries, whose conversion an account or a conversion grant may own), or a required signed-in account. Account operations name the account they were issued for, and the module refuses to send them once a different account is signed in. A fresh token is resolved per request. Grant sessions travel as cookies regardless of this choice. Every unsuccessful response rejects with one error type carrying the API error code, HTTP status, and retry delay.
 
-Sources: [session lifecycle](../../apps/web-app/src/auth/account-session.ts), [web adapter](../../apps/web-app/src/platform/account-auth.web.ts), [Android adapter](../../apps/web-app/src/platform/account-auth.android.ts), [iOS adapter](../../apps/web-app/src/platform/account-auth.ios.ts), [token verification](../../libs/api-server/src/account-auth.ts), and [registry provisioning](../../libs/registry/src/registry-durable-object.ts).
+Sources: [session lifecycle](../../apps/web-app/src/auth/account-session-machine.ts), [web adapter](../../apps/web-app/src/platform/account-auth.web.ts), [Android adapter](../../apps/web-app/src/platform/account-auth.android.ts), [iOS adapter](../../apps/web-app/src/platform/account-auth.ios.ts), [token verification](../../libs/api-server/src/account-auth.ts), and [registry provisioning](../../libs/registry/src/registry-durable-object.ts).
+
+## Client session lifecycle
+
+The web client models account auth as an [XState machine](../../apps/web-app/src/auth/account-session-machine.ts), following [ADR 0009](../adr/0009-use-xstate-for-client-lifecycle-state-machines.md). A [facade](../../apps/web-app/src/auth/account-session.ts) keeps the promise-based functions that routes, data fetching, and the player call, and derives the loading, signed-out, signed-in, or error state the UI shows.
+
+```mermaid
+stateDiagram-v2
+    [*] --> uninitialized
+    uninitialized --> initializing: INITIALIZE
+    initializing --> error: config, client, or restore fails
+    error --> initializing: INITIALIZE
+    initializing --> ready: session restored
+    state ready {
+        [*] --> signedOut
+        [*] --> signedIn
+        signedOut --> signingIn: SIGN_IN
+        signedIn --> signingIn: SIGN_IN (fresh authentication)
+        signingIn --> signedIn: provider session
+        signingIn --> signedOut: ended without a session
+        signedOut --> signedIn: SESSION_CHANGED
+    }
+    ready --> ready: SESSION_CHANGED to another subject
+    ready --> signingOut: SIGN_OUT
+    signingOut --> ready: media sessions cleared
+```
+
+Initialization loads the public auth configuration, creates the Supabase client, restores the stored session, and registers the native app-resume listener. Every change of the signed-in subject stops playback, and signing into an account forgets the remembered trial. Replacing or removing a signed-in account also clears the query cache; the initial restoration does not, because route loaders may be awaiting it.
+
+The `ready` state is one session scope. It owns the Supabase auth-change subscription and in-flight session reads. Starting a sign-in, starting a sign-out, or replacing the signed-in subject ends the scope, and a session read that has not finished then resolves to no session rather than one that may belong to another account. Sign-in is refused while signing out. Auth changes that Supabase reports during sign-out are ignored because the subscription belongs to the ended scope.
+
+A parallel region serializes media cookie issuance across scopes. Ending a scope discards queued requests and the result of the request in flight, but still waits for that request's response. Sign-out shows the signed-out state first, stops and unloads audio, signs out of Supabase locally, stops token refresh, clears the stored session and the remembered trial, waits for media cookie issuance to settle, and then clears the web and native media sessions. If Supabase could not confirm server revocation, sign-out still completes locally and reports the failure. When account auth cannot initialize and no account is signed in, requests that accept either authorization, such as trial pages and audiobook reads, continue with the grant session alone.
 
 ## Resuming a conversion after sign-in
 
