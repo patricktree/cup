@@ -1,7 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { Temporal } from "temporal-polyfill";
 
-import { RollingLimits } from "@cup/accounts/rolling-limits";
 import {
   dispatchSegmentWorkflows,
   reconcileSegmentWorkflow,
@@ -16,6 +15,7 @@ import {
   type ConversionMeasurements,
 } from "@cup/conversion-contracts";
 import { estimateAudioDuration } from "@cup/conversion-contracts/duration-accounting";
+import { RollingLimits } from "@cup/rolling-limits";
 
 import { canonicalJson, encodeBase64Url } from "#src/encoding.ts";
 import type {

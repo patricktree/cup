@@ -6,13 +6,13 @@ import { z } from "zod";
 
 import type { AccountSnapshot } from "@cup/accounts";
 import type { DeletionAttempt } from "@cup/accounts/lifecycle";
-import { RollingLimits } from "@cup/accounts/rolling-limits";
 import { conversionOwnerSchema, type ConversionOwner } from "@cup/conversion-contracts";
 import type {
   ListGrantsResult,
   ProjectedGrantState,
   GrantRegistrySnapshot,
 } from "@cup/conversion-grants";
+import { RollingLimits } from "@cup/rolling-limits";
 
 import { DeletionCoordinator, type DeletionEnvironment } from "#src/deletion-coordinator.ts";
 import {

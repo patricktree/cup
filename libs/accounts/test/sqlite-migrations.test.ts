@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import * as accountSchema from "#src/account-sqlite-schema.ts";
 import accountMigrations from "#src/migrations/account.ts";
-import { rateEvents } from "#src/sqlite-schema-shared.ts";
+import { rateEvents } from "#src/rate-limit-schema.ts";
 
 const stores = [
   { name: "account", schema: { ...accountSchema, rateEvents }, bundle: accountMigrations },

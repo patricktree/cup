@@ -57,7 +57,7 @@ The Worker is the HTTP boundary. Separate preparation and audio segment synthesi
 | Narration selection and document creation | Select source material and structure narration text and synchronization units                  | [Selection library](../../libs/narration-content-selection/), [document creation library](../../libs/narration-document-creation/)  |
 | Audiobook production                      | Store prepared narration and synthesize independently playable audio segments                  | [Audiobook production library](../../libs/audiobook-production/)                                                                    |
 
-The libraries are code boundaries inside the deployed system, not separate network services. [Accounts](../../libs/accounts/README.md) owns account conversion state, duration accounting, lifecycle transitions, and artifact fencing. It also provides the rolling-window rate limiter and its `rate_events` table, which the grant and registry objects reuse in their own databases. [Conversion grants](../../libs/conversion-grants/README.md) owns trial grants. [Registry](../../libs/registry/README.md) owns account identity mapping and provisioning, grant inventory, conversion ownership for both accounts and trials, ingress limits, and account deletion coordination. Owner objects consume narrow registry RPC interfaces; integration tests in the registry library exercise the three objects together. [Conversion contracts](../../libs/conversion-contracts/README.md) owns runtime-independent shared schemas, types, and duration calculations.
+The libraries are code boundaries inside the deployed system, not separate network services. [Accounts](../../libs/accounts/README.md) owns account conversion state, duration accounting, lifecycle transitions, and artifact fencing. [Conversion grants](../../libs/conversion-grants/README.md) owns trial grants. [Registry](../../libs/registry/README.md) owns account identity mapping and provisioning, grant inventory, conversion ownership for both accounts and trials, ingress limits, and account deletion coordination. Owner objects consume narrow registry RPC interfaces; integration tests in the registry library exercise the three objects together. [Conversion contracts](../../libs/conversion-contracts/README.md) owns runtime-independent shared schemas, types, and duration calculations. [Rolling limits](../../libs/rolling-limits/README.md) provides the rolling-window rate limiter and its `rate_events` table, which the account, grant, and registry objects each keep in their own databases.
 
 ```mermaid
 flowchart TD
@@ -67,7 +67,9 @@ flowchart TD
     API --> Contracts[conversion-contracts]
     Registry --> Accounts
     Registry --> Grants
-    Grants --> Accounts
+    Accounts --> Limits[rolling-limits]
+    Grants --> Limits
+    Registry --> Limits
     Accounts --> Contracts
     Grants --> Contracts
     Registry --> Contracts

@@ -9,6 +9,7 @@ import {
   createConversionArtifactPrefix,
 } from "@cup/conversion-contracts";
 import { derivePreparedConversionStatus } from "@cup/conversion-contracts/duration-accounting";
+import { RollingLimits } from "@cup/rolling-limits";
 
 import {
   accountIdentitySchema,
@@ -37,10 +38,9 @@ import {
   accountTombstone,
 } from "#src/account-sqlite-schema.ts";
 import { canonicalJson } from "#src/encoding.ts";
-import { RollingLimits } from "#src/rolling-limits.ts";
+import { rateEvents } from "#src/rate-limit-schema.ts";
 import { migrateAccount } from "#src/sqlite-migrations.ts";
 import { requireRow } from "#src/sqlite-row.ts";
-import { rateEvents } from "#src/sqlite-schema-shared.ts";
 
 export class AccountSqlite {
   private readonly database: DrizzleSqliteDODatabase;

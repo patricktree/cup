@@ -1,0 +1,7 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Generates the Durable Object runtime types the limiter compiles against; no Worker runs it.
+  "name": "rolling-limits-types",
+  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_date": "2026-08-15",
+}

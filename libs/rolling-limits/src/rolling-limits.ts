@@ -2,8 +2,7 @@ import { and, asc, eq, gt, lte, min } from "drizzle-orm";
 import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { z } from "zod";
 
-import { requireRow } from "#src/sqlite-row.ts";
-import { rateEvents } from "#src/sqlite-schema-shared.ts";
+import { rateEvents } from "#src/rate-limit-schema.ts";
 
 /** A serialized rolling window, with no fixed-window boundary burst. */
 export class RollingLimits {
@@ -42,11 +41,14 @@ export class RollingLimits {
     this.database.delete(rateEvents).where(lte(rateEvents.expiresAtMs, nowMs)).run();
   }
   nextAlarm() {
-    return requireRow(
-      this.database
-        .select({ next: min(rateEvents.expiresAtMs) })
-        .from(rateEvents)
-        .get(),
-    ).next;
+    const row = this.database
+      .select({ next: min(rateEvents.expiresAtMs) })
+      .from(rateEvents)
+      .get();
+    // An aggregate without GROUP BY always yields one row, even for an empty table.
+    if (row === undefined) {
+      throw new Error("Required SQLite row is missing");
+    }
+    return row.next;
   }
 }

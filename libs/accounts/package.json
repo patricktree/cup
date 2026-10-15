@@ -26,14 +26,6 @@
     "./lifecycle": {
       "types": "./dist/types/account-lifecycle.d.ts",
       "default": "./src/account-lifecycle.ts"
-    },
-    "./rolling-limits": {
-      "types": "./dist/types/rolling-limits.d.ts",
-      "default": "./src/rolling-limits.ts"
-    },
-    "./sqlite-schema-shared": {
-      "types": "./dist/types/sqlite-schema-shared.d.ts",
-      "default": "./src/sqlite-schema-shared.ts"
     }
   },
   "scripts": {
@@ -52,6 +44,7 @@
   },
   "dependencies": {
     "@cup/conversion-contracts": "workspace:*",
+    "@cup/rolling-limits": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "temporal-polyfill": "^1.0.5",
     "zod": "^4.6.5"

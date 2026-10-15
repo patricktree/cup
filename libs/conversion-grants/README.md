@@ -8,7 +8,7 @@ All Cup application SQLite access uses Drizzle's Durable Object driver. Edit the
 | ---------------- | ------------------------------------------ | ---------------------------------- |
 | Conversion grant | [Grant schema](src/grant-sqlite-schema.ts) | [Grant migrations](drizzle/grant/) |
 
-The [rate-limit schema](src/rate-limit-schema.ts) re-exports the [shared rate-limit table](../accounts/src/sqlite-schema-shared.ts), which records conversion start attempts for the rolling start limit.
+The [rate-limit schema](src/rate-limit-schema.ts) re-exports the [shared rate-limit table](../rolling-limits/src/rate-limit-schema.ts), which records conversion start attempts for the rolling start limit.
 
 Account schemas and migrations live in [accounts](../accounts/README.md); grant inventory, conversion ownership, and registry migrations live in [registry](../registry/README.md). Application reads, writes, and synchronous database transactions use Drizzle. Durable Object alarms and transactions spanning asynchronous trial operations continue to use the Cloudflare storage API.
 
