@@ -141,10 +141,18 @@ describe("actual operator CLI process", () => {
     expect(adjustmentBodies).toEqual([]);
   });
 
-  test("reports account inspection errors through the shared RPC error handling", async () => {
+  test("reports API refusals with the API error code and message", async () => {
     const result = await runCli("--json", "account", "inspect", GRANT_ID);
     expect(result.status).toBe(1);
     expect(result.stdout).toBe("");
+    expect(JSON.parse(result.stderr) as unknown).toEqual({
+      error: { code: "account-unavailable", message: "Account unavailable." },
+    });
+  });
+
+  test("reports failures without an API error body as a generic operator error", async () => {
+    const result = await runCliAt("http://127.0.0.1:1", "--json", "grant", "list");
+    expect(result.status).toBe(1);
     expect(JSON.parse(result.stderr) as unknown).toEqual({
       error: { code: "operator-error", message: "The operator request failed." },
     });

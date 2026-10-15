@@ -25,6 +25,7 @@
     "turbo:lint:fix": "pnpm run turbo:lint --fix"
   },
   "dependencies": {
+    "@cup/api-rpc.client": "workspace:*",
     "@cup/operator-api.routes": "workspace:*",
     "hono": "catalog:hono"
   },

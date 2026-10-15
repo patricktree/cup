@@ -76,7 +76,7 @@ flowchart TD
 
 ## API definitions
 
-The [application contracts](../../libs/web-app-api.routes/src/hono-app.ts) and [operator contracts](../../libs/operator-api.routes/src/hono-app.ts) define HTTP methods, paths, and schemas; [server composition](../../libs/api-server/src/api-server.ts) mounts their handlers. Account deletion and recovery handlers are implemented directly in the server composition. The [OpenAPI export](../../libs/web-app-api.client/scripts/export-openapi-json.ts) covers the application contracts, not the operator API. See [authentication and authorization](authentication.md) for access rules. Durable Object RPC and Workflow invocation are internal platform interfaces.
+The [application contracts](../../libs/web-app-api.routes/src/hono-app.ts) and [operator contracts](../../libs/operator-api.routes/src/hono-app.ts) define HTTP methods, paths, and schemas; [server composition](../../libs/api-server/src/api-server.ts) mounts their handlers. Account deletion and recovery handlers are implemented directly in the server composition. The [OpenAPI export](../../libs/web-app-api.client/scripts/export-openapi-json.ts) covers the application contracts, not the operator API. The [application client](../../libs/web-app-api.client/src/rpc-client.ts) and [operator client](../../libs/operator-api.client/src/rpc-client.ts) share [response handling](../../libs/api-rpc.client/src/rpc-response.ts): every unsuccessful response rejects with one error type carrying the API error code, HTTP status, and retry delay. See [authentication and authorization](authentication.md) for access rules. Durable Object RPC and Workflow invocation are internal platform interfaces.
 
 ## Storage ownership
 
