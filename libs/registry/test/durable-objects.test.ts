@@ -315,7 +315,7 @@ describe("SQLite conversion grant Durable Object", () => {
     expect(await grant.listConversions()).toHaveLength(10);
   });
 
-  test("counts start attempts moved from the legacy start-attempt table", async () => {
+  test("counts start attempts recorded in the rate-event bucket that migration 0002 fills", async () => {
     const name = "migrated-rate-limit";
     const grant = grantStub(name);
     await grant.initialize(grantId(name), CREATED_AT_MS, EXPIRES_AT_MS);
