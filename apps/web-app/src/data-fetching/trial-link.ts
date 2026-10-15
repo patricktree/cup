@@ -33,8 +33,9 @@ export function useStartTrialConversionMutation(
     // The start form shows refusals and the rate-limit countdown next to the submitted URL.
     meta: { errorDisplay: "inline" },
     mutationFn: async (sourceUrl: string) => {
-      if (pending.current?.grantId !== grantId || pending.current.sourceUrl !== sourceUrl)
+      if (pending.current?.grantId !== grantId || pending.current.sourceUrl !== sourceUrl) {
         pending.current = { grantId, sourceUrl, idempotencyKey: crypto.randomUUID() };
+      }
       return startTrialConversion(grantId, sourceUrl, pending.current.idempotencyKey);
     },
     onSuccess: (result) => onStarted(result.conversion.conversionId),

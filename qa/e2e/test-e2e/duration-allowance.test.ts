@@ -150,8 +150,9 @@ test.describe("in-flight reservations", () => {
 
     const second = await start();
     const blocked = await waitForPreparedAudiobook(page, second);
-    if (blocked.status !== "insufficient-duration")
+    if (blocked.status !== "insufficient-duration") {
       throw new Error("Expected the second conversion to lack duration.");
+    }
     expect(blocked.requiredMilliseconds).toBe(reserved);
     expect(blocked.availableMilliseconds).toBe(1_000);
     expect((await readGrant(page, grantId)).duration.reservedMilliseconds).toBe(reserved);
@@ -210,8 +211,9 @@ async function readSpeechCalls(worker: WorkerEnvironment): Promise<SpeechCall[]>
   const response = await fetch(`${worker.origin}/__qa/speech-calls`);
   expect(response.status).toBe(200);
   const value: unknown = await response.json();
-  if (!Array.isArray(value) || !value.every(isSpeechCall))
+  if (!Array.isArray(value) || !value.every(isSpeechCall)) {
     throw new Error("Invalid QA speech call report");
+  }
   return value;
 }
 

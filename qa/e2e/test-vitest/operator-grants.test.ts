@@ -19,8 +19,9 @@ test("updates only the selected grant allowance through the authenticated operat
     created === null ||
     !("grantId" in created) ||
     typeof created.grantId !== "string"
-  )
+  ) {
     throw new Error("Grant creation did not return an ID");
+  }
   const url = `${origin}/api/operator/grants/${created.grantId}/allowance`;
   expect(
     (
@@ -31,7 +32,7 @@ test("updates only the selected grant allowance through the authenticated operat
       })
     ).status,
   ).toBe(401);
-  for (const allowanceMilliseconds of [0, -1, 1.5])
+  for (const allowanceMilliseconds of [0, -1, 1.5]) {
     expect(
       (
         await fetch(url, {
@@ -41,6 +42,7 @@ test("updates only the selected grant allowance through the authenticated operat
         })
       ).status,
     ).toBe(400);
+  }
   const updated = await fetch(url, {
     method: "PUT",
     headers,

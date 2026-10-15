@@ -70,10 +70,14 @@ async function unmount(): Promise<void> {
 
 Object.assign(window, { mount, unmount });
 if (parameters.has("canvas")) {
-  if (parameters.has("thumbnail")) keepFocusFromScrolling();
+  if (parameters.has("thumbnail")) {
+    keepFocusFromScrolling();
+  }
 
   const story = parameters.get("story");
-  if (story !== null) await mount({ story });
+  if (story !== null) {
+    await mount({ story });
+  }
 } else {
   await showGallery();
 }
@@ -139,7 +143,9 @@ async function collectStoryGroups(): Promise<StoryGroup[]> {
   const storyGroups: StoryGroup[] = [];
   for (const [filePath, loadModule] of Object.entries(storyModules)) {
     const module: unknown = await loadModule();
-    if (!isUnknownRecord(module)) continue;
+    if (!isUnknownRecord(module)) {
+      continue;
+    }
 
     const storyNames = Object.entries(module)
       .filter(([, value]) => readStory(value) !== undefined)
@@ -244,7 +250,9 @@ function StoryThumbnail({
       id={storyId}
       onClick={(event) => {
         const isModifiedClick = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
-        if (onSelect === undefined || isModifiedClick) return;
+        if (onSelect === undefined || isModifiedClick) {
+          return;
+        }
 
         event.preventDefault();
         onSelect();
@@ -295,7 +303,9 @@ type StorySelection = {
 function readStorySelection(): StorySelection | undefined {
   const searchParameters = new URLSearchParams(window.location.search);
   const storyId = searchParameters.get("story");
-  if (storyId === null) return undefined;
+  if (storyId === null) {
+    return undefined;
+  }
 
   return { isStripVisible: searchParameters.get("thumbnails") !== "hidden", storyId };
 }
@@ -317,7 +327,9 @@ function StoryView({ initialSelection, storyGroups }: StoryViewProps): React.Rea
   React.useEffect(function followHistoryNavigation() {
     function readSelectionFromUrl(): void {
       const nextSelection = readStorySelection();
-      if (nextSelection !== undefined) setSelection(nextSelection);
+      if (nextSelection !== undefined) {
+        setSelection(nextSelection);
+      }
     }
 
     window.addEventListener("popstate", readSelectionFromUrl);
@@ -427,8 +439,12 @@ function StoryView({ initialSelection, storyGroups }: StoryViewProps): React.Rea
 }
 
 function readStory(value: unknown): Story | undefined {
-  if (isStoryComponent(value)) return { component: value };
-  if (!isUnknownRecord(value) || !isStoryComponent(value["component"])) return undefined;
+  if (isStoryComponent(value)) {
+    return { component: value };
+  }
+  if (!isUnknownRecord(value) || !isStoryComponent(value["component"])) {
+    return undefined;
+  }
   const handlers = value["handlers"];
   const beforeMount = value["beforeMount"];
   const play = value["play"];

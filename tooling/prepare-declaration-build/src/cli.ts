@@ -28,10 +28,14 @@ export async function runCli(args: string[]): Promise<number> {
     await program.parseAsync(args, { from: "user" });
     return 0;
   } catch (error) {
-    if (error instanceof CommanderError) return error.exitCode;
+    if (error instanceof CommanderError) {
+      return error.exitCode;
+    }
     console.error(error instanceof Error ? error.message : "Declaration build preparation failed.");
     return 1;
   }
 }
 
-if (import.meta.main) process.exitCode = await runCli(process.argv.slice(2));
+if (import.meta.main) {
+  process.exitCode = await runCli(process.argv.slice(2));
+}

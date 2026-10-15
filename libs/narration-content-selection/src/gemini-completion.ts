@@ -9,8 +9,9 @@ export const completeWithGemini: SelectionCompletion = async (request, options =
   const environment = options.env ?? process.env;
   const accountId = environment["CLOUDFLARE_ACCOUNT_ID"];
   const apiKey = options.apiKey ?? environment["CLOUDFLARE_API_KEY"];
-  if (!accountId || !apiKey)
+  if (!accountId || !apiKey) {
     throw new Error("Narration selection requires Cloudflare account ID and API key");
+  }
   const client = new OpenAI({
     apiKey,
     baseURL: `https://gateway.ai.cloudflare.com/v1/${accountId}/default/google-ai-studio/v1beta/openai`,
@@ -49,12 +50,15 @@ function parseGeminiResponse(
 ): SelectionCompletionResponse {
   const candidate = response.choices[0];
   const usage = response.usage;
-  if (!candidate || !usage)
+  if (!candidate || !usage) {
     throw new Error("Gemini response is missing a candidate or token usage");
+  }
   const toolCalls = (
     candidate.finish_reason === "tool_calls" ? (candidate.message.tool_calls ?? []) : []
   ).map((toolCall) => {
-    if (toolCall.type !== "function") throw new Error("Gemini returned an unsupported tool call");
+    if (toolCall.type !== "function") {
+      throw new Error("Gemini returned an unsupported tool call");
+    }
     return {
       id: toolCall.id,
       name: toolCall.function.name,

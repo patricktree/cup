@@ -50,7 +50,9 @@ export async function requestApi<Response extends ApiResponse>(
     | [auth: AccountAuth, send: (client: AuthenticatedRpcClient) => Promise<Response>]
 ): ApiResult<Response> {
   const client = createAppApiClient();
-  if (auth === "none") return parseOkResponse(send(client));
+  if (auth === "none") {
+    return parseOkResponse(send(client));
+  }
 
   if (auth === "optional") {
     const session = await getResourceAccountSession();
@@ -60,7 +62,8 @@ export async function requestApi<Response extends ApiResponse>(
   }
 
   const session = await getFreshAccountSession();
-  if (session?.user.id !== auth.subject)
+  if (session?.user.id !== auth.subject) {
     throw new UserFacingError({ title: "Sign in to continue." });
+  }
   return parseOkResponse(send(client.createAuthenticatedRpcClient(session.access_token)));
 }

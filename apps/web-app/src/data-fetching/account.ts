@@ -49,11 +49,14 @@ export function useStartAccountConversionMutation(
     // The start form shows refusals and the rate-limit countdown next to the submitted URL.
     meta: { errorDisplay: "inline" },
     onError: (failure, request) => {
-      if (!isSignedInAs(request.subject)) return;
+      if (!isSignedInAs(request.subject)) {
+        return;
+      }
       if (failure instanceof RpcError && failure.status === 429) {
         const pending = readPendingAccountConversion();
-        if (pending?.idempotencyKey === request.idempotencyKey)
+        if (pending?.idempotencyKey === request.idempotencyKey) {
           storePendingAccountConversion({ ...pending, submitted: false });
+        }
       }
     },
     mutationFn: async (request: PendingAccountConversion & { subject: string }) =>
@@ -63,14 +66,19 @@ export function useStartAccountConversionMutation(
         ),
       ),
     onSuccess: async (result, request) => {
-      if (!isSignedInAs(request.subject)) return;
-      if (readPendingAccountConversion()?.idempotencyKey === request.idempotencyKey)
+      if (!isSignedInAs(request.subject)) {
+        return;
+      }
+      if (readPendingAccountConversion()?.idempotencyKey === request.idempotencyKey) {
         clearPendingAccountConversion();
+      }
       await Promise.all([
         invalidateAccountQueries(request.subject),
         invalidateAccountHistory(request.subject),
       ]);
-      if (isSignedInAs(request.subject)) await onSuccess(result.conversionId);
+      if (isSignedInAs(request.subject)) {
+        await onSuccess(result.conversionId);
+      }
     },
   });
 }

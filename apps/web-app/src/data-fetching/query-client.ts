@@ -25,7 +25,9 @@ export const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error, query) => {
       // Without data, the page has nothing to show and reports the failure in place of its content.
-      if (query.state.data === undefined || query.meta?.errorDisplay === "inline") return;
+      if (query.state.data === undefined || query.meta?.errorDisplay === "inline") {
+        return;
+      }
 
       // A polling query keeps failing while the connection is down; one toast covers all attempts.
       notifyError(error, { title: query.meta?.errorTitle, id: toastIdOfQuery(query.queryHash) });
@@ -34,7 +36,9 @@ export const queryClient = new QueryClient({
   }),
   mutationCache: new MutationCache({
     onError: (error, _variables, _context, mutation) => {
-      if (mutation.meta?.errorDisplay === "inline") return;
+      if (mutation.meta?.errorDisplay === "inline") {
+        return;
+      }
 
       notifyError(error, { title: mutation.meta?.errorTitle });
     },

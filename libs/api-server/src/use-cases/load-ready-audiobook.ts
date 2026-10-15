@@ -10,7 +10,9 @@ export async function loadReadyAudiobook(
   dependencies: LoadReadyAudiobookDependencies,
 ): Promise<Audiobook | undefined> {
   const reference = await dependencies.getReadyAudiobookReference();
-  if (reference === undefined) return undefined;
+  if (reference === undefined) {
+    return undefined;
+  }
 
   return dependencies.loadAudiobook(reference);
 }

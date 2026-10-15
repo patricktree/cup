@@ -32,7 +32,9 @@ export async function startAudiobookConversion(
 ): Promise<StartGrantConversionResult> {
   const result = await dependencies.grant.startConversion(input.sourceUrl, input.idempotencyKey);
 
-  if (result.result !== "created") return result;
+  if (result.result !== "created") {
+    return result;
+  }
 
   await dependencies.registry.bindConversion(result.conversion.conversionId, input.grantId);
   await dependencies.registry.applyGrantRegistrySnapshot(result.registrySnapshot);

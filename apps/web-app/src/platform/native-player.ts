@@ -41,7 +41,9 @@ const native = registerPlugin<{
 }>("NarrationPlayer");
 
 export function stopNativePlayback() {
-  if (Capacitor.isNativePlatform()) void native.command({ action: "pause" });
+  if (Capacitor.isNativePlatform()) {
+    void native.command({ action: "pause" });
+  }
 }
 
 /**
@@ -79,7 +81,9 @@ export class NativePlayer {
   // A native engine that is not running yet reports only part of the state.
   private update = (state: Partial<PlayerSnapshot>) => {
     this.snapshot = { ...this.snapshot, ...state };
-    for (const listener of this.listeners) listener();
+    for (const listener of this.listeners) {
+      listener();
+    }
   };
   open = () => {
     this.initialization = (this.initialization ?? Promise.resolve()).then(() => this.initialize());
@@ -138,6 +142,8 @@ export class NativePlayer {
   seekTo = (positionMilliseconds: number) => this.command("seekTo", { positionMilliseconds });
   skip = (direction: 1 | -1) => {
     const unitIndex = this.session.adjacentUnitIndex(this.snapshot.currentUnitIndex, direction);
-    if (unitIndex !== undefined) this.seekToUnit(unitIndex);
+    if (unitIndex !== undefined) {
+      this.seekToUnit(unitIndex);
+    }
   };
 }

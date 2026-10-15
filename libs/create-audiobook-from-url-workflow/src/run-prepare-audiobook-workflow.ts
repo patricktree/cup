@@ -95,8 +95,9 @@ export async function runPrepareAudiobookWorkflow({
 }) {
   const params = conversionParamsSchema.parse(event.payload);
   const { sourceUrl } = params;
-  if ("v" in params && params.conversionId !== event.instanceId)
+  if ("v" in params && params.conversionId !== event.instanceId) {
     throw new NonRetryableError("Workflow conversion identity mismatch");
+  }
   const owner = "v" in params ? params.owner : { kind: "trial" as const, grantId: params.grantId };
   const conversionId = event.instanceId;
   const execution = resolveConversionExecution(env, {
@@ -279,12 +280,16 @@ async function storeDeclaredCoverImage({
   sourceUrl: string;
   step: WorkflowStep;
 }): Promise<CoverImage | undefined> {
-  if (declaration === undefined) return undefined;
+  if (declaration === undefined) {
+    return undefined;
+  }
 
   try {
     const outcome = await step.do("store cover image", COVER_IMAGE_STEP_CONFIG, async () => {
       const loaded = await loadCoverImage(declaration, sourceUrl);
-      if (loaded.result === "refused") return loaded;
+      if (loaded.result === "refused") {
+        return loaded;
+      }
 
       // The bytes are stored inside the step because a step result cannot carry them.
       const coverImage = await storeCoverImage({
@@ -299,7 +304,9 @@ async function storeDeclaredCoverImage({
       });
       return { result: "stored" as const, coverImage };
     });
-    if (outcome.result === "stored") return outcome.coverImage;
+    if (outcome.result === "stored") {
+      return outcome.coverImage;
+    }
 
     logMissingCoverImage(conversionId, outcome.reason);
   } catch (error) {

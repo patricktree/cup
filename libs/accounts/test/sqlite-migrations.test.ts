@@ -31,7 +31,9 @@ for (const { name, schema, bundle } of stores) {
       .filter((file) => file.endsWith("_snapshot.json"))
       .sort();
     const latest = snapshots.at(-1);
-    if (!latest) throw new Error(`Missing migration snapshot for ${name}`);
+    if (!latest) {
+      throw new Error(`Missing migration snapshot for ${name}`);
+    }
     const snapshot = z
       .object({ tables: z.unknown(), views: z.unknown() })
       .parse(JSON.parse(await fs.readFile(`drizzle/${name}/meta/${latest}`, "utf8")));
@@ -45,7 +47,9 @@ test("removing writer purpose preserves outstanding storage effects", () => {
   const database = new sqlite.DatabaseSync(":memory:");
   try {
     for (const [key, migration] of Object.entries(accountMigrations.migrations)) {
-      if (key === "m0003") break;
+      if (key === "m0003") {
+        break;
+      }
       database.exec(migration);
     }
     database.exec(

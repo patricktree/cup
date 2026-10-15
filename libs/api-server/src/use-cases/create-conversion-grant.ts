@@ -52,7 +52,9 @@ export async function createConversionGrant(
   const reservation = await dependencies.registry.reserveProvisioning(input.requestId, input.label);
   const entry = reservation.entry;
 
-  if (entry.credentialIssued) return { result: "already-issued", ...toGrantSummary(entry) };
+  if (entry.credentialIssued) {
+    return { result: "already-issued", ...toGrantSummary(entry) };
+  }
 
   const grant = dependencies.getGrant(entry.grantId);
   const grantSnapshot = await grant.initialize(entry.grantId, entry.createdAtMs, entry.expiresAtMs);

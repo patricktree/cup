@@ -61,7 +61,9 @@ async function fixture(owner = accountId, state = "active") {
     },
     AUDIO_BUCKET: { get: bucketRead },
   };
-  if (!isFixtureEnvironment(env)) throw new Error("Missing account fixture bindings");
+  if (!isFixtureEnvironment(env)) {
+    throw new Error("Missing account fixture bindings");
+  }
   return { app: createApiServer(), env, token, bucketRead };
 }
 

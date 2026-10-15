@@ -19,7 +19,9 @@ test("opens cold-start and repeat App Links while rejecting other origins", asyn
             url: "https://cup.audio/app/trials/test?from=link#credential=v1.test",
           });
           window.addEventListener("test-app-link", (event) => {
-            if (event instanceof CustomEvent) listener({ url: String(event.detail) });
+            if (event instanceof CustomEvent) {
+              listener({ url: String(event.detail) });
+            }
           });
           return "app-link-listener";
         },

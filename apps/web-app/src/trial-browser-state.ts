@@ -10,7 +10,9 @@ const trialBrowserStateSchema = z.object({
 
 function getLastGrantId(): string | null {
   const value = window.localStorage.getItem(TRIAL_BROWSER_STATE_KEY);
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
   return trialBrowserStateSchema.parse(JSON.parse(value)).lastGrantId;
 }
 

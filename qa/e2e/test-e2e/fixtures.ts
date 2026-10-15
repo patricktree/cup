@@ -71,7 +71,9 @@ export const test = base.extend<Fixtures>({
       await route.abort("blockedbyclient");
     });
     page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(message.text());
+      if (message.type() === "error") {
+        consoleErrors.push(message.text());
+      }
     });
     page.on("pageerror", (error) => pageErrors.push(error.message));
 
@@ -227,7 +229,9 @@ async function waitUntilReady(
     }
     try {
       const response = await fetch(origin);
-      if (response.ok) return;
+      if (response.ok) {
+        return;
+      }
     } catch {
       // Wrangler has not bound its local port yet.
     }
@@ -238,7 +242,9 @@ async function waitUntilReady(
 }
 
 async function stopProcess(process: childProcess.ChildProcess | undefined): Promise<void> {
-  if (process === undefined || process.exitCode !== null) return;
+  if (process === undefined || process.exitCode !== null) {
+    return;
+  }
   killProcessGroup(process, "SIGTERM");
   const timeout = setTimeout(() => killProcessGroup(process, "SIGKILL"), 10_000);
   await once(process, "exit");
@@ -246,11 +252,15 @@ async function stopProcess(process: childProcess.ChildProcess | undefined): Prom
 }
 
 function killProcessGroup(process: childProcess.ChildProcess, signal: NodeJS.Signals): void {
-  if (process.pid === undefined || process.exitCode !== null) return;
+  if (process.pid === undefined || process.exitCode !== null) {
+    return;
+  }
   try {
     globalThis.process.kill(-process.pid, signal);
   } catch (error) {
-    if (!isNoSuchProcessError(error)) throw error;
+    if (!isNoSuchProcessError(error)) {
+      throw error;
+    }
   }
 }
 
@@ -262,7 +272,9 @@ async function reservePort(): Promise<number> {
   const server = http.createServer();
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
-  if (address === null || typeof address === "string") throw new Error("No E2E Worker port.");
+  if (address === null || typeof address === "string") {
+    throw new Error("No E2E Worker port.");
+  }
   const { port } = address;
   await new Promise<void>((resolve, reject) =>
     server.close((error) => (error === undefined ? resolve() : reject(error))),
@@ -271,7 +283,9 @@ async function reservePort(): Promise<number> {
 }
 
 async function attachText(testInfo: TestInfo, name: string, lines: string[]): Promise<void> {
-  if (lines.length === 0) return;
+  if (lines.length === 0) {
+    return;
+  }
   await testInfo.attach(name, { body: lines.join("\n"), contentType: "text/plain" });
 }
 

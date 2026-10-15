@@ -54,7 +54,9 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
   }
 
   initialize(identity: AccountIdentity) {
-    if (this.sqlite.isErased()) throw new Error("Account was erased");
+    if (this.sqlite.isErased()) {
+      throw new Error("Account was erased");
+    }
     return this.sqlite.initialize(identity);
   }
 
@@ -72,7 +74,9 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
       nowMs,
       Number(this.env.CONVERSION_OWNER_LIMIT),
     );
-    if (result.result !== "exhausted") await this.reconcileDispatch();
+    if (result.result !== "exhausted") {
+      await this.reconcileDispatch();
+    }
     return result;
   }
 
@@ -85,8 +89,9 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     narrationTextCharactersBySegment?: readonly number[],
   ) {
     // The alarm dispatches reserved segments if the workflow never gets to.
-    if (narrationTextCharactersBySegment !== undefined)
+    if (narrationTextCharactersBySegment !== undefined) {
       await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
+    }
     this.sqlite.settleConversion(
       conversionId,
       outcome,
@@ -162,8 +167,9 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
       !(["pending", "ready"] as const).some(
         (status) => status === this.sqlite.getConversion(conversionId)?.status,
       )
-    )
+    ) {
       throw new Error("Account execution is fenced");
+    }
   }
 
   /** Reserves the whole narration document before dispatching any segment; see ADR 0008. */
@@ -173,15 +179,18 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     executionEpoch: number,
   ) {
     this.assertExecution(conversionId, executionEpoch);
-    if (this.sqlite.getConversion(conversionId)?.status !== "ready")
+    if (this.sqlite.getConversion(conversionId)?.status !== "ready") {
       throw new Error("Narration is not prepared");
+    }
 
     const reservation = this.sqlite.reserveMissingAudioSegments(
       conversionId,
       narrationTextCharactersBySegment,
       Temporal.Now.instant().epochMilliseconds,
     );
-    if (reservation.result !== "reserved") return reservation;
+    if (reservation.result !== "reserved") {
+      return reservation;
+    }
 
     // The alarm completes a dispatch that fails partway.
     await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
@@ -204,7 +213,9 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
         return { error };
       }
     });
-    if (failure) throw failure.error;
+    if (failure) {
+      throw failure.error;
+    }
     return { result: "started" as const };
   }
 
@@ -223,7 +234,9 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
   retryPreparation(conversionId: string) {
     return this.ctx.blockConcurrencyWhile(async () => {
       const conversion = this.sqlite.getConversion(conversionId);
-      if (conversion?.outcome?.status !== "failed") return;
+      if (conversion?.outcome?.status !== "failed") {
+        return;
+      }
       const account = this.sqlite.snapshot();
       const workflow = this.env.PREPARE_AUDIOBOOK_WORKFLOW;
       this.sqlite.retryPreparation(conversionId);
@@ -264,7 +277,9 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
     await this.reconcileArtifactWriters();
     await this.reconcileLifecycle();
-    if (this.sqlite.snapshot().state === "deleting") return;
+    if (this.sqlite.snapshot().state === "deleting") {
+      return;
+    }
     await this.reconcileDispatch();
     await this.reconcileSynthesis();
     if (
@@ -273,8 +288,9 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
       this.sqlite.unsettledConversions().length === 0 &&
       this.sqlite.reservedAudioSegments().length === 0 &&
       this.artifactWriters.writers().length === 0
-    )
+    ) {
       await this.ctx.storage.deleteAlarm();
+    }
   }
 
   private async reconcileDispatch() {
@@ -286,7 +302,7 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
         this.assertExecution(job.conversionId, job.executionEpoch);
         if (job.state === "delivered") {
           const status = await (await workflow.get(job.conversionId)).status();
-          if (status.status === "errored" || status.status === "terminated")
+          if (status.status === "errored" || status.status === "terminated") {
             this.sqlite.settleConversion(
               job.conversionId,
               {
@@ -297,10 +313,13 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
               Temporal.Now.instant().epochMilliseconds,
               job.executionEpoch,
             );
+          }
           continue;
         }
         const conversion = this.sqlite.getConversion(job.conversionId);
-        if (!conversion) throw new Error("Missing conversion dispatch target");
+        if (!conversion) {
+          throw new Error("Missing conversion dispatch target");
+        }
         await registry
           .get(registry.idFromName("registry"))
           .bindConversionOwner(job.conversionId, { kind: "account", accountId: account.accountId });
@@ -338,8 +357,9 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
         },
         { canResume: this.canExecute(segment.conversionId, account.executionEpoch) },
       );
-      if (result === "stopped")
+      if (result === "stopped") {
         this.sqlite.releaseAudioSegment(segment.conversionId, segment.sequence);
+      }
     }
   }
 
@@ -354,20 +374,29 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
 
   async reconcileArtifactWriter(writerId: string) {
     const writer = this.artifactWriters.find(writerId);
-    if (!writer) return false;
-    if (writer.state === "drained") return true;
+    if (!writer) {
+      return false;
+    }
+    if (writer.state === "drained") {
+      return true;
+    }
     if (writer.effect !== null) {
-      if (!writer.effect.startsWith("put:")) return false;
+      if (!writer.effect.startsWith("put:")) {
+        return false;
+      }
       const object = await this.env.AUDIO_BUCKET.head(writer.effect.slice(4));
-      if (object?.customMetadata?.["cup-writer-id"] !== writerId) return false;
+      if (object?.customMetadata?.["cup-writer-id"] !== writerId) {
+        return false;
+      }
       this.artifactWriters.writerEffect(writerId, null);
     }
     this.artifactWriters.drainWriter(writerId);
     return true;
   }
   private async reconcileArtifactWriters() {
-    for (const writer of this.artifactWriters.writers())
+    for (const writer of this.artifactWriters.writers()) {
       await this.reconcileArtifactWriter(writer.writerId);
+    }
   }
 
   prepareArtifactWrite(writerId: string, executionEpoch: number, prefix: string, key: string) {
@@ -404,7 +433,9 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     try {
       attempt = this.lifecycle.schedule(input);
     } catch (error) {
-      if (error instanceof AccountLifecycleConflictError) return { result: "conflict" } as const;
+      if (error instanceof AccountLifecycleConflictError) {
+        return { result: "conflict" } as const;
+      }
       throw error;
     }
     await this.reconcileLifecycle();
@@ -415,7 +446,9 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     try {
       this.lifecycle.restore(challengeId, authenticatedAtSeconds);
     } catch (error) {
-      if (error instanceof AccountLifecycleConflictError) return { result: "conflict" } as const;
+      if (error instanceof AccountLifecycleConflictError) {
+        return { result: "conflict" } as const;
+      }
       throw error;
     }
     await this.reconcileLifecycle();
@@ -444,13 +477,18 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
       return;
     }
     const attempt = this.lifecycle.current();
-    if (attempt?.attemptId !== attemptId || this.sqlite.snapshot().state !== "deleting")
+    if (attempt?.attemptId !== attemptId || this.sqlite.snapshot().state !== "deleting") {
       throw new Error("Account erasure is fenced");
-    if (this.artifactWriters.writers().length) throw new Error("Artifact writers have not drained");
+    }
+    if (this.artifactWriters.writers().length) {
+      throw new Error("Artifact writers have not drained");
+    }
     const prefix = createAccountArtifactPrefix(attempt.accountId);
     for (;;) {
       const objects = await this.env.AUDIO_BUCKET.list({ prefix, limit: 1000 });
-      if (objects.objects.length === 0) break;
+      if (objects.objects.length === 0) {
+        break;
+      }
       await this.env.AUDIO_BUCKET.delete(objects.objects.map((object) => object.key));
     }
     await this.env.REGISTRY.get(

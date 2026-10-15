@@ -41,7 +41,9 @@ export function useAccountConversionSubmission({
     requiresSignIn: requiresSignIn && !session,
     signIn,
     submit: async ({ sourceUrl: input }: { sourceUrl: string }) => {
-      if (start.isPending || retryIn > 0 || authState.status === "loading") return;
+      if (start.isPending || retryIn > 0 || authState.status === "loading") {
+        return;
+      }
       signIn.reset();
       const sourceUrl = new URL(input).toString();
       const stored = readPendingAccountConversion();
@@ -61,9 +63,13 @@ export function useAccountConversionSubmission({
       await start.mutateAsync({ ...request, subject: session.user.id }).catch(() => {});
     },
     cancelSignIn: () => {
-      if (signIn.isPending) return;
+      if (signIn.isPending) {
+        return;
+      }
       const request = readPendingAccountConversion();
-      if (request) storePendingAccountConversion({ ...request, submitted: false });
+      if (request) {
+        storePendingAccountConversion({ ...request, submitted: false });
+      }
       setRequiresSignIn(false);
     },
   };

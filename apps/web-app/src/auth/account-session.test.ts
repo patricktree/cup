@@ -73,7 +73,9 @@ test("logout clears a cookie issued by an earlier pending media request", async 
   });
   releaseIssuance?.();
   await page.evaluate(async () => {
-    if (!("pendingLogout" in window)) throw new Error("Missing pending logout");
+    if (!("pendingLogout" in window)) {
+      throw new Error("Missing pending logout");
+    }
     await window.pendingLogout;
   });
   expect((await page.context().cookies()).filter((cookie) => cookie.name === "cup_media")).toEqual(
@@ -199,8 +201,9 @@ test("concurrent session reads share an SDK refresh and cannot restore a signed-
   releaseRefresh?.();
   expect(
     await page.evaluate(async (storageKey) => {
-      if (!("pendingLogout" in window) || !("pendingReads" in window))
+      if (!("pendingLogout" in window) || !("pendingReads" in window)) {
         throw new Error("Missing pending auth operations");
+      }
       await window.pendingLogout;
       const reads = await window.pendingReads;
       const modulePath = "/src/auth/account-session.ts";

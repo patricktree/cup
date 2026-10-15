@@ -51,8 +51,9 @@ export function useWorkerEnvironment(): WorkerEnvironment {
       killProcessGroup(worker, "SIGTERM");
       await new Promise<void>((resolve) => worker?.once("exit", () => resolve()));
     }
-    if (persistenceDirectory !== undefined)
+    if (persistenceDirectory !== undefined) {
       await fs.rm(persistenceDirectory, { recursive: true, force: true });
+    }
   });
 
   return {
@@ -69,7 +70,9 @@ async function reservePort(): Promise<number> {
   const server = http.createServer();
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
-  if (address === null || typeof address === "string") throw new Error("No Worker test port.");
+  if (address === null || typeof address === "string") {
+    throw new Error("No Worker test port.");
+  }
   const { port } = address;
   await new Promise<void>((resolve, reject) =>
     server.close((error) => (error === undefined ? resolve() : reject(error))),
@@ -81,10 +84,14 @@ async function waitUntilReady(url: string, process: childProcess.ChildProcess): 
   let stderr = "";
   process.stderr?.setEncoding("utf8").on("data", (chunk: string) => (stderr += chunk));
   for (let attempt = 0; attempt < 100; attempt += 1) {
-    if (process.exitCode !== null) throw new Error(`Wrangler exited early.\n${stderr}`);
+    if (process.exitCode !== null) {
+      throw new Error(`Wrangler exited early.\n${stderr}`);
+    }
     try {
       const response = await fetch(url);
-      if (response.ok) return;
+      if (response.ok) {
+        return;
+      }
     } catch {
       // Wrangler has not bound its local port yet.
     }
@@ -94,11 +101,15 @@ async function waitUntilReady(url: string, process: childProcess.ChildProcess): 
 }
 
 function killProcessGroup(process: childProcess.ChildProcess, signal: NodeJS.Signals): void {
-  if (process.pid === undefined || process.exitCode !== null) return;
+  if (process.pid === undefined || process.exitCode !== null) {
+    return;
+  }
   try {
     globalThis.process.kill(-process.pid, signal);
   } catch (error) {
-    if (!isNoSuchProcessError(error)) throw error;
+    if (!isNoSuchProcessError(error)) {
+      throw error;
+    }
   }
 }
 
@@ -125,6 +136,8 @@ async function createTrial(origin: string): Promise<{ grantId: string; credentia
     throw new Error("Invalid grant creation response");
   }
   const credential = new URLSearchParams(new URL(body.trialLink).hash.slice(1)).get("credential");
-  if (credential === null) throw new Error("Missing trial credential");
+  if (credential === null) {
+    throw new Error("Missing trial credential");
+  }
   return { grantId: body.grantId, credential };
 }

@@ -23,8 +23,9 @@ export class RollingLimits {
         .where(and(eq(rateEvents.bucket, bucket), gt(rateEvents.createdAtMs, nowMs - windowMs)))
         .orderBy(asc(rateEvents.createdAtMs))
         .all();
-      if (events.length >= maximum)
+      if (events.length >= maximum) {
         return Math.max(1, Math.ceil(((events[0]?.time ?? nowMs) + windowMs - nowMs) / 1000));
+      }
       this.database
         .insert(rateEvents)
         .values({

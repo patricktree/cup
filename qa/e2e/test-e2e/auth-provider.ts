@@ -45,8 +45,9 @@ export async function startAuthProvider() {
       url.searchParams.get("provider") !== "google" ||
       url.searchParams.get("code_challenge_method")?.toLowerCase() !== "s256" ||
       redirect.hostname !== "127.0.0.1"
-    )
+    ) {
       throw new Error("Invalid QA OAuth request");
+    }
     const code = crypto.randomUUID();
     codes.set(code, {
       challenge: url.searchParams.get("code_challenge") ?? "",
@@ -61,7 +62,9 @@ export async function startAuthProvider() {
     response: http.ServerResponse,
   ) => {
     const chunks: Buffer[] = [];
-    for await (const chunk of request) chunks.push(Buffer.from(chunk));
+    for await (const chunk of request) {
+      chunks.push(Buffer.from(chunk));
+    }
     const body: unknown = JSON.parse(Buffer.concat(chunks).toString());
     if (
       url.searchParams.get("grant_type") !== "pkce" ||
@@ -71,14 +74,16 @@ export async function startAuthProvider() {
       typeof body.auth_code !== "string" ||
       !("code_verifier" in body) ||
       typeof body.code_verifier !== "string"
-    )
+    ) {
       throw new Error("Invalid PKCE exchange");
+    }
     const code = codes.get(body.auth_code);
     if (
       !code ||
       crypto.createHash("sha256").update(body.code_verifier).digest("base64url") !== code.challenge
-    )
+    ) {
       throw new Error("PKCE verification failed");
+    }
     codes.delete(body.auth_code);
     exchanges += 1;
     response.end(
@@ -145,7 +150,9 @@ export async function startAuthProvider() {
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
-  if (!address || typeof address === "string") throw new Error("No identity port");
+  if (!address || typeof address === "string") {
+    throw new Error("No identity port");
+  }
   origin = `http://127.0.0.1:${address.port}`;
   return {
     origin,

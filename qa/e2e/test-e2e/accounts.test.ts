@@ -26,7 +26,9 @@ test("Google PKCE signup resumes conversion, protects history and media, and sup
   const conversionId = new URL(page.url()).pathname.split("/").at(-1);
   const mediaUrl = `${origin}/api/files/audiobooks/${conversionId}/segments/0/audio.mp3`;
   await waitForAudiobook(page);
-  if (!conversionId) throw new Error("Conversion missing");
+  if (!conversionId) {
+    throw new Error("Conversion missing");
+  }
   await waitForGeneratedAudio(page, conversionId, await readAccessToken(page));
   const remainingAllowance = (await readAccount(page, origin)).balance.available;
   expect(remainingAllowance).toBeLessThan(30 * 60 * 1_000);
@@ -79,8 +81,9 @@ test("Google PKCE signup resumes conversion, protects history and media, and sup
     if (
       request.method() === "POST" &&
       new URL(request.url()).pathname === "/api/account/conversions"
-    )
+    ) {
       resumedRequests += 1;
+    }
   });
   await page.goto(`${origin}/app/`);
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
@@ -105,11 +108,15 @@ test("signup keeps trial conversions separate from the new account and its histo
   const originalUrl = page.url();
   const originalId = new URL(originalUrl).pathname.split("/").at(-1);
   await waitForAudiobook(page);
-  if (!originalId) throw new Error("Conversion missing");
+  if (!originalId) {
+    throw new Error("Conversion missing");
+  }
   await waitForGeneratedAudio(page, originalId);
   let importRequests = 0;
   page.on("request", (request) => {
-    if (new URL(request.url()).pathname.startsWith("/api/account/imports")) importRequests += 1;
+    if (new URL(request.url()).pathname.startsWith("/api/account/imports")) {
+      importRequests += 1;
+    }
   });
   await page.goto(`${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
@@ -118,7 +125,9 @@ test("signup keeps trial conversions separate from the new account and its histo
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
   await waitForAudiobook(page);
   const accountConversionId = new URL(page.url()).pathname.split("/").at(-1);
-  if (!accountConversionId) throw new Error("Conversion missing");
+  if (!accountConversionId) {
+    throw new Error("Conversion missing");
+  }
   const segments = await waitForGeneratedAudio(
     page,
     accountConversionId,
@@ -177,8 +186,9 @@ test("signed-in accounts skip trial credentials and signed-out users can reopen 
 
   let trialRequests = 0;
   page.on("request", (request) => {
-    if (new URL(request.url()).pathname.startsWith(`/api/grants/${grant.grantId}`))
+    if (new URL(request.url()).pathname.startsWith(`/api/grants/${grant.grantId}`)) {
       trialRequests += 1;
+    }
   });
   await page.goto(trialUrl);
   await expect(page).toHaveURL(`${origin}/app/`);
@@ -205,8 +215,9 @@ test("trial OAuth callback redirect does not depend on working authentication", 
   await page.route("**/api/auth/config", (route) => route.fulfill({ status: 503 }));
   let trialRequests = 0;
   page.on("request", (request) => {
-    if (new URL(request.url()).pathname.startsWith(`/api/grants/${grant.grantId}`))
+    if (new URL(request.url()).pathname.startsWith(`/api/grants/${grant.grantId}`)) {
       trialRequests += 1;
+    }
   });
   const query = "?code=test-code&from=google";
   for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -299,9 +310,13 @@ test("a rate-limited resumed conversion waits for explicit retry and keeps its i
   const { origin } = workerEnvironment;
   const keys: Array<string | undefined> = [];
   await page.route("**/api/account/conversions", (route) => {
-    if (route.request().method() !== "POST") return route.continue();
+    if (route.request().method() !== "POST") {
+      return route.continue();
+    }
     keys.push(route.request().headers()["idempotency-key"]);
-    if (keys.length > 1) return route.continue();
+    if (keys.length > 1) {
+      return route.continue();
+    }
     expectConsoleError(/^Failed to load resource: the server responded with a status of 429/);
     return route.fulfill({
       status: 429,
@@ -327,15 +342,18 @@ test("a rate-limited resumed conversion waits for explicit retry and keeps its i
 async function readAccessToken(page: Page) {
   return page.evaluate(() => {
     const stored = window.localStorage.getItem("cup_supabase_session");
-    if (!stored) throw new Error("Expected an authenticated browser session");
+    if (!stored) {
+      throw new Error("Expected an authenticated browser session");
+    }
     const session: unknown = JSON.parse(stored);
     if (
       !session ||
       typeof session !== "object" ||
       !("access_token" in session) ||
       typeof session.access_token !== "string"
-    )
+    ) {
       throw new Error("Expected an access token");
+    }
     return session.access_token;
   });
 }
@@ -356,7 +374,9 @@ test("account positions restore once and use last-write-wins across players", as
   const token = await readAccessToken(page);
   await waitForGeneratedAudio(page, id, token);
   const document = await readAudiobook(page, id, token);
-  if (document.status !== "ready") throw new Error("Article not prepared");
+  if (document.status !== "ready") {
+    throw new Error("Article not prepared");
+  }
   const unitId = document.narrationDocument.synchronizationUnits[1]!.id;
   const save = await page.evaluate(
     async (input) => {

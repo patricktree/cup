@@ -23,14 +23,16 @@ export function applyGrantRegistrySnapshot(
   entry: RegistryEntry,
   grantSnapshot: GrantRegistrySnapshot,
 ): "applied" | "replayed" | "stale" {
-  if (entry.grantSnapshot !== undefined && grantSnapshot.revision < entry.grantSnapshot.revision)
+  if (entry.grantSnapshot !== undefined && grantSnapshot.revision < entry.grantSnapshot.revision) {
     return "stale";
+  }
   if (
     entry.grantSnapshot !== undefined &&
     grantSnapshot.revision === entry.grantSnapshot.revision
   ) {
-    if (canonicalJson(entry.grantSnapshot) !== canonicalJson(grantSnapshot))
+    if (canonicalJson(entry.grantSnapshot) !== canonicalJson(grantSnapshot)) {
       throw new Error("Conflicting Registry snapshot at the same revision");
+    }
     return "replayed";
   }
   entry.grantSnapshot = grantSnapshot;
@@ -38,16 +40,24 @@ export function applyGrantRegistrySnapshot(
 }
 
 export function deriveProjectedState(entry: RegistryEntry, nowMs: number): ProjectedGrantState {
-  if (entry.phase !== "active" || entry.grantSnapshot === undefined) return "provisioning";
-  if (entry.grantSnapshot.revokedAtMs !== undefined) return "revoked";
-  if (nowMs >= entry.expiresAtMs) return "expired";
-  if (entry.grantSnapshot.spentMilliseconds >= entry.grantSnapshot.allowanceMilliseconds)
+  if (entry.phase !== "active" || entry.grantSnapshot === undefined) {
+    return "provisioning";
+  }
+  if (entry.grantSnapshot.revokedAtMs !== undefined) {
+    return "revoked";
+  }
+  if (nowMs >= entry.expiresAtMs) {
+    return "expired";
+  }
+  if (entry.grantSnapshot.spentMilliseconds >= entry.grantSnapshot.allowanceMilliseconds) {
     return "exhausted";
+  }
   if (
     entry.grantSnapshot.reservedMilliseconds + entry.grantSnapshot.spentMilliseconds >=
     entry.grantSnapshot.allowanceMilliseconds
-  )
+  ) {
     return "temporarily-full";
+  }
   return "open";
 }
 
@@ -94,9 +104,13 @@ function decodeKeysetCursor(
 ): { createdAtMs: number; id: string } {
   try {
     const decoded = decodeBase64Url(cursor);
-    if (encodeBase64Url(decoded) !== cursor) throw new Error();
+    if (encodeBase64Url(decoded) !== cursor) {
+      throw new Error();
+    }
     const value: unknown = JSON.parse(new TextDecoder().decode(decoded));
-    if (!isRecord(value)) throw new Error();
+    if (!isRecord(value)) {
+      throw new Error();
+    }
     const id = value[idKey];
     if (
       Object.keys(value).length !== 3 ||
@@ -104,8 +118,9 @@ function decodeKeysetCursor(
       typeof value["createdAtMs"] !== "number" ||
       !Number.isSafeInteger(value["createdAtMs"]) ||
       typeof id !== "string"
-    )
+    ) {
       throw new Error();
+    }
     return { createdAtMs: value["createdAtMs"], id };
   } catch {
     throw new Error("Invalid Registry cursor");

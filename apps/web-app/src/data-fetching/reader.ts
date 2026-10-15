@@ -45,7 +45,9 @@ async function retryConversion(conversionId: string) {
 }
 export function getLocalPlaybackPosition(conversionId: string): PlaybackPosition | null {
   const value = localStorage.getItem(`cup:position:v1:${conversionId}`);
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
   try {
     const result = playbackPositionSchema.safeParse(JSON.parse(value));
     return result.success ? result.data : null;

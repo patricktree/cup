@@ -68,7 +68,9 @@ export class AudiobookPlayer {
   getSnapshot = () => this.snapshot;
 
   open = () => {
-    if (this.elements) return;
+    if (this.elements) {
+      return;
+    }
 
     const elements: [HTMLAudioElement, HTMLAudioElement] = [
       this.createAudioElement(),
@@ -84,14 +86,17 @@ export class AudiobookPlayer {
           this.elements !== null &&
           this.activeElementIndex === elementIndex &&
           this.loadedEntryIndexes[elementIndex] === this.entryIndex
-        )
+        ) {
           handler();
+        }
       };
       const handlers = {
         ended: whenActive(() => this.onEnded()),
         timeupdate: whenActive(() => this.onTimeUpdate(element)),
         waiting: whenActive(() => {
-          if (this.snapshot.isPlaying) this.update({ isBuffering: true });
+          if (this.snapshot.isPlaying) {
+            this.update({ isBuffering: true });
+          }
         }),
         playing: whenActive(() => this.update({ isBuffering: false })),
         pause: whenActive(() => this.onElementPaused(element)),
@@ -104,10 +109,14 @@ export class AudiobookPlayer {
       });
     });
     this.removeElementListeners = () => {
-      for (const remove of removers) remove();
+      for (const remove of removers) {
+        remove();
+      }
     };
 
-    if (this.session.timeline.entries.length === 0) return;
+    if (this.session.timeline.entries.length === 0) {
+      return;
+    }
     this.isAwaitingInitialAuthorization = true;
     this.initialAuthorization = this.session
       .authorizeMedia()
@@ -115,7 +124,9 @@ export class AudiobookPlayer {
         // An unauthorized segment fails to load, which is reported once playback is requested.
       })
       .then(() => {
-        if (this.elements !== elements) return undefined;
+        if (this.elements !== elements) {
+          return undefined;
+        }
         this.isAwaitingInitialAuthorization = false;
         this.load(this.activeElementIndex, this.entryIndex, this.offsetMilliseconds);
         this.preloadFollowingEntry();
@@ -124,7 +135,9 @@ export class AudiobookPlayer {
   };
 
   close = () => {
-    if (!this.elements) return;
+    if (!this.elements) {
+      return;
+    }
 
     this.save();
     this.removeElementListeners?.();
@@ -142,17 +155,22 @@ export class AudiobookPlayer {
 
   /** Must be called from a user gesture: browsers only then allow both elements to start. */
   play = () => {
-    if (this.snapshot.isPlaying || !this.elements || this.session.timeline.entries.length === 0)
+    if (this.snapshot.isPlaying || !this.elements || this.session.timeline.entries.length === 0) {
       return;
+    }
 
     this.update({ isPlaying: true, error: null });
     // The active element is unlocked by its own start below unless it has nothing to play yet.
-    if (this.isAwaitingInitialAuthorization) this.unlockElement(this.activeElementIndex);
+    if (this.isAwaitingInitialAuthorization) {
+      this.unlockElement(this.activeElementIndex);
+    }
     this.unlockElement(this.standbyElementIndex);
     if (this.isAwaitingInitialAuthorization) {
       // Pressed before the initial authorization finished; start as soon as media may be requested.
       void this.initialAuthorization.then(() => {
-        if (this.snapshot.isPlaying) this.startActiveElement();
+        if (this.snapshot.isPlaying) {
+          this.startActiveElement();
+        }
         return undefined;
       });
       return;
@@ -163,11 +181,15 @@ export class AudiobookPlayer {
   /** Moves by segments with audio, so a skipped segment is never a destination. */
   skip = (direction: 1 | -1) => {
     const unitIndex = this.session.adjacentUnitIndex(this.snapshot.currentUnitIndex, direction);
-    if (unitIndex !== undefined) this.seekToUnit(unitIndex);
+    if (unitIndex !== undefined) {
+      this.seekToUnit(unitIndex);
+    }
   };
 
   pause = () => {
-    if (!this.snapshot.isPlaying) return;
+    if (!this.snapshot.isPlaying) {
+      return;
+    }
 
     this.update({ isPlaying: false, isBuffering: false });
     this.elements?.[this.activeElementIndex].pause();
@@ -177,7 +199,9 @@ export class AudiobookPlayer {
   /** Seeks to the start of a unit, or of the next unit with audio when it was skipped. */
   seekToUnit = (unitIndex: number) => {
     const entryIndex = findTimelineEntryIndex(this.session.timeline, unitIndex);
-    if (entryIndex < 0) return;
+    if (entryIndex < 0) {
+      return;
+    }
 
     this.moveTo(entryIndex, 0);
   };
@@ -185,7 +209,9 @@ export class AudiobookPlayer {
   /** Seeks to a position on the whole-audiobook timeline. */
   seekTo = (positionMilliseconds: number) => {
     const location = locateTimelinePosition(this.session.timeline, positionMilliseconds);
-    if (!location) return;
+    if (!location) {
+      return;
+    }
 
     this.moveTo(location.entryIndex, location.offsetMilliseconds);
   };
@@ -196,7 +222,9 @@ export class AudiobookPlayer {
 
   private update(value: Partial<PlayerSnapshot>) {
     this.snapshot = { ...this.snapshot, ...value };
-    for (const listener of this.listeners) listener();
+    for (const listener of this.listeners) {
+      listener();
+    }
   }
 
   private describePosition() {
@@ -208,7 +236,9 @@ export class AudiobookPlayer {
 
   private moveTo(entryIndex: number, offsetMilliseconds: number) {
     const elements = this.elements;
-    if (!elements) return;
+    if (!elements) {
+      return;
+    }
 
     if (this.isAwaitingInitialAuthorization) {
       // Nothing is loaded yet; the initial load picks up this position.
@@ -239,22 +269,30 @@ export class AudiobookPlayer {
     this.update({ ...this.describePosition(), error: null });
     this.save();
     this.preloadFollowingEntry();
-    if (this.snapshot.isPlaying) this.startActiveElement();
+    if (this.snapshot.isPlaying) {
+      this.startActiveElement();
+    }
   }
 
   private load(elementIndex: 0 | 1, entryIndex: number, offsetMilliseconds = 0) {
     const element = this.elements?.[elementIndex];
     const entry = this.session.timeline.entries[entryIndex];
-    if (!element || !entry) return;
+    if (!element || !entry) {
+      return;
+    }
 
     this.loadedEntryIndexes[elementIndex] = entryIndex;
     element.src = entry.url;
-    if (offsetMilliseconds === 0) return;
+    if (offsetMilliseconds === 0) {
+      return;
+    }
 
     element.addEventListener(
       "loadedmetadata",
       () => {
-        if (this.loadedEntryIndexes[elementIndex] !== entryIndex) return;
+        if (this.loadedEntryIndexes[elementIndex] !== entryIndex) {
+          return;
+        }
         element.currentTime = Math.min(
           offsetMilliseconds / 1_000,
           Math.max(0, element.duration - 0.01),
@@ -270,8 +308,9 @@ export class AudiobookPlayer {
     if (
       followingEntryIndex >= this.session.timeline.entries.length ||
       this.loadedEntryIndexes[standbyElementIndex] === followingEntryIndex
-    )
+    ) {
       return;
+    }
 
     // Media authorization can expire during a long audiobook; renew it ahead of each request.
     void this.session
@@ -280,7 +319,9 @@ export class AudiobookPlayer {
         const isStillFollowing =
           this.entryIndex + 1 === followingEntryIndex &&
           this.activeElementIndex !== standbyElementIndex;
-        if (isStillFollowing) this.load(standbyElementIndex, followingEntryIndex);
+        if (isStillFollowing) {
+          this.load(standbyElementIndex, followingEntryIndex);
+        }
         return undefined;
       })
       .catch(() => {
@@ -295,10 +336,14 @@ export class AudiobookPlayer {
    */
   private unlockElement(elementIndex: 0 | 1) {
     const element = this.elements?.[elementIndex];
-    if (!element || this.hasUnlockedElement[elementIndex]) return;
+    if (!element || this.hasUnlockedElement[elementIndex]) {
+      return;
+    }
 
     this.hasUnlockedElement[elementIndex] = true;
-    if (this.loadedEntryIndexes[elementIndex] === null) element.src = silenceUrl;
+    if (this.loadedEntryIndexes[elementIndex] === null) {
+      element.src = silenceUrl;
+    }
     element.muted = true;
     void element
       .play()
@@ -306,14 +351,20 @@ export class AudiobookPlayer {
         const isPlayingItsSegment =
           elementIndex === this.activeElementIndex &&
           this.loadedEntryIndexes[elementIndex] !== null;
-        if (isPlayingItsSegment) return undefined;
+        if (isPlayingItsSegment) {
+          return undefined;
+        }
         element.pause();
-        if (this.loadedEntryIndexes[elementIndex] !== null) element.currentTime = 0;
+        if (this.loadedEntryIndexes[elementIndex] !== null) {
+          element.currentTime = 0;
+        }
         return undefined;
       })
       .catch((error: unknown) => {
         // Loading a segment interrupts the silence after the gesture already unlocked the element.
-        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
         this.hasUnlockedElement[elementIndex] = false;
       })
       .finally(() => {
@@ -323,15 +374,20 @@ export class AudiobookPlayer {
 
   private startActiveElement() {
     const element = this.elements?.[this.activeElementIndex];
-    if (!element) return;
+    if (!element) {
+      return;
+    }
 
-    if (this.loadedEntryIndexes[this.activeElementIndex] !== this.entryIndex)
+    if (this.loadedEntryIndexes[this.activeElementIndex] !== this.entryIndex) {
       this.load(this.activeElementIndex, this.entryIndex, this.offsetMilliseconds);
+    }
 
     element.muted = false;
     void element.play().catch((error: unknown) => {
       // A newer seek or pause interrupts this start; only a genuine failure is reported.
-      if (error instanceof DOMException && error.name === "AbortError") return;
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
       this.update({
         isPlaying: false,
         isBuffering: false,
@@ -341,7 +397,9 @@ export class AudiobookPlayer {
   }
 
   private onEnded() {
-    if (!this.snapshot.isPlaying) return;
+    if (!this.snapshot.isPlaying) {
+      return;
+    }
 
     const followingEntryIndex = this.entryIndex + 1;
     if (followingEntryIndex >= this.session.timeline.entries.length) {
@@ -363,8 +421,9 @@ export class AudiobookPlayer {
   }
 
   private onTimeUpdate(element: HTMLAudioElement) {
-    if (this.loadedEntryIndexes[this.activeElementIndex] !== this.entryIndex || element.seeking)
+    if (this.loadedEntryIndexes[this.activeElementIndex] !== this.entryIndex || element.seeking) {
       return;
+    }
 
     this.offsetMilliseconds = element.currentTime * 1_000;
     this.update(this.describePosition());
@@ -374,14 +433,17 @@ export class AudiobookPlayer {
   /** Follows pauses made outside the player, such as an audio interruption by the system. */
   private onElementPaused(element: HTMLAudioElement) {
     // A seek pauses and restarts the element; by the time this event arrives it plays again.
-    if (this.snapshot.isPlaying && !this.snapshot.isBuffering && element.paused && !element.ended)
+    if (this.snapshot.isPlaying && !this.snapshot.isBuffering && element.paused && !element.ended) {
       this.pause();
+    }
   }
 
   private onMediaError(elementIndex: 0 | 1) {
     // A preloaded segment that failed is loaded again when playback reaches it.
     this.loadedEntryIndexes[elementIndex] = null;
-    if (elementIndex !== this.activeElementIndex || !this.snapshot.isPlaying) return;
+    if (elementIndex !== this.activeElementIndex || !this.snapshot.isPlaying) {
+      return;
+    }
 
     this.update({
       isPlaying: false,
@@ -394,10 +456,11 @@ export class AudiobookPlayer {
     const reported = this.describePosition();
     const save = when === "now" ? this.session.save(reported) : this.session.saveIfDue(reported);
     void save.catch((error: unknown) => {
-      if (this.elements)
+      if (this.elements) {
         this.update({
           error: error instanceof Error ? error.message : "Listening position could not be saved.",
         });
+      }
     });
   }
 }

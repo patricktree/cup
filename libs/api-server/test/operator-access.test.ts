@@ -130,7 +130,9 @@ function fixture() {
       }),
     },
   };
-  if (!isFixtureEnvironment(env)) throw new Error("Invalid operator fixture");
+  if (!isFixtureEnvironment(env)) {
+    throw new Error("Invalid operator fixture");
+  }
   return { env, readAccount, adjustAllowance, listAccounts };
 }
 
@@ -203,10 +205,11 @@ test("lists registry accounts with ISO creation times and forwards pagination", 
   });
   expect(listAccounts).toHaveBeenCalledWith({ phase: "active", limit: 10, cursor: "abc" });
 
-  for (const query of ["limit=0", "phase=deleted", "limit=1&limit=2"])
+  for (const query of ["limit=0", "phase=deleted", "limit=1&limit=2"]) {
     expect(
       (await app.request(`https://cup.audio/api/operator/accounts?${query}`, {}, env)).status,
     ).toBe(400);
+  }
 
   listAccounts.mockRejectedValueOnce(new Error("Invalid Registry cursor"));
   const invalidCursor = await app.request(
@@ -254,8 +257,9 @@ test("rejects account allowance adjustments for unknown accounts and invalid inp
     { requestId, amountMilliseconds: 1.5, reason: "refund" },
     { requestId, amountMilliseconds: 60_000, reason: " " },
     { requestId: "not-a-uuid", amountMilliseconds: 60_000, reason: "refund" },
-  ])
+  ]) {
     expect((await app.request(adjustmentRequest(body), {}, env)).status).toBe(400);
+  }
   expect(adjustAllowance).not.toHaveBeenCalled();
 });
 

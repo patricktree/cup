@@ -27,7 +27,9 @@ export function getGrantSessionCookie(
   cookieHeader: string | undefined,
   grantId: string,
 ): string | undefined {
-  if (cookieHeader === undefined) return undefined;
+  if (cookieHeader === undefined) {
+    return undefined;
+  }
   const cookieName = grantSessionCookieName(grantId);
   return cookieHeader
     .split(";")
@@ -67,10 +69,13 @@ export async function verifySession(
   nowMs: number,
 ): Promise<boolean> {
   const parts = token.split(".");
-  if (parts.length !== 3 || parts[0] !== "v1" || parts[1] === undefined || parts[2] === undefined)
+  if (parts.length !== 3 || parts[0] !== "v1" || parts[1] === undefined || parts[2] === undefined) {
     return false;
+  }
   const expected = await sign(record.sessionSigningKey, parts[1]);
-  if (!constantTimeEqual(expected, parts[2])) return false;
+  if (!constantTimeEqual(expected, parts[2])) {
+    return false;
+  }
   try {
     const payload: unknown = JSON.parse(new TextDecoder().decode(decodeBase64Url(parts[1])));
     return (
@@ -106,8 +111,9 @@ function constantTimeEqual(left: string, right: string): boolean {
   const rightBytes = new TextEncoder().encode(right);
   let difference = leftBytes.length ^ rightBytes.length;
   const length = Math.max(leftBytes.length, rightBytes.length);
-  for (let index = 0; index < length; index += 1)
+  for (let index = 0; index < length; index += 1) {
     difference |= (leftBytes[index] ?? 0) ^ (rightBytes[index] ?? 0);
+  }
   return difference === 0;
 }
 

@@ -19,7 +19,9 @@ export class AccountArtifactWriters {
   }
 
   prepareWrite(writerId: string, executionEpoch: number, prefix: string, key: string) {
-    if (!key.startsWith(prefix)) throw new Error("Artifact key is outside its prefix");
+    if (!key.startsWith(prefix)) {
+      throw new Error("Artifact key is outside its prefix");
+    }
     this.database.transaction(() => {
       this.registerWriter(writerId, executionEpoch, prefix);
       this.writerEffect(writerId, "put:" + key);
@@ -31,8 +33,9 @@ export class AccountArtifactWriters {
     if (
       !this.canWrite(account, executionEpoch) ||
       getAccountConversionIdFromArtifactPrefix(prefix, account.accountId) === undefined
-    )
+    ) {
       throw new Error("Artifact writer registration is fenced");
+    }
     this.assertWriterTarget(prefix);
     this.database
       .insert(artifactWriters)
@@ -50,8 +53,9 @@ export class AccountArtifactWriters {
       existing.executionEpoch !== executionEpoch ||
       existing.prefix !== prefix ||
       existing.state !== "running"
-    )
+    ) {
       throw new Error("Artifact writer identity conflict");
+    }
   }
 
   writerEffect(writerId: string, effect: string | null) {
@@ -63,12 +67,18 @@ export class AccountArtifactWriters {
           .where(eq(artifactWriters.writerId, writerId))
           .get(),
       );
-      if (writer.state !== "running") throw new Error("Artifact writer is not running");
-      if (effect !== null) this.assertWriterTarget(writer.prefix);
-      if (effect !== null && !this.canWrite(this.account(), writer.executionEpoch))
+      if (writer.state !== "running") {
+        throw new Error("Artifact writer is not running");
+      }
+      if (effect !== null) {
+        this.assertWriterTarget(writer.prefix);
+      }
+      if (effect !== null && !this.canWrite(this.account(), writer.executionEpoch)) {
         throw new Error("Artifact writer execution is fenced");
-      if (effect !== null && writer.effect !== null)
+      }
+      if (effect !== null && writer.effect !== null) {
         throw new Error("Artifact writer has an unresolved effect");
+      }
       this.database
         .update(artifactWriters)
         .set({ effect })
@@ -80,14 +90,17 @@ export class AccountArtifactWriters {
   private assertWriterTarget(prefix: string) {
     const account = this.account();
     const conversionId = getAccountConversionIdFromArtifactPrefix(prefix, account.accountId);
-    if (conversionId === undefined) throw new Error("Artifact writer target is invalid");
+    if (conversionId === undefined) {
+      throw new Error("Artifact writer target is invalid");
+    }
     const conversion = this.database
       .select({ status: accountConversions.status })
       .from(accountConversions)
       .where(eq(accountConversions.conversionId, conversionId))
       .get();
-    if (!conversion || !["pending", "ready"].includes(conversion.status))
+    if (!conversion || !["pending", "ready"].includes(conversion.status)) {
       throw new Error("Artifact writer target is fenced");
+    }
   }
 
   find(writerId: string) {
@@ -129,7 +142,9 @@ export class AccountArtifactWriters {
         .where(eq(artifactWriters.writerId, writerId))
         .get(),
     );
-    if (writer.effect !== null) throw new Error("Artifact writer has an unresolved storage effect");
+    if (writer.effect !== null) {
+      throw new Error("Artifact writer has an unresolved storage effect");
+    }
     this.database
       .update(artifactWriters)
       .set({ state: "drained" })

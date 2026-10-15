@@ -17,7 +17,9 @@ test("fills the form from a cold-start share and accepts repeat shares without s
         ) => {
           listener({ text: "An article\nhttps://example.com/first?from=share" });
           window.addEventListener("test-share", (event) => {
-            if (event instanceof CustomEvent) listener({ text: String(event.detail) });
+            if (event instanceof CustomEvent) {
+              listener({ text: String(event.detail) });
+            }
           });
           return "share-listener";
         },

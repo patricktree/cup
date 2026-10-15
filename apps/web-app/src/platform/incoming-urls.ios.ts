@@ -8,7 +8,9 @@ export async function initializeIosIncomingUrls(
   navigate: (href: string) => void,
   onShare: () => void,
 ): Promise<void> {
-  if (Capacitor.getPlatform() !== "ios") return;
+  if (Capacitor.getPlatform() !== "ios") {
+    return;
+  }
 
   let receivedEvent = false;
   await App.addListener("appUrlOpen", ({ url }) => {
@@ -17,9 +19,13 @@ export async function initializeIosIncomingUrls(
   });
   const launch = await App.getLaunchUrl();
   // A launch URL may also arrive as an event while the listener is registering.
-  if (!receivedEvent && launch !== undefined) receive(launch.url);
+  if (!receivedEvent && launch !== undefined) {
+    receive(launch.url);
+  }
 
   function receive(value: string): void {
-    if (!handleAppLink(value, navigate)) handleShareLink(value, navigate, onShare);
+    if (!handleAppLink(value, navigate)) {
+      handleShareLink(value, navigate, onShare);
+    }
   }
 }

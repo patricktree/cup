@@ -68,13 +68,17 @@ export function PlayerHostProvider({ children }: { children: React.ReactNode }) 
 
   React.useEffect(
     function reportLatestVersionOfLoadedAudiobook() {
-      if (loadedConversionId === undefined) return undefined;
+      if (loadedConversionId === undefined) {
+        return undefined;
+      }
 
       // Observing the query keeps it polling while a retry synthesizes and the listener is elsewhere.
       const observer = new QueryObserver(queryClient, createAudiobookQuery(loadedConversionId));
       const reportLatestVersion = () => {
         const latest = observer.getCurrentResult().data;
-        if (latest) host.updateLoadedAudiobook(loadedConversionId, latest);
+        if (latest) {
+          host.updateLoadedAudiobook(loadedConversionId, latest);
+        }
       };
       reportLatestVersion();
       return observer.subscribe(reportLatestVersion);
@@ -164,7 +168,9 @@ export function usePlayerState<Selected>(
 
 function readPlayerHostAccount(): PlayerHostAccount {
   const authState = authStateSnapshot();
-  if (authState.status === "loading") return { status: "restoring" };
+  if (authState.status === "loading") {
+    return { status: "restoring" };
+  }
 
   return {
     status: "known",

@@ -132,7 +132,9 @@ export async function reconcileSegmentWorkflow(
     return "in-progress";
   }
 
-  if (status === "terminated" || (status === "errored" && !canResume)) return "stopped";
+  if (status === "terminated" || (status === "errored" && !canResume)) {
+    return "stopped";
+  }
   if (status === "errored") {
     try {
       await instance.restart();
@@ -155,7 +157,9 @@ async function dispatchSegmentWorkflow(
     // Creation can succeed before its response is lost. Resolve through the stable identity.
     const instance = await workflow.get(id);
     const result = await instance.status();
-    if (result.status === "errored" || result.status === "terminated") await instance.restart();
+    if (result.status === "errored" || result.status === "terminated") {
+      await instance.restart();
+    }
   }
 }
 

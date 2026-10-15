@@ -29,8 +29,9 @@ for (const state of [
   test(`renders ${state.name}`, async ({ mount }) => {
     const component = await mount(state.story);
     await expect(component.getByText(state.text, { exact: true })).toBeVisible();
-    if (state.name === "final-deletion")
+    if (state.name === "final-deletion") {
       await expect(component.getByRole("button", { name: "Restore account…" })).toBeDisabled();
+    }
     await expect(component).toHaveScreenshot(`${state.name}.png`);
   });
 }
@@ -60,8 +61,12 @@ test("confirmation cannot use a challenge that was cleared after the page render
   await page.evaluate((key) => sessionStorage.removeItem(key), ACCOUNT_CONFIRMATION_STORAGE_KEY);
   let deletionRequests = 0;
   page.on("request", (request) => {
-    if (request.method() === "POST" && new URL(request.url()).pathname === "/api/account/deletion")
+    if (
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === "/api/account/deletion"
+    ) {
       deletionRequests += 1;
+    }
   });
   await component.getByRole("button", { name: "Schedule deletion" }).click();
   await expect(component.getByRole("alert")).toHaveText(

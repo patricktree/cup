@@ -495,8 +495,9 @@ export function cleanAudiobookSourceMaterialHtml(html: string): string {
 /** Rejects private, loopback, link-local, and metadata-service destinations. */
 export function assertPublicSourceUrl(value: string): void {
   const url = new URL(value);
-  if (url.protocol !== "http:" && url.protocol !== "https:")
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new Error("Source URL must use HTTP or HTTPS");
+  }
   const hostname = url.hostname
     .toLowerCase()
     .replace(/^\[(.*)\]$/u, "$1")
@@ -515,9 +516,13 @@ export function assertPublicSourceUrl(value: string): void {
 
 function isPrivateIpv4(hostname: string): boolean {
   const parts = hostname.split(".");
-  if (parts.length !== 4 || parts.some((part) => !/^\d{1,3}$/u.test(part))) return false;
+  if (parts.length !== 4 || parts.some((part) => !/^\d{1,3}$/u.test(part))) {
+    return false;
+  }
   const octets = parts.map(Number);
-  if (octets.some((octet) => octet > 255)) return true;
+  if (octets.some((octet) => octet > 255)) {
+    return true;
+  }
   const address = octets.reduce((result, octet) => result * 256 + octet, 0);
   return NON_PUBLIC_IPV4_RANGES.some(
     ([rangeStart, rangeEnd]) => address >= rangeStart && address <= rangeEnd,
@@ -525,10 +530,16 @@ function isPrivateIpv4(hostname: string): boolean {
 }
 
 function isPrivateIpv6(hostname: string): boolean {
-  if (!hostname.includes(":")) return false;
+  if (!hostname.includes(":")) {
+    return false;
+  }
   const normalized = hostname.toLowerCase();
-  if (normalized === "::" || normalized === "::1") return true;
-  if (/^(?:fc|fd)/u.test(normalized) || /^fe[89ab]/u.test(normalized)) return true;
+  if (normalized === "::" || normalized === "::1") {
+    return true;
+  }
+  if (/^(?:fc|fd)/u.test(normalized) || /^fe[89ab]/u.test(normalized)) {
+    return true;
+  }
   const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/u.exec(normalized)?.[1];
   return mapped !== undefined && isPrivateIpv4(mapped);
 }

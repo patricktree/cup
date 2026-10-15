@@ -31,13 +31,17 @@ export async function waitForPreparedAudiobook(
     .poll(
       async () => {
         const audiobook = await readAudiobook(page, conversionId, token);
-        if ("title" in audiobook) prepared = audiobook;
+        if ("title" in audiobook) {
+          prepared = audiobook;
+        }
         return audiobook.status;
       },
       { timeout: 90_000 },
     )
     .not.toBe("pending");
-  if (!prepared) throw new Error("Expected a prepared audiobook.");
+  if (!prepared) {
+    throw new Error("Expected a prepared audiobook.");
+  }
   return prepared;
 }
 
@@ -47,10 +51,14 @@ export async function waitForGeneratedAudio(page: Page, conversionId: string, to
     .poll(async () => (await readAudiobook(page, conversionId, token)).status, { timeout: 90_000 })
     .toBe("ready");
   const audiobook = await readAudiobook(page, conversionId, token);
-  if (audiobook.status !== "ready") throw new Error("Expected generated audio to remain ready.");
+  if (audiobook.status !== "ready") {
+    throw new Error("Expected generated audio to remain ready.");
+  }
 
   return audiobook.segments.map((segment) => {
-    if (segment.status !== "ready") throw new Error(`Segment ${segment.sequence} has no audio.`);
+    if (segment.status !== "ready") {
+      throw new Error(`Segment ${segment.sequence} has no audio.`);
+    }
     return segment;
   });
 }

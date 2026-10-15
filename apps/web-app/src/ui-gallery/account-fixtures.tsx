@@ -125,7 +125,7 @@ async function initializeAccountStorySession(confirmation?: "delete" | "restore"
       user: { id: SUBJECT, email: "reader@example.test" },
     }),
   );
-  if (confirmation)
+  if (confirmation) {
     sessionStorage.setItem(
       ACCOUNT_CONFIRMATION_STORAGE_KEY,
       JSON.stringify({
@@ -136,5 +136,6 @@ async function initializeAccountStorySession(confirmation?: "delete" | "restore"
         action: confirmation,
       }),
     );
+  }
   await ensureAuthInitialized();
 }

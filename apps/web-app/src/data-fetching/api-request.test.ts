@@ -58,7 +58,7 @@ test("unsuccessful responses reject with the API error code, status, and retry d
   let response = 0;
   await page.route(`**/api/grants/${GRANT_ID}`, (route) => {
     response += 1;
-    if (response === 1)
+    if (response === 1) {
       return route.fulfill({
         status: 429,
         headers: { "Retry-After": "7" },
@@ -70,11 +70,13 @@ test("unsuccessful responses reject with the API error code, status, and retry d
           },
         },
       });
-    if (response === 2)
+    }
+    if (response === 2) {
       return route.fulfill({
         status: 401,
         json: { error: { code: "grant-session-invalid", message: "No access." } },
       });
+    }
     return route.fulfill({ status: 502, contentType: "text/html", body: "<h1>Bad gateway</h1>" });
   });
   await page.goto("/ui-gallery/index.html");
@@ -89,7 +91,9 @@ test("unsuccessful responses reject with the API error code, status, and retry d
         () => null,
         (error: unknown) => error,
       );
-      if (!(failure instanceof RpcError)) throw new Error("Expected an RpcError");
+      if (!(failure instanceof RpcError)) {
+        throw new Error("Expected an RpcError");
+      }
       const { code, message, status, retryAfter } = failure;
       results.push({ code, message, status, retryAfter });
     }

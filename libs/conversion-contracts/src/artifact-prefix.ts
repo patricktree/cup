@@ -20,7 +20,9 @@ export function getAccountConversionIdFromArtifactPrefix(
   accountId: string,
 ): string | undefined {
   const root = createAccountConversionsPrefix(accountId);
-  if (!prefix.startsWith(root)) return undefined;
+  if (!prefix.startsWith(root)) {
+    return undefined;
+  }
   return /^([0-9a-f-]{36})\//.exec(prefix.slice(root.length))?.[1];
 }
 

@@ -95,10 +95,13 @@ export class PlayerHost {
 
     // Media authorization and the listening position belong to the user the audiobook was loaded for.
     const { loaded, shown } = this.snapshot;
-    if (account.status === "known" && loaded && loaded.subject !== subject) this.unload();
+    if (account.status === "known" && loaded && loaded.subject !== subject) {
+      this.unload();
+    }
     // Another listener has not chosen to skip segments without audio.
-    if (subject !== this.consentingSubject && shown)
+    if (subject !== this.consentingSubject && shown) {
       this.update({ shown: { ...shown, hasPlaybackConsent: false } });
+    }
     this.consentingSubject = subject;
 
     this.loadShownIntoEmptyPlayer();
@@ -125,7 +128,9 @@ export class PlayerHost {
 
   /** The listener left the conversion's page; its consent to skip segments is forgotten. */
   hideConversion = (conversionId: string) => {
-    if (this.snapshot.shown?.conversionId !== conversionId) return;
+    if (this.snapshot.shown?.conversionId !== conversionId) {
+      return;
+    }
 
     this.update({ shown: null });
   };
@@ -141,8 +146,9 @@ export class PlayerHost {
       loaded?.conversionId !== conversionId ||
       latest.status !== "ready" ||
       countReadySegments(latest) <= countReadySegments(loaded.audiobook)
-    )
+    ) {
       return;
+    }
 
     this.pendingVersion = latest;
     this.swapInPendingVersionWhilePaused();
@@ -154,7 +160,9 @@ export class PlayerHost {
    */
   play = () => {
     const loaded = this.snapshot.loaded;
-    if (!loaded?.hasPlaybackConsent) return;
+    if (!loaded?.hasPlaybackConsent) {
+      return;
+    }
 
     const { player, session } = loaded;
     // Start within the user gesture; browsers refuse audio that starts after awaiting.
@@ -163,7 +171,9 @@ export class PlayerHost {
     void session
       .authorizeMedia()
       .then(() => {
-        if (this.snapshot.loaded?.player === player) this.update({ authorizationError: null });
+        if (this.snapshot.loaded?.player === player) {
+          this.update({ authorizationError: null });
+        }
         return undefined;
       })
       .catch((error: unknown) => {
@@ -186,17 +196,25 @@ export class PlayerHost {
    */
   playShown = (unitIndex?: number) => {
     const { shown } = this.snapshot;
-    if (!shown?.canPlay) return;
+    if (!shown?.canPlay) {
+      return;
+    }
 
-    if (!this.isShownLoaded()) this.load(this.createLoadRequest(shown));
-    if (unitIndex !== undefined) this.snapshot.loaded?.player.seekToUnit(unitIndex);
+    if (!this.isShownLoaded()) {
+      this.load(this.createLoadRequest(shown));
+    }
+    if (unitIndex !== undefined) {
+      this.snapshot.loaded?.player.seekToUnit(unitIndex);
+    }
     this.play();
   };
 
   /** The listener chose to play the shown audiobook without its segments that have no audio. */
   consentToSkippingSegmentsWithoutAudio = () => {
     const { shown, loaded } = this.snapshot;
-    if (!shown) return;
+    if (!shown) {
+      return;
+    }
 
     this.update({
       shown: { ...shown, hasPlaybackConsent: true },
@@ -205,7 +223,9 @@ export class PlayerHost {
   };
 
   unload = () => {
-    if (!this.snapshot.loaded) return;
+    if (!this.snapshot.loaded) {
+      return;
+    }
 
     this.closeLoadedPlayer();
     this.update({ loaded: null, authorizationError: null });
@@ -261,16 +281,18 @@ export class PlayerHost {
       !shown?.audiobook ||
       !hasLoadableAudio(shown.audiobook) ||
       this.services.getAccount().status === "restoring"
-    )
+    ) {
       return;
+    }
 
     this.load(this.createLoadRequest(shown));
   }
 
   private createLoadRequest(shown: ShownConversion): LoadRequest {
     const { conversionId, audiobook } = shown;
-    if (!audiobook || !hasLoadableAudio(audiobook))
+    if (!audiobook || !hasLoadableAudio(audiobook)) {
       throw new Error(`Audiobook ${conversionId} cannot be loaded before it is ready.`);
+    }
 
     const account = this.services.getAccount();
     const subject = account.status === "known" ? account.subject : null;
@@ -290,11 +312,15 @@ export class PlayerHost {
   private swapInPendingVersionWhilePaused() {
     const { loaded } = this.snapshot;
     const audiobook = this.pendingVersion;
-    if (!loaded || !audiobook || loaded.player.getSnapshot().isPlaying) return;
+    if (!loaded || !audiobook || loaded.player.getSnapshot().isPlaying) {
+      return;
+    }
 
     const position = loaded.session.listeningPositionOf(loaded.player.getSnapshot());
     // Only audiobooks with audio are loaded, so a player always reports a unit with audio.
-    if (!position) throw new Error("The loaded player reports no unit with audio.");
+    if (!position) {
+      throw new Error("The loaded player reports no unit with audio.");
+    }
 
     this.load({
       conversionId: loaded.conversionId,
@@ -309,7 +335,9 @@ export class PlayerHost {
   private closeLoadedPlayer() {
     this.pendingVersion = null;
     const loaded = this.snapshot.loaded;
-    if (!loaded) return;
+    if (!loaded) {
+      return;
+    }
 
     this.releaseLoadedPlayer?.();
     this.releaseLoadedPlayer = undefined;
@@ -319,7 +347,9 @@ export class PlayerHost {
 
   /** Reports a failure only while the player it concerns is still the loaded one. */
   private reportAuthorizationError(player: Player, error: unknown, fallbackMessage: string) {
-    if (this.snapshot.loaded?.player !== player) return;
+    if (this.snapshot.loaded?.player !== player) {
+      return;
+    }
 
     this.update({ authorizationError: error instanceof Error ? error.message : fallbackMessage });
   }
@@ -327,14 +357,22 @@ export class PlayerHost {
   private update(value: Partial<PlayerHostSnapshot>) {
     this.snapshot = { ...this.snapshot, ...value };
     const { shown } = this.snapshot;
-    if (shown) this.snapshot.shown = { ...shown, canPlay: this.canPlayShown(shown) };
+    if (shown) {
+      this.snapshot.shown = { ...shown, canPlay: this.canPlayShown(shown) };
+    }
 
-    for (const listener of this.listeners) listener();
+    for (const listener of this.listeners) {
+      listener();
+    }
   }
 
   private canPlayShown({ audiobook, hasPlaybackConsent }: ShownConversion) {
-    if (!audiobook || !hasLoadableAudio(audiobook)) return false;
-    if (!hasSegmentsWithoutAudio(audiobook)) return true;
+    if (!audiobook || !hasLoadableAudio(audiobook)) {
+      return false;
+    }
+    if (!hasSegmentsWithoutAudio(audiobook)) {
+      return true;
+    }
 
     // Once loaded, the loaded audiobook's consent applies.
     const { loaded } = this.snapshot;

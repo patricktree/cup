@@ -70,13 +70,16 @@ export class AccountDurationLedger {
     return this.database.transaction(() => {
       const existing = this.segments(conversionId).find((item) => item.sequence === sequence);
       if (existing && existing.state !== "released") {
-        if (existing.narrationTextCharacters !== characters)
+        if (existing.narrationTextCharacters !== characters) {
           throw new Error("Segment reservation conflicts with synthesis identity");
+        }
         return {
           result: existing.state === "settled" ? ("settled" as const) : ("reserved" as const),
         };
       }
-      if (estimate > this.balance().available) return { result: "insufficient-duration" as const };
+      if (estimate > this.balance().available) {
+        return { result: "insufficient-duration" as const };
+      }
       this.insertReservation(conversionId, sequence, characters, estimate, nowMs);
       return { result: "reserved" as const };
     });
@@ -97,23 +100,26 @@ export class AccountDurationLedger {
       );
       const missing = narrationTextCharactersBySegment.flatMap((characters, sequence) => {
         const segment = existing.get(sequence);
-        if (segment === undefined || segment.state === "released")
+        if (segment === undefined || segment.state === "released") {
           return [{ sequence, characters, estimate: estimateAudioDuration(characters) }];
-        if (segment.narrationTextCharacters !== characters)
+        }
+        if (segment.narrationTextCharacters !== characters) {
           throw new Error("Segment reservation conflicts with synthesis identity");
+        }
         return [];
       });
 
       const requiredMilliseconds = missing.reduce((total, segment) => total + segment.estimate, 0);
       const availableMilliseconds = this.balance().available;
-      if (requiredMilliseconds > availableMilliseconds)
+      if (requiredMilliseconds > availableMilliseconds) {
         return {
           result: "insufficient-duration" as const,
           requiredMilliseconds,
           availableMilliseconds,
         };
+      }
 
-      for (const segment of missing)
+      for (const segment of missing) {
         this.insertReservation(
           conversionId,
           segment.sequence,
@@ -121,6 +127,7 @@ export class AccountDurationLedger {
           segment.estimate,
           nowMs,
         );
+      }
       return {
         result: "reserved" as const,
         sequences: this.segments(conversionId)
@@ -146,13 +153,18 @@ export class AccountDurationLedger {
     const actual = z.number().int().positive().safe().parse(Math.ceil(durationMilliseconds));
     return this.database.transaction(() => {
       const segment = this.segments(conversionId).find((item) => item.sequence === sequence);
-      if (!segment) throw new Error("Audio segment has no duration reservation");
+      if (!segment) {
+        throw new Error("Audio segment has no duration reservation");
+      }
       if (segment.state === "settled") {
-        if (segment.actualMilliseconds !== actual)
+        if (segment.actualMilliseconds !== actual) {
           throw new Error("Conflicting audio duration settlement");
+        }
         return { result: "replayed" as const };
       }
-      if (segment.state !== "reserved") throw new Error("Audio segment reservation was released");
+      if (segment.state !== "reserved") {
+        throw new Error("Audio segment reservation was released");
+      }
       const balance = this.rawBalance();
       const charged = Math.min(actual, balance.available + balance.reserved);
       const operationId = requireRow(
@@ -199,8 +211,12 @@ export class AccountDurationLedger {
 
   releaseReservations(conversionId: string, nowMs: number, sequence?: number): void {
     for (const segment of this.segments(conversionId)) {
-      if (segment.state !== "reserved" || (sequence !== undefined && segment.sequence !== sequence))
+      if (
+        segment.state !== "reserved" ||
+        (sequence !== undefined && segment.sequence !== sequence)
+      ) {
         continue;
+      }
       const operationId = requireRow(
         this.database
           .select({ operationId: accountAudioSegments.operationId })
@@ -274,12 +290,14 @@ export class AccountDurationLedger {
         .where(eq(creditLedger.operationId, operationId))
         .get();
       if (existing) {
-        if (existing.delta !== amount || existing.cause !== cause)
+        if (existing.delta !== amount || existing.cause !== cause) {
           throw new Error("Allowance adjustment idempotency conflict");
+        }
         return;
       }
-      if (amount < 0 && -amount > this.balance().available)
+      if (amount < 0 && -amount > this.balance().available) {
         throw new Error("Allowance adjustment exceeds available duration");
+      }
       this.database
         .insert(creditOperations)
         .values({
@@ -308,8 +326,9 @@ export class AccountDurationLedger {
         .get(),
     );
     const balance = this.rawBalance();
-    if (balance.available !== totals.available || balance.reserved !== totals.reserved)
+    if (balance.available !== totals.available || balance.reserved !== totals.reserved) {
       throw new Error("Account balance does not match its credit ledger");
+    }
     return {
       balance: this.balance(),
       reconstructed: { available: Math.max(0, totals.available), reserved: totals.reserved },

@@ -249,7 +249,7 @@ export function createOperatorApi<Bindings extends object>(
     .openapi(listAccountDeletionsRoute, handlers.listAccountDeletions)
     .openapi(adjustAccountAllowanceRoute, handlers.adjustAccountAllowance)
     .openapi(inspectAccountRoute, handlers.inspectAccount, (result, context) => {
-      if (!result.success)
+      if (!result.success) {
         return context.json(
           {
             error: {
@@ -260,6 +260,7 @@ export function createOperatorApi<Bindings extends object>(
           },
           404,
         );
+      }
       return undefined;
     })
     .openapi(createGrantRoute, handlers.createGrant)

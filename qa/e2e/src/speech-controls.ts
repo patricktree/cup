@@ -21,7 +21,9 @@ export function createTrackedSpeechProvider(bucket: R2Bucket, scenario: string):
       run: async (request, options) => {
         const conversionId = options?.gateway?.metadata?.["conversionId"];
         const query: unknown = Array.isArray(request) ? undefined : request.query;
-        if (typeof conversionId !== "string") throw new Error("Narration request identity missing");
+        if (typeof conversionId !== "string") {
+          throw new Error("Narration request identity missing");
+        }
         const characters = narrationTextFromRequest(query).length;
         await bucket.put(`${SPEECH_CALLS_PREFIX}${crypto.randomUUID()}`, "", {
           customMetadata: { conversionId, characters: String(characters) },
@@ -29,8 +31,9 @@ export function createTrackedSpeechProvider(bucket: R2Bucket, scenario: string):
         if (scenario === "speech-gated") {
           const deadline = performance.now() + 30_000;
           while ((await bucket.head(SPEECH_RELEASE_KEY)) === null) {
-            if (performance.now() >= deadline)
+            if (performance.now() >= deadline) {
               throw new Error("The E2E speech gate was not released");
+            }
             await new Promise((resolve) => setTimeout(resolve, 100));
           }
         }
@@ -42,11 +45,15 @@ export function createTrackedSpeechProvider(bucket: R2Bucket, scenario: string):
 
 function narrationTextFromRequest(query: unknown): string {
   if (typeof query === "object" && query !== null) {
-    if ("text" in query && typeof query.text === "string") return query.text;
+    if ("text" in query && typeof query.text === "string") {
+      return query.text;
+    }
     if ("input" in query) {
       if (typeof query.input === "string") {
         const transcript = query.input.split("TRANSCRIPT:\n")[1];
-        if (transcript !== undefined) return transcript;
+        if (transcript !== undefined) {
+          return transcript;
+        }
       }
       if (Array.isArray(query.input)) {
         const message: unknown = query.input[0];
@@ -62,8 +69,9 @@ function narrationTextFromRequest(query: unknown): string {
             part !== null &&
             "text" in part &&
             typeof part.text === "string"
-          )
+          ) {
             return part.text;
+          }
         }
       }
     }

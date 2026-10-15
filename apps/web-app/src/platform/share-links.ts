@@ -15,12 +15,16 @@ export function handleShareLink(
     envelope.password ||
     envelope.port ||
     (envelope.pathname !== "" && envelope.pathname !== "/")
-  )
+  ) {
     return;
+  }
 
   const url = URL.parse(envelope.searchParams.get("url") ?? "");
-  if (url === null || !["http:", "https:"].includes(url.protocol) || url.username || url.password)
+  if (url === null || !["http:", "https:"].includes(url.protocol) || url.username || url.password) {
     return;
+  }
 
-  if (!handleAppLink(url.href, navigate)) receiveSharedUrl(url.href, onShare);
+  if (!handleAppLink(url.href, navigate)) {
+    receiveSharedUrl(url.href, onShare);
+  }
 }

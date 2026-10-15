@@ -32,13 +32,16 @@ export class ConversionGrantSqlite {
       grant !== undefined &&
       grant.registryConfirmedSnapshotRevision < grant.registrySnapshotRevision &&
       (await this.storage.getAlarm()) === null
-    )
+    ) {
       await this.storage.setAlarm(Temporal.Now.instant().epochMilliseconds);
+    }
   }
 
   async load(): Promise<GrantRecord | undefined> {
     const row = this.database.select().from(grantTable).where(eq(grantTable.id, 1)).get();
-    if (row === undefined) return undefined;
+    if (row === undefined) {
+      return undefined;
+    }
     const conversions = this.database
       .select()
       .from(conversionTable)
@@ -76,13 +79,17 @@ export class ConversionGrantSqlite {
         .map((attempt) => attempt.attemptedAtMs),
       conversions,
     };
-    if (!isGrantRecord(parsed)) throw new Error("Conversion grant storage is corrupt");
+    if (!isGrantRecord(parsed)) {
+      throw new Error("Conversion grant storage is corrupt");
+    }
     return parsed;
   }
 
   async requireRecord(): Promise<GrantRecord> {
     const record = await this.load();
-    if (record === undefined) throw new Error("Conversion grant is not initialized");
+    if (record === undefined) {
+      throw new Error("Conversion grant is not initialized");
+    }
     return record;
   }
 
@@ -117,7 +124,7 @@ export class ConversionGrantSqlite {
         .onConflictDoUpdate({ target: conversionTable.conversionId, set: mutableConversion })
         .run();
     }
-    for (const segment of record.segmentUsage)
+    for (const segment of record.segmentUsage) {
       this.database
         .insert(segmentUsageTable)
         .values(segment)
@@ -131,12 +138,14 @@ export class ConversionGrantSqlite {
           },
         })
         .run();
+    }
     this.database.delete(startAttemptTable).run();
-    if (record.startAttempts.length > 0)
+    if (record.startAttempts.length > 0) {
       this.database
         .insert(startAttemptTable)
         .values(record.startAttempts.map((attemptedAtMs) => ({ attemptedAtMs })))
         .run();
+    }
   }
 }
 
@@ -151,8 +160,10 @@ function conversionRowToUnknown(row: ConversionRow): unknown {
     ...(row.workflowStartedAtMs === null ? {} : { workflowStartedAtMs: row.workflowStartedAtMs }),
     lastStartedPhase: row.lastStartedPhase,
   };
-  if (row.status === "pending") return { ...base, status: "pending" };
-  if (row.status === "ready")
+  if (row.status === "pending") {
+    return { ...base, status: "pending" };
+  }
+  if (row.status === "ready") {
     return {
       ...base,
       status: "ready",
@@ -163,6 +174,7 @@ function conversionRowToUnknown(row: ConversionRow): unknown {
       ...(row.measurements === null ? {} : { measurements: row.measurements }),
       ...(row.providerUsage === null ? {} : { providerUsage: row.providerUsage }),
     };
+  }
   return {
     ...base,
     status: row.status,
@@ -261,7 +273,9 @@ function isGrantConversion(value: unknown): value is GrantConversion {
   ) {
     return false;
   }
-  if (value["status"] === "pending") return true;
+  if (value["status"] === "pending") {
+    return true;
+  }
   if (value["status"] === "ready") {
     return (
       typeof value["completedAtMs"] === "number" &&

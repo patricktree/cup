@@ -14,7 +14,9 @@ async function stubAudioPlayback(page: Page) {
     });
     HTMLMediaElement.prototype.play = function () {
       // The standby element is started muted only to unlock it for later segment boundaries.
-      if (!this.muted) document.documentElement.dataset["playedSource"] = this.src;
+      if (!this.muted) {
+        document.documentElement.dataset["playedSource"] = this.src;
+      }
       return Promise.resolve();
     };
   });

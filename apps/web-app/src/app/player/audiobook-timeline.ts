@@ -23,7 +23,9 @@ export function createAudiobookTimeline(segments: readonly AudioSegment[]): Audi
   let durationMilliseconds = 0;
 
   for (const segment of [...segments].sort((left, right) => left.sequence - right.sequence)) {
-    if (segment.status !== "ready") continue;
+    if (segment.status !== "ready") {
+      continue;
+    }
 
     entries.push({
       unitIndex: segment.sequence,
@@ -42,7 +44,9 @@ export function locateTimelinePosition(
   timeline: AudiobookTimeline,
   positionMilliseconds: number,
 ): { entryIndex: number; offsetMilliseconds: number } | undefined {
-  if (timeline.entries.length === 0) return undefined;
+  if (timeline.entries.length === 0) {
+    return undefined;
+  }
 
   // Stop just short of the end: an element sought to its end has ended and would not resume there.
   const position = Math.min(

@@ -33,17 +33,21 @@ export type PreparedConversionStatus = "insufficient-duration" | "synthesizing" 
 export function derivePreparedConversionStatus(
   usage: readonly Pick<SegmentUsage, "state">[],
 ): PreparedConversionStatus {
-  if (usage.length === 0) return "insufficient-duration";
+  if (usage.length === 0) {
+    return "insufficient-duration";
+  }
   return usage.some((segment) => segment.state === "reserved") ? "synthesizing" : "ready";
 }
 
 export function estimateAudioDuration(narrationTextCharacters: number): number {
-  if (!Number.isSafeInteger(narrationTextCharacters) || narrationTextCharacters < 1)
+  if (!Number.isSafeInteger(narrationTextCharacters) || narrationTextCharacters < 1) {
     throw new Error("Narration character count must be a positive safe integer");
+  }
   // Reserve 1 minute 20 seconds per 1,000 characters, with a one-second minimum.
   const estimate = Math.max(1_000, narrationTextCharacters * 80);
-  if (!Number.isSafeInteger(estimate))
+  if (!Number.isSafeInteger(estimate)) {
     throw new Error("Estimated duration exceeds supported precision");
+  }
   return estimate;
 }
 

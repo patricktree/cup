@@ -13,7 +13,9 @@ export type PendingAccountConversion = z.infer<typeof requestSchema>;
 
 export function readPendingAccountConversion() {
   const value = window.sessionStorage.getItem(PENDING_CONVERSION_KEY);
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
   try {
     return requestSchema.parse(JSON.parse(value));
   } catch {

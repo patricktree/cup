@@ -9,13 +9,14 @@ export function accountArtifactBucket(
 ): R2Bucket {
   return new Proxy(bucket, {
     get(target, property, receiver) {
-      if (property === "put")
+      if (property === "put") {
         return async (...args: Parameters<R2Bucket["put"]>) => {
           let handedToR2 = false;
           try {
             const [key] = args;
-            if (!key.startsWith(prefix))
+            if (!key.startsWith(prefix)) {
               throw new Error("Artifact write is outside its account prefix");
+            }
             const digest = new Uint8Array(
               await crypto.subtle.digest(
                 "SHA-256",
@@ -30,8 +31,9 @@ export function accountArtifactBucket(
               existing?.customMetadata?.["cup-writer-id"] === writerId &&
               (await account.reconcileArtifactWriter(writerId))
             ) {
-              if (args[1] instanceof ReadableStream)
+              if (args[1] instanceof ReadableStream) {
                 await args[1].pipeTo(new WritableStream({ write() {} }));
+              }
               return existing;
             }
             await account.prepareArtifactWrite(writerId, executionEpoch, prefix, key);
@@ -44,11 +46,13 @@ export function accountArtifactBucket(
             await account.drainArtifactWriter(writerId);
             return object;
           } catch (error) {
-            if (!handedToR2 && args[1] instanceof ReadableStream)
+            if (!handedToR2 && args[1] instanceof ReadableStream) {
               await args[1].cancel(error).catch(() => undefined);
+            }
             throw error;
           }
         };
+      }
       const value: unknown = Reflect.get(target, property, receiver);
       return typeof value === "function" ? value.bind(target) : value;
     },

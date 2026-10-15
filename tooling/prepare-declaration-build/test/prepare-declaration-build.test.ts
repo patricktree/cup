@@ -14,8 +14,9 @@ const TYPE_STRIPPING_CONFIG = url.fileURLToPath(
 const directories: string[] = [];
 
 afterEach(async () => {
-  for (const directory of directories.splice(0))
+  for (const directory of directories.splice(0)) {
     await fs.rm(directory, { recursive: true, force: true });
+  }
 });
 
 test("cleans stale declarations and metadata while preserving aliases, conditions, and other manifest fields", async () => {

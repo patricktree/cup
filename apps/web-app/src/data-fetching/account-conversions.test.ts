@@ -37,7 +37,9 @@ test("a late rate-limit response cannot change the next account's pending reques
   });
   let requests = 0;
   await page.route("**/api/account/conversions", async (route) => {
-    if (route.request().method() !== "POST") return route.continue();
+    if (route.request().method() !== "POST") {
+      return route.continue();
+    }
     requests += 1;
     await held;
     await route.fulfill({
@@ -52,8 +54,9 @@ test("a late rate-limit response cannot change the next account's pending reques
   );
   await page.goto("/ui-gallery/index.html");
   await page.evaluate(async () => {
-    if (!("mount" in window) || typeof window.mount !== "function")
+    if (!("mount" in window) || typeof window.mount !== "function") {
       throw new Error("Gallery is unavailable");
+    }
     await window.mount({ story: "routes/index/LandingPage" });
   });
   const component = page.locator("main");
@@ -68,11 +71,15 @@ test("a late rate-limit response cannot change the next account's pending reques
       access_token: `eyJhbGciOiJIUzI1NiJ9.${payload}.fixture`,
       refresh_token: "other-refresh",
     });
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     const pendingPath = "/src/data-fetching/account-conversion-storage.ts";
     const pending = await import(pendingPath);
     const request = pending.readPendingAccountConversion();
-    if (!request) throw new Error("Expected the original request to remain");
+    if (!request) {
+      throw new Error("Expected the original request to remain");
+    }
     pending.storePendingAccountConversion({ ...request, submitted: true });
   }, otherSubject);
   release?.();

@@ -90,14 +90,16 @@ export class RegistrySqlite {
             }),
       }));
     const parsed: unknown = { grants };
-    if (!isRegistryRecord(parsed)) throw new Error("Registry storage is corrupt");
+    if (!isRegistryRecord(parsed)) {
+      throw new Error("Registry storage is corrupt");
+    }
     return parsed;
   }
 
   async save(record: RegistryRecord): Promise<void> {
     // Callers hold a storage transaction across the delete and every insert batch.
     this.database.delete(registryGrantTable).run();
-    for (let offset = 0; offset < record.grants.length; offset += GRANTS_PER_BATCH)
+    for (let offset = 0; offset < record.grants.length; offset += GRANTS_PER_BATCH) {
       this.database
         .insert(registryGrantTable)
         .values(
@@ -118,6 +120,7 @@ export class RegistrySqlite {
           })),
         )
         .run();
+    }
   }
 }
 

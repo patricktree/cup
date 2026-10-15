@@ -15,11 +15,16 @@ export async function getGrantConversion(
   dependencies: GetGrantConversionDependencies,
 ): Promise<ConversionDetail | undefined> {
   const conversion = await dependencies.getConversion(conversionId);
-  if (conversion === undefined) return undefined;
+  if (conversion === undefined) {
+    return undefined;
+  }
   const snapshot = toGrantConversionSnapshot(conversion);
-  if (snapshot.status === "pending")
+  if (snapshot.status === "pending") {
     return { ...snapshot, lastStartedPhase: conversion.lastStartedPhase };
-  if (snapshot.status === "failed") return snapshot;
+  }
+  if (snapshot.status === "failed") {
+    return snapshot;
+  }
   return {
     ...snapshot,
     status: derivePreparedConversionStatus(await dependencies.listAudioSegments(conversionId)),

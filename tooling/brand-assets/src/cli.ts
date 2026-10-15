@@ -70,17 +70,22 @@ async function generateAssets(check: boolean): Promise<void> {
   // Android's vector format cannot represent arbitrary SVG. Reject unsupported artwork
   // rather than silently dropping shapes when the source icon changes.
   const viewBox = source.match(/viewBox="([^"]+)"/)?.[1];
-  if (viewBox === undefined) throw new Error("Cup SVG requires a viewBox.");
+  if (viewBox === undefined) {
+    throw new Error("Cup SVG requires a viewBox.");
+  }
   const [x, y, width, height] = viewBox.split(/\s+/).map(Number);
-  if (x !== 0 || y !== 0 || !width || !height)
+  if (x !== 0 || y !== 0 || !width || !height) {
     throw new Error("Cup SVG requires a viewBox starting at 0 0.");
+  }
   const content = source.replace(/<svg\b[^>]*>|<\/svg>/g, "").trim();
   const paths = [...content.matchAll(/<path\s+([^>]+)\/>/g)];
   if (paths.length === 0 || content.replace(/<path\s+[^>]+\/>/g, "").trim()) {
     throw new Error("Android vector export supports only paths with d and fill attributes.");
   }
   const vectors = paths.map(([, attributes]) => {
-    if (attributes === undefined) throw new Error("Missing SVG path attributes.");
+    if (attributes === undefined) {
+      throw new Error("Missing SVG path attributes.");
+    }
     const data = attributes.match(/\bd="([^"]+)"/)?.[1];
     const fill = attributes.match(/\bfill="(#[\da-fA-F]{6})"/)?.[1];
     if (!data || !fill || attributes.replace(/\b(?:d|fill)="[^"]*"/g, "").trim()) {
@@ -100,10 +105,11 @@ ${vectors.join("\n")}
 `,
   );
 
-  if (stale.length)
+  if (stale.length) {
     throw new Error(
       `Brand assets are out of date:\n${stale.join("\n")}\nRun pnpm brand-assets:sync from the repository root, then rerun pnpm brand-assets:check.`,
     );
+  }
   console.log(
     check ? "Brand assets are up to date." : "Generated web, Android, and iOS brand assets.",
   );
@@ -115,9 +121,13 @@ ${vectors.join("\n")}
     try {
       actual = await fs.readFile(target);
     } catch (error) {
-      if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") throw error;
+      if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") {
+        throw error;
+      }
     }
-    if (actual?.equals(expected)) return;
+    if (actual?.equals(expected)) {
+      return;
+    }
     if (check) {
       stale.push(relativePath);
       return;

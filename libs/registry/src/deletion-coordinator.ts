@@ -66,17 +66,22 @@ export class DeletionCoordinator {
         .from(canceledDeletionAttempts)
         .where(eq(canceledDeletionAttempts.attemptId, attempt.attemptId))
         .get();
-      if (canceled) return;
+      if (canceled) {
+        return;
+      }
       const existing = this.job(attempt.attemptId);
       if (
         existing &&
         (existing.accountId !== attempt.accountId ||
           existing.subject !== attempt.subject ||
           existing.deadlineMs !== attempt.deadlineMs)
-      )
+      ) {
         throw new Error("Deletion attempt identity conflict");
+      }
       if (attempt.state === "restored") {
-        if (existing?.state === "deleting") throw new Error("Deletion cleanup has started");
+        if (existing?.state === "deleting") {
+          throw new Error("Deletion cleanup has started");
+        }
         this.database
           .insert(canceledDeletionAttempts)
           .values({
@@ -85,7 +90,9 @@ export class DeletionCoordinator {
           })
           .onConflictDoNothing()
           .run();
-        if (existing) this.save({ ...existing, state: "restored", email: "" });
+        if (existing) {
+          this.save({ ...existing, state: "restored", email: "" });
+        }
         this.cancelNotification(`${attempt.attemptId}:scheduled`);
         return;
       }
@@ -143,7 +150,9 @@ export class DeletionCoordinator {
         this.receiptIfFinished(job, "restored");
         continue;
       }
-      if (job.state === "erased" || nowMs < job.nextAttemptMs) continue;
+      if (job.state === "erased" || nowMs < job.nextAttemptMs) {
+        continue;
+      }
       const account = this.env.ACCOUNTS.get(this.env.ACCOUNTS.idFromName(job.accountId));
       try {
         if (job.state === "scheduled") {
@@ -181,7 +190,9 @@ export class DeletionCoordinator {
             "Your Cup account has been deleted",
             "Your Cup account and its private conversions have been deleted. Original trial conversions remain separate. You can create a new Cup account at https://cup.audio/app.",
           );
-        } else throw new Error("Deletion dependencies are pending");
+        } else {
+          throw new Error("Deletion dependencies are pending");
+        }
       } catch {
         job.failures += 1;
         job.nextAttemptMs =
@@ -194,8 +205,12 @@ export class DeletionCoordinator {
     await this.sendNotifications();
     for (const row of this.database.select({ json: deletionJobs.json }).from(deletionJobs).all()) {
       const job = jobSchema.parse(JSON.parse(row.json));
-      if (job.state === "erased") this.receiptIfFinished(job, "erased");
-      if (job.state === "restored") this.receiptIfFinished(job, "restored");
+      if (job.state === "erased") {
+        this.receiptIfFinished(job, "erased");
+      }
+      if (job.state === "restored") {
+        this.receiptIfFinished(job, "restored");
+      }
     }
   }
 
@@ -212,7 +227,9 @@ export class DeletionCoordinator {
       .from(deletionNotifications)
       .all()) {
       const notification = notificationSchema.parse(JSON.parse(row.json));
-      if (notification.state === "pending") times.push(notification.nextAttemptMs);
+      if (notification.state === "pending") {
+        times.push(notification.nextAttemptMs);
+      }
     }
     const receipt = requireRow(
       this.database
@@ -220,14 +237,18 @@ export class DeletionCoordinator {
         .from(deletionReceipts)
         .get(),
     ).next;
-    if (receipt !== null) times.push(receipt);
+    if (receipt !== null) {
+      times.push(receipt);
+    }
     const canceled = requireRow(
       this.database
         .select({ next: min(canceledDeletionAttempts.expiresAtMs) })
         .from(canceledDeletionAttempts)
         .get(),
     ).next;
-    if (canceled !== null) times.push(canceled);
+    if (canceled !== null) {
+      times.push(canceled);
+    }
     return times.length
       ? Math.max(Temporal.Now.instant().epochMilliseconds + 1_000, Math.min(...times))
       : null;
@@ -271,7 +292,9 @@ export class DeletionCoordinator {
 
   recordGoogleRevocation(attemptId: string, subject: string, outcome: "revoked" | "failed") {
     const job = this.job(attemptId);
-    if (!job || job.subject !== subject || job.state !== "scheduled") return;
+    if (!job || job.subject !== subject || job.state !== "scheduled") {
+      return;
+    }
     this.save({ ...job, googleRevocation: outcome });
   }
 
@@ -317,14 +340,18 @@ export class DeletionCoordinator {
       .from(deletionNotifications)
       .where(eq(deletionNotifications.key, key))
       .get();
-    if (!row) return;
+    if (!row) {
+      return;
+    }
     const notification = notificationSchema.parse(JSON.parse(row.json));
-    if (notification.state === "pending")
+    if (notification.state === "pending") {
       this.saveNotification({ ...notification, state: "canceled" });
+    }
   }
   private saveNotification(notification: Notification) {
-    if (notification.state !== "pending")
+    if (notification.state !== "pending") {
       notification = { ...notification, email: "", text: "", subject: "" };
+    }
     this.database
       .update(deletionNotifications)
       .set({ json: JSON.stringify(notification) })
@@ -353,7 +380,9 @@ export class DeletionCoordinator {
       .all()) {
       const notification = notificationSchema.parse(JSON.parse(row.json));
       const nowMs = Temporal.Now.instant().epochMilliseconds;
-      if (notification.state !== "pending" || notification.nextAttemptMs > nowMs) continue;
+      if (notification.state !== "pending" || notification.nextAttemptMs > nowMs) {
+        continue;
+      }
       if (
         notification.firstAttemptMs !== null &&
         nowMs >= notification.firstAttemptMs + 23 * 3_600_000
@@ -382,16 +411,19 @@ export class DeletionCoordinator {
             text: notification.text,
           }),
         });
-        if (response.ok) notification.state = "sent";
-        else if (
+        if (response.ok) {
+          notification.state = "sent";
+        } else if (
           response.status >= 400 &&
           response.status < 500 &&
           ![408, 409, 429].includes(response.status)
-        )
+        ) {
           notification.state = "failed";
-        else {
+        } else {
           const delay = response.headers.get("Retry-After");
-          if (delay) retryAfterMs = providerRetryDelay(delay, nowMs);
+          if (delay) {
+            retryAfterMs = providerRetryDelay(delay, nowMs);
+          }
         }
         await response.body?.cancel();
       } catch {
@@ -419,9 +451,11 @@ export class DeletionCoordinator {
       .where(eq(deletionNotifications.attemptId, job.attemptId))
       .all()
       .map((row) => notificationSchema.parse(JSON.parse(row.json)));
-    if (notifications.some((notification) => notification.state === "pending")) return;
+    if (notifications.some((notification) => notification.state === "pending")) {
+      return;
+    }
     this.database.transaction(() => {
-      if (result !== "restored")
+      if (result !== "restored") {
         this.database
           .insert(deletionReceipts)
           .values({
@@ -443,6 +477,7 @@ export class DeletionCoordinator {
           })
           .onConflictDoNothing()
           .run();
+      }
       this.database
         .delete(deletionNotifications)
         .where(eq(deletionNotifications.attemptId, job.attemptId))
@@ -462,16 +497,22 @@ export class DeletionCoordinator {
       body: JSON.stringify({ should_soft_delete: false }),
     });
     await response.body?.cancel();
-    if (!response.ok && response.status !== 404) throw new Error("Identity deletion unavailable");
+    if (!response.ok && response.status !== 404) {
+      throw new Error("Identity deletion unavailable");
+    }
   }
 }
 
 function providerRetryDelay(value: string, nowMs: number) {
-  if (/^\d+$/.test(value)) return Number(value) * 1000;
+  if (/^\d+$/.test(value)) {
+    return Number(value) * 1000;
+  }
   const match = /^[A-Za-z]{3}, (\d{2}) ([A-Za-z]{3}) (\d{4}) (\d{2}):(\d{2}):(\d{2}) GMT$/.exec(
     value,
   );
-  if (!match) return 0;
+  if (!match) {
+    return 0;
+  }
   const month =
     ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(
       match[2]!,

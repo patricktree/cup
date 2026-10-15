@@ -32,11 +32,16 @@ export function resolveConversionReader(
       artifactPrefix,
       getConversion: () => account.getConversion(conversionId),
       getReadyAudiobookReference: async () => {
-        if ((await account.inspect()).state !== "active") return undefined;
+        if ((await account.inspect()).state !== "active") {
+          return undefined;
+        }
         const outcome = (await account.getConversion(conversionId))?.outcome;
-        if (outcome?.status !== "ready") return undefined;
-        if (outcome.audiobookReference.key !== `${artifactPrefix}audiobook.json`)
+        if (outcome?.status !== "ready") {
+          return undefined;
+        }
+        if (outcome.audiobookReference.key !== `${artifactPrefix}audiobook.json`) {
           throw new Error("Private manifest ownership mismatch");
+        }
         return outcome.audiobookReference;
       },
       listAudioSegments: () => account.listAudioSegments(conversionId),

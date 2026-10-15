@@ -26,8 +26,9 @@ let testEnvironment: TestEnvironment | undefined;
 beforeAll(async () => {
   await harness.listen();
   const environment: unknown = await worker.getEnv();
-  if (!isTestEnvironment(environment))
+  if (!isTestEnvironment(environment)) {
     throw new Error("The conversion grant test bindings are unavailable.");
+  }
   testEnvironment = environment;
 }, 30_000);
 
@@ -64,7 +65,9 @@ describe("SQLite conversion grant Durable Object", () => {
     );
 
     const exchanged = await grant.exchangeCredential(root.credential, CREATED_AT_MS);
-    if (exchanged.result !== "created") throw new Error("Credential exchange failed.");
+    if (exchanged.result !== "created") {
+      throw new Error("Credential exchange failed.");
+    }
     expect((await grant.validateSession(exchanged.sessionToken, EXPIRES_AT_MS)).result).toBe(
       "valid",
     );
@@ -86,7 +89,9 @@ describe("SQLite conversion grant Durable Object", () => {
       grantId("phase-request"),
       CREATED_AT_MS,
     );
-    if (accepted.result !== "created") throw new Error("Conversion was not accepted.");
+    if (accepted.result !== "created") {
+      throw new Error("Conversion was not accepted.");
+    }
 
     expect(accepted.conversion.lastStartedPhase).toBe(ConversionPhase.CONVERSION_START);
     await grant.recordPhaseStarted(
@@ -150,7 +155,9 @@ describe("SQLite conversion grant Durable Object", () => {
       spentMilliseconds: 0,
     });
 
-    if (first.result !== "created") throw new Error("The first conversion was not accepted.");
+    if (first.result !== "created") {
+      throw new Error("The first conversion was not accepted.");
+    }
     await grant.recordFailed(first.conversion.conversionId, {
       completedAtMs: CREATED_AT_MS + 7 * 61_000,
       failureCategory: "source-preparation",
@@ -170,7 +177,9 @@ describe("SQLite conversion grant Durable Object", () => {
       grantId("ready-request"),
       CREATED_AT_MS,
     );
-    if (accepted.result !== "created") throw new Error("Conversion was not accepted.");
+    if (accepted.result !== "created") {
+      throw new Error("Conversion was not accepted.");
+    }
     const ready = {
       completedAtMs: CREATED_AT_MS + 1,
       title: "Ready",
@@ -205,7 +214,9 @@ describe("SQLite conversion grant Durable Object", () => {
       grantId("recovered-request"),
       CREATED_AT_MS,
     );
-    if (accepted.result !== "created") throw new Error("Conversion was not accepted.");
+    if (accepted.result !== "created") {
+      throw new Error("Conversion was not accepted.");
+    }
     await grant.recordFailed(accepted.conversion.conversionId, {
       completedAtMs: CREATED_AT_MS + 1,
       failureCategory: "source-preparation",
@@ -243,11 +254,15 @@ describe("SQLite conversion grant Durable Object", () => {
         CREATED_AT_MS + index * 61_000,
       );
       expect(accepted.result).toBe("created");
-      if (accepted.result !== "created") throw new Error("Conversion was not accepted.");
+      if (accepted.result !== "created") {
+        throw new Error("Conversion was not accepted.");
+      }
       conversions.push(accepted.conversion);
     }
     const failedConversion = conversions[0];
-    if (failedConversion === undefined) throw new Error("Failed conversion is unavailable.");
+    if (failedConversion === undefined) {
+      throw new Error("Failed conversion is unavailable.");
+    }
     await grant.recordFailed(failedConversion.conversionId, {
       completedAtMs: CREATED_AT_MS + 5 * 61_000,
       failureCategory: "source-preparation",
@@ -314,15 +329,19 @@ describe("SQLite conversion grant Registry Durable Object", () => {
       entries.push(entry);
     }
     const first = entries[0];
-    if (first === undefined) throw new Error("Expected a provisioned grant.");
-    for (let index = 0; index < 51; index++)
+    if (first === undefined) {
+      throw new Error("Expected a provisioned grant.");
+    }
+    for (let index = 0; index < 51; index++) {
       await registry.bindConversion(grantId(`batch-conversion-${index}`), first.grantId);
+    }
 
     expect((await registry.listGrants({ limit: 100 }, CREATED_AT_MS)).grants).toHaveLength(8);
-    for (let index = 0; index < 51; index++)
+    for (let index = 0; index < 51; index++) {
       expect(await registry.findGrantIdForConversion(grantId(`batch-conversion-${index}`))).toBe(
         first.grantId,
       );
+    }
 
     const storage = await worker.getDurableObjectStorage("REGISTRY", {
       name: "registry-batches",
@@ -391,7 +410,9 @@ describe("SQLite conversion grant Registry Durable Object", () => {
     const firstPage = await registry.listGrants({ label: "alpha", limit: 1 }, CREATED_AT_MS + 2);
     expect(firstPage.grants).toHaveLength(1);
     expect(firstPage.nextCursor).toBeDefined();
-    if (firstPage.nextCursor === undefined) throw new Error("The first page has no cursor.");
+    if (firstPage.nextCursor === undefined) {
+      throw new Error("The first page has no cursor.");
+    }
     const secondPage = await registry.listGrants(
       { label: "alpha", limit: 1, cursor: firstPage.nextCursor },
       CREATED_AT_MS + 2,
@@ -412,8 +433,9 @@ function registryStub(name: string) {
 }
 
 function getTestEnvironment(): TestEnvironment {
-  if (testEnvironment === undefined)
+  if (testEnvironment === undefined) {
     throw new Error("The conversion grant test environment is unavailable.");
+  }
   return testEnvironment;
 }
 
@@ -461,13 +483,17 @@ test("changes duration allowance without replacing credentials or sessions", asy
   const root = await createRootCredential();
   await grant.installCredentialVerifier(root.verifier, CREATED_AT_MS);
   const exchange = await grant.exchangeCredential(root.credential, CREATED_AT_MS);
-  if (exchange.result !== "created") throw new Error("Credential exchange failed");
+  if (exchange.result !== "created") {
+    throw new Error("Credential exchange failed");
+  }
   const accepted = await grant.startConversion(
     "https://example.com/allowance",
     crypto.randomUUID(),
     CREATED_AT_MS,
   );
-  if (accepted.result !== "created") throw new Error("Conversion not accepted");
+  if (accepted.result !== "created") {
+    throw new Error("Conversion not accepted");
+  }
   expect((await grant.reserveAudioSegment(accepted.conversion.conversionId, 0, 100)).result).toBe(
     "reserved",
   );
@@ -545,7 +571,9 @@ test("persists segment usage as constrained rows without resetting the balance",
   const root = await createRootCredential();
   await grant.installCredentialVerifier(root.verifier, CREATED_AT_MS);
   const session = await grant.exchangeCredential(root.credential, CREATED_AT_MS);
-  if (session.result !== "created") throw new Error("Session not created");
+  if (session.result !== "created") {
+    throw new Error("Session not created");
+  }
   const first = await grant.startConversion(
     "https://example.com/first",
     crypto.randomUUID(),
@@ -556,8 +584,9 @@ test("persists segment usage as constrained rows without resetting the balance",
     crypto.randomUUID(),
     CREATED_AT_MS,
   );
-  if (first.result !== "created" || second.result !== "created")
+  if (first.result !== "created" || second.result !== "created") {
     throw new Error("Conversions not created");
+  }
   await grant.reserveAudioSegment(first.conversion.conversionId, 0, 10);
   await grant.completeAudioSegment(first.conversion.conversionId, 0, 800);
   await grant.reserveAudioSegment(first.conversion.conversionId, 1, 10);
@@ -625,8 +654,9 @@ test("serializes concurrent duration reservations across conversions and absorbs
     crypto.randomUUID(),
     CREATED_AT_MS,
   );
-  if (first.result !== "created" || second.result !== "created")
+  if (first.result !== "created" || second.result !== "created") {
     throw new Error("Conversions not accepted");
+  }
   const results = await Promise.all([
     grant.reserveAudioSegment(first.conversion.conversionId, 0, 1),
     grant.reserveAudioSegment(second.conversion.conversionId, 0, 1),
@@ -676,7 +706,9 @@ test("blocks an oversized reservation without spending or splitting the remainin
     crypto.randomUUID(),
     CREATED_AT_MS,
   );
-  if (accepted.result !== "created") throw new Error("Conversion not accepted");
+  if (accepted.result !== "created") {
+    throw new Error("Conversion not accepted");
+  }
   expect((await grant.reserveAudioSegment(accepted.conversion.conversionId, 0, 30)).result).toBe(
     "insufficient-duration",
   );
@@ -695,7 +727,9 @@ test("retries reuse reservations, failures release only unfinished work, and rep
     crypto.randomUUID(),
     CREATED_AT_MS,
   );
-  if (accepted.result !== "created") throw new Error("Conversion not accepted");
+  if (accepted.result !== "created") {
+    throw new Error("Conversion not accepted");
+  }
   const id = accepted.conversion.conversionId;
   await grant.reserveAudioSegment(id, 0, 10);
   await grant.reserveAudioSegment(id, 1, 10);
@@ -730,7 +764,9 @@ test("revocation blocks new reservations while existing reservations may finish"
     crypto.randomUUID(),
     CREATED_AT_MS,
   );
-  if (accepted.result !== "created") throw new Error("Conversion not accepted");
+  if (accepted.result !== "created") {
+    throw new Error("Conversion not accepted");
+  }
   const id = accepted.conversion.conversionId;
   await grant.reserveAudioSegment(id, 0, 10);
   await grant.revoke(CREATED_AT_MS);
@@ -747,7 +783,9 @@ test("unused receipt columns do not affect existing conversion replay or duratio
   await grant.setDurationAllowance(20_000, CREATED_AT_MS);
   const key = crypto.randomUUID();
   const accepted = await grant.startConversion("https://example.com/retained", key, CREATED_AT_MS);
-  if (accepted.result !== "created") throw new Error("Conversion not accepted");
+  if (accepted.result !== "created") {
+    throw new Error("Conversion not accepted");
+  }
   const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
   await storage.exec("ALTER TABLE conversions ADD COLUMN import_receipt_hash TEXT");
   await storage.exec("UPDATE conversions SET import_receipt_hash = ?", "a".repeat(64));
@@ -775,17 +813,23 @@ test.each([false, true])(
     const root = await createRootCredential();
     await grant.installCredentialVerifier(root.verifier, CREATED_AT_MS);
     const session = await grant.exchangeCredential(root.credential, CREATED_AT_MS);
-    if (session.result !== "created") throw new Error("Session not created");
+    if (session.result !== "created") {
+      throw new Error("Session not created");
+    }
     const accepted = await grant.startConversion(
       "https://example.com/old",
       crypto.randomUUID(),
       CREATED_AT_MS,
     );
-    if (accepted.result !== "created") throw new Error("Conversion not accepted");
+    if (accepted.result !== "created") {
+      throw new Error("Conversion not accepted");
+    }
     await grant.reserveAudioSegment(accepted.conversion.conversionId, 0, 10);
     await grant.completeAudioSegment(accepted.conversion.conversionId, 0, 800);
     await grant.reserveAudioSegment(accepted.conversion.conversionId, 1, 10);
-    if (revoked) await grant.revoke(CREATED_AT_MS);
+    if (revoked) {
+      await grant.revoke(CREATED_AT_MS);
+    }
     const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
     const before = await storage.exec("SELECT * FROM grant");
     await installProductionSchema(storage, "grant", [
@@ -822,7 +866,9 @@ test.each([false, true])(
         crypto.randomUUID(),
         CREATED_AT_MS,
       );
-      if (next.result !== "created") throw new Error("New conversion not accepted");
+      if (next.result !== "created") {
+        throw new Error("New conversion not accepted");
+      }
       await grant.reserveAudioSegment(next.conversion.conversionId, 0, 10);
       await grant.completeAudioSegment(next.conversion.conversionId, 0, 900);
     }
@@ -839,7 +885,7 @@ test("upgrades production registry inventory and drops old audiobook ownership",
   const entries = [];
   for (const label of ["Open", "Revoked", "Provisioning"]) {
     const { entry } = await registry.reserveProvisioning(crypto.randomUUID(), label, CREATED_AT_MS);
-    if (label !== "Provisioning")
+    if (label !== "Provisioning") {
       await registry.activate(
         entry.requestId,
         {
@@ -853,6 +899,7 @@ test("upgrades production registry inventory and drops old audiobook ownership",
         },
         true,
       );
+    }
     await registry.bindConversion(crypto.randomUUID(), entry.grantId);
     entries.push(entry);
   }
@@ -870,8 +917,9 @@ test("upgrades production registry inventory and drops old audiobook ownership",
     "canceled_deletion_attempts",
     "deletion_receipts",
     "rate_events",
-  ])
+  ]) {
     await storage.exec(`DROP TABLE ${table}`);
+  }
   await installProductionSchema(storage, "grant-registry", [
     "registry_grants",
     "conversion_grants",
@@ -921,7 +969,9 @@ test("upgrades production registry inventory and drops old audiobook ownership",
     ).toBe("replayed");
   }
   const first = entries[0];
-  if (first === undefined) throw new Error("Missing grant");
+  if (first === undefined) {
+    throw new Error("Missing grant");
+  }
   const newConversion = crypto.randomUUID();
   await registry.bindConversion(newConversion, first.grantId);
   await registry.migrate();
@@ -964,14 +1014,20 @@ async function installProductionSchema(
   tables: string[],
 ) {
   const rows = new Map<string, Record<string, string | number | null>[]>();
-  for (const table of tables) rows.set(table, await storage.exec(`SELECT * FROM ${table}`));
-  for (const table of tables.toReversed()) await storage.exec(`DROP TABLE ${table}`);
+  for (const table of tables) {
+    rows.set(table, await storage.exec(`SELECT * FROM ${table}`));
+  }
+  for (const table of tables.toReversed()) {
+    await storage.exec(`DROP TABLE ${table}`);
+  }
   await storage.exec("DROP TABLE __drizzle_migrations");
   const fixture = await fs.readFile(
     new URL(`./fixtures/production-${store}.sql`, import.meta.url),
     "utf8",
   );
-  for (const statement of fixture.split("--> statement-breakpoint")) await storage.exec(statement);
+  for (const statement of fixture.split("--> statement-breakpoint")) {
+    await storage.exec(statement);
+  }
   for (const [table, records] of rows) {
     // The frozen production schema predates columns that later migrations added.
     const productionColumns = new Set(

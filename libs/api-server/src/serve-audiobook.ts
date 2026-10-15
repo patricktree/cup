@@ -20,7 +20,9 @@ export async function loadReadyAudiobookFromEnvironment(
 ): Promise<Audiobook | undefined> {
   if (!reader) {
     const owner = await getRegistryStub(env).findConversionOwner(conversionId);
-    if (!owner) return undefined;
+    if (!owner) {
+      return undefined;
+    }
     reader = resolveConversionReader(env, conversionId, owner);
   }
   const conversionReader = reader;
@@ -40,27 +42,36 @@ export async function serveAudio(
   requestId: string,
 ): Promise<Response> {
   const owner = await getRegistryStub(env).findConversionOwner(conversionId);
-  if (!owner) return audiobookNotFound(requestId);
+  if (!owner) {
+    return audiobookNotFound(requestId);
+  }
   const reader = resolveConversionReader(env, conversionId, owner);
   const audiobook = await loadReadyAudiobookFromEnvironment(env, conversionId, reader);
-  if (audiobook === undefined) return audiobookNotFound(requestId);
+  if (audiobook === undefined) {
+    return audiobookNotFound(requestId);
+  }
 
-  if (!audiobook.narrationDocument.synchronizationUnits[sequence])
+  if (!audiobook.narrationDocument.synchronizationUnits[sequence]) {
     return audiobookNotFound(requestId);
+  }
   const usage = await reader.listAudioSegments();
-  if (!usage.some((item) => item.sequence === sequence && item.state === "settled"))
+  if (!usage.some((item) => item.sequence === sequence && item.state === "settled")) {
     return audiobookNotFound(requestId);
+  }
   const key = createAudioSegmentKey(conversionId, sequence, reader.artifactPrefix);
   const object = await env.AUDIO_BUCKET.get(key);
-  if (object === null) return audiobookNotFound(requestId);
+  if (object === null) {
+    return audiobookNotFound(requestId);
+  }
 
   const headers = new Headers({
     "Accept-Ranges": "bytes",
     "Content-Type": "audio/mpeg",
     ETag: object.httpEtag,
   });
-  if (request.headers.get("If-None-Match") === object.httpEtag)
+  if (request.headers.get("If-None-Match") === object.httpEtag) {
     return new Response(null, { status: 304, headers });
+  }
 
   const range = request.headers.get("Range");
   if (range === null) {
@@ -69,7 +80,7 @@ export async function serveAudio(
   }
 
   const parsed = parseRange(range, object.size);
-  if (parsed === undefined)
+  if (parsed === undefined) {
     return new Response(
       JSON.stringify(
         createErrorBody(
@@ -83,11 +94,14 @@ export async function serveAudio(
         headers: { "Content-Type": "application/json", "Content-Range": `bytes */${object.size}` },
       },
     );
+  }
 
   const ranged = await env.AUDIO_BUCKET.get(key, {
     range: { offset: parsed.start, length: parsed.end - parsed.start + 1 },
   });
-  if (ranged === null) return audiobookNotFound(requestId);
+  if (ranged === null) {
+    return audiobookNotFound(requestId);
+  }
 
   headers.set("Content-Length", (parsed.end - parsed.start + 1).toString());
   headers.set("Content-Range", `bytes ${parsed.start}-${parsed.end}/${object.size}`);
@@ -104,22 +118,29 @@ export async function serveCoverImage(
   requestId: string,
 ): Promise<Response> {
   const owner = await getRegistryStub(env).findConversionOwner(conversionId);
-  if (!owner) return coverImageNotFound(requestId);
+  if (!owner) {
+    return coverImageNotFound(requestId);
+  }
   const reader = resolveConversionReader(env, conversionId, owner);
   const audiobook = await loadReadyAudiobookFromEnvironment(env, conversionId, reader);
   // The manifest decides: an object left by an earlier preparation attempt is not served.
-  if (audiobook?.coverImage === undefined) return coverImageNotFound(requestId);
+  if (audiobook?.coverImage === undefined) {
+    return coverImageNotFound(requestId);
+  }
 
   const key = createCoverImageKey(conversionId, reader.artifactPrefix);
   const object = await env.AUDIO_BUCKET.get(key);
-  if (object === null) return coverImageNotFound(requestId);
+  if (object === null) {
+    return coverImageNotFound(requestId);
+  }
 
   const headers = new Headers({
     "Content-Type": audiobook.coverImage.contentType,
     ETag: object.httpEtag,
   });
-  if (request.headers.get("If-None-Match") === object.httpEtag)
+  if (request.headers.get("If-None-Match") === object.httpEtag) {
     return new Response(null, { status: 304, headers });
+  }
 
   headers.set("Content-Length", object.size.toString());
   return new Response(isHead ? null : object.body, { status: 200, headers });
@@ -131,10 +152,14 @@ function getRegistryStub(env: ApiServerEnvironment): RegistryStub {
 
 function parseRange(value: string, size: number): { start: number; end: number } | undefined {
   const match = /^bytes=(\d*)-(\d*)$/.exec(value);
-  if (match === null || (match[1] === "" && match[2] === "")) return undefined;
+  if (match === null || (match[1] === "" && match[2] === "")) {
+    return undefined;
+  }
   if (match[1] === "") {
     const suffix = Number(match[2]);
-    if (!Number.isSafeInteger(suffix) || suffix <= 0) return undefined;
+    if (!Number.isSafeInteger(suffix) || suffix <= 0) {
+      return undefined;
+    }
     return { start: Math.max(0, size - suffix), end: size - 1 };
   }
   const start = Number(match[1]);

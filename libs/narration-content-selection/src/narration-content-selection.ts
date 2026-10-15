@@ -605,7 +605,9 @@ function prepareSelectionPromptChildren(parent: DefaultTreeAdapterMap["parentNod
       continue;
     }
 
-    if (!("tagName" in child)) continue;
+    if (!("tagName" in child)) {
+      continue;
+    }
     child.attrs = child.attrs.filter((attribute) => attribute.name !== "id");
     prepareSelectionPromptChildren(getElementContent(child));
   }

@@ -33,7 +33,9 @@ export async function validateCoverImage({
   expect(Number(imageResponse.headers()["content-length"])).toBe(image.byteLength);
 
   const imageEtag = imageResponse.headers()["etag"];
-  if (imageEtag === undefined) throw new Error("Cover image response did not include an ETag");
+  if (imageEtag === undefined) {
+    throw new Error("Cover image response did not include an ETag");
+  }
   const unchangedImage = await request.get(coverImageUrl, {
     headers: { ...headers, "If-None-Match": imageEtag },
   });
@@ -56,7 +58,9 @@ export async function validateAudioSegment({
   expect(audioResponse.headers()["content-type"]).toBe("audio/mpeg");
   expect(audioResponse.headers()["accept-ranges"]).toBe("bytes");
   const audioEtag = audioResponse.headers()["etag"];
-  if (audioEtag === undefined) throw new Error("MP3 response did not include an ETag");
+  if (audioEtag === undefined) {
+    throw new Error("MP3 response did not include an ETag");
+  }
   const audio = new Uint8Array(await audioResponse.body());
   expect(Number(audioResponse.headers()["content-length"])).toBe(audio.byteLength);
   expect(analyzeMp3(audio).durationMilliseconds).toBeGreaterThan(0);

@@ -51,7 +51,9 @@ function AccountConversionForm(): React.ReactNode {
       <SignInDialog
         open={submission.requiresSignIn}
         onOpenChange={(open) => {
-          if (!open) submission.cancelSignIn();
+          if (!open) {
+            submission.cancelSignIn();
+          }
         }}
         finalFocus={() => submitButtonRef.current ?? null}
         isPending={submission.signIn.isPending}
@@ -103,7 +105,9 @@ function ConversionForm({
     validationLogic: revalidateLogic({ mode: "submit", modeAfterSubmission: "change" }),
     validators: { onDynamic: startConversionRequestSchema },
     onSubmit: async ({ value }) => {
-      if (isPending || retryIn > 0) return;
+      if (isPending || retryIn > 0) {
+        return;
+      }
       await onSubmit(value);
     },
   });

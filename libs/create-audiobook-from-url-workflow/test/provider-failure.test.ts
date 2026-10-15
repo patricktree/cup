@@ -93,7 +93,9 @@ test.each(["trial", "account"] as const)(
       sourceUrl: SOURCE_URL,
       idempotencyKey: crypto.randomUUID(),
     });
-    if (!started.conversion) throw new Error("Expected conversion");
+    if (!started.conversion) {
+      throw new Error("Expected conversion");
+    }
     const conversionId = kind === "account" ? started.conversion.conversionId : trialConversionId;
     const owner = kind === "account" ? account : grant;
 
@@ -116,10 +118,11 @@ test.each(["trial", "account"] as const)(
     await expect(workflow.get(`segment-${conversionId}-0`)).rejects.toBeInstanceOf(Error);
 
     await owner.reconcileForTest();
-    for (const sequence of [0, 1])
+    for (const sequence of [0, 1]) {
       await expect(
         (await workflow.get(`segment-${conversionId}-${sequence}`)).status(),
       ).resolves.toBeDefined();
+    }
     // Dispatched work keeps its reservation until it settles or reports a failure.
     expect((await owner.listAudioSegments(conversionId)).map((segment) => segment.state)).toEqual([
       "reserved",
@@ -145,7 +148,9 @@ test.each(["trial", "account"] as const)(
     expect(new Uint8Array((await stored?.arrayBuffer()) ?? [])).toEqual(COVER_IMAGE_BYTES);
     expect(stored?.httpMetadata?.contentType).toBe("image/jpeg");
     const audiobookReference = await owner.getReadyAudiobookReference(conversionId);
-    if (!audiobookReference) throw new Error("Expected a ready audiobook");
+    if (!audiobookReference) {
+      throw new Error("Expected a ready audiobook");
+    }
     const audiobook = await loadAudiobook({ bucket: environment.AUDIO_BUCKET, audiobookReference });
     expect(audiobook.coverImage).toEqual({
       contentType: "image/jpeg",
@@ -181,7 +186,9 @@ test.each([
     expect((await owner.getConversion(conversionId))?.status).toBe("ready");
     expect(await environment.AUDIO_BUCKET.head(artifactPrefix + "cover-image")).toBeNull();
     const audiobookReference = await owner.getReadyAudiobookReference(conversionId);
-    if (!audiobookReference) throw new Error("Expected a ready audiobook");
+    if (!audiobookReference) {
+      throw new Error("Expected a ready audiobook");
+    }
     const audiobook = await loadAudiobook({ bucket: environment.AUDIO_BUCKET, audiobookReference });
     expect(audiobook).not.toHaveProperty("coverImage");
     expect(await owner.hasCoverImage(conversionId)).toBe(false);
@@ -213,7 +220,9 @@ test("an account document exceeding the available duration reserves nothing unti
     sourceUrl: SOURCE_URL,
     idempotencyKey: crypto.randomUUID(),
   });
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   const conversionId = started.conversion.conversionId;
 
   await runConversion(accountId, conversionId, accountId);
@@ -243,7 +252,9 @@ test.each([400, 503])(
     const { grant, grantId, conversionId, now } = await createConversion();
     await runConversion(grantId, conversionId);
     const [failing, other] = await grant.listAudioSegments(conversionId);
-    if (!failing || !other) throw new Error("Expected two reserved segments");
+    if (!failing || !other) {
+      throw new Error("Expected two reserved segments");
+    }
     await expect(
       runSegment(
         conversionId,
@@ -323,7 +334,9 @@ test("account segment retry preserves its ledger and earlier successful audio", 
     sourceUrl: SOURCE_URL,
     idempotencyKey: crypto.randomUUID(),
   });
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   const conversionId = started.conversion.conversionId;
   await runConversion(accountId, conversionId, accountId);
   await runSegment(conversionId, { kind: "account", accountId }, 0, createFakeSpeechSynthesisAi());
@@ -361,8 +374,9 @@ test("account segment retry preserves its ledger and earlier successful audio", 
   const failure = await environment.AUDIO_BUCKET.head(
     `accounts/${accountId}/conversions/${conversionId}/segment-1-failure.json`,
   );
-  for (const artifact of [manifest, audio, failure])
+  for (const artifact of [manifest, audio, failure]) {
     expect(artifact?.customMetadata?.["cup-writer-id"]).toMatch(/^[a-f0-9]{64}$/);
+  }
   await expect(account.inspectAccounting()).resolves.toBeDefined();
 });
 
@@ -378,7 +392,9 @@ test("a stale account execution epoch cannot reserve duration or publish segment
     sourceUrl: SOURCE_URL,
     idempotencyKey: crypto.randomUUID(),
   });
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   const conversionId = started.conversion.conversionId;
   await runConversion(accountId, conversionId, accountId);
   const balance = (await account.inspect()).balance;
@@ -419,7 +435,9 @@ test.each(["trial", "account"] as const)(
       sourceUrl: SOURCE_URL,
       idempotencyKey: crypto.randomUUID(),
     });
-    if (!started.conversion) throw new Error("Expected conversion");
+    if (!started.conversion) {
+      throw new Error("Expected conversion");
+    }
     const conversionId = kind === "account" ? started.conversion.conversionId : trialConversionId;
 
     await expect(
@@ -472,14 +490,16 @@ async function createConversion() {
   const now = Temporal.Now.instant().epochMilliseconds;
   await grant.initialize(grantId, now, now + 86_400_000);
   const accepted = await grant.startConversion(SOURCE_URL, crypto.randomUUID(), now);
-  if (accepted.result !== "created") throw new Error("Conversion not accepted");
+  if (accepted.result !== "created") {
+    throw new Error("Conversion not accepted");
+  }
   return { grant, grantId, conversionId: accepted.conversion.conversionId, now };
 }
 
 /** Creates a pending conversion under either owner, with a uniform view of what tests assert. */
 async function createOwnedConversion(kind: "trial" | "account") {
   const { grant, grantId, conversionId: trialConversionId } = await createConversion();
-  if (kind === "trial")
+  if (kind === "trial") {
     return {
       grantId,
       accountId: undefined,
@@ -500,6 +520,7 @@ async function createOwnedConversion(kind: "trial" | "account") {
         },
       },
     };
+  }
 
   const accountId = crypto.randomUUID();
   const account = environment.ACCOUNTS.get(environment.ACCOUNTS.idFromName(accountId));
@@ -512,7 +533,9 @@ async function createOwnedConversion(kind: "trial" | "account") {
     sourceUrl: SOURCE_URL,
     idempotencyKey: crypto.randomUUID(),
   });
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   const conversionId = started.conversion.conversionId;
   const getReadyOutcome = async () => {
     const outcome = (await account.getConversion(conversionId))?.outcome;
@@ -601,15 +624,18 @@ async function doStep<T>(
 ): Promise<T> {
   const config = typeof configOrCallback === "function" ? {} : configOrCallback;
   const callback = typeof configOrCallback === "function" ? configOrCallback : configuredCallback;
-  if (typeof callback !== "function" || typeof config.retries?.delay === "function")
+  if (typeof callback !== "function" || typeof config.retries?.delay === "function") {
     throw new Error("Expected a configured workflow step");
+  }
   const attempts = (config.retries?.limit ?? 0) + 1;
   for (let attempt = 1; ; attempt++) {
     try {
       const context: WorkflowStepContext = { attempt, step: { name, count: 1 }, config: {} };
       return await callback(context);
     } catch (error) {
-      if (error instanceof NonRetryableError || attempt >= attempts) throw error;
+      if (error instanceof NonRetryableError || attempt >= attempts) {
+        throw error;
+      }
     }
   }
 }

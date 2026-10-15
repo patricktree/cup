@@ -5,9 +5,14 @@ export async function initializeAndroidBackButton(history: {
   canGoBack(): boolean;
   back(): void;
 }): Promise<void> {
-  if (Capacitor.getPlatform() !== "android") return;
+  if (Capacitor.getPlatform() !== "android") {
+    return;
+  }
   await App.addListener("backButton", () => {
-    if (history.canGoBack()) history.back();
-    else void App.minimizeApp();
+    if (history.canGoBack()) {
+      history.back();
+    } else {
+      void App.minimizeApp();
+    }
   });
 }

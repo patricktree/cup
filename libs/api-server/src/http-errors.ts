@@ -5,7 +5,7 @@ export function accountAuthError(
   requestId: string,
   retryAfter = 3600,
 ) {
-  if (result === "rate-limited")
+  if (result === "rate-limited") {
     return jsonError(
       requestId,
       "rate-limited",
@@ -13,10 +13,13 @@ export function accountAuthError(
       429,
       { "Retry-After": String(retryAfter) },
     );
-  if (result === "unauthorized")
+  }
+  if (result === "unauthorized") {
     return jsonError(requestId, "account-session-required", "Sign in to continue.", 401);
-  if (result === "blocked")
+  }
+  if (result === "blocked") {
     return jsonError(requestId, "account-blocked", "Account access is blocked.", 403);
+  }
   return jsonError(
     requestId,
     "account-setup-pending",

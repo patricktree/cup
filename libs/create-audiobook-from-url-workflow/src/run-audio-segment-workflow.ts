@@ -32,19 +32,23 @@ export async function runAudioSegmentWorkflow({
 }) {
   const params = segmentWorkflowParamsSchema.parse(event.payload);
   const { conversionId, sequence } = params;
-  if (event.instanceId !== `segment-${conversionId}-${sequence}`)
+  if (event.instanceId !== `segment-${conversionId}-${sequence}`) {
     throw new NonRetryableError("Segment Workflow identity mismatch");
+  }
 
   const execution = resolveConversionExecution(env, params);
   const { artifactPrefix: prefix, artifactBucket: bucket } = execution;
   const audiobook = await step.do("load prepared narration", async () => {
     const manifest = await execution.getReadyAudiobookReference();
-    if (!manifest || manifest.key !== `${prefix}audiobook.json`)
+    if (!manifest || manifest.key !== `${prefix}audiobook.json`) {
       throw new NonRetryableError("Prepared narration is unavailable");
+    }
     return loadAudiobook({ bucket, audiobookReference: manifest });
   });
   const unit = audiobook.narrationDocument.synchronizationUnits[sequence];
-  if (!unit) throw new NonRetryableError("Synchronization unit does not exist");
+  if (!unit) {
+    throw new NonRetryableError("Synchronization unit does not exist");
+  }
 
   const synthesize = (rateLimitWaits: number) =>
     step.do(
@@ -58,10 +62,11 @@ export async function runAudioSegmentWorkflow({
       async ({ attempt }) => {
         // The owner reserves the whole document or nothing; a lone segment never reserves itself.
         const state = await execution.getAudioSegmentState(sequence);
-        if (state !== "reserved" && state !== "settled")
+        if (state !== "reserved" && state !== "settled") {
           throw new NonRetryableError(
             "This segment has no duration reservation. Retry to generate the missing audio.",
           );
+        }
         try {
           const segment = await produceAudioSegment({
             ai,
@@ -80,10 +85,12 @@ export async function runAudioSegmentWorkflow({
           if (
             error instanceof RateLimitedNarrationSynthesisError &&
             rateLimitWaits < MAX_RATE_LIMIT_WAITS
-          )
+          ) {
             return "rate-limited" as const;
-          if (error instanceof PermanentNarrationSynthesisError)
+          }
+          if (error instanceof PermanentNarrationSynthesisError) {
             throw new NonRetryableError(error.message);
+          }
           throw error;
         }
       },
@@ -92,7 +99,9 @@ export async function runAudioSegmentWorkflow({
   try {
     for (let rateLimitWaits = 0; ; rateLimitWaits += 1) {
       const outcome = await synthesize(rateLimitWaits);
-      if (outcome !== "rate-limited") return outcome;
+      if (outcome !== "rate-limited") {
+        return outcome;
+      }
 
       await step.sleep(
         `wait for speech provider rate limit ${rateLimitWaits + 1}`,

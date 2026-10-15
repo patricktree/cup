@@ -41,7 +41,9 @@ const identityProvider = http.createServer((request, response) => {
 beforeAll(async () => {
   await new Promise<void>((resolve) => identityProvider.listen(0, "127.0.0.1", resolve));
   const address = identityProvider.address();
-  if (!address || typeof address === "string") throw new Error("Identity provider did not start");
+  if (!address || typeof address === "string") {
+    throw new Error("Identity provider did not start");
+  }
   await harness.update({
     root: nodeUrl.fileURLToPath(new URL("..", import.meta.url)),
     workers: [
@@ -54,7 +56,9 @@ beforeAll(async () => {
   });
   await harness.listen();
   const environment: unknown = await worker.getEnv();
-  if (!isAccountEnvironment(environment)) throw new Error("Account bindings unavailable");
+  if (!isAccountEnvironment(environment)) {
+    throw new Error("Account bindings unavailable");
+  }
   bindings = environment;
 }, 30_000);
 
@@ -82,7 +86,9 @@ test("concurrent verified logins allocate one account and one welcome grant", as
   expect(new Set(snapshots.map((snapshot) => snapshot.accountId)).size).toBe(1);
   expect(snapshots.every((snapshot) => snapshot.balance.available === 1_800_000)).toBe(true);
   const accountId = snapshots[0]?.accountId;
-  if (accountId === undefined) throw new Error("Expected provisioned account");
+  if (accountId === undefined) {
+    throw new Error("Expected provisioned account");
+  }
   const account = bindings.ACCOUNTS.get(bindings.ACCOUNTS.idFromName(accountId));
   expect((await account.inspectAccounting()).entries).toBe(1);
   expect((await registry.findIdentity(subject))?.phase).toBe("active");
@@ -128,7 +134,9 @@ test("account listing pages ties deterministically, filters by phase, and finds 
     await registry.reserveVerifiedIdentity(crypto.randomUUID(), nowMs),
   ];
   const fenced = identities[0];
-  if (fenced === undefined) throw new Error("Expected reserved identity");
+  if (fenced === undefined) {
+    throw new Error("Expected reserved identity");
+  }
   await registry.fenceIdentityDeletion(fenced.subject, fenced.accountId);
   const expectedOrder = identities
     .toSorted(
@@ -139,7 +147,9 @@ test("account listing pages ties deterministically, filters by phase, and finds 
 
   const first = await registry.listAccounts({ limit: 2 });
   expect(first.accounts.map((account) => account.accountId)).toEqual(expectedOrder.slice(0, 2));
-  if (first.nextCursor === undefined) throw new Error("Expected another page");
+  if (first.nextCursor === undefined) {
+    throw new Error("Expected another page");
+  }
   const second = await registry.listAccounts({ limit: 2, cursor: first.nextCursor });
   expect(second.accounts.map((account) => account.accountId)).toEqual(expectedOrder.slice(2));
   expect(second.nextCursor).toBeUndefined();
@@ -166,7 +176,9 @@ test("concurrent segment reservations cannot exceed the available duration", asy
   );
   const reservations = await Promise.all(
     starts.map((start) => {
-      if (!start.conversion) throw new Error("Expected conversion");
+      if (!start.conversion) {
+        throw new Error("Expected conversion");
+      }
       return account.reserveAudioSegment(start.conversion.conversionId, 0, 11_250, 1);
     }),
   );
@@ -211,7 +223,9 @@ test("failure releases once and a contradictory success cannot charge later", as
     nowMs,
   );
   const conversionId = started.conversion?.conversionId;
-  if (conversionId === undefined) throw new Error("Expected conversion");
+  if (conversionId === undefined) {
+    throw new Error("Expected conversion");
+  }
   await account.reserveAudioSegment(conversionId, 0, 100, 1);
   const failure = {
     status: "failed",
@@ -256,7 +270,9 @@ test("successful settlement consumes once and rejects a foreign artifact prefix"
     nowMs,
   );
   const conversionId = started.conversion?.conversionId;
-  if (conversionId === undefined) throw new Error("Expected conversion");
+  if (conversionId === undefined) {
+    throw new Error("Expected conversion");
+  }
   await account.reserveAudioSegment(conversionId, 0, 100, 1);
   await account.completeAudioSegment(conversionId, 0, 15_000, 1);
   const outcome = {
@@ -318,7 +334,9 @@ test("blocked accounts deny new reservations and final deletion denies settlemen
     nowMs,
   );
   const conversionId = started.conversion?.conversionId;
-  if (conversionId === undefined) throw new Error("Expected conversion");
+  if (conversionId === undefined) {
+    throw new Error("Expected conversion");
+  }
   const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
   await storage.exec("UPDATE account SET state = 'deleting', execution_epoch = 2");
   await expectWorkerRpcRejection(
@@ -414,7 +432,9 @@ test("obsolete execution cannot settle after an account execution epoch change",
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/" },
     nowMs,
   );
-  if (!started.conversion) throw new Error("Expected accepted conversion");
+  if (!started.conversion) {
+    throw new Error("Expected accepted conversion");
+  }
   await account.reserveAudioSegment(started.conversion.conversionId, 0, 100, 1);
   const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
   await storage.exec("UPDATE account SET execution_epoch = 2, state = 'active'");
@@ -440,7 +460,9 @@ test("lost dispatch acknowledgement and exhausted terminal retries release the r
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/" },
     nowMs,
   );
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   await account.reserveAudioSegment(started.conversion.conversionId, 0, 100, 1);
   expect((await account.inspect()).balance.reserved).toBe(8_000);
   await account.reconcileForTest();
@@ -472,7 +494,9 @@ test("account history pages ties deterministically without crossing owners", asy
   expect(first.items).toHaveLength(50);
   expect(first.nextCursor).not.toBeNull();
   const [createdAtMs, conversionId] = first.nextCursor!.split(":");
-  if (!conversionId) throw new Error("Expected history cursor");
+  if (!conversionId) {
+    throw new Error("Expected history cursor");
+  }
   const second = await account.history({ createdAtMs: Number(createdAtMs), conversionId });
   expect(second.items).toHaveLength(3);
   expect(second.nextCursor).toBeNull();
@@ -489,7 +513,9 @@ test("unresolved storage effects block artifact writer drain", async () => {
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/book" },
     nowMs,
   );
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   const prefix = `accounts/${accountId}/conversions/${started.conversion.conversionId}/`;
   await account.registerArtifactWriter("writer", 1, prefix);
   await account.beginArtifactEffect("writer", "put:" + prefix + "audiobook.mp3");
@@ -506,7 +532,9 @@ test("ready conversions accept artifact writes", async () => {
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/book" },
     nowMs,
   );
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   const conversionId = started.conversion.conversionId;
   const prefix = `accounts/${accountId}/conversions/${conversionId}/executions/1/`;
   await account.settleConversion(
@@ -536,7 +564,9 @@ test("writer fences deny new effects after a deadline while allowing outstanding
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/book" },
     nowMs,
   );
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   const prefix = `accounts/${accountId}/conversions/${started.conversion.conversionId}/`;
   await account.registerArtifactWriter("pending", 1, prefix);
   await account.beginArtifactEffect("pending", "put:audio");
@@ -643,7 +673,9 @@ test("confirmed ordinary storage effects reconcile after lost acknowledgment, in
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/book" },
     nowMs,
   );
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   const prefix = "accounts/" + accountId + "/conversions/" + started.conversion.conversionId + "/";
   const writerId = crypto.randomUUID();
   const key = prefix + "audio.mp3";
@@ -664,7 +696,9 @@ test("streamed artifact replay drains the producer after a lost write acknowledg
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/book" },
     nowMs,
   );
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   const prefix = "accounts/" + accountId + "/conversions/" + started.conversion.conversionId + "/";
   const key = prefix + "audiobook.mp3";
   const digest = new Uint8Array(
@@ -690,7 +724,9 @@ test("a rejected concurrent streamed write cancels its producer instead of hangi
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/book" },
     nowMs,
   );
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   const prefix = `accounts/${accountId}/conversions/${started.conversion.conversionId}/`;
   const key = prefix + "audiobook.mp3";
   const digest = new Uint8Array(
@@ -720,7 +756,9 @@ test("final erasure waits for an in-flight upload and preserves original trials 
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/book" },
     nowMs,
   );
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   const prefix = `accounts/${accountId}/conversions/${started.conversion.conversionId}/`;
   const writerId = crypto.randomUUID();
   const key = prefix + "audiobook.mp3";
@@ -878,7 +916,9 @@ test("segment overruns cap charges at the allowance without invalidating other r
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/overrun" },
     nowMs,
   );
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   const id = started.conversion.conversionId;
   await account.reserveAudioSegment(id, 0, 11_250, 1);
   await account.reserveAudioSegment(id, 1, 11_250, 1);
@@ -915,7 +955,9 @@ test("failed generation retains completed duration charges and releases only unf
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/partial" },
     nowMs,
   );
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   const id = started.conversion.conversionId;
   await account.reserveAudioSegment(id, 0, 100, 1);
   await account.reserveAudioSegment(id, 1, 100, 1);
@@ -946,7 +988,9 @@ test("reservation retries preserve the segment identity and reject conflicting n
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/replay" },
     nowMs,
   );
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   const id = started.conversion.conversionId;
   expect(await account.reserveAudioSegment(id, 0, 100, 1)).toEqual({ result: "reserved" });
   expect(await account.reserveAudioSegment(id, 0, 100, 1)).toEqual({ result: "reserved" });
@@ -967,7 +1011,9 @@ test("replaying the account baseline preserves history and grants the welcome al
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/baseline" },
     nowMs,
   );
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   const before = await account.getConversion(started.conversion.conversionId);
   const first = await account.migrateForTest();
   const second = await account.migrateForTest();
@@ -992,7 +1038,9 @@ test("migration replay preserves existing artifact effects and account data", as
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/book" },
     nowMs,
   );
-  if (!started.conversion) throw new Error("Expected conversion");
+  if (!started.conversion) {
+    throw new Error("Expected conversion");
+  }
   const prefix = `accounts/${accountId}/conversions/${started.conversion.conversionId}/`;
   await account.prepareArtifactWrite("existing-writer", 1, prefix, prefix + "audiobook.mp3");
   const storage = await worker.getDurableObjectStorage("ACCOUNT_DISPATCH_TEST", {

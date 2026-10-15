@@ -34,7 +34,9 @@ for (const { name, schema, bundle } of stores) {
       .filter((file) => file.endsWith("_snapshot.json"))
       .sort();
     const latest = snapshots.at(-1);
-    if (!latest) throw new Error(`Missing migration snapshot for ${name}`);
+    if (!latest) {
+      throw new Error(`Missing migration snapshot for ${name}`);
+    }
     const snapshot = z
       .object({ tables: z.unknown(), views: z.unknown() })
       .parse(JSON.parse(await fs.readFile(`drizzle/${name}/meta/${latest}`, "utf8")));

@@ -25,8 +25,9 @@ const server = http.createServer((request, response) => {
 
 server.listen(0, "127.0.0.1", () => {
   const address = server.address();
-  if (address === null || typeof address === "string")
+  if (address === null || typeof address === "string") {
     throw new Error("No source-page server port.");
+  }
   // The Playwright configuration reads the assigned port from this line.
   console.log(`Listening on http://127.0.0.1:${address.port}`);
 });

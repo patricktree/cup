@@ -23,7 +23,9 @@ test("delivers share URLs to the form and preserves trial credentials", async ({
           listener: (payload: { url: string }) => void,
         ) => {
           window.addEventListener("test-share", (event) => {
-            if (event instanceof CustomEvent) listener({ url: String(event.detail) });
+            if (event instanceof CustomEvent) {
+              listener({ url: String(event.detail) });
+            }
           });
           return "share-listener";
         },
@@ -94,7 +96,9 @@ test("opens cold-start and repeat Universal Links only for Cup app routes", asyn
           listener: (payload: { url: string }) => void,
         ) => {
           window.addEventListener("test-app-link", (event) => {
-            if (event instanceof CustomEvent) listener({ url: String(event.detail) });
+            if (event instanceof CustomEvent) {
+              listener({ url: String(event.detail) });
+            }
           });
           return "app-link-listener";
         },
@@ -128,8 +132,9 @@ test("opens cold-start and repeat Universal Links only for Cup app routes", asyn
       "https://cup.audio/api/grants/test",
       "https://cup.audio/",
       "not a URL",
-    ])
+    ]) {
       window.dispatchEvent(new CustomEvent("test-app-link", { detail: url }));
+    }
     return { paths, shares };
   });
   expect(result).toEqual({

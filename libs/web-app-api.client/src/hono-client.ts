@@ -15,7 +15,9 @@ export async function parseOkResponse<ResponseType extends ClientResponse<unknow
   try {
     return await parseResponse(response);
   } catch (error) {
-    if (!isParseResponseError(error)) throw error;
+    if (!isParseResponseError(error)) {
+      throw error;
+    }
     const body = readErrorBody(error);
     throw new RpcError(
       body.code ?? "operational-error",

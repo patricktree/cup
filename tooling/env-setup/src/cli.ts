@@ -40,7 +40,9 @@ export async function runCli(
     await program.parseAsync(args, { from: "user" });
     return 0;
   } catch (error) {
-    if (error instanceof CommanderError) return error.exitCode;
+    if (error instanceof CommanderError) {
+      return error.exitCode;
+    }
     output.error(error instanceof Error ? error.message : "Environment configuration failed.");
     return 1;
   }
@@ -56,25 +58,34 @@ export async function runCli(
       problems.push(...validate(source, "Credential source"));
     }
     for (const { file, values } of files) {
-      if (command === "setup" && values === null) continue;
+      if (command === "setup" && values === null) {
+        continue;
+      }
       problems.push(...validate(values, file));
     }
     const reference = source ?? files[0]!.values;
     for (const { file, values } of files) {
-      if (!values || !reference) continue;
+      if (!values || !reference) {
+        continue;
+      }
       for (const key of KEYS) {
-        if (values[key] && reference[key] && values[key] !== reference[key])
+        if (values[key] && reference[key] && values[key] !== reference[key]) {
           problems.push(
             `${file}: ${key} differs from ${source ? "the credential source" : FILES[0]}. Existing files are preserved.`,
           );
+        }
       }
     }
-    if (problems.length) throw new Error(`${problems.join("\n")}\n${HELP}`);
+    if (problems.length) {
+      throw new Error(`${problems.join("\n")}\n${HELP}`);
+    }
     if (command === "setup" && source) {
       const credentials = source;
       const content = KEYS.map((key) => `${key}='${credentials[key]}'`).join("\n") + "\n";
       for (const { file, values } of files) {
-        if (values !== null) continue;
+        if (values !== null) {
+          continue;
+        }
         await fs.writeFile(path.join(root, file), content, { flag: "wx", mode: 0o600 });
         output.log(`Created ${file}`);
       }
@@ -83,25 +94,36 @@ export async function runCli(
   }
 }
 
-if (import.meta.main) process.exitCode = await runCli(process.argv.slice(2));
+if (import.meta.main) {
+  process.exitCode = await runCli(process.argv.slice(2));
+}
 
 async function readEnv(file: string) {
   try {
     return util.parseEnv(await fs.readFile(file, "utf8"));
   } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return null;
+    }
     throw new Error(`Cannot read environment file: ${file}`, { cause: error });
   }
 }
 
 function validate(values: Record<string, string | undefined> | null, label: string) {
-  if (values === null) return [`${label}: file is missing.`];
+  if (values === null) {
+    return [`${label}: file is missing.`];
+  }
   return KEYS.flatMap((key) => {
     const value = values[key];
-    if (!value?.trim()) return [`${label}: ${key} is missing or empty.`];
-    if (/^(?:your[-_ ]|replace[-_ ]|changeme$|placeholder$|example$|<)/i.test(value))
+    if (!value?.trim()) {
+      return [`${label}: ${key} is missing or empty.`];
+    }
+    if (/^(?:your[-_ ]|replace[-_ ]|changeme$|placeholder$|example$|<)/i.test(value)) {
       return [`${label}: ${key} is a placeholder.`];
-    if (/[\s'"`]/u.test(value)) return [`${label}: ${key} contains whitespace or quotes.`];
+    }
+    if (/[\s'"`]/u.test(value)) {
+      return [`${label}: ${key} contains whitespace or quotes.`];
+    }
     return [];
   });
 }

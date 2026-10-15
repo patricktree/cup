@@ -90,9 +90,12 @@ function TrialConversionPage(): React.JSX.Element {
 
 /** Opening a trial link words its refusals in terms of the link rather than the grant. */
 function describeTrialLinkRefusal(error: RpcError): ErrorCopy {
-  if (error.code === "grant-session-required" || error.code === "grant-session-invalid")
+  if (error.code === "grant-session-required" || error.code === "grant-session-invalid") {
     return TRIAL_SESSION_LOST;
-  if (error.code === "grant-revoked") return TRIAL_LINK_REVOKED;
+  }
+  if (error.code === "grant-revoked") {
+    return TRIAL_LINK_REVOKED;
+  }
   return TRIAL_LINK_INVALID;
 }
 

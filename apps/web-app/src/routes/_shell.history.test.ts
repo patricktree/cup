@@ -31,7 +31,9 @@ test("history pagination appends a distinct page and removes Load more", async (
 test("does not poll settled empty conversion history", async ({ mount, page }) => {
   let requests = 0;
   page.on("request", (request) => {
-    if (new URL(request.url()).pathname === "/api/account/conversions") requests += 1;
+    if (new URL(request.url()).pathname === "/api/account/conversions") {
+      requests += 1;
+    }
   });
   await page.clock.install();
   const component = await mount("routes/_shell.history/EmptyHistory");

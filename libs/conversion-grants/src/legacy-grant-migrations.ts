@@ -40,17 +40,21 @@ function migrateWithLegacyReset<T extends Record<string, unknown>>(
 ) {
   const legacy = database.get(sql`SELECT name FROM sqlite_master
     WHERE type = 'table' AND name = '_schema_migrations'`);
-  if (legacy === undefined) return migrate(database, migrations);
+  if (legacy === undefined) {
+    return migrate(database, migrations);
+  }
 
   const version = database.get<{ version: number }>(
     sql`SELECT MAX(version) AS version FROM _schema_migrations`,
   );
-  if (version?.version !== legacyVersion)
+  if (version?.version !== legacyVersion) {
     throw new Error(`Expected legacy grant schema version ${legacyVersion}; refusing to reset`);
+  }
   const drizzleJournal = database.get(sql`SELECT name FROM sqlite_master
     WHERE type = 'table' AND name = '__drizzle_migrations'`);
-  if (drizzleJournal !== undefined)
+  if (drizzleJournal !== undefined) {
     throw new Error("Both legacy and Drizzle migration histories exist; refusing to reset");
+  }
 
   // Drizzle executes the reset, baseline, preserved rows, and journal write in one transaction.
   // Removing the legacy journal makes the destructive transition run exactly once.

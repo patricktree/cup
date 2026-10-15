@@ -23,8 +23,9 @@ async function fixture(t: TestContext) {
     "tooling/env-setup/src",
     "apps/cloudflare-worker",
     "libs/narration-content-selection",
-  ])
+  ]) {
     await fs.mkdir(path.join(root, directory), { recursive: true });
+  }
   return {
     root,
     run: async (args: string[], credentials: Record<string, string> = CREDENTIALS) => {
@@ -48,7 +49,9 @@ test("check requires actual files even with exported credentials", async (t) => 
   const { run } = await fixture(t);
   const result = await run(["check"]);
   assert.equal(result.status, 1);
-  for (const file of FILES) assert.ok(result.stderr.includes(file));
+  for (const file of FILES) {
+    assert.ok(result.stderr.includes(file));
+  }
   assert.ok(result.stderr.includes("setup --from"));
   assert.ok(!result.stderr.includes(CREDENTIALS.CLOUDFLARE_API_KEY));
 });
@@ -89,8 +92,9 @@ test("invalid source reports all invalid keys without creating files", async (t)
     assert.match(result.stderr, /CLOUDFLARE_ACCOUNT_ID/);
     assert.match(result.stderr, /CLOUDFLARE_API_KEY/);
   }
-  for (const file of FILES)
+  for (const file of FILES) {
     await assert.rejects(fs.stat(path.join(root, file)), { code: "ENOENT" });
+  }
 });
 
 test("conflicts fail before creating another file and never overwrite", async (t) => {
@@ -149,6 +153,7 @@ test("invalid command arguments fail before creating files", async (t) => {
     assert.equal(result.status, 1);
     assert.match(result.stderr, /error:/);
   }
-  for (const file of FILES)
+  for (const file of FILES) {
     await assert.rejects(fs.stat(path.join(root, file)), { code: "ENOENT" });
+  }
 });

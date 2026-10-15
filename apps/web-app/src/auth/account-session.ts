@@ -49,7 +49,9 @@ export const subscribeAuthState = (listener: () => void) => {
 
 function publish(next: AccountAuthState) {
   authState = next;
-  for (const listener of listeners) listener();
+  for (const listener of listeners) {
+    listener();
+  }
 }
 
 function publishSession(session: Session | null) {
@@ -61,7 +63,9 @@ function publishSession(session: Session | null) {
       queryClient.clear();
     }
     stopPlayback();
-    if (subject) trialBrowserState.clearLastGrantId();
+    if (subject) {
+      trialBrowserState.clearLastGrantId();
+    }
     previousSubject = subject;
   }
   publish(session ? { status: "signed-in", session } : { status: "signed-out" });
@@ -106,11 +110,17 @@ async function initializeAuth() {
     },
   });
   client.auth.onAuthStateChange((_event, next) => {
-    if (!isSigningOut) publishSession(next);
+    if (!isSigningOut) {
+      publishSession(next);
+    }
   });
   const restored = await client.auth.getSession();
-  if (restored.error) throw restored.error;
-  if (!isSigningOut) publishSession(restored.data.session);
+  if (restored.error) {
+    throw restored.error;
+  }
+  if (!isSigningOut) {
+    publishSession(restored.data.session);
+  }
   await addAuthResumeListener(() => {
     void getFreshAccountSession().then(refreshPlaybackAuthorization).catch(stopPlayback);
   });
@@ -119,11 +129,17 @@ async function initializeAuth() {
 
 export async function getFreshAccountSession() {
   const generation = sessionGeneration;
-  if (isSigningOut) return null;
+  if (isSigningOut) {
+    return null;
+  }
   const client = await ensureAuthInitialized();
   const result = await client.auth.getSession();
-  if (result.error) throw result.error;
-  if (isSigningOut || generation !== sessionGeneration) return null;
+  if (result.error) {
+    throw result.error;
+  }
+  if (isSigningOut || generation !== sessionGeneration) {
+    return null;
+  }
   return result.data.session;
 }
 
@@ -132,13 +148,17 @@ export async function getResourceAccountSession() {
   try {
     return await getFreshAccountSession();
   } catch (error) {
-    if (sessionSnapshot()) throw error;
+    if (sessionSnapshot()) {
+      throw error;
+    }
     return null;
   }
 }
 
 export async function signInGoogle(fresh = false) {
-  if (isSigningOut) throw new Error("Wait for sign-out to finish before signing in.");
+  if (isSigningOut) {
+    throw new Error("Wait for sign-out to finish before signing in.");
+  }
   sessionGeneration += 1;
   stopPlayback();
   const client = await ensureAuthInitialized();
@@ -149,7 +169,9 @@ export async function signInGoogle(fresh = false) {
 function stopPlayback() {
   stopNativePlayback();
   window.dispatchEvent(new Event(STOP_PLAYBACK_EVENT_NAME));
-  for (const audio of document.querySelectorAll("audio")) audio.pause();
+  for (const audio of document.querySelectorAll("audio")) {
+    audio.pause();
+  }
 }
 
 export function refreshPlaybackAuthorization(current: Session | null = sessionSnapshot()) {
@@ -157,9 +179,13 @@ export function refreshPlaybackAuthorization(current: Session | null = sessionSn
   const update = mediaUpdates
     .catch(() => undefined)
     .then(async () => {
-      if (!current || isSigningOut || generation !== sessionGeneration) return undefined;
+      if (!current || isSigningOut || generation !== sessionGeneration) {
+        return undefined;
+      }
       const latest = await getFreshAccountSession();
-      if (!latest || isSigningOut || generation !== sessionGeneration) return undefined;
+      if (!latest || isSigningOut || generation !== sessionGeneration) {
+        return undefined;
+      }
       const response = await createAppApiClient()
         .createAuthenticatedRpcClient(latest.access_token)
         .createFilesSession();
@@ -167,7 +193,9 @@ export function refreshPlaybackAuthorization(current: Session | null = sessionSn
         stopPlayback();
         throw new Error("Sign in again to continue playback.");
       }
-      if (isSigningOut || generation !== sessionGeneration) return undefined;
+      if (isSigningOut || generation !== sessionGeneration) {
+        return undefined;
+      }
       await setNativeMediaSession(latest);
       return undefined;
     });
@@ -190,7 +218,9 @@ async function finishSignOut() {
   stopPlayback();
   for (const audio of document.querySelectorAll("audio")) {
     audio.removeAttribute("src");
-    for (const source of audio.querySelectorAll("source")) source.removeAttribute("src");
+    for (const source of audio.querySelectorAll("source")) {
+      source.removeAttribute("src");
+    }
     audio.load();
   }
   const client = await ensureAuthInitialized();
@@ -204,6 +234,7 @@ async function finishSignOut() {
     .clearFilesSession()
     .catch(() => undefined);
   await clearNativeAuthSession();
-  if (response.error)
+  if (response.error) {
     throw new Error("Signed out on this device. Server session revocation could not be confirmed.");
+  }
 }

@@ -32,8 +32,9 @@ export async function verifyAccountToken(
     payload["is_anonymous"] === true ||
     typeof payload.exp !== "number" ||
     typeof payload.iat !== "number"
-  )
+  ) {
     throw new errors.JWTClaimValidationFailed("Invalid account identity", payload);
+  }
   const amr = payload["amr"];
   const authenticatedAtSeconds = Array.isArray(amr)
     ? Math.max(
@@ -44,8 +45,9 @@ export async function verifyAccountToken(
             typeof entry !== "object" ||
             !("method" in entry) ||
             !("timestamp" in entry)
-          )
+          ) {
             return [];
+          }
           return ["oauth", "id_token"].includes(String(entry.method)) &&
             typeof entry.timestamp === "number"
             ? [entry.timestamp]
@@ -71,7 +73,9 @@ export async function verifyAccountToken(
 
 export async function authenticateAccountRequest(request: Request, env: ApiServerEnvironment) {
   const authorization = request.headers.get("Authorization");
-  if (!authorization?.startsWith("Bearer ")) return { result: "unauthorized" } as const;
+  if (!authorization?.startsWith("Bearer ")) {
+    return { result: "unauthorized" } as const;
+  }
   let identity: Awaited<ReturnType<typeof verifyAccountToken>>;
   try {
     identity = await verifyAccountToken(authorization.slice(7), env.SUPABASE_URL);
@@ -97,14 +101,18 @@ export async function authenticateAccountRequest(request: Request, env: ApiServe
 }
 
 export function mediaRequest(request: Request): Request {
-  if (request.headers.has("Authorization")) return request;
+  if (request.headers.has("Authorization")) {
+    return request;
+  }
   const value = request.headers
     .get("Cookie")
     ?.split(";")
     .map((part) => part.trim())
     .find((part) => part.startsWith("cup_media="))
     ?.slice(10);
-  if (!value) return request;
+  if (!value) {
+    return request;
+  }
   const headers = new Headers(request.headers);
   headers.set("Authorization", `Bearer ${value}`);
   return new Request(request.url, { method: request.method, headers });

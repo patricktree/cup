@@ -61,7 +61,9 @@ function createSession({
     },
     issueMediaCookie: () => {
       calls.push("issueMediaCookie");
-      if (!state.shouldHoldCookies) return Promise.resolve();
+      if (!state.shouldHoldCookies) {
+        return Promise.resolve();
+      }
       return new Promise((resolve, reject) => {
         pendingCookies.push({ resolve, reject });
       });
@@ -108,11 +110,12 @@ test("an unknown position, or one after the last audio, restores the start", () 
     null,
     { synchronizationUnitId: "removed-unit", offsetMilliseconds: 4_000 },
     { synchronizationUnitId: "unit-4", offsetMilliseconds: 4_000 },
-  ])
+  ]) {
     expect(createSession({ position }).session.initialLocation).toEqual({
       entryIndex: 0,
       offsetMilliseconds: 0,
     });
+  }
 });
 
 test("a reported position becomes the unit and the offset within its audio", () => {

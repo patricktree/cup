@@ -14,7 +14,9 @@ export function useRateLimitCountdown(error: unknown) {
     };
   }, [error]);
   React.useEffect(() => {
-    if (!seconds) return undefined;
+    if (!seconds) {
+      return undefined;
+    }
     const timer = window.setInterval(
       () => setNowMs(Temporal.Now.instant().epochMilliseconds),
       1000,

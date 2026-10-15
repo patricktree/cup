@@ -13,7 +13,9 @@ const REDIRECTED_HOSTNAMES = new Set([
  */
 export function routeApplicationDomain(request: Request): Response | undefined {
   const url = new URL(request.url);
-  if (!REDIRECTED_HOSTNAMES.has(url.hostname)) return undefined;
+  if (!REDIRECTED_HOSTNAMES.has(url.hostname)) {
+    return undefined;
+  }
 
   // Omit a fragment so browsers carry the original trial credential to the canonical domain.
   return Response.redirect(`${APPLICATION_ORIGIN}${url.pathname}${url.search}`, 308);

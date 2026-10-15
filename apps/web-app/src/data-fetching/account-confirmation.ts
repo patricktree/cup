@@ -30,45 +30,55 @@ export function useAccountConfirmation(subject: string) {
         const issued = deletionChallengeSchema.parse(
           await requestApi({ subject }, (client) => client.createDeletionChallenge()),
         );
-        if (issued.subject !== subject || !isSignedInAs(subject))
+        if (issued.subject !== subject || !isSignedInAs(subject)) {
           throw new UserFacingError({
             title: "Use the same Google account that requested confirmation.",
           });
+        }
         const next = { ...issued, action: command.action };
         storeAccountChallenge(next);
         setChallenge(next);
         // Supabase AMR timestamps have whole-second precision; authenticate strictly after issuance.
         await new Promise<void>((resolve) => window.setTimeout(resolve, 1_100));
-        if (!isSignedInAs(subject))
+        if (!isSignedInAs(subject)) {
           throw new UserFacingError({ title: "Use the same Google account." });
+        }
         await signInGoogle(true);
         return null;
       }
 
       const pending = readPendingAccountChallenge();
-      if (!pending || pending.subject !== subject)
+      if (!pending || pending.subject !== subject) {
         throw new UserFacingError({
           title: "Use the same Google account that requested confirmation.",
         });
+      }
       // The Google provider token lives only on the session; requestApi below re-resolves its own
       // token and guard, so this check exists to name the account mismatch and narrow `session`.
       const session = await getFreshAccountSession();
-      if (session?.user.id !== subject)
+      if (session?.user.id !== subject) {
         throw new UserFacingError({ title: "Use the same Google account." });
+      }
       const input = {
         challengeId: pending.challengeId,
         ...(session.provider_token ? { providerToken: session.provider_token } : {}),
       };
-      if (pending.action === "delete")
+      if (pending.action === "delete") {
         await requestApi({ subject }, (client) => client.scheduleDeletion(input));
-      else await requestApi({ subject }, (client) => client.restoreAccount(input));
-      if (!isSignedInAs(subject)) return null;
+      } else {
+        await requestApi({ subject }, (client) => client.restoreAccount(input));
+      }
+      if (!isSignedInAs(subject)) {
+        return null;
+      }
       if (readPendingAccountChallenge()?.challengeId === pending.challengeId) {
         clearAccountChallenge();
         setChallenge(null);
       }
       await invalidateAccountQueries(subject);
-      if (!isSignedInAs(subject)) return null;
+      if (!isSignedInAs(subject)) {
+        return null;
+      }
       // signOut owns playback/media cleanup; the auth lifecycle clears account queries.
       if (pending.action === "delete") {
         await signOut();
@@ -87,7 +97,9 @@ export function useAccountConfirmation(subject: string) {
     begin: (action: "delete" | "restore") => change.mutate({ type: "begin", action }),
     confirm: () => change.mutate({ type: "confirm" }),
     cancel: () => {
-      if (change.isPending) return;
+      if (change.isPending) {
+        return;
+      }
       clearAccountChallenge();
       setChallenge(null);
       change.reset();

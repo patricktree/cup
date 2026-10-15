@@ -28,19 +28,26 @@ export async function authenticateAccount<Account extends { inspect(): Promise<A
       let snapshot;
       if (!mapping) {
         const key = await dependencies.getIngressIdentity();
-        if (!key) return { result: "unavailable" } as const;
+        if (!key) {
+          return { result: "unavailable" } as const;
+        }
         const provision = await registry.provisionFromIngress(subject, key);
-        if (provision.result === "rate-limited")
+        if (provision.result === "rate-limited") {
           return { result: "rate-limited", retryAfter: provision.retryAfter } as const;
+        }
         snapshot = provision.snapshot;
-      } else snapshot = await registry.provisionVerifiedIdentity(subject);
+      } else {
+        snapshot = await registry.provisionVerifiedIdentity(subject);
+      }
       return {
         result: "authenticated",
         snapshot,
         account: dependencies.getAccount(snapshot.accountId),
       } as const;
     }
-    if (mapping.phase !== "active") return { result: "blocked" } as const;
+    if (mapping.phase !== "active") {
+      return { result: "blocked" } as const;
+    }
     const account = dependencies.getAccount(mapping.accountId);
     const snapshot = await account.inspect();
     return { result: "authenticated", snapshot, account } as const;

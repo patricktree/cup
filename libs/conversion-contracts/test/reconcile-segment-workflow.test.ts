@@ -21,7 +21,9 @@ function createWorkflow(status: string | undefined) {
   const workflow: SynthesisWorkflowDispatcher = {
     create,
     get: async () => {
-      if (status === undefined) throw new Error("instance.not_found");
+      if (status === undefined) {
+        throw new Error("instance.not_found");
+      }
       return { status: async () => ({ status }), restart };
     },
   };

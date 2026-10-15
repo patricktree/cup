@@ -52,8 +52,12 @@ for (const mode of ["search", "vsearch", "query"] as const) {
       withIndexLock(async () => {
         await refresh(mode !== "search");
         const args = [mode, question, "-n", "5"];
-        if (options.json) args.push("--json");
-        if (options.collection) args.push("-c", options.collection);
+        if (options.json) {
+          args.push("--json");
+        }
+        if (options.collection) {
+          args.push("-c", options.collection);
+        }
         process.stdout.write(await runQmd(args));
       }),
     );
@@ -82,8 +86,9 @@ program
 try {
   await program.parseAsync();
 } catch (error) {
-  if (error instanceof CommanderError) process.exitCode = error.exitCode;
-  else {
+  if (error instanceof CommanderError) {
+    process.exitCode = error.exitCode;
+  } else {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   }
@@ -115,7 +120,9 @@ async function withIndexLock(operation: () => Promise<void>) {
 
 async function refresh(semantic: boolean) {
   await runQmd(["update"], true);
-  if (semantic) await runQmd(["embed"], true);
+  if (semantic) {
+    await runQmd(["embed"], true);
+  }
 }
 
 async function runQmd(args: string[], progress = false): Promise<string> {
@@ -140,14 +147,20 @@ async function runQmd(args: string[], progress = false): Promise<string> {
     let output = "";
     child.stdout.setEncoding("utf8");
     child.stdout.on("data", (chunk: string) => {
-      if (progress) process.stderr.write(chunk);
-      else output += chunk;
+      if (progress) {
+        process.stderr.write(chunk);
+      } else {
+        output += chunk;
+      }
     });
     child.on("error", reject);
     child.on("close", (code, signal) => {
-      if (code === 0) resolve(output);
-      else {
-        if (!progress && output) process.stderr.write(output);
+      if (code === 0) {
+        resolve(output);
+      } else {
+        if (!progress && output) {
+          process.stderr.write(output);
+        }
         reject(new Error(`QMD ${args[0]} failed (${signal ?? code}).`));
       }
     });
@@ -167,8 +180,11 @@ async function checkRetrieval(lexicalOnly: boolean) {
     console.log(
       `${rank ? "PASS" : "FAIL"} ${check.id}: ${check.expectedFile} (rank ${rank || "absent"})`,
     );
-    if (!rank) failures += 1;
+    if (!rank) {
+      failures += 1;
+    }
   }
-  if (failures)
+  if (failures) {
     throw new Error(`${failures} retrieval checks missed the expected page in the top 3.`);
+  }
 }

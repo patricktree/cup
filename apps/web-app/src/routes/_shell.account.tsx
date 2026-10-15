@@ -48,7 +48,9 @@ function AccountSettings({
   const confirmation = useAccountConfirmation(subject);
   const { challenge, isPending: pending, error, result, begin, confirm, cancel } = confirmation;
   const data = account.data;
-  if (account.error && !account.isFetching) throw account.error;
+  if (account.error && !account.isFetching) {
+    throw account.error;
+  }
   return (
     <>
       <p>{email}</p>

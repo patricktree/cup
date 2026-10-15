@@ -290,7 +290,9 @@ function NarrationDocument({
       const marked = failedUnitIndexes.flatMap((unitIndex) => {
         const unit = units[unitIndex];
         const segment = unit && narrationDocumentElement.querySelector(`[id="${unit.id}"]`);
-        if (!segment) return [];
+        if (!segment) {
+          return [];
+        }
 
         segment.setAttribute("data-synthesis-failed", "");
         segment.setAttribute("title", "Audio could not be generated for this segment.");
@@ -311,14 +313,18 @@ function NarrationDocument({
 
   React.useEffect(
     function addSegmentPlaybackButtons() {
-      if (!isSelectable) return undefined;
+      if (!isSelectable) {
+        return undefined;
+      }
 
       const narrationDocumentElement = narrationDocumentElementRef.current;
       check.assert(narrationDocumentElement);
 
       const buttons = units.flatMap((unit, unitIndex) => {
         // A segment without audio has nothing to start; playback skips it.
-        if (failedUnitIndexes.includes(unitIndex)) return [];
+        if (failedUnitIndexes.includes(unitIndex)) {
+          return [];
+        }
 
         const segment = narrationDocumentElement.querySelector(`[id="${unit.id}"]`);
         check.assert(segment);
@@ -333,7 +339,9 @@ function NarrationDocument({
       });
 
       return () => {
-        for (const button of buttons) button.remove();
+        for (const button of buttons) {
+          button.remove();
+        }
       };
     },
     [units, failedUnitIndexes, isSelectable, narrationDocumentElementRef],

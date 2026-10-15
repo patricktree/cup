@@ -138,9 +138,13 @@ test("reuses completed chunk results when selection is replayed after a failure"
   let shouldFail = true;
   const runChunk: SelectionChunkRunner = async (index, select) => {
     const previous = cached.get(index);
-    if (previous) return previous;
+    if (previous) {
+      return previous;
+    }
     calls.push(index);
-    if (index === 1 && shouldFail) throw new Error("Temporary provider failure");
+    if (index === 1 && shouldFail) {
+      throw new Error("Temporary provider failure");
+    }
     const result = await select();
     cached.set(index, result);
     return result;
@@ -401,7 +405,9 @@ test("uses Gemini through AI Gateway and accounts for cached input and reasoning
           conversionId: "conversion-123",
           chunkIndex: 1,
         });
-        if (typeof init?.body !== "string") throw new Error("Expected a JSON request body");
+        if (typeof init?.body !== "string") {
+          throw new Error("Expected a JSON request body");
+        }
         const body: unknown = JSON.parse(init.body);
         // Gemini rejects sampling parameters on upcoming models.
         expect(body).not.toHaveProperty("temperature");
@@ -535,7 +541,9 @@ test("cancels an in-flight Gemini request when the caller aborts", async () => {
         fetch: async (_url, init) => {
           requests += 1;
           const signal = init?.signal;
-          if (!signal) throw new Error("Expected request signal");
+          if (!signal) {
+            throw new Error("Expected request signal");
+          }
           return new Promise<Response>((_resolve, reject) => {
             signal.addEventListener(
               "abort",

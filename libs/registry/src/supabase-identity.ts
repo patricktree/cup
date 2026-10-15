@@ -24,6 +24,8 @@ export async function verifySupabaseIdentity(env: SupabaseAdminEnvironment, subj
     throw new Error("Supabase identity verification unavailable");
   }
   const user = z.object({ id: z.uuid() }).parse(await response.json());
-  if (user.id !== subject) throw new Error("Supabase identity mismatch");
+  if (user.id !== subject) {
+    throw new Error("Supabase identity mismatch");
+  }
   return true;
 }

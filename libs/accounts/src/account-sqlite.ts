@@ -79,8 +79,9 @@ export class AccountSqlite {
         deletionChallenges,
         deletionAttempts,
         accounts,
-      ])
+      ]) {
         this.database.delete(table).run();
+      }
       this.database.insert(accountTombstone).values({ id: 1, attemptId: "" }).run();
     });
   }
@@ -97,8 +98,9 @@ export class AccountSqlite {
             subject: existing.subject,
             createdAtMs: existing.createdAtMs,
           })
-        )
+        ) {
           throw new Error("Account initialization conflicts with its existing identity");
+        }
         return this.snapshot();
       }
       this.database
@@ -119,7 +121,9 @@ export class AccountSqlite {
 
   snapshot(): AccountSnapshot {
     const identity = this.readIdentity();
-    if (identity === undefined) throw new Error("Account is not initialized");
+    if (identity === undefined) {
+      throw new Error("Account is not initialized");
+    }
     return { ...identity, balance: this.duration.balance() };
   }
 
@@ -150,13 +154,16 @@ export class AccountSqlite {
         .where(eq(accountConversions.idempotencyKey, request.idempotencyKey))
         .get();
       if (existing !== undefined) {
-        if (existing.fingerprint !== fingerprint)
+        if (existing.fingerprint !== fingerprint) {
           throw new Error("Conversion idempotency conflict");
+        }
         const { fingerprint: _fingerprint, ...conversion } = existing;
         return { result: "replayed", conversion };
       }
       const retryAfter = this.limits.consume("account-conversion", startLimit, 60_000, nowMs);
-      if (retryAfter) return { result: "rate-limited", retryAfter };
+      if (retryAfter) {
+        return { result: "rate-limited", retryAfter };
+      }
       const conversionId = crypto.randomUUID();
       this.database
         .insert(accountConversions)
@@ -281,8 +288,9 @@ export class AccountSqlite {
     const fingerprint = canonicalJson(parsed);
     this.database.transaction(() => {
       const account = this.snapshot();
-      if (executionEpoch !== undefined && account.executionEpoch !== executionEpoch)
+      if (executionEpoch !== undefined && account.executionEpoch !== executionEpoch) {
         throw new Error("Account execution epoch mismatch");
+      }
       const deadline = requireRow(
         this.database
           .select({ deadline: accounts.recoveryDeadlineMs })
@@ -293,17 +301,21 @@ export class AccountSqlite {
       if (
         account.state === "deleting" ||
         (account.state === "deletion_scheduled" && (deadline === null || nowMs >= deadline))
-      )
+      ) {
         throw new Error("Account blocks conversion settlement");
+      }
       const conversion = this.database
         .select({ status: accountConversions.status, outcome: accountConversions.outcomeJson })
         .from(accountConversions)
         .where(eq(accountConversions.conversionId, conversionId))
         .get();
-      if (conversion === undefined) throw new Error("Account conversion does not exist");
+      if (conversion === undefined) {
+        throw new Error("Account conversion does not exist");
+      }
       if (conversion.status !== "pending") {
-        if (conversion.outcome !== fingerprint)
+        if (conversion.outcome !== fingerprint) {
           throw new Error("Conflicting conversion settlement");
+        }
         return;
       }
       if (
@@ -314,8 +326,9 @@ export class AccountSqlite {
             accountId: account.accountId,
           }),
         )
-      )
+      ) {
         throw new Error("Private audiobook reference is outside its conversion prefix");
+      }
       this.database
         .update(accountConversions)
         .set({ status: parsed.status, outcomeJson: fingerprint, completedAtMs: nowMs })
@@ -324,8 +337,9 @@ export class AccountSqlite {
       this.duration.releaseReservations(conversionId, nowMs);
       // Reserving with the ready outcome leaves no moment in which a prepared conversion has
       // undecided reservations: afterwards a segment without one means the document did not fit.
-      if (parsed.status === "ready" && narrationTextCharactersBySegment !== undefined)
+      if (parsed.status === "ready" && narrationTextCharactersBySegment !== undefined) {
         this.duration.reserveMissing(conversionId, narrationTextCharactersBySegment, nowMs);
+      }
       this.database
         .update(pendingJobs)
         .set({ state: "delivered" })
@@ -428,7 +442,9 @@ export class AccountSqlite {
       .from(accountConversions)
       .where(eq(accountConversions.conversionId, conversionId))
       .get();
-    if (!row) return undefined;
+    if (!row) {
+      return undefined;
+    }
     const { outcomeJson, ...conversion } = row;
     return {
       ...conversion,
@@ -461,7 +477,9 @@ export class AccountSqlite {
 
   private requireActive(): AccountSnapshot {
     const account = this.snapshot();
-    if (account.state !== "active") throw new Error("Account is not active");
+    if (account.state !== "active") {
+      throw new Error("Account is not active");
+    }
     return account;
   }
 }

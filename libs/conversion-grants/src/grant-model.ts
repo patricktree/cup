@@ -130,7 +130,9 @@ export function toGrantConversionSnapshot(conversion: GrantConversion): GrantCon
     acceptedAt: toIsoString(conversion.acceptedAtMs),
     ...(conversion.title === undefined ? {} : { title: conversion.title }),
   };
-  if (conversion.status === "pending") return { ...base, status: "pending" };
+  if (conversion.status === "pending") {
+    return { ...base, status: "pending" };
+  }
   if (conversion.status === "ready") {
     return {
       ...base,
@@ -196,7 +198,7 @@ export function createOperatorGrantSnapshot(
           workflowId: conversion.conversionId,
           reconciliation,
         };
-        if (conversion.status === "ready")
+        if (conversion.status === "ready") {
           return {
             ...facts,
             ...(conversion.measurements === undefined
@@ -206,7 +208,8 @@ export function createOperatorGrantSnapshot(
               ? {}
               : { providerUsage: conversion.providerUsage }),
           };
-        if (conversion.status === "failed")
+        }
+        if (conversion.status === "failed") {
           return {
             ...facts,
             ...(conversion.diagnosticReference === undefined
@@ -216,6 +219,7 @@ export function createOperatorGrantSnapshot(
               ? {}
               : { cleanupState: conversion.cleanupState }),
           };
+        }
         return facts;
       }),
   };
@@ -226,11 +230,19 @@ export function deriveDurationBalance(record: GrantRecord): DurationBalance {
 }
 
 export function deriveGrantState(record: GrantRecord, nowMs: number): GrantState {
-  if (record.revokedAtMs !== undefined) return "revoked";
-  if (nowMs >= record.expiresAtMs) return "expired";
+  if (record.revokedAtMs !== undefined) {
+    return "revoked";
+  }
+  if (nowMs >= record.expiresAtMs) {
+    return "expired";
+  }
   const duration = deriveDurationBalance(record);
-  if (duration.spentMilliseconds >= record.allowanceMilliseconds) return "exhausted";
-  if (duration.availableMilliseconds === 0) return "temporarily-full";
+  if (duration.spentMilliseconds >= record.allowanceMilliseconds) {
+    return "exhausted";
+  }
+  if (duration.availableMilliseconds === 0) {
+    return "temporarily-full";
+  }
   return "open";
 }
 

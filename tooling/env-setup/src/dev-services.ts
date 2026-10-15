@@ -25,8 +25,9 @@ program
 try {
   await program.parseAsync(process.argv);
 } catch (error) {
-  if (error instanceof CommanderError) process.exitCode = error.exitCode;
-  else {
+  if (error instanceof CommanderError) {
+    process.exitCode = error.exitCode;
+  } else {
     console.error(error instanceof Error ? error.message : "Local development services failed.");
     process.exitCode = 1;
   }
@@ -42,7 +43,9 @@ async function run(action: "start" | "stop") {
   try {
     terraformEnv = parseEnv(await fs.readFile(path.join(root, "terraform/.env.local"), "utf8"));
   } catch (error) {
-    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {
+      throw error;
+    }
   }
 
   const clientId =
@@ -52,8 +55,9 @@ async function run(action: "start" | "stop") {
     process.env["SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET"] ??
     terraformEnv["TF_VAR_google_web_client_secret"];
 
-  if (action === "start" && (!clientId || !clientSecret))
+  if (action === "start" && (!clientId || !clientSecret)) {
     throw new Error("Configure the local Google OAuth client ID and secret.");
+  }
 
   const environment = {
     ...process.env,
@@ -82,7 +86,9 @@ async function run(action: "start" | "stop") {
       await fs.writeFile(workerEnvPath, backup, { mode: 0o600 });
       await fs.unlink(backupPath);
     } catch (error) {
-      if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+      if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {
+        throw error;
+      }
     }
   } else {
     await start();
@@ -119,8 +125,9 @@ async function run(action: "start" | "stop") {
       typeof status.API_URL !== "string" ||
       typeof status.ANON_KEY !== "string" ||
       typeof status.SERVICE_ROLE_KEY !== "string"
-    )
+    ) {
       throw new Error("Local Supabase status is incomplete.");
+    }
 
     const values = {
       ...workerEnv,
@@ -135,7 +142,9 @@ async function run(action: "start" | "stop") {
     try {
       await fs.writeFile(backupPath, await fs.readFile(workerEnvPath), { mode: 0o600, flag: "wx" });
     } catch (error) {
-      if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
+      if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) {
+        throw error;
+      }
     }
 
     await fs.writeFile(

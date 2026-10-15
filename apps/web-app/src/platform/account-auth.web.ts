@@ -7,7 +7,9 @@ export async function initializeAuthStorage(storageKeys: readonly string[]) {
     storage,
     detectSessionInUrl: true,
     clearStoredSession: async () => {
-      for (const key of storageKeys) storage.removeItem(key);
+      for (const key of storageKeys) {
+        storage.removeItem(key);
+      }
     },
   };
 }
@@ -26,7 +28,9 @@ export async function signInWithGoogle(
         : { prompt: "select_account" },
     },
   });
-  if (result.error) throw result.error;
+  if (result.error) {
+    throw result.error;
+  }
 }
 
 export async function setNativeMediaSession(_session: Session): Promise<void> {}

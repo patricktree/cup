@@ -37,7 +37,9 @@ function createFakePlayer(options: FakePlayerOptions): FakePlayer {
   };
   const setSnapshot = (value: Partial<PlayerSnapshot>) => {
     snapshot = { ...snapshot, ...value };
-    for (const listener of listeners) listener();
+    for (const listener of listeners) {
+      listener();
+    }
   };
 
   return {
@@ -94,7 +96,9 @@ function createHost({
     },
     createPlayer: (session) => {
       const request = requests.get(session);
-      if (!request) throw new Error("The session was not created by this host.");
+      if (!request) {
+        throw new Error("The session was not created by this host.");
+      }
       const player = createFakePlayer({
         conversionId: request.conversionId,
         audiobook: request.audiobook,

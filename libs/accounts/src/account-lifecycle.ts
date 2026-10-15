@@ -34,7 +34,9 @@ export class AccountLifecycle {
 
   challenge(nowMs = Temporal.Now.instant().epochMilliseconds) {
     const account = this.snapshot();
-    if (account.state === "deleting") throw new Error("Account deletion has started");
+    if (account.state === "deleting") {
+      throw new Error("Account deletion has started");
+    }
     const challengeId = crypto.randomUUID();
     this.database
       .delete(deletionChallenges)
@@ -65,10 +67,13 @@ export class AccountLifecycle {
     z.email().parse(input.email);
     return this.database.transaction(() => {
       const account = this.snapshot();
-      if (account.state === "deletion_scheduled") return this.current();
+      if (account.state === "deletion_scheduled") {
+        return this.current();
+      }
       this.consume(input.challengeId, input.authenticatedAtSeconds, nowMs);
-      if (account.state !== "active")
+      if (account.state !== "active") {
         throw new AccountLifecycleConflictError("Account deletion has started");
+      }
       const attempt: DeletionAttempt = {
         attemptId: crypto.randomUUID(),
         accountId: account.accountId,
@@ -103,10 +108,13 @@ export class AccountLifecycle {
         account.state !== "deletion_scheduled" ||
         account.recoveryDeadlineMs === null ||
         nowMs >= account.recoveryDeadlineMs
-      )
+      ) {
         throw new AccountLifecycleConflictError("Recovery deadline has passed");
+      }
       const attempt = this.current();
-      if (!attempt) throw new Error("Deletion attempt missing");
+      if (!attempt) {
+        throw new Error("Deletion attempt missing");
+      }
       this.database
         .update(deletionAttempts)
         .set({ state: "restored", delivered: false })
@@ -148,7 +156,9 @@ export class AccountLifecycle {
         .from(deletionAttempts)
         .where(and(eq(deletionAttempts.attemptId, attemptId), eq(deletionAttempts.state, state)))
         .get();
-      if (!row) return;
+      if (!row) {
+        return;
+      }
       const payload = deletionAttemptSchema.parse(JSON.parse(row.json));
       this.database
         .update(deletionAttempts)
@@ -160,9 +170,12 @@ export class AccountLifecycle {
   fence(attemptId: string, nowMs = Temporal.Now.instant().epochMilliseconds) {
     this.database.transaction(() => {
       const attempt = this.current();
-      if (!attempt || attempt.attemptId !== attemptId || attempt.state === "restored")
+      if (!attempt || attempt.attemptId !== attemptId || attempt.state === "restored") {
         throw new Error("Deletion attempt was superseded");
-      if (nowMs < attempt.deadlineMs) throw new Error("Recovery period has not ended");
+      }
+      if (nowMs < attempt.deadlineMs) {
+        throw new Error("Recovery period has not ended");
+      }
       this.database
         .update(accounts)
         .set({ state: "deleting", executionEpoch: sql`${accounts.executionEpoch} + 1` })
@@ -192,10 +205,11 @@ export class AccountLifecycle {
       nowMs >= challenge.expiresAtMs ||
       authenticatedAtSeconds * 1_000 <= challenge.issuedAtMs ||
       authenticatedAtSeconds * 1_000 > nowMs + 5_000
-    )
+    ) {
       throw new AccountLifecycleConflictError(
         "Fresh Google sign-in after the challenge is required",
       );
+    }
     this.database
       .update(deletionChallenges)
       .set({ used: true })

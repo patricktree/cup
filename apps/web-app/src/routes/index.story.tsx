@@ -23,7 +23,9 @@ export const SignIn = {
 
     const submit = canvas.getByRole("button", { name: "Load & listen" });
     await waitFor(() => {
-      if (submit.matches(":disabled")) throw new Error("Waiting for conversion submission");
+      if (submit.matches(":disabled")) {
+        throw new Error("Waiting for conversion submission");
+      }
     });
     await user.click(submit);
     await within(document.body).findByRole("dialog", { name: "Sign in" });

@@ -38,13 +38,14 @@ function fixture(state: GrantState = "open", hasCoverImage = true) {
     etag: "manifest-etag",
   };
   async function readBucket(key: string, options?: { range: { offset: number; length: number } }) {
-    if (key === reference.key)
+    if (key === reference.key) {
       return {
         size: reference.byteLength,
         etag: reference.etag,
         httpMetadata: { contentType: reference.contentType },
         text: async () => manifest,
       };
+    }
     const bytes = new Uint8Array([1, 2, 3]);
     return {
       size: bytes.length,
@@ -79,7 +80,9 @@ function fixture(state: GrantState = "open", hasCoverImage = true) {
     },
     AUDIO_BUCKET: { get: bucketRead },
   };
-  if (!isFixtureEnvironment(env)) throw new Error("Missing trial fixture bindings");
+  if (!isFixtureEnvironment(env)) {
+    throw new Error("Missing trial fixture bindings");
+  }
   return { app: createApiServer(), env, bucketRead, validateSession };
 }
 

@@ -48,15 +48,17 @@ account
         }),
       );
       output(result, () => {
-        for (const listed of result.accounts)
+        for (const listed of result.accounts) {
           writeFields([
             ["Account ID", listed.accountId],
             ["Subject", listed.subject],
             ["Phase", listed.phase],
             ["Created", listed.createdAt],
           ]);
-        if (result.nextCursor !== undefined)
+        }
+        if (result.nextCursor !== undefined) {
           process.stdout.write(`Next cursor: ${result.nextCursor}\n`);
+        }
       });
     }),
   );
@@ -130,10 +132,11 @@ grant
             ["Request ID", result.requestId],
             ...(result.result === "issued" ? [["Trial link", result.trialLink] as const] : []),
           ]);
-          if (result.result === "issued")
+          if (result.result === "issued") {
             process.stderr.write(
               "Warning: this trial link is shown once and cannot be recovered.\n",
             );
+          }
         });
       } catch (error) {
         throw new CliError(
@@ -163,7 +166,7 @@ grant
       );
       output(result, () => {
         process.stdout.write("State source: Registry snapshot\n");
-        for (const item of result.grants)
+        for (const item of result.grants) {
           writeFields([
             ["Grant ID", item.grantId],
             ["Label", item.label],
@@ -171,8 +174,10 @@ grant
             ["Created", item.createdAt],
             ["Expires", item.expiresAt],
           ]);
-        if (result.nextCursor !== undefined)
+        }
+        if (result.nextCursor !== undefined) {
           process.stdout.write(`Next cursor: ${result.nextCursor}\n`);
+        }
       });
     }),
   );
@@ -251,13 +256,16 @@ grant
           ["Complete", result.complete ? "yes" : "no"],
           ["Registry schema", result.registryVersion],
         ]);
-        for (const item of result.grants)
+        for (const item of result.grants) {
           writeFields([
             ["Grant ID", item.grantId],
             ["Result", item.success ? `schema ${item.schemaVersion}` : (item.error ?? "failed")],
           ]);
+        }
       });
-      if (!result.complete) process.exitCode = 1;
+      if (!result.complete) {
+        process.exitCode = 1;
+      }
     }),
   );
 
@@ -289,14 +297,16 @@ async function run(
   const global = globalOptionsSchema.parse(command.optsWithGlobals());
   try {
     const operatorUrl = global.operatorUrl ?? process.env["CREATE_AUDIOBOOK_FROM_URL_OPERATOR_URL"];
-    if (operatorUrl === undefined)
+    if (operatorUrl === undefined) {
       throw new CliError(
         "operator-url-required",
         "Use --operator-url or set CREATE_AUDIOBOOK_FROM_URL_OPERATOR_URL.",
       );
+    }
     const url = new URL(operatorUrl);
-    if (url.protocol !== "https:" && !isLoopbackOperatorUrl(url))
+    if (url.protocol !== "https:" && !isLoopbackOperatorUrl(url)) {
       throw new CliError("invalid-operator-url", "The operator URL must use HTTPS.");
+    }
     const accessToken = await getAccessToken(url.toString());
     await action(new OperatorApiClient(url.toString(), accessToken), createOutput(global.json));
   } catch (error) {
@@ -307,8 +317,9 @@ async function run(
     process.stderr.write(
       `${global.json ? JSON.stringify({ error: { code: cliError.code, message: cliError.message } }) : `Error: ${cliError.message}`}\n`,
     );
-    if (global.debug && cliError.cause instanceof Error)
+    if (global.debug && cliError.cause instanceof Error) {
       process.stderr.write(`${redact(cliError.cause.message)}\n`);
+    }
     process.exitCode = 1;
   }
 }
@@ -319,14 +330,18 @@ function createOutput(isJson: boolean): Output {
 }
 
 async function getAccessToken(operatorUrl: string): Promise<string> {
-  if (isDevelopmentOperatorUrl(new URL(operatorUrl))) return LOCAL_OPERATOR_ACCESS_TOKEN;
+  if (isDevelopmentOperatorUrl(new URL(operatorUrl))) {
+    return LOCAL_OPERATOR_ACCESS_TOKEN;
+  }
   if (process.env["CREATE_AUDIOBOOK_FROM_URL_ACCESS_TOKEN"] !== undefined) {
     return process.env["CREATE_AUDIOBOOK_FROM_URL_ACCESS_TOKEN"];
   }
   try {
     const { stdout } = await execFile("cloudflared", ["access", "token", `-app=${operatorUrl}`]);
     const token = stdout.trim();
-    if (token === "") throw new Error("cloudflared returned an empty token");
+    if (token === "") {
+      throw new Error("cloudflared returned an empty token");
+    }
     return token;
   } catch (error) {
     throw new CliError(
@@ -338,7 +353,9 @@ async function getAccessToken(operatorUrl: string): Promise<string> {
 }
 
 function writeFields(fields: ReadonlyArray<readonly [string, string | number]>): void {
-  for (const [label, value] of fields) process.stdout.write(`${label}: ${value}\n`);
+  for (const [label, value] of fields) {
+    process.stdout.write(`${label}: ${value}\n`);
+  }
   process.stdout.write("\n");
 }
 function parseUuid(value: string): string {
@@ -346,8 +363,9 @@ function parseUuid(value: string): string {
 }
 function parseInteger(value: string): number {
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 100)
+  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 100) {
     throw new CliError("invalid-limit", "--limit must be an integer from 1 through 100.");
+  }
   return parsed;
 }
 function redact(value: string): string {

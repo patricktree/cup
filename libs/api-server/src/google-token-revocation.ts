@@ -43,8 +43,9 @@ export async function revokeVerifiedGoogleToken(
     !user.identities.some(
       (item) => item.provider === "google" && item.identity_data.sub === identity.sub,
     )
-  )
+  ) {
     return false;
+  }
   const response = await fetch("https://oauth2.googleapis.com/revoke", {
     method: "POST",
     signal: AbortSignal.timeout(5_000),

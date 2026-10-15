@@ -24,7 +24,9 @@ beforeAll(async () => {
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
-  if (address === null || typeof address === "string") throw new Error("No test server address.");
+  if (address === null || typeof address === "string") {
+    throw new Error("No test server address.");
+  }
   operatorUrl = `http://127.0.0.1:${address.port}`;
 });
 
@@ -194,17 +196,21 @@ function runCliAt(
 
 async function handleRequest(request: http.IncomingMessage, response: http.ServerResponse) {
   const url = new URL(request.url ?? "/", operatorUrl);
-  if (request.headers["cf-access-token"] !== LOCAL_OPERATOR_ACCESS_TOKEN)
+  if (request.headers["cf-access-token"] !== LOCAL_OPERATOR_ACCESS_TOKEN) {
     return send(response, 401, {
       error: { code: "operator-unauthorized", message: "Local authorization required." },
     });
+  }
   const body = await readBody(request);
-  if (body !== "" && request.headers["content-type"] !== "application/json")
+  if (body !== "" && request.headers["content-type"] !== "application/json") {
     return send(response, 415, {
       error: { code: "unsupported-media-type", message: "JSON required." },
     });
-  if (handleAccountRequest(request.method, url, body, response)) return;
-  if (request.method === "POST" && url.pathname === "/api/operator/grants")
+  }
+  if (handleAccountRequest(request.method, url, body, response)) {
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/operator/grants") {
     return send(response, 201, {
       result: "issued",
       grantId: GRANT_ID,
@@ -215,7 +221,8 @@ async function handleRequest(request: http.IncomingMessage, response: http.Serve
       state: "open",
       trialLink: `${operatorUrl}/app/trials/${GRANT_ID}#credential=v1.${"a".repeat(43)}`,
     });
-  if (request.method === "GET" && url.pathname === "/api/operator/grants")
+  }
+  if (request.method === "GET" && url.pathname === "/api/operator/grants") {
     return send(response, 200, {
       grants: [
         {
@@ -228,18 +235,23 @@ async function handleRequest(request: http.IncomingMessage, response: http.Serve
         },
       ],
     });
-  if (request.method === "GET" && url.pathname === `/api/operator/grants/${GRANT_ID}`)
+  }
+  if (request.method === "GET" && url.pathname === `/api/operator/grants/${GRANT_ID}`) {
     return send(response, 200, inspectFixture());
-  if (request.method === "POST" && url.pathname.endsWith("/revocation"))
+  }
+  if (request.method === "POST" && url.pathname.endsWith("/revocation")) {
     return send(response, 200, { changed: true, grant: grantFixture("revoked") });
-  if (request.method === "POST" && url.pathname.endsWith("/session-invalidations"))
+  }
+  if (request.method === "POST" && url.pathname.endsWith("/session-invalidations")) {
     return send(response, 200, { invalidatedAt: CREATED_AT, grant: grantFixture("revoked") });
-  if (request.method === "POST" && url.pathname === "/api/operator/grant-migrations")
+  }
+  if (request.method === "POST" && url.pathname === "/api/operator/grant-migrations") {
     return send(response, 200, {
       complete: false,
       registryVersion: 1,
       grants: [{ grantId: GRANT_ID, success: false, error: "Migration failed." }],
     });
+  }
   return send(response, 404, { error: { code: "not-found", message: "Not found." } });
 }
 
@@ -249,13 +261,17 @@ function handleAccountRequest(
   body: string,
   response: http.ServerResponse,
 ): boolean {
-  if (method === "GET") return handleAccountRead(url, response);
-  if (method === "POST") return handleAccountWrite(url, body, response);
+  if (method === "GET") {
+    return handleAccountRead(url, response);
+  }
+  if (method === "POST") {
+    return handleAccountWrite(url, body, response);
+  }
   return false;
 }
 
 function handleAccountRead(url: URL, response: http.ServerResponse): boolean {
-  if (url.pathname === "/api/operator/accounts")
+  if (url.pathname === "/api/operator/accounts") {
     send(response, 200, {
       accounts: [
         {
@@ -267,9 +283,9 @@ function handleAccountRead(url: URL, response: http.ServerResponse): boolean {
       ],
       nextCursor: "next",
     });
-  else if (url.pathname === "/api/operator/accounts/deletions")
+  } else if (url.pathname === "/api/operator/accounts/deletions") {
     send(response, 200, { attempts: [], receipts: [] });
-  else if (url.pathname === `/api/operator/accounts/${GRANT_ID}`)
+  } else if (url.pathname === `/api/operator/accounts/${GRANT_ID}`) {
     send(response, 404, {
       error: {
         code: "account-unavailable",
@@ -277,12 +293,16 @@ function handleAccountRead(url: URL, response: http.ServerResponse): boolean {
         requestId: REQUEST_ID,
       },
     });
-  else return false;
+  } else {
+    return false;
+  }
   return true;
 }
 
 function handleAccountWrite(url: URL, body: string, response: http.ServerResponse): boolean {
-  if (url.pathname !== `/api/operator/accounts/${ACCOUNT_ID}/allowance-adjustments`) return false;
+  if (url.pathname !== `/api/operator/accounts/${ACCOUNT_ID}/allowance-adjustments`) {
+    return false;
+  }
   adjustmentBodies.push(JSON.parse(body));
   send(response, 200, {
     accountId: ACCOUNT_ID,
@@ -326,8 +346,9 @@ function inspectFixture() {
 
 async function readBody(request: http.IncomingMessage): Promise<string> {
   const chunks: Buffer[] = [];
-  for await (const chunk of request)
+  for await (const chunk of request) {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
   return Buffer.concat(chunks).toString("utf8");
 }
 

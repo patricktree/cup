@@ -216,7 +216,9 @@ function PlaybackError({
 }) {
   const error = usePlayerState(player, (state) => state.error);
   const message = error ?? authorizationError;
-  if (!message) return null;
+  if (!message) {
+    return null;
+  }
 
   return (
     /* TODO: implement some general error handling like toasts/snackbars and put it there */

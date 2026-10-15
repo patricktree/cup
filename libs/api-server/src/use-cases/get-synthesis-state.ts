@@ -42,15 +42,20 @@ export async function getSynthesisState(
   const segments = await Promise.all(
     narrationTextCharactersBySegment.map(async (_characters, sequence): Promise<AudioSegment> => {
       const segment = usage.get(sequence);
-      if (segment === undefined) return { sequence, status: "absent" };
-      if (segment.state === "reserved") return { sequence, status: "generating" };
-      if (segment.state === "settled")
+      if (segment === undefined) {
+        return { sequence, status: "absent" };
+      }
+      if (segment.state === "reserved") {
+        return { sequence, status: "generating" };
+      }
+      if (segment.state === "settled") {
         return {
           sequence,
           status: "ready",
           durationMilliseconds: segment.actualMilliseconds,
           url: `${origin}/api/files/audiobooks/${conversionId}/segments/${sequence}/audio.mp3`,
         };
+      }
 
       return {
         sequence,
@@ -67,13 +72,14 @@ export async function getSynthesisState(
       usage.has(sequence) ? total : total + estimateAudioDuration(characters),
     0,
   );
-  if (requiredMilliseconds > 0)
+  if (requiredMilliseconds > 0) {
     return {
       status: "insufficient-duration",
       segments,
       requiredMilliseconds,
       availableMilliseconds: await dependencies.getAvailableMilliseconds(),
     };
+  }
 
   return {
     status: segments.some((segment) => segment.status === "generating") ? "synthesizing" : "ready",
