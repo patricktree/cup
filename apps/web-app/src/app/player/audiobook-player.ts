@@ -230,7 +230,10 @@ export class AudiobookPlayer {
       this.activeElementIndex = standbyElementIndex;
       elements[standbyElementIndex].currentTime = offsetMilliseconds / 1_000;
     } else {
-      this.load(this.activeElementIndex, entryIndex, offsetMilliseconds);
+      // Replacing the source of the element the media controls follow makes Android browsers
+      // drop and recreate their notification, so the segment starts on the standby element.
+      this.activeElementIndex = standbyElementIndex;
+      this.load(standbyElementIndex, entryIndex, offsetMilliseconds);
     }
 
     this.update({ ...this.describePosition(), error: null });
