@@ -47,7 +47,7 @@ test("rejects malformed and invalid trial links", async ({
     await fulfillError(route, 401, "invalid-grant-credential", "The grant credential is invalid.");
   });
   expectConsoleError(CONSOLE_ERRORS.unauthorized);
-  expectConsoleError(/^ApiError: The grant credential is invalid\./);
+  expectConsoleError(/^RpcError: The grant credential is invalid\./);
   await gotoPage(page, trialLink(workerEnvironment.origin));
   await expect(page.getByRole("heading", { name: "This trial link is invalid." })).toBeVisible();
 });
@@ -57,7 +57,7 @@ test("shows a revoked trial link", async ({ expectConsoleError, page, workerEnvi
     await fulfillError(route, 403, "grant-revoked", "The grant was revoked.");
   });
   expectConsoleError(CONSOLE_ERRORS.forbidden);
-  expectConsoleError(/^ApiError: The grant was revoked\./);
+  expectConsoleError(/^RpcError: The grant was revoked\./);
 
   await gotoPage(page, trialLink(workerEnvironment.origin));
   await expect(page.getByRole("heading", { name: "This trial link was revoked." })).toBeVisible();
@@ -79,7 +79,7 @@ test("recovers from an operational credential exchange error", async ({
   });
   await mockGrant(page, workerEnvironment.origin);
   expectConsoleError(CONSOLE_ERRORS.unavailable);
-  expectConsoleError(/^ApiError: The service is unavailable\./);
+  expectConsoleError(/^RpcError: The service is unavailable\./);
 
   await gotoPage(page, trialLink(workerEnvironment.origin));
   await expect(
@@ -107,7 +107,7 @@ test("retries an initial grant loading failure", async ({
     await fulfillJson(route, 200, createGrant());
   });
   expectConsoleError(CONSOLE_ERRORS.serverError);
-  expectConsoleError(/^ApiError: The Trial could not be loaded\./);
+  expectConsoleError(/^RpcError: The Trial could not be loaded\./);
 
   await gotoPage(page, `${workerEnvironment.origin}/app/trials/${GRANT_ID}`);
   await expect(
@@ -193,7 +193,7 @@ test("retries a conversion loading failure", async ({
     await fulfillJson(route, 200, createPendingConversion());
   });
   expectConsoleError(CONSOLE_ERRORS.serverError);
-  expectConsoleError(/^ApiError: The conversion could not be loaded\./);
+  expectConsoleError(/^RpcError: The conversion could not be loaded\./);
 
   await gotoPage(page, `${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
   await expect(
@@ -225,7 +225,7 @@ test("shows an article not-found state", async ({
     await fulfillError(route, 404, "audiobook-not-found", "The audiobook was not found.");
   });
   expectConsoleError(CONSOLE_ERRORS.notFound);
-  expectConsoleError(/^ApiError: The audiobook was not found\./);
+  expectConsoleError(/^RpcError: The audiobook was not found\./);
 
   await gotoPage(page, `${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
   await expect(
@@ -250,7 +250,7 @@ test("retries an audiobook loading failure", async ({
   });
   await mockSegmentAudio(page, workerEnvironment.origin);
   expectConsoleError(CONSOLE_ERRORS.serverError);
-  expectConsoleError(/^ApiError: The article could not be loaded\./);
+  expectConsoleError(/^RpcError: The article could not be loaded\./);
 
   await gotoPage(page, `${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
   await expect(
