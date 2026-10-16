@@ -14,6 +14,13 @@ describe("operator transport contracts", () => {
     expect(grantParamsSchema.safeParse({ grantId: UUID.toUpperCase() }).success).toBe(false);
   });
 
+  test.each([
+    [grantParamsSchema, { grantId: UUID, extra: true }],
+    [createGrantRequestSchema, { label: "Label", requestId: UUID, extra: true }],
+  ])("rejects unknown request fields", (schema, value) => {
+    expect(schema.safeParse(value).success).toBe(false);
+  });
+
   test("counts label and invalidation limits as Unicode code points", () => {
     expect(
       createGrantRequestSchema.safeParse({ label: "😀".repeat(120), requestId: UUID }).success,

@@ -26,24 +26,25 @@ const conversionBaseSchema = z.object({
   completedAt: z.iso.datetime().optional(),
 });
 
+/**
+ * A trial conversion as listener API responses report it. Clients read it from responses, so it
+ * drops fields it does not know instead of rejecting them.
+ */
 export const grantConversionSnapshotSchema = z.discriminatedUnion("status", [
-  conversionBaseSchema.extend({ status: z.literal("pending") }).strict(),
-  conversionBaseSchema
-    .extend({
-      status: z.literal("ready"),
-      completedAt: z.iso.datetime(),
-      audiobookUrl: z.string().regex(AUDIOBOOK_PATH_PATTERN),
-    })
-    .strict(),
-  conversionBaseSchema
-    .extend({
-      status: z.literal("failed"),
-      completedAt: z.iso.datetime(),
-      failure: z
-        .object({ category: conversionFailureCategorySchema, explanation: z.string().min(1) })
-        .strict(),
-    })
-    .strict(),
+  conversionBaseSchema.extend({ status: z.literal("pending") }),
+  conversionBaseSchema.extend({
+    status: z.literal("ready"),
+    completedAt: z.iso.datetime(),
+    audiobookUrl: z.string().regex(AUDIOBOOK_PATH_PATTERN),
+  }),
+  conversionBaseSchema.extend({
+    status: z.literal("failed"),
+    completedAt: z.iso.datetime(),
+    failure: z.object({
+      category: conversionFailureCategorySchema,
+      explanation: z.string().min(1),
+    }),
+  }),
 ]);
 export type GrantConversionSnapshot = z.infer<typeof grantConversionSnapshotSchema>;
 export const grantConversionsSchema = z.array(grantConversionSnapshotSchema);
