@@ -32,7 +32,7 @@ Use an existing credentials file or another checkout’s env file as the source.
 
 ## Validation
 
-Run `pnpm validate:fast` as needed during development. Shipping to production means pushing to `main`, the default branch. Run `pnpm validate` to complete both fast and extended checks on the changes being shipped. The pre-commit hook runs only the fast group. The pre-push hook rejects pushed commits that move a submodule pointer backwards (see the [submodule check](tooling/submodule-check/README.md)) and runs extended validation when a push updates `main`.
+Run `pnpm validate:fast` as needed during development. Shipping to production means pushing to `main`, the default branch. Run `pnpm validate` to complete both fast and extended checks on the changes being shipped. The pre-commit hook runs only the fast group. The pre-push hook rejects pushed commits that move a submodule pointer backwards (see the [submodule check](.patricktree-stack/tooling/submodule-check/README.md)) and runs extended validation when a push updates `main`.
 
 | Command                          | Scope                                                                                                                                                             |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |

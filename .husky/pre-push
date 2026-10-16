@@ -16,7 +16,7 @@ EOF
 if [ -n "${pushed_oids}" ]; then
     # commits created by `git rebase --continue` skip the pre-commit hook, so check every pushed commit;
     # pushed_oids is unquoted so that each object ID becomes a separate argument
-    pnpm exec node tooling/submodule-check/src/cli.ts commits ${pushed_oids} || exit $?
+    pnpm exec submodule-check commits ${pushed_oids} || exit $?
 fi
 
 if [ "${runs_extended_validation}" = true ]; then

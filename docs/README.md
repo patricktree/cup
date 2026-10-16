@@ -16,23 +16,23 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 
 ## Operate and develop Cup
 
-| Guide                                                                | Purpose                                                                                |
-| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| [Repository setup and validation](../AGENTS.md)                      | Prepare a checkout and run checks                                                      |
-| [Local development](local-development.md)                            | Run the web application against local services                                         |
-| [Production configuration](production-configuration.md)              | Supply Worker secrets and provider settings, and track the pending rollout             |
-| [Mobile development](../apps/mobile-app/README.md)                   | Build native shells and configure platform links and sharing                           |
-| [Account migrations](../libs/accounts/README.md#database-migrations) | Change account Drizzle schemas and validate account storage                            |
-| [Grant migrations](../libs/conversion-grants/README.md)              | Change trial Drizzle schemas and validate grant storage                                |
-| [Registry migrations](../libs/registry/README.md)                    | Change the shared registry schema and preserve deployed registry storage               |
-| [Conversion contracts](../libs/conversion-contracts/README.md)       | Shared conversion types, schemas, and duration calculations                            |
-| [Duration ledger](../libs/duration-ledger/README.md)                 | Shared allowance, reservation, and charge storage for accounts and grants              |
-| [Operator CLI](../apps/operator/README.md)                           | Manage trial grants, list accounts, and adjust account allowances                      |
-| [Terraform infrastructure](../terraform/README.md)                   | Manage infrastructure state, provider configuration, and manual prerequisites          |
-| [Declaration builds](declaration-builds.md)                          | Understand source and declaration package scopes, compiler settings, and build caching |
-| [Brand assets](../tooling/brand-assets/README.md)                    | Maintain generated application branding                                                |
-| [Migration generator](../tooling/drizzle-migrations/README.md)       | Generate SQLite migrations, snapshots, and Worker bundles                              |
-| [Submodule check](../tooling/submodule-check/README.md)              | Reject commits that move a submodule pointer backwards                                 |
+| Guide                                                                      | Purpose                                                                                |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [Repository setup and validation](../AGENTS.md)                            | Prepare a checkout and run checks                                                      |
+| [Local development](local-development.md)                                  | Run the web application against local services                                         |
+| [Production configuration](production-configuration.md)                    | Supply Worker secrets and provider settings, and track the pending rollout             |
+| [Mobile development](../apps/mobile-app/README.md)                         | Build native shells and configure platform links and sharing                           |
+| [Account migrations](../libs/accounts/README.md#database-migrations)       | Change account Drizzle schemas and validate account storage                            |
+| [Grant migrations](../libs/conversion-grants/README.md)                    | Change trial Drizzle schemas and validate grant storage                                |
+| [Registry migrations](../libs/registry/README.md)                          | Change the shared registry schema and preserve deployed registry storage               |
+| [Conversion contracts](../libs/conversion-contracts/README.md)             | Shared conversion types, schemas, and duration calculations                            |
+| [Duration ledger](../libs/duration-ledger/README.md)                       | Shared allowance, reservation, and charge storage for accounts and grants              |
+| [Operator CLI](../apps/operator/README.md)                                 | Manage trial grants, list accounts, and adjust account allowances                      |
+| [Terraform infrastructure](../terraform/README.md)                         | Manage infrastructure state, provider configuration, and manual prerequisites          |
+| [Declaration builds](declaration-builds.md)                                | Understand source and declaration package scopes, compiler settings, and build caching |
+| [Brand assets](../tooling/brand-assets/README.md)                          | Maintain generated application branding                                                |
+| [Migration generator](../tooling/drizzle-migrations/README.md)             | Generate SQLite migrations, snapshots, and Worker bundles                              |
+| [Submodule check](../.patricktree-stack/tooling/submodule-check/README.md) | Reject commits that move a submodule pointer backwards                                 |
 
 ## Decisions and evidence
 
