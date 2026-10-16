@@ -1,10 +1,14 @@
 import { DurableObject } from "cloudflare:workers";
-import { and, asc, eq, gt, lte, min, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, lte, min, or, sql } from "drizzle-orm";
 import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { Temporal } from "temporal-polyfill";
 import { z } from "zod";
 
-import type { AccountSnapshot } from "@cup/accounts";
+import {
+  accountUsageProjectionSchema,
+  type AccountSnapshot,
+  type AccountUsageProjection,
+} from "@cup/accounts";
 import type { DeletionAttempt } from "@cup/accounts/lifecycle";
 import { conversionOwnerSchema, type ConversionOwner } from "@cup/conversion-contracts";
 import type {
@@ -15,9 +19,11 @@ import type {
 import { RollingLimits } from "@cup/rolling-limits";
 
 import { DeletionCoordinator, type DeletionEnvironment } from "#src/deletion-coordinator.ts";
+import { canonicalJson } from "#src/encoding.ts";
 import {
   applyGrantRegistrySnapshot,
   decodeAccountCursor,
+  deriveAvailableMilliseconds,
   decodeCursor,
   deriveProjectedState,
   encodeAccountCursor,
@@ -39,6 +45,30 @@ export type IdentityAccount = {
   phase: "provisioning" | "active" | "deleting_identity";
 };
 
+/** The account's duration usage as last projected into the registry. */
+type AccountUsage = Omit<AccountUsageProjection, "accountId">;
+
+export type ListedAccount = IdentityAccount & {
+  usage?: AccountUsage & { availableMilliseconds: number };
+};
+
+// Bounds the account RPCs one alarm makes while backfilling usage projections.
+const USAGE_BACKFILL_BATCH_SIZE = 25;
+const USAGE_BACKFILL_RETRY_MS = 60_000;
+
+const IDENTITY_COLUMNS = {
+  subject: identityAccounts.subject,
+  accountId: identityAccounts.accountId,
+  createdAtMs: identityAccounts.createdAtMs,
+  phase: identityAccounts.phase,
+};
+
+// Provisioning activates an account before pulling its usage, so only active accounts are owed one.
+const LACKS_USAGE_PROJECTION = and(
+  eq(identityAccounts.phase, "active"),
+  isNull(identityAccounts.projectionRevision),
+);
+
 type RegistryEnvironment = DeletionEnvironment & {
   SIGNUP_IP_LIMIT?: string;
   CONVERSION_IP_LIMIT?: string;
@@ -55,7 +85,14 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
     this.database = drizzle(context.storage);
     this.sqlite = new RegistrySqlite(context.storage);
 
-    void context.blockConcurrencyWhile(() => this.sqlite.applyMigrations());
+    void context.blockConcurrencyWhile(async () => {
+      await this.sqlite.applyMigrations();
+      // Accounts that existed before usage projections, or whose first pull failed, converge
+      // through the alarm's backfill.
+      if (this.hasAccountsWithoutUsage() && (await context.storage.getAlarm()) === null) {
+        await context.storage.setAlarm(Temporal.Now.instant().epochMilliseconds);
+      }
+    });
     this.deletions = new DeletionCoordinator(context.storage, env);
     this.limits = new RollingLimits(context.storage);
   }
@@ -125,6 +162,14 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
         .run();
     });
     this.database.delete(provisioningJobs).where(eq(provisioningJobs.subject, subject)).run();
+    // Repeat sign-ins also provision; afterwards the account keeps its own projection current.
+    if (this.lacksUsageProjection(identity.accountId)) {
+      try {
+        await this.pullAccountUsage(identity.accountId);
+      } catch {
+        /* The alarm's backfill pulls usage for active accounts that lack a projection. */
+      }
+    }
     return snapshot;
   }
 
@@ -173,16 +218,23 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
           .run();
       },
     );
+    this.limits.expire(Temporal.Now.instant().epochMilliseconds);
+    // Last, because it calls account objects that may be slow; the work above is time-critical.
+    await this.backfillAccountUsage();
     const provisioningNext = requireRow(
       this.database
         .select({ next: min(provisioningJobs.nextAttemptMs) })
         .from(provisioningJobs)
         .get(),
     ).next;
-    this.limits.expire(Temporal.Now.instant().epochMilliseconds);
-    const candidates = [this.deletions.nextAlarm(), this.limits.nextAlarm()].filter(
-      (time): time is number => time !== null,
-    );
+    const usageBackfillNext = this.hasAccountsWithoutUsage()
+      ? Temporal.Now.instant().epochMilliseconds + USAGE_BACKFILL_RETRY_MS
+      : null;
+    const candidates = [
+      this.deletions.nextAlarm(),
+      this.limits.nextAlarm(),
+      usageBackfillNext,
+    ].filter((time): time is number => time !== null);
     const deletionNext = candidates.length ? Math.min(...candidates) : null;
     const next =
       provisioningNext === null
@@ -265,7 +317,7 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
 
   findIdentity(subject: string): IdentityAccount | undefined {
     return this.database
-      .select()
+      .select(IDENTITY_COLUMNS)
       .from(identityAccounts)
       .where(eq(identityAccounts.subject, subject))
       .get();
@@ -273,15 +325,58 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
 
   findAccount(accountId: string): IdentityAccount | undefined {
     return this.database
-      .select()
+      .select(IDENTITY_COLUMNS)
       .from(identityAccounts)
       .where(eq(identityAccounts.accountId, accountId))
       .get();
   }
 
+  /**
+   * Keeps the newest usage projection an account pushed. Revisions order projections, so a late
+   * delivery of an older one is ignored and a repeated delivery must match what was stored.
+   */
+  applyAccountUsageProjection(
+    projection: AccountUsageProjection,
+  ): "applied" | "replayed" | "stale" {
+    const parsed = accountUsageProjectionSchema.parse(projection);
+    return this.database.transaction(() => {
+      const row = this.database
+        .select()
+        .from(identityAccounts)
+        .where(eq(identityAccounts.accountId, parsed.accountId))
+        .get();
+      if (row === undefined) {
+        throw new Error("Registry account does not exist");
+      }
+      const current = toAccountUsage(row);
+      if (current !== undefined && parsed.revision < current.revision) {
+        return "stale";
+      }
+      const { accountId: _accountId, ...usage } = parsed;
+      if (current !== undefined && parsed.revision === current.revision) {
+        if (canonicalJson(current) !== canonicalJson(usage)) {
+          throw new Error("Conflicting account usage projection at the same revision");
+        }
+        return "replayed";
+      }
+      this.database
+        .update(identityAccounts)
+        .set({
+          projectionRevision: usage.revision,
+          projectionAllowanceMilliseconds: usage.allowanceMilliseconds,
+          projectionReservedMilliseconds: usage.reservedMilliseconds,
+          projectionSpentMilliseconds: usage.spentMilliseconds,
+          projectionSchemaVersion: usage.schemaVersion,
+        })
+        .where(eq(identityAccounts.accountId, parsed.accountId))
+        .run();
+      return "applied";
+    });
+  }
+
   /** Keyset pagination keeps pages stable while new identities are provisioned between requests. */
   listAccounts(input: { phase?: IdentityAccount["phase"]; limit: number; cursor?: string }): {
-    accounts: IdentityAccount[];
+    accounts: ListedAccount[];
     nextCursor?: string;
   } {
     z.number().int().min(1).max(100).parse(input.limit);
@@ -306,7 +401,18 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
       .orderBy(asc(identityAccounts.createdAtMs), asc(identityAccounts.accountId))
       .limit(input.limit + 1)
       .all();
-    const accounts = rows.slice(0, input.limit);
+    const accounts = rows.slice(0, input.limit).map((row): ListedAccount => {
+      const usage = toAccountUsage(row);
+      return {
+        subject: row.subject,
+        accountId: row.accountId,
+        createdAtMs: row.createdAtMs,
+        phase: row.phase,
+        ...(usage === undefined
+          ? {}
+          : { usage: { ...usage, availableMilliseconds: deriveAvailableMilliseconds(usage) } }),
+      };
+    });
     const last = accounts.at(-1);
     return {
       accounts,
@@ -328,6 +434,55 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
         .where(eq(identityAccounts.subject, subject))
         .run();
     });
+  }
+
+  /** Pulls usage from the account and confirms it there, so the account need not push it again. */
+  private async pullAccountUsage(accountId: string): Promise<void> {
+    const account = this.env.ACCOUNTS.get(this.env.ACCOUNTS.idFromName(accountId));
+    const projection = await account.registryUsageProjection();
+    if (projection.accountId !== accountId) {
+      throw new Error("Account usage projection identity mismatch");
+    }
+    this.applyAccountUsageProjection(projection);
+    await account.confirmRegistryUsage(projection.revision);
+  }
+
+  private async backfillAccountUsage(): Promise<void> {
+    const pending = this.database
+      .select({ accountId: identityAccounts.accountId })
+      .from(identityAccounts)
+      .where(LACKS_USAGE_PROJECTION)
+      .orderBy(asc(identityAccounts.createdAtMs), asc(identityAccounts.accountId))
+      .limit(USAGE_BACKFILL_BATCH_SIZE)
+      .all();
+    for (const { accountId } of pending) {
+      try {
+        await this.pullAccountUsage(accountId);
+      } catch {
+        /* The next alarm retries; one unavailable account must not stall the rest. */
+      }
+    }
+  }
+
+  private hasAccountsWithoutUsage(): boolean {
+    return (
+      this.database
+        .select({ accountId: identityAccounts.accountId })
+        .from(identityAccounts)
+        .where(LACKS_USAGE_PROJECTION)
+        .limit(1)
+        .get() !== undefined
+    );
+  }
+
+  private lacksUsageProjection(accountId: string): boolean {
+    return (
+      this.database
+        .select({ accountId: identityAccounts.accountId })
+        .from(identityAccounts)
+        .where(and(eq(identityAccounts.accountId, accountId), LACKS_USAGE_PROJECTION))
+        .get() !== undefined
+    );
   }
 
   async reserveProvisioning(
@@ -493,4 +648,23 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
     await this.sqlite.applyMigrations();
     return REGISTRY_SCHEMA_VERSION;
   }
+}
+
+function toAccountUsage(row: typeof identityAccounts.$inferSelect): AccountUsage | undefined {
+  if (
+    row.projectionRevision === null ||
+    row.projectionAllowanceMilliseconds === null ||
+    row.projectionReservedMilliseconds === null ||
+    row.projectionSpentMilliseconds === null ||
+    row.projectionSchemaVersion === null
+  ) {
+    return undefined;
+  }
+  return {
+    revision: row.projectionRevision,
+    allowanceMilliseconds: row.projectionAllowanceMilliseconds,
+    reservedMilliseconds: row.projectionReservedMilliseconds,
+    spentMilliseconds: row.projectionSpentMilliseconds,
+    schemaVersion: row.projectionSchemaVersion,
+  };
 }

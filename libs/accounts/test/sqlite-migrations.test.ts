@@ -311,6 +311,33 @@ test("aligning with the shared duration ledger preserves conversions, jobs, and 
   }
 });
 
+test("tracking the registry's usage confirmation keeps the account and starts unconfirmed", () => {
+  const database = new sqlite.DatabaseSync(":memory:");
+  try {
+    applyMigrations(database, ["m0000", "m0001", "m0002", "m0003", "m0004", "m0005"]);
+    database.exec(
+      "INSERT INTO account VALUES (1, 'account', 'subject', 1, 'deletion_scheduled', 2, 3)",
+    );
+
+    applyMigrations(database, ["m0006"]);
+
+    expect(database.prepare("SELECT * FROM account").all()).toEqual([
+      {
+        id: 1,
+        account_id: "account",
+        subject: "subject",
+        created_at_ms: 1,
+        state: "deletion_scheduled",
+        execution_epoch: 2,
+        recovery_deadline_ms: 3,
+        registry_confirmed_revision: 0,
+      },
+    ]);
+  } finally {
+    database.close();
+  }
+});
+
 /** Runs migrations in one transaction with enforced foreign keys, like the Durable Object migrator. */
 function applyMigrations(database: sqlite.DatabaseSync, keys: string[]) {
   const migrations: Record<string, string> = accountMigrations.migrations;

@@ -8,6 +8,13 @@
       "when": 1790952715672,
       "tag": "0000_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792068947260,
+      "tag": "0001_account_usage_projection",
+      "breakpoints": true
     }
   ]
 }

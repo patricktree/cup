@@ -187,7 +187,7 @@ Filter by Registry phase (`provisioning`, `active`, or `deleting_identity`), and
 pnpm operator account list --phase active --limit 100
 ```
 
-Use the returned opaque cursor with `--cursor` to fetch the next page. Each entry shows the account ID, the Supabase user ID (`Subject`), the Registry phase, and the creation time. The Registry does not record which sign-in provider created an account; look up the subject in Supabase for provider details.
+Use the returned opaque cursor with `--cursor` to fetch the next page. Each entry shows the account ID, the Supabase user ID (`Subject`), the Registry phase, the creation time, and the account's allowance, spent, reserved, and available minutes. Usage comes from the Registry's projection, which can lag the account by up to about a minute; an account shows `Usage: not yet projected` until the Registry first receives it. Use `account inspect` for the authoritative balance. The Registry does not record which sign-in provider created an account; look up the subject in Supabase for provider details.
 
 ### Inspect an account
 

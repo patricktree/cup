@@ -1,5 +1,6 @@
 import { generateSQLiteDrizzleJson } from "drizzle-kit/api";
 import fs from "node:fs/promises";
+import sqlite from "node:sqlite";
 import { expect, test } from "vitest";
 import { z } from "zod";
 
@@ -44,4 +45,55 @@ for (const { name, schema, bundle } of stores) {
     expect(current.tables).toEqual(snapshot.tables);
     expect(current.views).toEqual(snapshot.views);
   });
+}
+
+test("adding account usage projections keeps identities and leaves them unprojected", () => {
+  const database = new sqlite.DatabaseSync(":memory:");
+  try {
+    applyMigrations(database, ["m0000"]);
+    database.exec(
+      "INSERT INTO identity_accounts VALUES ('subject', 'account', 1, 'active'), ('fenced', 'other', 2, 'deleting_identity')",
+    );
+
+    applyMigrations(database, ["m0001"]);
+
+    const unprojected = {
+      projection_revision: null,
+      projection_allowance_milliseconds: null,
+      projection_reserved_milliseconds: null,
+      projection_spent_milliseconds: null,
+      projection_schema_version: null,
+    };
+    expect(
+      database.prepare("SELECT * FROM identity_accounts ORDER BY created_at_ms").all(),
+    ).toEqual([
+      {
+        subject: "subject",
+        account_id: "account",
+        created_at_ms: 1,
+        phase: "active",
+        ...unprojected,
+      },
+      {
+        subject: "fenced",
+        account_id: "other",
+        created_at_ms: 2,
+        phase: "deleting_identity",
+        ...unprojected,
+      },
+    ]);
+  } finally {
+    database.close();
+  }
+});
+
+function applyMigrations(database: sqlite.DatabaseSync, keys: string[]) {
+  const migrations: Record<string, string> = registryMigrations.migrations;
+  database.exec("BEGIN");
+  for (const key of keys) {
+    for (const statement of migrations[key]!.split("--> statement-breakpoint")) {
+      database.exec(statement);
+    }
+  }
+  database.exec("COMMIT");
 }
