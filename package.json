@@ -16,7 +16,7 @@
     "brand-assets:sync": "pnpm --filter '@cup/brand-assets' sync",
     "build": "turbo run turbo:build",
     "build:watch": "turbo watch turbo:build",
-    "cf-typegen": "pnpm --recursive --parallel run cf-typegen",
+    "cf-typegen": "turbo run turbo:cf-typegen",
     "clean": "pnpm run --parallel clean && pnpm exec del-cli \"**/node_modules\" \"**/.turbo\"",
     "declutter": "knip",
     "dev:services": "node tooling/env-setup/src/dev-services.ts",
