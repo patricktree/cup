@@ -40,7 +40,10 @@ export const accountAccountingInspectionSchema = z
   .strict();
 export type AccountAccountingInspection = z.infer<typeof accountAccountingInspectionSchema>;
 
-/** An artifact writer that is not yet drained, for operator inspection. */
+/**
+ * An artifact writer for operator inspection. `AccountArtifactWriters.writers()` lists only writers
+ * that are not drained, but the schema accepts every stored state.
+ */
 export const accountArtifactWriterSchema = z
   .object({
     writerId: z.string(),
@@ -50,6 +53,7 @@ export const accountArtifactWriterSchema = z
   })
   .strict();
 export type AccountArtifactWriter = z.infer<typeof accountArtifactWriterSchema>;
+
 /** Increases when a projected field changes meaning, so the registry can tell older projections. */
 export const ACCOUNT_USAGE_PROJECTION_SCHEMA_VERSION = 1;
 
