@@ -8,11 +8,11 @@ API contracts are zod schemas in the [listener contracts](../../libs/listener-ap
 
 After the 2026-10-16 production deploy, `pnpm operator account inspect` failed three times in a row, each time because the operator response schema had drifted from what `@cup/accounts` returns:
 
-| Commit  | Drift                                                                                                                                                  |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 38f8342 | Account history added an optional `hasCoverImage` field to ready outcomes; the strict operator outcome schema rejected the unknown key.                |
-| 6bd8708 | Account history reports derived statuses (`synthesizing`, `insufficient-duration`); the operator schema allowed only `pending`, `ready`, and `failed`. |
-| 1d75504 | `inspectAccounting` returned the ledger balance without its `unit`; the operator schema required it.                                                   |
+| Commit  | Drift                                                                                                                                                             |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 38f8342 | Account history added an optional `hasCoverImage` field to ready outcomes; the strict operator outcome schema rejected the unknown key.                           |
+| 6bd8708 | Account history reports derived conversion statuses (`synthesizing`, `insufficient-duration`); the operator schema allowed only `pending`, `ready`, and `failed`. |
+| 1d75504 | `inspectAccounting` returned the ledger `balance` without its `unit`; the operator schema required it.                                                            |
 
 Each fix was a one-line schema or data change, but each failure surfaced only in production, as an unlogged 500, one at a time. The type checker caught none of them: `.parse` accepts any input, so the handler's value was never compared with the schema's type. Strict response parsing also does not suit the listener API: installed Android apps keep running older client code against the newest Worker, so a strict client schema turns every added response field into an outage for users who have not updated. On 2026-10-16 the user decided the following rules.
 
@@ -32,13 +32,14 @@ Each fix was a one-line schema or data change, but each failure surfaced only in
 ## Consequences
 
 - Reviewers should flag: `.strict()` on a schema a client uses to parse a response; `.parse` or `.safeParse` of a handler's own response in server code; a contract shape that repeats another package's schema instead of importing it; and a response change that is not covered by a strict test.
+- Rules 2 and 3 pull in opposite directions for shared schemas: a contract response schema that clients parse is tolerant, yet tests must check responses strictly. How tests obtain a strict check without a second hand-written schema is left to the implementation. Likewise, an owning package's schema may itself be strict, such as `accountOutcomeSchema`; a response shape derived from it under rule 4 must not carry that strictness to clients.
 - Tolerance covers added fields only. Removing, renaming, or narrowing a response field still breaks installed apps, so such changes need the same care as before.
 - Contract packages depend on the owning packages' contract entry points, such as `@cup/accounts/contracts`, not on their main entry points, so clients that import a contract do not pull in Worker code.
 
 ### Implementation status
 
-This decision is accepted, and its implementation is in progress in parallel pull requests. At the time of writing, the following code does not follow it yet:
+This decision is accepted, and its implementation is in progress in parallel pull requests. On 2026-10-16, the following code did not follow it yet:
 
-- The server composition parses its own responses with `audiobookSchema`, `listAccountDeletionsResponseSchema`, and `inspectAccountResponseSchema` (rule 3).
-- The operator contracts define `accountConversionOutcomeSchema` and the account inspection shapes by hand, duplicating `accountOutcomeSchema` from [`@cup/accounts/contracts`](../../libs/accounts/src/account-contracts.ts) (rule 4).
-- Response schemas in the listener and operator contracts call `.strict()`, and the web app parses listener responses with them, for example in [account history](../../apps/web-app/src/data-fetching/account-history.ts) and the [reader](../../apps/web-app/src/data-fetching/reader.ts) (rule 2).
+- The [server composition](../../libs/api-server/src/api-server.ts) parses its own responses with `audiobookSchema`, `listAccountDeletionsResponseSchema`, and `inspectAccountResponseSchema` (rule 3).
+- The operator contracts define `accountConversionOutcomeSchema` and the account inspection shapes by hand, duplicating `accountOutcomeSchema` from [`@cup/accounts/contracts`](../../libs/accounts/src/account-contracts.ts) (rule 4). The listener contracts' `historyItemSchema` also repeats the account outcome shape.
+- Many response schemas in the listener, operator, and [grant](../../libs/conversion-grants/src/grant-contracts.ts) contracts call `.strict()`, and the web app parses responses with them, for example `audiobookSchema` and `retryConversionResponseSchema` in the [reader](../../apps/web-app/src/data-fetching/reader.ts) and `grantSnapshotSchema` and `startConversionResponseSchema` in [trial conversion](../../apps/web-app/src/data-fetching/conversion-grant.ts) (rule 2). [Account history](../../apps/web-app/src/data-fetching/account-history.ts) already parses tolerant schemas.
