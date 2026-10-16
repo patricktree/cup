@@ -24,13 +24,16 @@ const CREDENTIAL_PATTERN = /^v1\.[A-Za-z0-9_-]{43}$/;
 /*
  * Request schemas are strict: the server rejects fields it does not know. Response schemas drop
  * unknown fields instead, because installed apps keep parsing responses from newer Workers. Shared
- * strict schemas that responses embed are rebuilt here from their shapes for the response side.
+ * strict schemas that responses embed are rebuilt here from their shapes for the response side;
+ * the trial conversion snapshot only describes responses, so it is tolerant where it is defined.
  */
 
 export { sourceUrlSchema, grantConversionSnapshotSchema, grantConversionsSchema };
 export type { GrantConversionSnapshot, GrantConversions, GrantState };
 
 const durationBalanceResponseSchema = z.object(durationBalanceSchema.shape);
+const synchronizationUnitResponseSchema = z.object(SYNCHRONIZATION_UNIT_SCHEMA.shape);
+const playbackPositionResponseSchema = z.object(playbackPositionSchema.shape);
 
 export const grantSnapshotSchema = z.object({
   ...sharedGrantSnapshotSchema.shape,
@@ -128,11 +131,11 @@ const preparedBase = {
   coverImage: coverImageSchema.optional(),
   narrationDocument: z.object({
     html: z.string().min(1),
-    synchronizationUnits: z.array(z.object(SYNCHRONIZATION_UNIT_SCHEMA.shape)).min(1),
+    synchronizationUnits: z.array(synchronizationUnitResponseSchema).min(1),
   }),
   // One entry per synchronization unit, in document order.
   segments: z.array(audioSegmentSchema),
-  playbackPosition: z.object(playbackPositionSchema.shape).nullable(),
+  playbackPosition: playbackPositionResponseSchema.nullable(),
 };
 export const audiobookSchema = z.discriminatedUnion("status", [
   z.object({ ...readerBase, status: z.literal("pending") }),

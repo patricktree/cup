@@ -282,11 +282,11 @@ describe("listener API transport contracts", () => {
     expect(audioSegmentSchema.parse(segment)).toStrictEqual(expected);
   });
 
-  test("keeps conversions separate from the grant snapshot", () => {
+  test("drops conversions from the grant snapshot", () => {
     const grant = {
       grantId: UUID,
-      createdAt: "2026-08-28T12:00:00.000Z",
-      expiresAt: "2026-08-29T12:00:00.000Z",
+      createdAt: ACCEPTED_AT,
+      expiresAt: ACCEPTED_AT,
       state: "open",
       duration: DURATION,
     };
