@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import {
-  playbackPositionSchema,
+  playbackPositionSchema as sharedPlaybackPositionSchema,
   conversionPhaseSchema,
   durationBalanceSchema,
 } from "@cup/conversion-contracts";
@@ -22,10 +22,11 @@ const LOWERCASE_UUID_V4_PATTERN =
 const CREDENTIAL_PATTERN = /^v1\.[A-Za-z0-9_-]{43}$/;
 
 /*
- * Request schemas are strict: the server rejects fields it does not know. Response schemas drop
- * unknown fields instead, because installed apps keep parsing responses from newer Workers. Shared
- * strict schemas that responses embed are rebuilt here from their shapes for the response side;
- * the trial conversion snapshot only describes responses, so it is tolerant where it is defined.
+ * Listener request and response schemas drop unknown fields instead of rejecting them: installed
+ * apps keep sending fields a newer Worker no longer reads, and keep parsing responses from newer
+ * Workers. Strict schemas shared with internal boundaries (storage, workflows, operator contracts)
+ * are rebuilt here from their shapes; the trial conversion snapshot only describes listener
+ * responses, so it is tolerant where it is defined.
  */
 
 export { sourceUrlSchema, grantConversionSnapshotSchema, grantConversionsSchema };
@@ -33,7 +34,8 @@ export type { GrantConversionSnapshot, GrantConversions, GrantState };
 
 const durationBalanceResponseSchema = z.object(durationBalanceSchema.shape);
 const synchronizationUnitResponseSchema = z.object(SYNCHRONIZATION_UNIT_SCHEMA.shape);
-const playbackPositionResponseSchema = z.object(playbackPositionSchema.shape);
+/** The saved-position request body and the position in audiobook responses. */
+export const playbackPositionSchema = z.object(sharedPlaybackPositionSchema.shape);
 
 export const grantSnapshotSchema = z.object({
   ...sharedGrantSnapshotSchema.shape,
@@ -51,9 +53,9 @@ export const authConfigResponseSchema = z.object({
   googleWebClientId: z.string(),
 });
 
-export const grantParamsSchema = z.object({ grantId: uuidV4Schema }).strict();
+export const grantParamsSchema = z.object({ grantId: uuidV4Schema });
 export type GrantParams = z.infer<typeof grantParamsSchema>;
-export const conversionParamsSchema = z.object({ conversionId: uuidV4Schema }).strict();
+export const conversionParamsSchema = z.object({ conversionId: uuidV4Schema });
 export type ConversionParams = z.infer<typeof conversionParamsSchema>;
 
 export const conversionDetailSchema = z.discriminatedUnion("status", [
@@ -68,16 +70,14 @@ export const conversionDetailSchema = z.discriminatedUnion("status", [
 ]);
 export type ConversionDetail = z.infer<typeof conversionDetailSchema>;
 
-export const exchangeCredentialRequestSchema = z
-  .object({ credential: z.string().regex(CREDENTIAL_PATTERN) })
-  .strict();
+export const exchangeCredentialRequestSchema = z.object({
+  credential: z.string().regex(CREDENTIAL_PATTERN),
+});
 export type ExchangeCredentialRequest = z.infer<typeof exchangeCredentialRequestSchema>;
 
-export const startConversionRequestSchema = z
-  .object({
-    sourceUrl: sourceUrlSchema,
-  })
-  .strict();
+export const startConversionRequestSchema = z.object({
+  sourceUrl: sourceUrlSchema,
+});
 export type StartConversionRequest = z.infer<typeof startConversionRequestSchema>;
 
 export const startConversionHeadersSchema = z
@@ -100,7 +100,6 @@ export const startConversionResponseSchema = z.object({
 });
 export type StartConversionResponse = z.infer<typeof startConversionResponseSchema>;
 
-export { playbackPositionSchema };
 export type { PlaybackPosition } from "@cup/conversion-contracts";
 export const segmentParamsSchema = conversionParamsSchema.extend({
   sequence: z.coerce.number().int().min(0).max(199),
@@ -135,7 +134,7 @@ const preparedBase = {
   }),
   // One entry per synchronization unit, in document order.
   segments: z.array(audioSegmentSchema),
-  playbackPosition: playbackPositionResponseSchema.nullable(),
+  playbackPosition: playbackPositionSchema.nullable(),
 };
 export const audiobookSchema = z.discriminatedUnion("status", [
   z.object({ ...readerBase, status: z.literal("pending") }),
@@ -168,12 +167,10 @@ export const errorResponseSchema = z.object({
 });
 export type ErrorResponse = z.infer<typeof errorResponseSchema>;
 
-export const accountConfirmationSchema = z
-  .object({
-    challengeId: z.uuidv4(),
-    providerToken: z.string().min(1).max(8192).optional(),
-  })
-  .strict();
+export const accountConfirmationSchema = z.object({
+  challengeId: z.uuidv4(),
+  providerToken: z.string().min(1).max(8192).optional(),
+});
 export type AccountConfirmationRequest = z.infer<typeof accountConfirmationSchema>;
 
 export const accountSnapshotSchema = z.object({

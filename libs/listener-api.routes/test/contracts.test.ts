@@ -38,14 +38,51 @@ const PREPARED_AUDIOBOOK = {
 
 describe("listener API transport contracts", () => {
   test.each([
-    [grantParamsSchema, { grantId: UUID, extra: true }],
-    [conversionParamsSchema, { conversionId: UUID, extra: true }],
-    [segmentParamsSchema, { conversionId: UUID, sequence: "0", extra: true }],
-    [exchangeCredentialRequestSchema, { credential: `v1.${"a".repeat(43)}`, extra: true }],
-    [startConversionRequestSchema, { sourceUrl: "https://example.com", extra: true }],
-    [accountConfirmationSchema, { challengeId: UUID, extra: true }],
-    [playbackPositionSchema, { synchronizationUnitId: "one", offsetMilliseconds: 0, extra: true }],
-  ])("rejects unknown request fields", (schema, value) => {
+    { name: "grant parameters", schema: grantParamsSchema, request: { grantId: UUID } },
+    {
+      name: "conversion parameters",
+      schema: conversionParamsSchema,
+      request: { conversionId: UUID },
+    },
+    {
+      name: "segment parameters",
+      schema: segmentParamsSchema,
+      request: { conversionId: UUID, sequence: 0 },
+    },
+    {
+      name: "credential exchange",
+      schema: exchangeCredentialRequestSchema,
+      request: { credential: `v1.${"a".repeat(43)}` },
+    },
+    {
+      name: "start conversion",
+      schema: startConversionRequestSchema,
+      request: { sourceUrl: "https://example.com" },
+    },
+    {
+      name: "account confirmation",
+      schema: accountConfirmationSchema,
+      request: { challengeId: UUID },
+    },
+    {
+      name: "playback position",
+      schema: playbackPositionSchema,
+      request: { synchronizationUnitId: "one", offsetMilliseconds: 0 },
+    },
+  ])("drops unknown fields in the $name request", ({ schema, request }) => {
+    const result = schema.safeParse({ ...request, extra: true });
+    expect(result.success).toBe(true);
+    expect(result.data).toStrictEqual(request);
+  });
+
+  test.each([
+    [grantParamsSchema, { extra: true }],
+    [segmentParamsSchema, { conversionId: UUID }],
+    [exchangeCredentialRequestSchema, { extra: true }],
+    [startConversionRequestSchema, { extra: true }],
+    [accountConfirmationSchema, { providerToken: "token" }],
+    [playbackPositionSchema, { synchronizationUnitId: "one" }],
+  ])("still requires declared request fields", (schema, value) => {
     expect(schema.safeParse(value).success).toBe(false);
   });
 
