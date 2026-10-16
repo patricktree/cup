@@ -153,6 +153,7 @@ const accountConversionOutcomeSchema = z.discriminatedUnion("status", [
           etag: z.string(),
         })
         .strict(),
+      hasCoverImage: z.literal(true).optional(),
     })
     .strict(),
   z

@@ -54,6 +54,7 @@ const inspection: InspectAccountResponse = {
             byteLength: 12,
             etag: "etag",
           },
+          hasCoverImage: true,
         },
       },
     ],
