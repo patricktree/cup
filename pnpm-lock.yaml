@@ -1289,6 +1289,9 @@ importers:
 
   libs/listener-api.routes:
     dependencies:
+      '@cup/accounts':
+        specifier: workspace:*
+        version: link:../accounts
       '@cup/conversion-contracts':
         specifier: workspace:*
         version: link:../conversion-contracts

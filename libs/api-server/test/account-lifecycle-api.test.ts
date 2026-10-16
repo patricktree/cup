@@ -52,7 +52,18 @@ beforeEach(() => {
     result: "scheduled",
     attempt: { attemptId: challengeId, deadlineMs: 100 },
   });
-  account.restoreAccount.mockResolvedValue({ result: "restored", account: { state: "active" } });
+  account.restoreAccount.mockResolvedValue({
+    result: "restored",
+    account: {
+      accountId: challengeId,
+      subject: challengeId,
+      createdAtMs: 1,
+      state: "active",
+      executionEpoch: 1,
+      recoveryDeadlineMs: null,
+      balance: { unit: "audio-millisecond", available: 0, reserved: 0 },
+    },
+  });
 });
 
 function request(path = "", body: unknown = { challengeId }, headers: Record<string, string> = {}) {
