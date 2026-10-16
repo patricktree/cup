@@ -32,6 +32,7 @@
     "turbo:test": "pnpm run test"
   },
   "dependencies": {
+    "@cup/accounts": "workspace:*",
     "@cup/conversion-contracts": "workspace:*",
     "@cup/conversion-grants": "workspace:*",
     "@cup/narration-document-creation": "workspace:*",

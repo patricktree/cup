@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { accountHistoryItemSchema, accountOutcomeSchema } from "@cup/accounts/contracts";
 import {
   playbackPositionSchema as sharedPlaybackPositionSchema,
   conversionPhaseSchema,
@@ -26,7 +27,8 @@ const CREDENTIAL_PATTERN = /^v1\.[A-Za-z0-9_-]{43}$/;
  * apps keep sending fields a newer Worker no longer reads, and keep parsing responses from newer
  * Workers. Strict schemas shared with internal boundaries (storage, workflows, operator contracts)
  * are rebuilt here from their shapes; the trial conversion snapshot only describes listener
- * responses, so it is tolerant where it is defined.
+ * responses, so it is tolerant where it is defined. Route tests parse responses with strict
+ * variants of these schemas.
  */
 
 export { sourceUrlSchema, grantConversionSnapshotSchema, grantConversionsSchema };
@@ -187,22 +189,29 @@ export const accountSnapshotSchema = z.object({
   }),
 });
 
+export type AccountSnapshot = z.infer<typeof accountSnapshotSchema>;
+
+// Follows the option order in `accountOutcomeSchema`; a reordering there fails to compile here.
+const [readyAccountOutcomeSchema, failedAccountOutcomeSchema] = accountOutcomeSchema.options;
+/** An account conversion without its completion time, storage reference, or failure category. */
 export const historyItemSchema = z.object({
-  conversionId: z.uuidv4(),
-  idempotencyKey: z.uuidv4(),
-  sourceUrl: z.string(),
-  createdAtMs: z.number(),
-  status: z.enum(["pending", "insufficient-duration", "synthesizing", "ready", "failed"]),
-  outcome: z.union([
-    z.object({
-      status: z.literal("ready"),
-      title: z.string(),
-      hasCoverImage: z.literal(true).optional(),
-    }),
-    z.object({ status: z.literal("failed"), explanation: z.string() }),
-    z.null(),
-  ]),
+  ...accountHistoryItemSchema.pick({
+    conversionId: true,
+    idempotencyKey: true,
+    sourceUrl: true,
+    createdAtMs: true,
+    status: true,
+  }).shape,
+  outcome: z
+    .discriminatedUnion("status", [
+      z.object(
+        readyAccountOutcomeSchema.pick({ status: true, title: true, hasCoverImage: true }).shape,
+      ),
+      z.object(failedAccountOutcomeSchema.pick({ status: true, explanation: true }).shape),
+    ])
+    .nullable(),
 });
+export type HistoryItem = z.infer<typeof historyItemSchema>;
 
 export const accountStartResponseSchema = z.object({ conversionId: z.uuidv4() });
 
@@ -212,7 +221,14 @@ export const deletionChallengeSchema = z.object({
   issuedAtMs: z.number(),
   expiresAtMs: z.number(),
 });
+export type DeletionChallenge = z.infer<typeof deletionChallengeSchema>;
+export const scheduleDeletionResponseSchema = z.object({
+  state: z.literal("deletion_scheduled"),
+  recoveryDeadlineMs: z.number().optional(),
+});
+export type ScheduleDeletionResponse = z.infer<typeof scheduleDeletionResponseSchema>;
 export const accountHistorySchema = z.object({
   items: z.array(historyItemSchema),
   nextCursor: z.string().nullable(),
 });
+export type AccountHistory = z.infer<typeof accountHistorySchema>;

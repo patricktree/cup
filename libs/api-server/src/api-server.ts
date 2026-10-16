@@ -11,12 +11,17 @@ import {
   createGrantSessionCookie,
   createRootCredential,
   getGrantSessionCookie,
+  toGrantConversionSnapshot,
   type ConversionGrantDurableObject,
 } from "@cup/conversion-grants";
 import {
-  audiobookSchema,
   createListenerApi,
+  type Audiobook,
+  type ConversionDetail,
   type ListenerApiHandlers,
+  type RetryConversionResponse,
+  type ScheduleDeletionResponse,
+  type StartConversionResponse,
 } from "@cup/listener-api.routes";
 import {
   createOperatorApi,
@@ -34,6 +39,15 @@ import { APPLICATION_ORIGIN, routeApplicationDomain } from "#src/domain-routing.
 import { revokeVerifiedGoogleToken } from "#src/google-token-revocation.ts";
 import { accountAuthError, jsonError } from "#src/http-errors.ts";
 import { ingressIdentity } from "#src/ingress-identity.ts";
+import {
+  toAccountHistoryResponse,
+  toAccountSnapshotResponse,
+  toDeletionChallengeResponse,
+  toDurationBalanceResponse,
+  toGrantSnapshotResponse,
+  toNarrationDocumentResponse,
+  toPlaybackPositionResponse,
+} from "#src/listener-responses.ts";
 import { isDevelopmentOperatorRequest } from "#src/operator-access.ts";
 import {
   loadReadyAudiobookFromEnvironment,
@@ -162,7 +176,7 @@ async function getAccountConversion(
         title: conversion.outcome.title,
         completedAt: toIsoString(conversion.completedAtMs ?? conversion.createdAtMs),
         audiobookUrl: `/app/audiobooks/${conversionId}`,
-      },
+      } satisfies ConversionDetail,
       200,
     );
   }
@@ -173,11 +187,14 @@ async function getAccountConversion(
         status: "failed",
         completedAt: toIsoString(conversion.completedAtMs ?? conversion.createdAtMs),
         failure: { category: "internal", explanation: conversion.outcome.explanation },
-      },
+      } satisfies ConversionDetail,
       200,
     );
   }
-  return context.json({ ...base, status: "pending", lastStartedPhase: "conversion-start" }, 200);
+  return context.json(
+    { ...base, status: "pending", lastStartedPhase: "conversion-start" } satisfies ConversionDetail,
+    200,
+  );
 }
 
 const validateAccountLifecycleRequest: MiddlewareHandler<{
@@ -209,7 +226,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     if (auth.result !== "authenticated") {
       return accountAuthError(auth.result, context.get("requestId"));
     }
-    return context.json(await auth.account.deletionChallenge(), 200);
+    return context.json(toDeletionChallengeResponse(await auth.account.deletionChallenge()), 200);
   },
   async scheduleDeletion(context) {
     const auth = await authenticateAccountRequest(context.req.raw, context.env);
@@ -260,7 +277,10 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
       }
     }
     return context.json(
-      { state: "deletion_scheduled", recoveryDeadlineMs: attempt?.deadlineMs },
+      {
+        state: "deletion_scheduled",
+        ...(attempt === undefined ? {} : { recoveryDeadlineMs: attempt.deadlineMs }),
+      } satisfies ScheduleDeletionResponse,
       200,
     );
   },
@@ -290,7 +310,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
         409,
       );
     }
-    return context.json(result.account, 200);
+    return context.json(toAccountSnapshotResponse(result.account), 200);
   },
   authConfig(context) {
     return context.json(
@@ -315,7 +335,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     const page = await auth.account.history(
       split?.[1] ? { createdAtMs: Number(split[0]), conversionId: split[1] } : undefined,
     );
-    return context.json(page, 200);
+    return context.json(toAccountHistoryResponse(page), 200);
   },
   async filesSession(context) {
     const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
@@ -359,7 +379,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     if (auth.result !== "authenticated") {
       return accountAuthError(auth.result, context.get("requestId"));
     }
-    return context.json(auth.snapshot, 200);
+    return context.json(toAccountSnapshotResponse(auth.snapshot), 200);
   },
   async startAccountConversion(context) {
     const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
@@ -434,7 +454,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
           403,
         );
       }
-      return context.json(result.snapshot, 201, {
+      return context.json(toGrantSnapshotResponse(result.snapshot), 201, {
         "Set-Cookie": createGrantSessionCookie(grantId, result.sessionToken),
       });
     } catch (error) {
@@ -487,7 +507,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
         500,
       );
     }
-    return context.json(authenticated.snapshot, 200, {
+    return context.json(toGrantSnapshotResponse(authenticated.snapshot), 200, {
       "Set-Cookie": createGrantSessionCookie(grantId, authenticated.token),
     });
   },
@@ -618,29 +638,9 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     return context.json(
       {
         result: result.result,
-        conversion: {
-          conversionId: result.conversion.conversionId,
-          sourceUrl: result.conversion.sourceUrl,
-          acceptedAt: toIsoString(result.conversion.createdAtMs),
-          status: result.conversion.status,
-          ...(result.conversion.status === "ready"
-            ? {
-                title: result.conversion.title,
-                completedAt: toIsoString(result.conversion.completedAtMs),
-                audiobookUrl: `/app/audiobooks/${result.conversion.conversionId}`,
-              }
-            : result.conversion.status === "failed"
-              ? {
-                  completedAt: toIsoString(result.conversion.completedAtMs),
-                  failure: {
-                    category: result.conversion.failureCategory,
-                    explanation: result.conversion.explanation,
-                  },
-                }
-              : {}),
-        },
-        duration: result.duration,
-      },
+        conversion: toGrantConversionSnapshot(result.conversion),
+        duration: toDurationBalanceResponse(result.duration),
+      } satisfies StartConversionResponse,
       result.result === "created" ? 202 : 200,
       { "Set-Cookie": createGrantSessionCookie(grantId, authenticated.token) },
     );
@@ -664,7 +664,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
           .result === "valid");
     const base = { originalUrl: conversion.sourceUrl, canGenerate };
     if (conversion.status === "pending") {
-      return context.json({ ...base, status: "pending" }, 200);
+      return context.json({ ...base, status: "pending" } satisfies Audiobook, 200);
     }
     if (conversion.status === "failed") {
       return context.json(
@@ -672,7 +672,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
           ...base,
           status: "failed",
           explanation: "Preparation failed. Retry to load this article.",
-        },
+        } satisfies Audiobook,
         200,
       );
     }
@@ -714,7 +714,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
         : undefined;
     const playbackPosition = listener ? await listener.getPlaybackPosition(conversionId) : null;
     return context.json(
-      audiobookSchema.parse({
+      {
         ...base,
         ...synthesis,
         title: audiobook.title,
@@ -728,9 +728,9 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
                   : { alternativeText: audiobook.coverImage.alternativeText }),
               },
             }),
-        narrationDocument: audiobook.narrationDocument,
-        playbackPosition,
-      }),
+        narrationDocument: toNarrationDocumentResponse(audiobook.narrationDocument),
+        playbackPosition: toPlaybackPositionResponse(playbackPosition),
+      } satisfies Audiobook,
       200,
     );
   },
@@ -762,7 +762,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     const audiobook = await loadReadyAudiobookFromEnvironment(context.env, conversionId);
     if (!audiobook) {
       await dispatch.retryPreparation();
-      return context.json({ result: "started" as const }, 200);
+      return context.json({ result: "started" } satisfies RetryConversionResponse, 200);
     }
 
     // A prepared conversion retries synthesis: failed segments, or the whole document when it
@@ -770,15 +770,25 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     const result = await dispatch.startSynthesis(
       countNarrationTextCharactersBySegment(audiobook.narrationDocument),
     );
-    if (result.result === "expired" || result.result === "revoked") {
-      return jsonError(
-        context.get("requestId"),
-        `grant-${result.result}`,
-        "This trial no longer permits new speech generation.",
-        403,
+    if (result.result === "started") {
+      return context.json({ result: "started" } satisfies RetryConversionResponse, 200);
+    }
+    if (result.result === "insufficient-duration") {
+      return context.json(
+        {
+          result: "insufficient-duration",
+          requiredMilliseconds: result.requiredMilliseconds,
+          availableMilliseconds: result.availableMilliseconds,
+        } satisfies RetryConversionResponse,
+        200,
       );
     }
-    return context.json(result, 200);
+    return jsonError(
+      context.get("requestId"),
+      `grant-${result.result}`,
+      "This trial no longer permits new speech generation.",
+      403,
+    );
   },
 
   async savePosition(context) {

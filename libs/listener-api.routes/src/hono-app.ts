@@ -4,6 +4,7 @@ import type { RouteHandler } from "@hono/zod-openapi";
 import {
   audiobookSchema,
   retryConversionResponseSchema,
+  scheduleDeletionResponseSchema,
   segmentParamsSchema,
   playbackPositionSchema,
   authConfigResponseSchema,
@@ -116,10 +117,7 @@ const scheduleDeletionRoute = createRoute({
       description: "Deletion scheduled.",
       content: {
         "application/json": {
-          schema: z.object({
-            state: z.literal("deletion_scheduled"),
-            recoveryDeadlineMs: z.number().optional(),
-          }),
+          schema: scheduleDeletionResponseSchema,
         },
       },
     },
