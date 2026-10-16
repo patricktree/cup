@@ -1472,14 +1472,27 @@ export function createApiServer(dependencies: ApiServerDependencies = production
     return applyWebAppCspNonce(response, nonce);
   });
 
-  app.onError((_error, context) =>
-    jsonError(
+  app.onError((error, context) => {
+    // Drizzle's wrapper includes SQL parameters; log only the underlying error.
+    let cause: unknown = error;
+    while (cause instanceof Error && cause.cause instanceof Error) {
+      cause = cause.cause;
+    }
+    console.error(
+      JSON.stringify({
+        event: "request-failed",
+        requestId: context.get("requestId"),
+        route: context.req.routePath,
+        error: cause instanceof Error ? `${cause.name}: ${cause.message}` : "Unknown error",
+      }),
+    );
+    return jsonError(
       context.get("requestId"),
       "operational-error",
       "The request could not be completed.",
       500,
-    ),
-  );
+    );
+  });
 
   app.use("/api/account/deletion", validateAccountLifecycleRequest);
   app.use("/api/account/deletion/*", validateAccountLifecycleRequest);

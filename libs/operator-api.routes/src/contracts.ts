@@ -189,7 +189,14 @@ export const inspectAccountResponseSchema = z
               idempotencyKey: z.uuid(),
               sourceUrl: z.string(),
               createdAtMs: z.number(),
-              status: z.enum(["pending", "ready", "failed"]),
+              // A prepared conversion reports the state of its audio, as in the listener history.
+              status: z.enum([
+                "pending",
+                "insufficient-duration",
+                "synthesizing",
+                "ready",
+                "failed",
+              ]),
               outcome: accountConversionOutcomeSchema.nullable(),
               completedAtMs: z.number().nullable(),
             })
