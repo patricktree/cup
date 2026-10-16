@@ -191,6 +191,7 @@ export const accountSnapshotSchema = z.object({
 
 export type AccountSnapshot = z.infer<typeof accountSnapshotSchema>;
 
+// Follows the option order in `accountOutcomeSchema`; a reordering there fails to compile here.
 const [readyAccountOutcomeSchema, failedAccountOutcomeSchema] = accountOutcomeSchema.options;
 /** An account conversion without its completion time, storage reference, or failure category. */
 export const historyItemSchema = z.object({

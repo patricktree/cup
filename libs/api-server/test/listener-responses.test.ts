@@ -22,8 +22,8 @@ import { createApiServer } from "#src/api-server.ts";
 
 import { toStrictSchema } from "#test/strict-schema.ts";
 
-// Every fake Durable Object result below carries `internalRevision`, a field no listener contract
-// declares, as a stand-in for internal fields that the owning packages may add later.
+// Fake Durable Object results that handlers pass on carry `internalRevision`, a field no listener
+// contract declares, as a stand-in for internal fields that the owning packages may add later.
 
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {
@@ -44,7 +44,10 @@ const subject = "f355f913-ba12-45d6-a7d2-4df95f7cf11f";
 const grantId = "0b3c9a4e-6f1d-4c2a-9e7b-5d8f1a2c3b4e";
 const accountConversionId = "f9cc2e59-46a3-4890-b923-bda04d03b4d0";
 const failedConversionId = "6a1f3c2e-8b4d-4e5f-9a7c-1d2e3f4a5b6c";
+const pendingConversionId = "1b2c3d4e-5f6a-4b7c-8d9e-0f1a2b3c4d5e";
 const trialConversionId = "3e7a9c1b-2d4f-4a6b-8c9d-0e1f2a3b4c5d";
+const readyTrialConversionId = "4f8b0d2c-3e5a-4b7c-9d0e-1f2a3b4c5d6e";
+const failedTrialConversionId = "5a9c1e3d-4f6b-4c8d-ae1f-2a3b4c5d6e7f";
 const challengeId = "7c2e4a6b-8d1f-4e3a-9b5c-6d7e8f9a0b1c";
 const idempotencyKey = "9d8c7b6a-5e4f-4a3b-8c2d-1e0f9a8b7c6d";
 const origin = "https://cup.audio";
@@ -111,6 +114,20 @@ const failedAccountConversion = {
     explanation: "The page could not be loaded.",
   },
 };
+const pendingAccountConversion = {
+  conversionId: pendingConversionId,
+  idempotencyKey,
+  sourceUrl: "https://example.com/pending",
+  createdAtMs: 1_000,
+  status: "pending",
+  completedAtMs: null,
+  outcome: null,
+};
+const accountConversions = new Map<string, object>([
+  [accountConversionId, readyAccountConversion],
+  [failedConversionId, failedAccountConversion],
+  [pendingConversionId, pendingAccountConversion],
+]);
 const settledSegments = [
   { sequence: 0, state: "settled", actualMilliseconds: 1_000, internalRevision: 7 },
 ];
@@ -133,33 +150,21 @@ const account = {
     account: { ...accountSnapshot, internalRevision: 7 },
   }),
   history: async () => ({
-    items: [
-      { ...readyAccountConversion, status: "ready" },
-      failedAccountConversion,
-      {
-        conversionId: trialConversionId,
-        idempotencyKey,
-        sourceUrl: "https://example.com/pending",
-        createdAtMs: 1_000,
-        status: "pending",
-        completedAtMs: null,
-        outcome: null,
-      },
-    ],
+    items: [readyAccountConversion, failedAccountConversion, pendingAccountConversion],
     nextCursor: null,
   }),
   startConversion: async () => ({
     result: "created",
     conversion: { ...readyAccountConversion, status: "pending", outcome: null },
   }),
-  getConversion: async (conversionId: string) =>
-    conversionId === accountConversionId ? readyAccountConversion : failedAccountConversion,
+  getConversion: async (conversionId: string) => accountConversions.get(conversionId),
   listAudioSegments: async () => settledSegments,
   getPlaybackPosition: async () => ({
     synchronizationUnitId: "synchronization-unit-1",
     offsetMilliseconds: 500,
     internalRevision: 7,
   }),
+  retryPreparation: async () => undefined,
   startSynthesis: async () => ({
     result: "insufficient-duration",
     requiredMilliseconds: 5_000,
@@ -176,6 +181,29 @@ const trialConversion = {
   lastStartedPhase: "conversion-start",
   workflowStartedAtMs: 4_001,
 };
+const trialConversions = [
+  trialConversion,
+  {
+    ...trialConversion,
+    conversionId: readyTrialConversionId,
+    sourceUrl: "https://example.com/trial-ready",
+    status: "ready",
+    completedAtMs: 5_000,
+    title: "A trial document",
+    audiobookReference,
+    measurements: { narrationTextCharacters: 10, narrationChunks: 1 },
+  },
+  {
+    ...trialConversion,
+    conversionId: failedTrialConversionId,
+    sourceUrl: "https://example.com/trial-failed",
+    status: "failed",
+    completedAtMs: 5_000,
+    failureCategory: "source-preparation",
+    explanation: "The page could not be loaded.",
+    diagnosticReference: "diagnostics/trial-failed",
+  },
+];
 const grant = {
   validateSession: async (token: string) =>
     token === "valid-session"
@@ -186,11 +214,12 @@ const grant = {
     sessionToken: "valid-session",
     snapshot: grantSnapshot,
   }),
-  getConversion: async () => trialConversion,
+  getConversion: async (conversionId: string) =>
+    trialConversions.find((conversion) => conversion.conversionId === conversionId),
   listAudioSegments: async () => [],
-  startConversion: async () => ({
+  startConversion: async (sourceUrl: string) => ({
     result: "replayed",
-    conversion: trialConversion,
+    conversion: trialConversions.find((conversion) => conversion.sourceUrl === sourceUrl),
     duration: { ...duration, internalRevision: 7 },
     registrySnapshot: { allowanceMilliseconds: 1_200_000 },
   }),
@@ -207,7 +236,7 @@ const env = {
     get: () => ({
       consumeIngressRequest: async () => undefined,
       findConversionOwner: async (conversionId: string) =>
-        conversionId === trialConversionId
+        trialConversions.some((conversion) => conversion.conversionId === conversionId)
           ? { kind: "trial", grantId }
           : { kind: "account", accountId },
     }),
@@ -374,7 +403,11 @@ test("conversion details carry only declared fields for account and trial owners
   for (const [conversionId, headers, status] of [
     [accountConversionId, {}, "ready"],
     [failedConversionId, {}, "failed"],
+    [pendingConversionId, {}, "pending"],
     [trialConversionId, { Cookie: grantCookie }, "pending"],
+    // A prepared trial conversion without reserved segments did not fit the available duration.
+    [readyTrialConversionId, { Cookie: grantCookie }, "insufficient-duration"],
+    [failedTrialConversionId, { Cookie: grantCookie }, "failed"],
   ] as const) {
     const detail = await parseStrictly(
       await request(`/api/conversions/${conversionId}`, { headers }),
@@ -435,4 +468,50 @@ test("a refused retry carries only the declared durations", async () => {
     requiredMilliseconds: 5_000,
     availableMilliseconds: 1_000,
   });
+});
+
+test("a trial start carries only the declared fields of ready and failed conversions", async () => {
+  for (const [sourceUrl, status] of [
+    ["https://example.com/trial-ready", "ready"],
+    ["https://example.com/trial-failed", "failed"],
+  ] as const) {
+    const started = await parseStrictly(
+      await request(`/api/grants/${grantId}/conversions`, {
+        method: "POST",
+        headers: { ...browserMutation, Cookie: grantCookie, "Idempotency-Key": idempotencyKey },
+        body: { sourceUrl },
+      }),
+      200,
+      startConversionResponseSchema,
+    );
+    expect(started.conversion).toMatchObject({ sourceUrl, status });
+  }
+});
+
+test("pending and failed audiobooks carry only declared fields", async () => {
+  for (const [conversionId, status] of [
+    [pendingConversionId, "pending"],
+    [failedConversionId, "failed"],
+  ] as const) {
+    const audiobook = await parseStrictly(
+      await request(`/api/audiobooks/${conversionId}`),
+      200,
+      audiobookSchema,
+    );
+    expect(audiobook.status).toBe(status);
+  }
+});
+
+test("a retried preparation reports only that it started", async () => {
+  expect(
+    await parseStrictly(
+      await request(`/api/audiobooks/${failedConversionId}/retry`, {
+        method: "POST",
+        headers: browserMutation,
+        body: {},
+      }),
+      200,
+      retryConversionResponseSchema,
+    ),
+  ).toEqual({ result: "started" });
 });

@@ -3,16 +3,20 @@ import type {
   AccountHistoryPage,
   AccountSnapshot as StoredAccountSnapshot,
 } from "@cup/accounts/contracts";
+import type { AccountLifecycle } from "@cup/accounts/lifecycle";
 import type { Audiobook as StoredAudiobook } from "@cup/audiobook-production";
 import type { DurationBalance, PlaybackPosition } from "@cup/conversion-contracts";
 import type { GrantSnapshot as StoredGrantSnapshot } from "@cup/conversion-grants/contracts";
 import type {
   AccountHistory,
   AccountSnapshot,
+  Audiobook,
   DeletionChallenge,
   GrantSnapshot,
   HistoryItem,
 } from "@cup/listener-api.routes";
+
+type ReadyAudiobook = Extract<Audiobook, { status: "ready" }>;
 
 /*
  * Listener handlers send Durable Object results through these mappings, which copy only the fields
@@ -37,7 +41,7 @@ export function toAccountSnapshotResponse(snapshot: StoredAccountSnapshot) {
   } satisfies AccountSnapshot;
 }
 
-export function toDeletionChallengeResponse(challenge: DeletionChallenge) {
+export function toDeletionChallengeResponse(challenge: ReturnType<AccountLifecycle["challenge"]>) {
   return {
     challengeId: challenge.challengeId,
     subject: challenge.subject,
@@ -96,10 +100,10 @@ export function toDurationBalanceResponse(duration: DurationBalance) {
 export function toPlaybackPositionResponse(position: PlaybackPosition | null) {
   return position === null
     ? null
-    : {
+    : ({
         synchronizationUnitId: position.synchronizationUnitId,
         offsetMilliseconds: position.offsetMilliseconds,
-      };
+      } satisfies ReadyAudiobook["playbackPosition"]);
 }
 
 export function toNarrationDocumentResponse(document: StoredAudiobook["narrationDocument"]) {
@@ -109,5 +113,5 @@ export function toNarrationDocumentResponse(document: StoredAudiobook["narration
       id: unit.id,
       narrationText: unit.narrationText,
     })),
-  };
+  } satisfies ReadyAudiobook["narrationDocument"];
 }

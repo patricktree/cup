@@ -664,7 +664,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
           .result === "valid");
     const base = { originalUrl: conversion.sourceUrl, canGenerate };
     if (conversion.status === "pending") {
-      return context.json({ ...base, status: "pending" }, 200);
+      return context.json({ ...base, status: "pending" } satisfies Audiobook, 200);
     }
     if (conversion.status === "failed") {
       return context.json(
@@ -672,7 +672,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
           ...base,
           status: "failed",
           explanation: "Preparation failed. Retry to load this article.",
-        },
+        } satisfies Audiobook,
         200,
       );
     }
@@ -762,7 +762,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     const audiobook = await loadReadyAudiobookFromEnvironment(context.env, conversionId);
     if (!audiobook) {
       await dispatch.retryPreparation();
-      return context.json({ result: "started" as const }, 200);
+      return context.json({ result: "started" } satisfies RetryConversionResponse, 200);
     }
 
     // A prepared conversion retries synthesis: failed segments, or the whole document when it
