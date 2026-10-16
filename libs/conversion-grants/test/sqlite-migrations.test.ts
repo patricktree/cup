@@ -44,15 +44,14 @@ for (const { name, schema, bundle } of stores) {
 test("moving start attempts into rate events keeps them counting toward the start limit", () => {
   const database = new sqlite.DatabaseSync(":memory:");
   try {
-    for (const [key, migration] of Object.entries(grantMigrations.migrations)) {
-      if (key === "m0002") {
-        break;
-      }
-      database.exec(migration);
+    const { key, earlierKeys } = findMigration("shared_rate_events");
+    const migrations: Record<string, string> = grantMigrations.migrations;
+    for (const earlierKey of earlierKeys) {
+      database.exec(migrations[earlierKey]!);
     }
     database.exec("INSERT INTO start_attempts (attempted_at_ms) VALUES (1000), (1000), (2500)");
 
-    database.exec(grantMigrations.migrations.m0002);
+    database.exec(migrations[key]!);
 
     expect(
       database
@@ -109,7 +108,8 @@ test("grant migrations create the current schema", async () => {
 test("adopting the duration ledger turns allowance and segment usage into equal ledger balances", () => {
   const database = new sqlite.DatabaseSync(":memory:");
   try {
-    applyMigrations(database, ["m0000", "m0001", "m0002"]);
+    const { key, earlierKeys } = findMigration("adopt_duration_ledger");
+    applyMigrations(database, earlierKeys);
     database.exec(`INSERT INTO grant (
       id, allowance_milliseconds, grant_id, created_at_ms, expires_at_ms, session_signing_key,
       signing_key_generation, projection_revision, registry_confirmed_revision
@@ -128,7 +128,7 @@ test("adopting the duration ledger turns allowance and segment usage into equal 
       ('ready', 3, 38, 3000, 'released', 0, 0, 0)`.replaceAll(", 0)", ")"),
     );
 
-    applyMigrations(database, ["m0003"]);
+    applyMigrations(database, [key]);
 
     expect(database.prepare("SELECT * FROM credit_balances").all()).toEqual([
       // 20,000 allowance - 1,200 spent - 2,000 reserved
@@ -259,6 +259,21 @@ test("adopting the duration ledger leaves an uninitialized grant without a balan
     database.close();
   }
 });
+
+/**
+ * Finds a migration by its journal tag without its number prefix, so renumbering it after a rebase
+ * keeps the test valid; also returns the keys of all migrations that run before it.
+ */
+function findMigration(name: string) {
+  const keys = Object.keys(grantMigrations.migrations);
+  const index = grantMigrations.journal.entries.findIndex((entry) =>
+    entry.tag.endsWith(`_${name}`),
+  );
+  if (index === -1) {
+    throw new Error(`Missing grant migration ${name}`);
+  }
+  return { key: keys[index]!, earlierKeys: keys.slice(0, index) };
+}
 
 /** Runs migrations in one transaction with enforced foreign keys, like the Durable Object migrator. */
 function applyMigrations(database: sqlite.DatabaseSync, keys: string[]) {

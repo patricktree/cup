@@ -25,3 +25,5 @@ pnpm validate:fast
 ```
 
 Once deployed, append migrations instead of rewriting the baseline. Drizzle Kit rebuilds a table to add a constrained column and copies the new column from the old table, which lacks it; list only the existing columns in the copy, as the [account usage projection](drizzle/registry/0001_account_usage_projection.sql) does. Tests verify schema snapshots and bundled SQL, legacy preservation and migration replay, ownership conflicts, and account provisioning and deletion alongside trial grants.
+
+If a rebase leaves two branches' migrations with the same number, follow [Renumber a migration after a rebase](../accounts/README.md#renumber-a-migration-after-a-rebase) with `@cup/registry`. The registry generator does not yet replace the copied snapshot of a `--custom` migration, so after regenerating a hand-written registry migration, update its snapshot to the current schema before rerunning the generator.
