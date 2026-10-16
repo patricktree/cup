@@ -265,9 +265,7 @@ test("adopting the duration ledger leaves an uninitialized grant without a balan
  * keeps the test valid; also returns the keys of all migrations that run before it.
  */
 function findMigration(name: string) {
-  const keys = grantMigrations.journal.entries.map(
-    (entry) => `m${String(entry.idx).padStart(4, "0")}`,
-  );
+  const keys = Object.keys(grantMigrations.migrations);
   const index = grantMigrations.journal.entries.findIndex((entry) =>
     entry.tag.endsWith(`_${name}`),
   );

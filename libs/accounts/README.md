@@ -26,7 +26,7 @@ Review generated SQL, snapshots, journals, and Worker bundles together. Add migr
 
 ### Renumber a migration after a rebase
 
-Drizzle numbers migrations sequentially, so two branches that each add a migration conflict on the same number. Keep the default branch's migrations and give the rebased branch's migration the next free number. Migration tests find migrations by tag name and count them from the bundle, so they need no edits after renumbering. The steps use `@cup/accounts`; substitute the package of the affected store.
+Drizzle numbers migrations sequentially, so two branches that each add a migration conflict on the same number. Keep the default branch's migrations and give the rebased branch's migration the next free number. Migration tests find migrations by tag name and derive counts from the generated migrations, so they need no edits after renumbering. The steps use `@cup/accounts`; substitute the package of the affected store.
 
 1. While resolving the conflict, keep the default branch's version of the journal (`drizzle/<store>/meta/_journal.json`), the snapshots, and the Worker bundle under `src/migrations/`.
 2. Save any hand-written SQL from the branch's migration file, then delete that file.

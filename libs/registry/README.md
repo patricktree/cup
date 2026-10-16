@@ -26,4 +26,4 @@ pnpm validate:fast
 
 Once deployed, append migrations instead of rewriting the baseline. Tests verify schema snapshots and bundled SQL, legacy preservation and migration replay, ownership conflicts, and account provisioning and deletion alongside trial grants.
 
-If a rebase leaves two branches' migrations with the same number, follow [Renumber a migration after a rebase](../accounts/README.md#renumber-a-migration-after-a-rebase) with `@cup/registry`.
+If a rebase leaves two branches' migrations with the same number, follow [Renumber a migration after a rebase](../accounts/README.md#renumber-a-migration-after-a-rebase) with `@cup/registry`. The registry generator does not yet replace the copied snapshot of a `--custom` migration, so after regenerating a hand-written registry migration, update its snapshot to the current schema before rerunning the generator.

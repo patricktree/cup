@@ -5,9 +5,10 @@ import { z } from "zod";
 
 import registryMigrations from "#src/migrations/registry.ts";
 
-/** Counts bundled migrations, so tests that inspect `__drizzle_migrations` survive new migrations. */
+// Counted from the migrations, so tests that inspect `__drizzle_migrations` survive new or renumbered migrations.
 export const registryMigrationCount = Object.keys(registryMigrations.migrations).length;
 
+// @cup/conversion-grants does not export its migration bundle, so count the entries of its journal.
 const grantJournal = z
   .object({ entries: z.array(z.unknown()) })
   .parse(

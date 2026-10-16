@@ -315,9 +315,7 @@ test("aligning with the shared duration ledger preserves conversions, jobs, and 
  * keeps the test valid; also returns the keys of all migrations that run before it.
  */
 function findMigration(name: string) {
-  const keys = accountMigrations.journal.entries.map(
-    (entry) => `m${String(entry.idx).padStart(4, "0")}`,
-  );
+  const keys = Object.keys(accountMigrations.migrations);
   const index = accountMigrations.journal.entries.findIndex((entry) =>
     entry.tag.endsWith(`_${name}`),
   );
