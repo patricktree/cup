@@ -388,7 +388,11 @@ export class AccountSqlite {
   }
 
   inspectAccounting() {
-    return this.duration.inspectAccounting();
+    const accounting = this.duration.inspectAccounting();
+    return {
+      ...accounting,
+      balance: { unit: "audio-millisecond", ...accounting.balance },
+    } as const;
   }
 
   unsettledConversions(): {

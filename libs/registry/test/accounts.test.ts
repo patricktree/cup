@@ -309,7 +309,8 @@ test("concurrent segment reservations cannot exceed the available duration", asy
     reserved: 1_800_000,
   });
   expect(await account.pendingConversions()).toHaveLength(10);
-  expect(await account.inspectAccounting()).toMatchObject({
+  expect(await account.inspectAccounting()).toEqual({
+    balance: { unit: "audio-millisecond", available: 0, reserved: 1_800_000 },
     reconstructed: { available: 0, reserved: 1_800_000 },
     entries: 3,
   });
