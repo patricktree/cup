@@ -7,6 +7,7 @@ import { createTestHarness } from "wrangler";
 import type { AccountDurableObject } from "@cup/accounts";
 import { accountArtifactBucket } from "@cup/accounts/artifact-writer";
 
+import { registryMigrationCount } from "#test/migration-counts.ts";
 import type {
   AccountDispatchTestDurableObject,
   DeletionTestDurableObject,
@@ -513,7 +514,9 @@ test("grant bindings remain trial-owned after replaying migrations", async () =>
   const storage = await worker.getDurableObjectStorage("REGISTRY", {
     name: registryName,
   });
-  expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(2);
+  expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(
+    registryMigrationCount,
+  );
   expect(await registry.migrate()).toBe(5);
   expect(await registry.findConversionOwner(conversionId)).toEqual({
     kind: "trial",

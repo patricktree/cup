@@ -50,12 +50,13 @@ for (const { name, schema, bundle } of stores) {
 test("adding account usage projections keeps identities and leaves them unprojected", () => {
   const database = new sqlite.DatabaseSync(":memory:");
   try {
-    applyMigrations(database, ["m0000"]);
+    const { key, earlierKeys } = findMigration("account_usage_projection");
+    applyMigrations(database, earlierKeys);
     database.exec(
       "INSERT INTO identity_accounts VALUES ('subject', 'account', 1, 'active'), ('fenced', 'other', 2, 'deleting_identity')",
     );
 
-    applyMigrations(database, ["m0001"]);
+    applyMigrations(database, [key]);
 
     const unprojected = {
       projection_revision: null,
@@ -86,6 +87,21 @@ test("adding account usage projections keeps identities and leaves them unprojec
     database.close();
   }
 });
+
+/**
+ * Finds a migration by its journal tag without its number prefix, so renumbering it after a rebase
+ * keeps the test valid; also returns the keys of all migrations that run before it.
+ */
+function findMigration(name: string) {
+  const keys = Object.keys(registryMigrations.migrations);
+  const index = registryMigrations.journal.entries.findIndex((entry) =>
+    entry.tag.endsWith(`_${name}`),
+  );
+  if (index === -1) {
+    throw new Error(`Missing registry migration ${name}`);
+  }
+  return { key: keys[index]!, earlierKeys: keys.slice(0, index) };
+}
 
 function applyMigrations(database: sqlite.DatabaseSync, keys: string[]) {
   const migrations: Record<string, string> = registryMigrations.migrations;
