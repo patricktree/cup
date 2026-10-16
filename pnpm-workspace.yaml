@@ -12,6 +12,7 @@ packages:
   - .patricktree-stack/tooling/config-typescript
   - .patricktree-stack/tooling/config-vitest
   - .patricktree-stack/tooling/config-wyw-in-js
+  - .patricktree-stack/tooling/mermaid-check
   - .patricktree-stack/tooling/submodule-check
   - .patricktree-stack/libs/utils-ecma
   - .patricktree-stack/qa-utils/test-utils-node

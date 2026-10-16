@@ -33,6 +33,7 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 | [Brand assets](../tooling/brand-assets/README.md)                          | Maintain generated application branding                                                |
 | [Migration generator](../tooling/drizzle-migrations/README.md)             | Generate SQLite migrations, snapshots, and Worker bundles                              |
 | [Submodule check](../.patricktree-stack/tooling/submodule-check/README.md) | Reject commits that move a submodule pointer backwards                                 |
+| [Mermaid check](../.patricktree-stack/tooling/mermaid-check/README.md)     | Parse Mermaid diagrams in documentation                                                |
 
 ## Decisions and evidence
 
@@ -50,6 +51,6 @@ Before design or implementation, read the glossary and relevant architecture pag
 
 Keep implementation detail in code: link to route contracts, schemas, and configuration instead of copying their contents. Document responsibilities, relationships, guarantees, and behavior that requires reading across components. Extend existing pages before adding another explanation of the same subject.
 
-Run `pnpm docs:check` for Markdown and local-link validation; it also runs in `pnpm validate:fast`. These checks detect structural problems, not architectural correctness. Review diagrams and explanations against the linked implementation when changing behavior.
+Run `pnpm docs:check` for Markdown, local-link, and [Mermaid diagram](../.patricktree-stack/tooling/mermaid-check/README.md) validation; it also runs in `pnpm validate:fast`. These checks detect structural problems, not architectural correctness. Review diagrams and explanations against the linked implementation when changing behavior.
 
 Label unverified configuration and future plans explicitly. Use Git history for the chronology of documentation changes.
