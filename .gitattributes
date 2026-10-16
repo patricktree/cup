@@ -1,1 +1,7 @@
+# Generated files: collapsed in GitHub diffs and excluded from agent code reviews.
+**/worker-configuration.d.ts linguist-generated=true
+**/drizzle/**/meta/*_snapshot.json linguist-generated=true
+**/drizzle/**/meta/_journal.json linguist-generated=true
+libs/*/src/migrations/*.ts linguist-generated=true
+
 qa/e2e/worker-configuration.d.ts whitespace=-trailing-space
