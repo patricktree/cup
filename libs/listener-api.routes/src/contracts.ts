@@ -40,6 +40,7 @@ export { sourceUrlSchema, grantConversionSnapshotSchema, grantConversionsSchema 
 export type { GrantConversionSnapshot, GrantConversions, GrantState };
 
 const durationBalanceResponseSchema = z.object(durationBalanceSchema.shape);
+const accountDurationBalanceResponseSchema = z.object(accountDurationBalanceSchema.shape);
 const synchronizationUnitResponseSchema = z.object(SYNCHRONIZATION_UNIT_SCHEMA.shape);
 /** The saved-position request body and the position in audiobook responses. */
 export const playbackPositionSchema = z.object(sharedPlaybackPositionSchema.shape);
@@ -180,10 +181,13 @@ export const accountConfirmationSchema = z.object({
 });
 export type AccountConfirmationRequest = z.infer<typeof accountConfirmationSchema>;
 
-/** The account snapshot with the account contract's fields, rebuilt without its strictness. */
+/*
+ * Keeps the account contract's fields and value checks. The balance is replaced because the spread
+ * shape still holds the account contract's strict balance schema.
+ */
 export const accountSnapshotSchema = z.object({
   ...sharedAccountSnapshotSchema.shape,
-  balance: z.object(accountDurationBalanceSchema.shape),
+  balance: accountDurationBalanceResponseSchema,
 });
 
 export type AccountSnapshot = z.infer<typeof accountSnapshotSchema>;
