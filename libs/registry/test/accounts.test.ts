@@ -597,17 +597,19 @@ test("lost dispatch acknowledgement and exhausted terminal retries release the r
 
 test("account history pages ties deterministically without crossing owners", async () => {
   const { account, accountId } = await createAccount();
-  await account.adjustAllowance(crypto.randomUUID(), 60, "history test", nowMs);
-  const accepted = [];
-  for (let index = 0; index < 53; index++) {
-    accepted.push(
-      await account.startConversion(
-        { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/" },
-        nowMs + index * 60_001,
-      ),
-    );
-  }
+  const conversionCount = 53;
+  await account.startConversion(
+    { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/" },
+    nowMs,
+  );
   const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
+  // Copying the accepted conversion in one statement avoids 52 sequential RPCs, which exceed the test timeout under load.
+  await storage.exec(
+    `INSERT INTO account_conversions (conversion_id, idempotency_key, source_url, created_at_ms, status)
+     SELECT copy.value, copy.value, source_url, created_at_ms, status
+     FROM account_conversions, json_each(?) AS copy`,
+    JSON.stringify(Array.from({ length: conversionCount - 1 }, () => crypto.randomUUID())),
+  );
   await storage.exec("UPDATE account_conversions SET created_at_ms = ?", nowMs);
   const first = await account.history();
   expect(first.items).toHaveLength(50);
@@ -620,7 +622,7 @@ test("account history pages ties deterministically without crossing owners", asy
   expect(second.items).toHaveLength(3);
   expect(second.nextCursor).toBeNull();
   expect(new Set([...first.items, ...second.items].map((item) => item?.conversionId)).size).toBe(
-    accepted.length,
+    conversionCount,
   );
   const { account: other } = await createAccount();
   expect((await other.history()).items).toHaveLength(0);
