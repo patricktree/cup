@@ -12,12 +12,12 @@
   },
   "scripts": {
     "cf-typegen": "wrangler types",
-    "cf-typegen:check": "pnpm run cf-typegen --check",
     "clean": "del-cli --dot=true \"*.tsbuildinfo\" \"playwright-output\"",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:update": "playwright test --update-snapshots",
-    "turbo:build": "pnpm run cf-typegen:check && tsc --build ./tsconfig.json",
+    "turbo:build": "tsc --build ./tsconfig.json",
+    "turbo:cf-typegen": "pnpm run cf-typegen",
     "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
     "turbo:lint:fix": "pnpm run turbo:lint --fix",
     "turbo:test": "vitest run"

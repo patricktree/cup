@@ -48,6 +48,10 @@ Test suites can run concurrently in several checkouts. Each run starts its own s
 
 Use `pnpm test:e2e:app` or `pnpm test:e2e:source-material` to rerun a single E2E suite. `pnpm test:e2e` runs both. Builds use checked-in brand assets; after changing their sources, run `pnpm brand-assets:sync` and review the generated changes. `pnpm brand-assets:check` reports stale files without modifying them.
 
+When you commit a new kind of generated file, mark its path `linguist-generated=true` in `.gitattributes`. GitHub then collapses it in pull request diffs, and agent code reviews leave it out of the diff they read (`git diff -- . ':(exclude,attr:linguist-generated=true)'`).
+
+Worker types (`worker-configuration.d.ts`) are generated, not committed: postinstall and the `turbo:cf-typegen` task, which build, lint, and test wait for, write them from each Wrangler config. If your editor reports missing Worker types, run `pnpm cf-typegen`.
+
 ## Repository References
 
 | Need                                | File                           |
