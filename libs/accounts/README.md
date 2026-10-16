@@ -23,3 +23,26 @@ pnpm validate:fast
 ```
 
 Review generated SQL, snapshots, journals, and Worker bundles together. Add migrations after a baseline is deployed instead of rewriting applied history. Drizzle Kit cannot rename tables or columns non-interactively and does not carry data through rebuilt tables; for such a change, pass `--custom` to the generator, write SQL that moves the existing rows, and test it against data written by the previous migrations. The generator records the current schema as the custom migration's snapshot. Foreign keys stay enforced inside the migration transaction, so rebuilding a referenced table means rebuilding the tables that reference it too, as the [ledger alignment](drizzle/account/0005_align_duration_ledger_schema.sql) does. When Drizzle Kit rebuilds a table to add a constrained column, it also copies the new column from the old table, which lacks it; list only the existing columns in the copy, as the [usage confirmation](drizzle/account/0006_registry_usage_projection.sql) does. Tests verify schema-to-snapshot and bundle-to-SQL agreement while registry integration tests cover account accounting, dispatch, deletion, fencing, and shared ownership.
+
+### Renumber a migration after a rebase
+
+Drizzle numbers migrations sequentially, so two branches that each add a migration conflict on the same number. Keep the default branch's migrations and give the rebased branch's migration the next free number. Migration tests find migrations by tag name and derive counts from the generated migrations, so they need no edits after renumbering. The steps use `@cup/accounts`; substitute the package of the affected store.
+
+1. While resolving the conflict, keep the default branch's version of the journal (`drizzle/<store>/meta/_journal.json`), the snapshots, and the Worker bundle under `src/migrations/`.
+2. Save any hand-written SQL from the branch's migration file, then delete that file.
+3. Generate the migration again under the next free number. For a hand-written migration, pass `--custom`:
+
+   ```sh
+   pnpm --filter @cup/accounts migrations:generate --custom --name describe_change
+   ```
+
+   For a generated migration, omit `--custom`; Drizzle Kit regenerates its SQL from the schema.
+
+4. For a hand-written migration, copy the saved SQL into the new file, then rerun the generator to rebuild the Worker bundle from the SQL files. It should report no schema changes:
+
+   ```sh
+   pnpm --filter @cup/accounts migrations:generate
+   ```
+
+5. Check that the journal has no entry for the old number and that the new snapshot's `prevId` matches the previous snapshot's `id`.
+6. Update links to the migration's SQL file, such as those in this README, and run the validation commands above.

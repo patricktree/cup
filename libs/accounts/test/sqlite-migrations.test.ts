@@ -46,16 +46,15 @@ for (const { name, schema, bundle } of stores) {
 test("removing writer purpose preserves outstanding storage effects", () => {
   const database = new sqlite.DatabaseSync(":memory:");
   try {
-    for (const [key, migration] of Object.entries(accountMigrations.migrations)) {
-      if (key === "m0003") {
-        break;
-      }
-      database.exec(migration);
+    const { key, earlierKeys } = findMigration("remove_artifact_writer_purpose");
+    const migrations: Record<string, string> = accountMigrations.migrations;
+    for (const earlierKey of earlierKeys) {
+      database.exec(migrations[earlierKey]!);
     }
     database.exec(
       "INSERT INTO artifact_writers (writer_id, execution_epoch, prefix, state, unresolved_effect, purpose) VALUES ('writer', 1, 'accounts/account/conversions/conversion/', 'running', 'put:accounts/account/conversions/conversion/audio-segments/0.mp3', 'production')",
     );
-    database.exec(accountMigrations.migrations.m0003);
+    database.exec(migrations[key]!);
     expect(database.prepare("SELECT * FROM artifact_writers").all()).toEqual([
       {
         writer_id: "writer",
@@ -73,11 +72,10 @@ test("removing writer purpose preserves outstanding storage effects", () => {
 test("deletion state checks preserve stored rows and reject unsupported values", () => {
   const database = new sqlite.DatabaseSync(":memory:");
   try {
-    for (const [key, migration] of Object.entries(accountMigrations.migrations)) {
-      if (key === "m0004") {
-        break;
-      }
-      database.exec(migration);
+    const { key, earlierKeys } = findMigration("deletion_state_checks");
+    const migrations: Record<string, string> = accountMigrations.migrations;
+    for (const earlierKey of earlierKeys) {
+      database.exec(migrations[earlierKey]!);
     }
     database.exec(
       "INSERT INTO deletion_attempts (attempt_id, payload_json, state) VALUES ('scheduled', '{}', 'scheduled')",
@@ -93,7 +91,7 @@ test("deletion state checks preserve stored rows and reject unsupported values",
     const attempts = database.prepare("SELECT * FROM deletion_attempts ORDER BY rowid").all();
     const challenges = database.prepare("SELECT * FROM deletion_challenges ORDER BY rowid").all();
 
-    database.exec(accountMigrations.migrations.m0004);
+    database.exec(migrations[key]!);
 
     expect(database.prepare("SELECT * FROM deletion_attempts ORDER BY rowid").all()).toEqual(
       attempts,
@@ -136,7 +134,8 @@ test("account migrations create the current schema", async () => {
 test("aligning with the shared duration ledger preserves conversions, jobs, and segments", () => {
   const database = new sqlite.DatabaseSync(":memory:");
   try {
-    applyMigrations(database, ["m0000", "m0001", "m0002", "m0003", "m0004"]);
+    const { key, earlierKeys } = findMigration("align_duration_ledger_schema");
+    applyMigrations(database, earlierKeys);
     const reference = {
       key: "accounts/account/conversions/ready/audiobook.json",
       contentType: "application/json",
@@ -209,7 +208,7 @@ test("aligning with the shared duration ledger preserves conversions, jobs, and 
       ('ready', 1, 25, 2000, 'reserved', 0, 0, 'op-1'),
       ('ready', 2, 38, 3000, 'released', 0, 0, 'op-2')`);
 
-    applyMigrations(database, ["m0005"]);
+    applyMigrations(database, [key]);
 
     expect(
       database.prepare("SELECT * FROM account_conversions ORDER BY created_at_ms").all(),
@@ -314,12 +313,13 @@ test("aligning with the shared duration ledger preserves conversions, jobs, and 
 test("tracking the registry's usage confirmation keeps the account and starts unconfirmed", () => {
   const database = new sqlite.DatabaseSync(":memory:");
   try {
-    applyMigrations(database, ["m0000", "m0001", "m0002", "m0003", "m0004", "m0005"]);
+    const { key, earlierKeys } = findMigration("registry_usage_projection");
+    applyMigrations(database, earlierKeys);
     database.exec(
       "INSERT INTO account VALUES (1, 'account', 'subject', 1, 'deletion_scheduled', 2, 3)",
     );
 
-    applyMigrations(database, ["m0006"]);
+    applyMigrations(database, [key]);
 
     expect(database.prepare("SELECT * FROM account").all()).toEqual([
       {
@@ -337,6 +337,21 @@ test("tracking the registry's usage confirmation keeps the account and starts un
     database.close();
   }
 });
+
+/**
+ * Finds a migration by its journal tag without its number prefix, so renumbering it after a rebase
+ * keeps the test valid; also returns the keys of all migrations that run before it.
+ */
+function findMigration(name: string) {
+  const keys = Object.keys(accountMigrations.migrations);
+  const index = accountMigrations.journal.entries.findIndex((entry) =>
+    entry.tag.endsWith(`_${name}`),
+  );
+  if (index === -1) {
+    throw new Error(`Missing account migration ${name}`);
+  }
+  return { key: keys[index]!, earlierKeys: keys.slice(0, index) };
+}
 
 /** Runs migrations in one transaction with enforced foreign keys, like the Durable Object migrator. */
 function applyMigrations(database: sqlite.DatabaseSync, keys: string[]) {
