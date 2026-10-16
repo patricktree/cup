@@ -73,7 +73,7 @@ flowchart TD
     Accounts --> Contracts
     Grants --> Contracts
     Registry --> Contracts
-    Accounts -. ownership and deletion RPC .-> Registry
+    Accounts -. ownership, usage, and deletion RPC .-> Registry
     Grants -. snapshot RPC .-> Registry
 ```
 
@@ -87,13 +87,13 @@ Each Durable Object has its own SQLite database; account and grant objects isola
 
 The one-time transition from handwritten trial schemas preserves grant identities, credentials, settings, and registry inventory while discarding old conversions and restoring full configured allowances. Old audiobook ownership routes are removed, so those links stop resolving; R2 artifacts are retained separately. New conversions survive subsequent migration replays. [ADR 0004](../adr/0004-preserve-only-grants-during-drizzle-transition.md) defines this exception to historical retention.
 
-| Store                   | Ownership and purpose                                                                                                 | Primary source                                                                      |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Account object          | One per account; private conversion history, duration ledger, and lifecycle state                                     | [Account object](../../libs/accounts/src/account-durable-object.ts)                 |
-| Conversion grant object | One per trial grant; shared allowance and duration ledger, credentials, sessions, and conversions                     | [Grant object](../../libs/conversion-grants/src/conversion-grant-durable-object.ts) |
-| Registry                | Singleton identity-to-account mapping, grant inventory, conversion ownership, provisioning, and deletion coordination | [Registry](../../libs/registry/src/registry-durable-object.ts)                      |
-| Supabase Auth           | Identity-provider data; Cup application state remains in Durable Objects                                              | [Auth configuration](../../supabase/config.toml)                                    |
-| R2 audiobook bucket     | Conversion artifacts: prepared manifests, audio segments, and unit failure details                                    | [Artifact storage](../../libs/audiobook-production/src/audio-segment-storage.ts)    |
+| Store                   | Ownership and purpose                                                                                                                          | Primary source                                                                      |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Account object          | One per account; private conversion history, duration ledger, and lifecycle state                                                              | [Account object](../../libs/accounts/src/account-durable-object.ts)                 |
+| Conversion grant object | One per trial grant; shared allowance and duration ledger, credentials, sessions, and conversions                                              | [Grant object](../../libs/conversion-grants/src/conversion-grant-durable-object.ts) |
+| Registry                | Singleton identity-to-account mapping, grant inventory, owner usage projections, conversion ownership, provisioning, and deletion coordination | [Registry](../../libs/registry/src/registry-durable-object.ts)                      |
+| Supabase Auth           | Identity-provider data; Cup application state remains in Durable Objects                                                                       | [Auth configuration](../../supabase/config.toml)                                    |
+| R2 audiobook bucket     | Conversion artifacts: prepared manifests, audio segments, and unit failure details                                                             | [Artifact storage](../../libs/audiobook-production/src/audio-segment-storage.ts)    |
 
 Cloudflare Workflows owns execution state; the account or grant object owns the application-visible conversion outcome. See [R2 objects and key layout](r2-storage.md) for prefixes, object contents, and metadata, [conversion](conversion.md) for artifact production and delivery, and [account deletion](account-deletion.md) for cleanup and write fencing. Infrastructure state is covered by the [Terraform guide](../../terraform/README.md).
 

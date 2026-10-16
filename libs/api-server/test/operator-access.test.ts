@@ -91,6 +91,20 @@ const identity = {
   createdAtMs: 1_767_225_600_000,
   phase: "active",
 } as const;
+const projectedIdentity = {
+  subject: "7d2a0f5b-3c8e-4f9a-8b4d-6e7f8a9b0c1d",
+  accountId: "e2b63f75-4f5e-4b8a-b822-8ac22612fab0",
+  createdAtMs: 1_767_225_600_000,
+  phase: "active",
+  usage: {
+    revision: 7,
+    allowanceMilliseconds: 1_800_000,
+    reservedMilliseconds: 600_000,
+    spentMilliseconds: 1_500_000,
+    schemaVersion: 1,
+    availableMilliseconds: 0,
+  },
+} as const;
 
 function fixture() {
   const readAccount = vi.fn<() => Promise<InspectAccountResponse["account"]>>(
@@ -101,10 +115,10 @@ function fixture() {
   >(async () => undefined);
   const listAccounts = vi.fn<
     (input: { phase?: string; limit: number; cursor?: string }) => Promise<{
-      accounts: (typeof identity)[];
+      accounts: (typeof identity | typeof projectedIdentity)[];
       nextCursor?: string;
     }>
-  >(async () => ({ accounts: [identity], nextCursor: "next" }));
+  >(async () => ({ accounts: [identity, projectedIdentity], nextCursor: "next" }));
   const findAccount = vi.fn<(id: string) => Promise<typeof identity | undefined>>(async (id) =>
     id === accountId ? identity : undefined,
   );
@@ -183,7 +197,7 @@ test("account routes remain behind operator authentication and reject invalid ac
   expect(readAccount).not.toHaveBeenCalled();
 });
 
-test("lists registry accounts with ISO creation times and forwards pagination", async () => {
+test("lists registry accounts with ISO creation times, projected usage, and forwards pagination", async () => {
   const { env, listAccounts } = fixture();
   const app = createApiServer({ validateOperatorAccess: async () => true });
   const response = await app.request(
@@ -199,6 +213,18 @@ test("lists registry accounts with ISO creation times and forwards pagination", 
         subject: identity.subject,
         createdAt: "2026-01-01T00:00:00Z",
         phase: "active",
+      },
+      {
+        accountId: projectedIdentity.accountId,
+        subject: projectedIdentity.subject,
+        createdAt: "2026-01-01T00:00:00Z",
+        phase: "active",
+        usage: {
+          allowanceMilliseconds: 1_800_000,
+          reservedMilliseconds: 600_000,
+          spentMilliseconds: 1_500_000,
+          availableMilliseconds: 0,
+        },
       },
     ],
     nextCursor: "next",

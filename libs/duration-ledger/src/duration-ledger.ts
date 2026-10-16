@@ -81,6 +81,14 @@ export class DurationLedger {
     };
   }
 
+  /**
+   * Orders the ledger's states: every change to the allowance, reserved, or spent duration appends
+   * an event, and events are never removed, so the count grows with each change and only then.
+   */
+  revision(): number {
+    return requireRow(this.database.select({ events: count() }).from(creditLedger).get()).events;
+  }
+
   reserve(conversionId: string, sequence: number, characters: number, nowMs: number) {
     z.number().int().nonnegative().safe().parse(sequence);
     const estimate = estimateAudioDuration(characters);

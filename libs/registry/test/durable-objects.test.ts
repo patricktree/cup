@@ -401,7 +401,7 @@ describe("SQLite conversion grant Registry Durable Object", () => {
 
   test("binds request IDs, pages snapshots, and rejects same-revision conflicts", async () => {
     const registry = registryStub("registry");
-    expect(await registry.migrate()).toBe(4);
+    expect(await registry.migrate()).toBe(5);
     const first = await registry.reserveProvisioning(
       grantId("provision-one"),
       "Alpha",
@@ -575,7 +575,7 @@ test("replays baselines without changing grant balances or registry bindings", a
   expect(await registryStorage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(
     registryMigrationCount,
   );
-  expect(await registry.migrate()).toBe(4);
+  expect(await registry.migrate()).toBe(5);
   expect(await registry.findGrantIdForConversion(conversionId)).toBe(entry.grantId);
   await registry.activate(
     entry.requestId,

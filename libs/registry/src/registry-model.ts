@@ -3,7 +3,7 @@ import type { ProjectedGrantState, GrantRegistrySnapshot } from "@cup/conversion
 import { canonicalJson, decodeBase64Url, encodeBase64Url } from "#src/encoding.ts";
 import { toIsoString } from "#src/time.ts";
 
-export const REGISTRY_SCHEMA_VERSION = 4;
+export const REGISTRY_SCHEMA_VERSION = 5;
 export const GRANT_LIFETIME_MS = 90 * 24 * 60 * 60 * 1_000;
 
 export type RegistryEntry = {
@@ -59,6 +59,21 @@ export function deriveProjectedState(entry: RegistryEntry, nowMs: number): Proje
     return "temporarily-full";
   }
   return "open";
+}
+
+/**
+ * Matches the owner's balance: an overrun can leave reserved and spent duration above the allowance
+ * until reservations settle, and the balance then reports no availability.
+ */
+export function deriveAvailableMilliseconds(usage: {
+  allowanceMilliseconds: number;
+  reservedMilliseconds: number;
+  spentMilliseconds: number;
+}): number {
+  return Math.max(
+    0,
+    usage.allowanceMilliseconds - usage.reservedMilliseconds - usage.spentMilliseconds,
+  );
 }
 
 export function toOperatorFacts(entry: RegistryEntry, nowMs: number) {

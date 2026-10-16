@@ -310,6 +310,34 @@ test("aligning with the shared duration ledger preserves conversions, jobs, and 
   }
 });
 
+test("tracking the registry's usage confirmation keeps the account and starts unconfirmed", () => {
+  const database = new sqlite.DatabaseSync(":memory:");
+  try {
+    const { key, earlierKeys } = findMigration("registry_usage_projection");
+    applyMigrations(database, earlierKeys);
+    database.exec(
+      "INSERT INTO account VALUES (1, 'account', 'subject', 1, 'deletion_scheduled', 2, 3)",
+    );
+
+    applyMigrations(database, [key]);
+
+    expect(database.prepare("SELECT * FROM account").all()).toEqual([
+      {
+        id: 1,
+        account_id: "account",
+        subject: "subject",
+        created_at_ms: 1,
+        state: "deletion_scheduled",
+        execution_epoch: 2,
+        recovery_deadline_ms: 3,
+        registry_confirmed_revision: 0,
+      },
+    ]);
+  } finally {
+    database.close();
+  }
+});
+
 /**
  * Finds a migration by its journal tag without its number prefix, so renumbering it after a rebase
  * keeps the test valid; also returns the keys of all migrations that run before it.

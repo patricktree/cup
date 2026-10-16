@@ -7,10 +7,12 @@ import { createTestHarness } from "wrangler";
 import type { AccountDurableObject } from "@cup/accounts";
 import { accountArtifactBucket } from "@cup/accounts/artifact-writer";
 
-import type { RegistryDurableObject } from "#src/index.ts";
-
 import { registryMigrationCount } from "#test/migration-counts.ts";
-import type { AccountDispatchTestDurableObject, DeletionTestDurableObject } from "#test/worker.ts";
+import type {
+  AccountDispatchTestDurableObject,
+  DeletionTestDurableObject,
+  RegistryDurableObject,
+} from "#test/worker.ts";
 
 type AccountEnvironment = {
   ACCOUNT_DISPATCH_TEST: DurableObjectNamespace<AccountDispatchTestDurableObject>;
@@ -163,6 +165,120 @@ test("account listing pages ties deterministically, filters by phase, and finds 
   });
   expect(await registry.findAccount(crypto.randomUUID())).toBeUndefined();
   await expectWorkerRpcRejection(registry.listAccounts({ limit: 2, cursor: "invalid" }));
+});
+
+test("provisioning projects the welcome allowance into the account listing", async () => {
+  const registry = bindings.REGISTRY.get(bindings.REGISTRY.idFromName("usage-provisioning"));
+  const snapshot = await registry.provisionVerifiedIdentity(crypto.randomUUID(), nowMs);
+
+  const { accounts } = await registry.listAccounts({ limit: 100 });
+  expect(accounts).toEqual([
+    {
+      subject: snapshot.subject,
+      accountId: snapshot.accountId,
+      createdAtMs: nowMs,
+      phase: "active",
+      usage: {
+        revision: 1,
+        allowanceMilliseconds: 1_800_000,
+        reservedMilliseconds: 0,
+        spentMilliseconds: 0,
+        schemaVersion: 1,
+        availableMilliseconds: 1_800_000,
+      },
+    },
+  ]);
+});
+
+test("account usage projections apply newer revisions and ignore stale ones", async () => {
+  const registry = bindings.REGISTRY.get(bindings.REGISTRY.idFromName("usage-revisions"));
+  const { accountId } = await registry.provisionVerifiedIdentity(crypto.randomUUID(), nowMs);
+  const projection = {
+    accountId,
+    revision: 3,
+    allowanceMilliseconds: 1_800_000,
+    reservedMilliseconds: 60_000,
+    spentMilliseconds: 0,
+    schemaVersion: 1,
+  };
+
+  expect(await registry.applyAccountUsageProjection(projection)).toBe("applied");
+  expect(await registry.applyAccountUsageProjection(projection)).toBe("replayed");
+  expect(await registry.applyAccountUsageProjection({ ...projection, revision: 2 })).toBe("stale");
+  await expectWorkerRpcRejection(
+    registry.applyAccountUsageProjection({ ...projection, spentMilliseconds: 1 }),
+  );
+  await expectWorkerRpcRejection(
+    registry.applyAccountUsageProjection({ ...projection, accountId: crypto.randomUUID() }),
+  );
+
+  const { accounts } = await registry.listAccounts({ limit: 100 });
+  expect(accounts[0]?.usage).toEqual({
+    revision: 3,
+    allowanceMilliseconds: 1_800_000,
+    reservedMilliseconds: 60_000,
+    spentMilliseconds: 0,
+    schemaVersion: 1,
+    availableMilliseconds: 1_740_000,
+  });
+});
+
+test("an allowance adjustment pushes the account's usage to the registry", async () => {
+  // Account objects push to the singleton registry name used in production.
+  const registry = bindings.REGISTRY.get(bindings.REGISTRY.idFromName("registry"));
+  const { accountId } = await registry.provisionVerifiedIdentity(crypto.randomUUID(), nowMs);
+  const account = bindings.ACCOUNTS.get(bindings.ACCOUNTS.idFromName(accountId));
+
+  await account.adjustAllowance(crypto.randomUUID(), 600_000, "support refund");
+
+  expect(await account.registryUsageProjection()).toEqual({
+    accountId,
+    revision: 2,
+    allowanceMilliseconds: 2_400_000,
+    reservedMilliseconds: 0,
+    spentMilliseconds: 0,
+    schemaVersion: 1,
+  });
+  const listed = (await registry.listAccounts({ limit: 100 })).accounts.find(
+    (item) => item.accountId === accountId,
+  );
+  expect(listed?.usage).toEqual({
+    revision: 2,
+    allowanceMilliseconds: 2_400_000,
+    reservedMilliseconds: 0,
+    spentMilliseconds: 0,
+    schemaVersion: 1,
+    availableMilliseconds: 2_400_000,
+  });
+});
+
+test("the registry alarm backfills usage for active accounts without a projection", async () => {
+  const registry = bindings.REGISTRY.get(bindings.REGISTRY.idFromName("usage-backfill"));
+  const { accountId } = await registry.provisionVerifiedIdentity(crypto.randomUUID(), nowMs);
+  const account = bindings.ACCOUNTS.get(bindings.ACCOUNTS.idFromName(accountId));
+  const conversion = await account.startConversion({
+    idempotencyKey: crypto.randomUUID(),
+    sourceUrl: "https://example.com/backfill",
+  });
+  if (conversion.conversion === undefined) {
+    throw new Error("Expected conversion");
+  }
+  await account.reserveAudioSegment(conversion.conversion.conversionId, 0, 100, 1);
+  await registry.forgetAccountUsageForTest(accountId);
+  expect((await registry.listAccounts({ limit: 100 })).accounts[0]?.usage).toBeUndefined();
+
+  await registry.reconcileForTest();
+
+  const reserved = (await account.listAudioSegments(conversion.conversion.conversionId))[0]
+    ?.estimatedMilliseconds;
+  expect((await registry.listAccounts({ limit: 100 })).accounts[0]?.usage).toEqual({
+    revision: 2,
+    allowanceMilliseconds: 1_800_000,
+    reservedMilliseconds: reserved,
+    spentMilliseconds: 0,
+    schemaVersion: 1,
+    availableMilliseconds: 1_800_000 - (reserved ?? 0),
+  });
 });
 
 test("concurrent segment reservations cannot exceed the available duration", async () => {
@@ -401,7 +517,7 @@ test("grant bindings remain trial-owned after replaying migrations", async () =>
   expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(
     registryMigrationCount,
   );
-  expect(await registry.migrate()).toBe(4);
+  expect(await registry.migrate()).toBe(5);
   expect(await registry.findConversionOwner(conversionId)).toEqual({
     kind: "trial",
     grantId: entry.grantId,

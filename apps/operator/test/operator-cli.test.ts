@@ -9,6 +9,7 @@ import { LOCAL_OPERATOR_ACCESS_TOKEN } from "@cup/operator-api.routes";
 const GRANT_ID = "b4ad28a8-bbd7-46af-a17c-59527becd745";
 const REQUEST_ID = "2f94d6a9-68eb-49eb-b88e-753cf5fba041";
 const ACCOUNT_ID = "d1a52e64-3e4d-4a7f-a711-7fb11501e9af";
+const PROJECTED_ACCOUNT_ID = "e2b63f75-4f5e-4b8a-b822-8ac22612fab0";
 const SUBJECT = "6c1f9e4a-2b7d-4e8f-9a3c-5d6e7f8a9b0c";
 const CREATED_AT = "2026-08-28T10:00:00Z";
 const EXPIRES_AT = "2026-11-26T10:00:00Z";
@@ -80,6 +81,12 @@ describe("actual operator CLI process", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain(`Account ID: ${ACCOUNT_ID}`);
     expect(result.stdout).toContain("Phase: deleting_identity");
+    expect(result.stdout).toContain("Usage: not yet projected");
+    expect(result.stdout).toContain(`Account ID: ${PROJECTED_ACCOUNT_ID}`);
+    expect(result.stdout).toContain("Allowance minutes: 30");
+    expect(result.stdout).toContain("Spent minutes: 12.5");
+    expect(result.stdout).toContain("Reserved minutes: 2");
+    expect(result.stdout).toContain("Available minutes: 15.5");
     expect(result.stdout).toContain("Next cursor: next");
   });
 
@@ -287,6 +294,18 @@ function handleAccountRead(url: URL, response: http.ServerResponse): boolean {
           subject: SUBJECT,
           createdAt: CREATED_AT,
           phase: url.searchParams.get("phase") ?? "active",
+        },
+        {
+          accountId: PROJECTED_ACCOUNT_ID,
+          subject: SUBJECT,
+          createdAt: CREATED_AT,
+          phase: "active",
+          usage: {
+            allowanceMilliseconds: 1_800_000,
+            reservedMilliseconds: 120_000,
+            spentMilliseconds: 750_000,
+            availableMilliseconds: 930_000,
+          },
         },
       ],
       nextCursor: "next",

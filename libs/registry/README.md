@@ -2,7 +2,7 @@
 
 Registry account provisioning and deletion require `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and `RESEND_API_KEY`. Provisioning always checks the provider identity before activation; integration tests supply a local identity provider.
 
-This library owns the singleton `RegistryDurableObject`: provider identity mapping, account provisioning, grant inventory and projections, conversion ownership, ingress rate limits, and durable account deletion coordination and notifications. Account and grant objects keep their owner-specific conversion state and accounting. Integration tests here exercise all three Durable Object classes together.
+This library owns the singleton `RegistryDurableObject`: provider identity mapping, account provisioning, grant inventory, grant and account usage projections, conversion ownership, ingress rate limits, and durable account deletion coordination and notifications. Account and grant objects keep their owner-specific conversion state and accounting. Integration tests here exercise all three Durable Object classes together.
 
 The shared `REGISTRY` binding resolves the existing singleton name `registry`. `conversion_owners` is the sole mapping from each conversion ID to an account or trial grant, with a check constraint requiring exactly the matching owner identifier. The undeployed unified baseline contains no `conversion_grants` table or compatibility lookup; the legacy table is dropped during the transition.
 
@@ -24,6 +24,6 @@ pnpm --filter @cup/registry test
 pnpm validate:fast
 ```
 
-Once deployed, append migrations instead of rewriting the baseline. Tests verify schema snapshots and bundled SQL, legacy preservation and migration replay, ownership conflicts, and account provisioning and deletion alongside trial grants.
+Once deployed, append migrations instead of rewriting the baseline. Drizzle Kit rebuilds a table to add a constrained column and copies the new column from the old table, which lacks it; list only the existing columns in the copy, as the [account usage projection](drizzle/registry/0001_account_usage_projection.sql) does. Tests verify schema snapshots and bundled SQL, legacy preservation and migration replay, ownership conflicts, and account provisioning and deletion alongside trial grants.
 
 If a rebase leaves two branches' migrations with the same number, follow [Renumber a migration after a rebase](../accounts/README.md#renumber-a-migration-after-a-rebase) with `@cup/registry`. The registry generator does not yet replace the copied snapshot of a `--custom` migration, so after regenerating a hand-written registry migration, update its snapshot to the current schema before rerunning the generator.
