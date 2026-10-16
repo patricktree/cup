@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-import { accountHistoryItemSchema, accountOutcomeSchema } from "@cup/accounts/contracts";
+import {
+  accountDurationBalanceSchema,
+  accountHistoryItemSchema,
+  accountOutcomeSchema,
+  accountSnapshotSchema as sharedAccountSnapshotSchema,
+} from "@cup/accounts/contracts";
 import {
   playbackPositionSchema as sharedPlaybackPositionSchema,
   conversionPhaseSchema,
@@ -35,6 +40,7 @@ export { sourceUrlSchema, grantConversionSnapshotSchema, grantConversionsSchema 
 export type { GrantConversionSnapshot, GrantConversions, GrantState };
 
 const durationBalanceResponseSchema = z.object(durationBalanceSchema.shape);
+const accountDurationBalanceResponseSchema = z.object(accountDurationBalanceSchema.shape);
 const synchronizationUnitResponseSchema = z.object(SYNCHRONIZATION_UNIT_SCHEMA.shape);
 /** The saved-position request body and the position in audiobook responses. */
 export const playbackPositionSchema = z.object(sharedPlaybackPositionSchema.shape);
@@ -175,18 +181,13 @@ export const accountConfirmationSchema = z.object({
 });
 export type AccountConfirmationRequest = z.infer<typeof accountConfirmationSchema>;
 
+/*
+ * Keeps the account contract's fields and value checks. The balance is replaced because the spread
+ * shape still holds the account contract's strict balance schema.
+ */
 export const accountSnapshotSchema = z.object({
-  accountId: z.uuid(),
-  subject: z.uuid(),
-  createdAtMs: z.number(),
-  state: z.enum(["active", "deletion_scheduled", "deleting"]),
-  executionEpoch: z.number(),
-  recoveryDeadlineMs: z.number().nullable(),
-  balance: z.object({
-    unit: z.literal("audio-millisecond"),
-    available: z.number(),
-    reserved: z.number(),
-  }),
+  ...sharedAccountSnapshotSchema.shape,
+  balance: accountDurationBalanceResponseSchema,
 });
 
 export type AccountSnapshot = z.infer<typeof accountSnapshotSchema>;
