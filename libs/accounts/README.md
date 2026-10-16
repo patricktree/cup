@@ -4,6 +4,8 @@ This library owns private account conversion history, duration accounting, lifec
 
 `AccountDurableObject` requires the `PREPARE_AUDIOBOOK_WORKFLOW` binding for preparation dispatch and retries, and the `SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW` binding for player-requested speech synthesis. The required `REGISTRY` binding uses a [narrow registry RPC interface](src/account-registry.ts) for conversion ownership, usage projection, and deletion intent; the required `AUDIO_BUCKET` binding supports artifact reconciliation and account erasure. Integration tests in [registry](../registry/README.md) exercise account behavior against the real registry and trial grant objects.
 
+The [account contracts](src/account-contracts.ts), exported as `@cup/accounts/contracts`, define the runtime schemas for what the account returns to inspection, including its snapshot, accounting totals, history page, and artifact writers. The [operator API contracts](../operator-api.routes/src/contracts.ts) compose these schemas instead of copying them.
+
 Shared conversion schemas and duration calculations live in [conversion-contracts](../conversion-contracts/README.md), and the duration ledger shared with conversion grants lives in [duration-ledger](../duration-ledger/README.md). The welcome allowance, lifecycle transitions, and writer reconciliation stay together here because they enforce account invariants. See [account deletion](../../docs/architecture/account-deletion.md) for the cross-object protocol.
 
 ## Database migrations

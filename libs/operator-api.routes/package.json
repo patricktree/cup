@@ -28,6 +28,7 @@
     "turbo:test": "pnpm run test"
   },
   "dependencies": {
+    "@cup/accounts": "workspace:*",
     "@cup/conversion-grants": "workspace:*",
     "@hono/zod-openapi": "catalog:hono",
     "hono": "catalog:hono",

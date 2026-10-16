@@ -1,6 +1,13 @@
 import { z } from "zod";
 
 import {
+  accountAccountingInspectionSchema,
+  accountArtifactWriterSchema,
+  accountDurationBalanceSchema,
+  accountHistoryPageSchema,
+  accountSnapshotSchema,
+} from "@cup/accounts/contracts";
+import {
   grantSnapshotSchema,
   operatorGrantSnapshotSchema,
   projectedGrantStates,
@@ -133,88 +140,14 @@ export const setGrantAllowanceRequestSchema = z
 export const accountParamsSchema = z.object({ accountId: z.uuid() }).strict();
 export type AccountParams = z.infer<typeof accountParamsSchema>;
 
-const accountDurationBalanceSchema = z
-  .object({
-    unit: z.literal("audio-millisecond"),
-    available: z.number().int().nonnegative().safe(),
-    reserved: z.number().int().nonnegative().safe(),
-  })
-  .strict();
-const accountConversionOutcomeSchema = z.discriminatedUnion("status", [
-  z
-    .object({
-      status: z.literal("ready"),
-      title: z.string(),
-      audiobookReference: z
-        .object({
-          key: z.string(),
-          contentType: z.literal("application/json"),
-          byteLength: z.number().int().positive().safe(),
-          etag: z.string(),
-        })
-        .strict(),
-      hasCoverImage: z.literal(true).optional(),
-    })
-    .strict(),
-  z
-    .object({ status: z.literal("failed"), failureCategory: z.string(), explanation: z.string() })
-    .strict(),
-]);
+// The account owns these shapes and its Durable Object returns them, so the operator contract
+// composes the account schemas instead of keeping copies that can drift from the account.
 export const inspectAccountResponseSchema = z
   .object({
-    account: z
-      .object({
-        accountId: z.uuid(),
-        subject: z.uuid(),
-        createdAtMs: z.number(),
-        state: z.enum(["active", "deletion_scheduled", "deleting"]),
-        executionEpoch: z.number().int().positive(),
-        recoveryDeadlineMs: z.number().nullable(),
-        balance: accountDurationBalanceSchema,
-      })
-      .strict(),
-    accounting: z
-      .object({
-        balance: accountDurationBalanceSchema,
-        reconstructed: z.object({ available: z.number(), reserved: z.number() }).strict(),
-        entries: z.number().int().nonnegative(),
-      })
-      .strict(),
-    history: z
-      .object({
-        items: z.array(
-          z
-            .object({
-              conversionId: z.uuid(),
-              idempotencyKey: z.uuid(),
-              sourceUrl: z.string(),
-              createdAtMs: z.number(),
-              // A prepared conversion reports the state of its audio, as in the listener history.
-              status: z.enum([
-                "pending",
-                "insufficient-duration",
-                "synthesizing",
-                "ready",
-                "failed",
-              ]),
-              outcome: accountConversionOutcomeSchema.nullable(),
-              completedAtMs: z.number().nullable(),
-            })
-            .strict(),
-        ),
-        nextCursor: z.string().nullable(),
-      })
-      .strict(),
-    writers: z.array(
-      z
-        .object({
-          writerId: z.string(),
-          prefix: z.string(),
-          state: z.string(),
-          effect: z.string().nullable(),
-        })
-        .strict(),
-    ),
+    account: accountSnapshotSchema,
+    accounting: accountAccountingInspectionSchema,
+    history: accountHistoryPageSchema,
+    writers: z.array(accountArtifactWriterSchema),
   })
   .strict();
 export type InspectAccountResponse = z.infer<typeof inspectAccountResponseSchema>;

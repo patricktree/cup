@@ -19,8 +19,10 @@ import {
   startAccountConversionSchema,
 } from "#src/account-contracts.ts";
 import type {
+  AccountAccountingInspection,
   AccountConversion,
   AccountConversionOutcome,
+  AccountHistoryPage,
   AccountIdentity,
   AccountSnapshot,
   AccountUsageProjection,
@@ -387,12 +389,12 @@ export class AccountSqlite {
     this.duration.adjustAllowance(requestId, amount, cause, nowMs);
   }
 
-  inspectAccounting() {
+  inspectAccounting(): AccountAccountingInspection {
     const accounting = this.duration.inspectAccounting();
     return {
       ...accounting,
       balance: { unit: "audio-millisecond", ...accounting.balance },
-    } as const;
+    };
   }
 
   unsettledConversions(): {
@@ -423,7 +425,7 @@ export class AccountSqlite {
       .all();
   }
 
-  history(cursor?: { createdAtMs: number; conversionId: string }) {
+  history(cursor?: { createdAtMs: number; conversionId: string }): AccountHistoryPage {
     const rows = this.database
       .select({
         conversionId: accountConversions.conversionId,
@@ -445,9 +447,9 @@ export class AccountSqlite {
       .limit(51)
       .all();
     const items = rows.slice(0, 50).map((row) => {
-      const conversion = this.getConversion(row.conversionId);
+      const conversion = requireRow(this.getConversion(row.conversionId));
       // Stored `ready` means prepared; history reports whether the audiobook can be played.
-      return conversion?.status === "ready"
+      return conversion.status === "ready"
         ? {
             ...conversion,
             status: derivePreparedConversionStatus(this.duration.segments(row.conversionId)),

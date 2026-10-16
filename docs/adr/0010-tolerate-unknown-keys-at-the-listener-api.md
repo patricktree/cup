@@ -43,8 +43,8 @@ Each fix was a one-line schema or data change, but each failure surfaced only in
 
 ### Implementation status
 
-This decision is accepted. patricktree/cup#30 implements rules 1 and 4 for the listener contracts and the web app: listener request and response schemas drop unknown keys, and strict shared schemas are rebuilt from their shapes on the listener side. patricktree/cup#29 covers the server and operator contracts. On 2026-10-16, the following code did not follow the decision yet:
+This decision is accepted. patricktree/cup#30 implements rules 1 and 4 for the listener contracts and the web app: listener request and response schemas drop unknown keys, and strict shared schemas are rebuilt from their shapes on the listener side. patricktree/cup#29 implements rule 6 for the operator contracts: the account inspection response composes the schemas from `@cup/accounts/contracts` instead of copying them. On 2026-10-16, the following code did not follow the decision yet:
 
 - The [server composition](../../libs/api-server/src/api-server.ts) parses its own responses with `audiobookSchema`, `listAccountDeletionsResponseSchema`, and `inspectAccountResponseSchema` (rule 5). Because `audiobookSchema` is tolerant, that check strips undeclared fields instead of failing.
-- The operator contracts define `accountConversionOutcomeSchema` and the account inspection shapes by hand, duplicating `accountOutcomeSchema` from [`@cup/accounts/contracts`](../../libs/accounts/src/account-contracts.ts) (rule 6). The listener contracts' `historyItemSchema` also repeats the account outcome shape.
+- The listener contracts' `historyItemSchema` repeats the account outcome shape instead of deriving it from [`@cup/accounts/contracts`](../../libs/accounts/src/account-contracts.ts) (rule 6).
 - Operator response schemas, including the strict `grantSnapshotSchema` from the [grant contracts](../../libs/conversion-grants/src/grant-contracts.ts) that they embed, call `.strict()`, and the operator CLI parses responses with them (rule 4).
