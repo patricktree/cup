@@ -13,8 +13,9 @@ const GITLINK_MODE = "160000";
 
 /**
  * Checks the submodule pointers in the index (what `git commit` would record) against `HEAD` and
- * `origin/main`. Only pointers that the staged change moves are checked, so a branch that merely
- * predates a submodule update on main passes.
+ * `origin/main`. A pointer is compared against `origin/main` only if it differs from the pointer at
+ * the merge base, so a branch that merely predates a submodule update on main passes, while a
+ * backward move that an earlier commit already recorded does not.
  */
 export async function checkStaged(root: string, environment: Environment): Promise<CheckResult> {
   const git = createGit(root, environment);
@@ -22,7 +23,6 @@ export async function checkStaged(root: string, environment: Environment): Promi
   if (submodulePaths.length === 0) {
     return { problems: [], notes: [] };
   }
-  const mainPointers = await readMainPointers(git, submodulePaths);
 
   const stagedPointers = parsePointers(
     await git.run(["ls-files", "--stage", "-z", "--", ...submodulePaths]),
@@ -31,19 +31,36 @@ export async function checkStaged(root: string, environment: Environment): Promi
   const hasHead =
     (await git.tryRun(["rev-parse", "--verify", "--quiet", "HEAD^{commit}"], [1])) !== undefined;
   const headPointers = hasHead
-    ? parsePointers(await git.run(["ls-tree", "-z", "HEAD", "--", ...submodulePaths]))
+    ? await readTreePointers(git, "HEAD", submodulePaths)
     : new Map<string, string>();
+
+  const mainPointers = await readMainPointers(git, submodulePaths);
+  // exit code 1 means HEAD and origin/main share no history
+  const mergeBase =
+    hasHead && mainPointers ? await git.tryRun(["merge-base", "HEAD", MAIN_REF], [1]) : undefined;
+  const mergeBasePointers =
+    mergeBase === undefined
+      ? new Map<string, string>()
+      : await readTreePointers(git, mergeBase.trim(), submodulePaths);
 
   const moves: PointerMove[] = [];
   for (const [submodulePath, to] of stagedPointers) {
-    const from = headPointers.get(submodulePath);
-    if (from !== undefined && from !== to) {
-      moves.push({ location: "the staged change", previousLabel: "HEAD", submodulePath, from, to });
+    const baselines = new Map<string, string>();
+    const headPointer = headPointers.get(submodulePath);
+    if (headPointer !== undefined && headPointer !== to) {
+      baselines.set(headPointer, "HEAD");
+    }
+    const mainPointer = mainPointers?.get(submodulePath);
+    if (mainPointer !== undefined && mergeBasePointers.get(submodulePath) !== to) {
+      addMainBaseline(baselines, mainPointer, to);
+    }
+    if (baselines.size > 0) {
+      moves.push({ location: "the staged change", submodulePath, to, baselines });
     }
   }
 
   return {
-    problems: await findBackwardMoves(git, environment, moves, mainPointers, "staged"),
+    problems: await findBackwardMoves(git, environment, moves, "staged"),
     notes: mainPointers ? [] : [mainUnavailableNote("HEAD")],
   };
 }
@@ -51,7 +68,8 @@ export async function checkStaged(root: string, environment: Environment): Promi
 /**
  * Checks every commit reachable from the given revisions but not yet on any remote-tracking branch,
  * i.e. the commits a push would publish. This covers commits that bypass the pre-commit hook, such
- * as those `git rebase --continue` creates after conflict resolution.
+ * as those `git rebase --continue` creates after conflict resolution. Merge commits are compared
+ * against each parent, so a merge that resolves to an older pointer is caught as well.
  */
 export async function checkCommits(
   root: string,
@@ -65,19 +83,19 @@ export async function checkCommits(
   }
   const mainPointers = await readMainPointers(git, submodulePaths);
 
+  // no pathspec: path-limited history simplification would hide merges that keep one parent's pointer
   const log = await git.run([
     "log",
     "--format=commit%x09%H%x09%s",
     "--raw",
     "--no-abbrev",
-    "--diff-merges=first-parent",
+    "--diff-merges=separate",
     ...revisions,
     "--not",
     "--remotes",
-    "--",
-    ...submodulePaths,
   ]);
 
+  const submodulePathSet = new Set(submodulePaths);
   const moves: PointerMove[] = [];
   let location = "";
   for (const line of log.split("\n")) {
@@ -86,22 +104,32 @@ export async function checkCommits(
       location = `commit ${oid} (${subject})`;
       continue;
     }
-    // e.g. `:160000 160000 <old oid> <new oid> M\t.patricktree-stack`
+
+    // e.g. `:160000 160000 <old oid> <new oid> M\t.patricktree-stack`, once per parent of a merge
     const match = /^:(\d+) (\d+) ([0-9a-f]+) ([0-9a-f]+) \w+\t(.+)$/.exec(line);
-    if (match?.[1] === GITLINK_MODE && match[2] === GITLINK_MODE) {
-      moves.push({
-        location,
-        previousLabel: "its parent",
-        from: match[3]!,
-        to: match[4]!,
-        submodulePath: match[5]!,
-      });
+    if (!match) {
+      continue;
     }
+    const [, fromMode, toMode, from, to, submodulePath] = match;
+    if (
+      fromMode !== GITLINK_MODE ||
+      toMode !== GITLINK_MODE ||
+      !submodulePathSet.has(submodulePath!)
+    ) {
+      continue;
+    }
+
+    const baselines = new Map<string, string>([[from!, "a parent commit"]]);
+    const mainPointer = mainPointers?.get(submodulePath!);
+    if (mainPointer !== undefined) {
+      addMainBaseline(baselines, mainPointer, to!);
+    }
+    moves.push({ location, submodulePath: submodulePath!, to: to!, baselines });
   }
 
   return {
-    problems: await findBackwardMoves(git, environment, moves, mainPointers, "commit"),
-    notes: mainPointers ? [] : [mainUnavailableNote("each commit's parent")],
+    problems: await findBackwardMoves(git, environment, moves, "commit"),
+    notes: mainPointers ? [] : [mainUnavailableNote("each commit's parents")],
   };
 }
 
@@ -112,12 +140,19 @@ type Git = {
 };
 
 type PointerMove = {
+  /** E.g. `the staged change` or `commit <oid> (<subject>)` */
   location: string;
-  previousLabel: string;
   submodulePath: string;
-  from: string;
   to: string;
+  /** Pointers that `to` must not be an ancestor of, each with a description of where it is recorded */
+  baselines: Map<string, string>;
 };
+
+function addMainBaseline(baselines: Map<string, string>, mainPointer: string, to: string): void {
+  if (mainPointer !== to && !baselines.has(mainPointer)) {
+    baselines.set(mainPointer, "origin/main");
+  }
+}
 
 function createGit(cwd: string, environment: Environment): Git {
   const run = async (args: string[]) => {
@@ -159,7 +194,10 @@ async function readSubmodulePaths(git: Git): Promise<string[]> {
     .map((line) => line.slice(line.indexOf(" ") + 1));
 }
 
-async function readMainPointers(git: Git, submodulePaths: string[]) {
+async function readMainPointers(
+  git: Git,
+  submodulePaths: string[],
+): Promise<Map<string, string> | undefined> {
   const mainCommit = await git.tryRun(
     ["rev-parse", "--verify", "--quiet", `${MAIN_REF}^{commit}`],
     [1],
@@ -167,7 +205,16 @@ async function readMainPointers(git: Git, submodulePaths: string[]) {
   if (mainCommit === undefined) {
     return undefined;
   }
-  return parsePointers(await git.run(["ls-tree", "-z", MAIN_REF, "--", ...submodulePaths]));
+
+  return readTreePointers(git, MAIN_REF, submodulePaths);
+}
+
+async function readTreePointers(
+  git: Git,
+  treeish: string,
+  submodulePaths: string[],
+): Promise<Map<string, string>> {
+  return parsePointers(await git.run(["ls-tree", "-z", treeish, "--", ...submodulePaths]));
 }
 
 /**
@@ -183,7 +230,12 @@ function parsePointers(output: string): Map<string, string> {
       continue;
     }
     // ls-tree prints `<mode> commit <oid>`, ls-files prints `<mode> <oid> <stage>`
-    const oid = typeOrOid === "commit" ? oidOrStage : typeOrOid;
+    const isTreeEntry = typeOrOid === "commit";
+    // stages 1 to 3 are the sides of an unresolved conflict, which git refuses to commit anyway
+    if (!isTreeEntry && oidOrStage !== "0") {
+      continue;
+    }
+    const oid = isTreeEntry ? oidOrStage : typeOrOid;
     pointers.set(entry.slice(tabIndex + 1), oid!);
   }
   return pointers;
@@ -193,17 +245,11 @@ async function findBackwardMoves(
   git: Git,
   environment: Environment,
   moves: PointerMove[],
-  mainPointers: Map<string, string> | undefined,
   mode: "staged" | "commit",
 ): Promise<string[]> {
   const problems: string[] = [];
   for (const move of moves) {
-    const baselines = new Map<string, string>([[move.from, move.previousLabel]]);
-    const mainPointer = mainPointers?.get(move.submodulePath);
-    if (mainPointer !== undefined && mainPointer !== move.to && !baselines.has(mainPointer)) {
-      baselines.set(mainPointer, "origin/main");
-    }
-
+    const { baselines } = move;
     const submoduleGit = await createSubmoduleGit(git, environment, move.submodulePath);
     if (typeof submoduleGit === "string") {
       problems.push(submoduleGit);
@@ -263,10 +309,16 @@ async function createSubmoduleGit(
   const submoduleGit = createGit(submoduleRoot, submoduleEnvironment);
 
   const notCheckedOut = `${submodulePath}: the submodule is not checked out. Run \`git submodule update --init\` and retry.`;
-  const submoduleRealPath = await fs.realpath(submoduleRoot).catch(() => undefined);
+  const submoduleRealPath = await fs.realpath(submoduleRoot).catch((error: unknown) => {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return undefined;
+    }
+    throw error;
+  });
   if (submoduleRealPath === undefined) {
     return notCheckedOut;
   }
+
   // an uninitialized submodule directory resolves to the superproject's repository
   const toplevel = (await submoduleGit.run(["rev-parse", "--show-toplevel"])).trim();
   if ((await fs.realpath(toplevel)) !== submoduleRealPath) {
@@ -303,6 +355,6 @@ function describeBackwardMove(
   ].join("\n");
 }
 
-function mainUnavailableNote(comparedAgainst: string) {
+function mainUnavailableNote(comparedAgainst: string): string {
   return `${MAIN_REF} is unavailable; submodule pointers were compared against ${comparedAgainst} only.`;
 }

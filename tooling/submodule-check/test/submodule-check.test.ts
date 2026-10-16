@@ -181,7 +181,7 @@ test("commits rejects a commit that moves the pointer backwards, e.g. after a re
   const result = await repository.run(["commits", "HEAD"]);
   assert.equal(result.status, 1);
   assert.match(result.stderr, new RegExp(`commit ${backwardCommit} \\(resolve conflicts\\)`));
-  assert.match(result.stderr, new RegExp(`from ${repository.commits.new} \\(its parent\\)`));
+  assert.match(result.stderr, new RegExp(`from ${repository.commits.new} \\(a parent commit\\)`));
 });
 
 test("commits passes for forward moves and ignores commits already on a remote", async (t) => {
@@ -196,4 +196,37 @@ test("commits passes for forward moves and ignores commits already on a remote",
 
   const result = await repository.run(["commits", "HEAD"]);
   assert.equal(result.status, 0, result.stderr);
+});
+
+test("staged rejects an unchanged pointer that the branch already moved behind origin/main", async (t) => {
+  const repository = await fixture(t);
+  repository.stage("new");
+  repository.setMain(repository.commit("update stack on main"));
+  repository.git("checkout", "--quiet", "-b", "feature", "refs/remotes/origin/main");
+  repository.stage("middle");
+  repository.git("commit", "--quiet", "--no-verify", "--message", "resolve conflicts");
+
+  const result = await repository.run(["staged"]);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, new RegExp(`from ${repository.commits.new} \\(origin/main\\)`));
+});
+
+test("commits rejects a merge that resolves to an older pointer, but passes a regular merge", async (t) => {
+  const repository = await fixture(t);
+  repository.git("branch", "feature");
+  repository.stage("new");
+  repository.setMain(repository.commit("update stack on main"));
+  repository.git("checkout", "--quiet", "feature");
+  repository.commit("feature work");
+
+  repository.git("merge", "--quiet", "--no-edit", "refs/remotes/origin/main");
+  assert.equal((await repository.run(["commits", "HEAD"])).status, 0);
+
+  repository.git("reset", "--quiet", "--hard", "HEAD~1");
+  repository.git("merge", "--quiet", "--no-edit", "--strategy=ours", "refs/remotes/origin/main");
+  const mergeCommit = repository.git("rev-parse", "HEAD");
+  const result = await repository.run(["commits", "HEAD"]);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, new RegExp(`commit ${mergeCommit} `));
+  assert.match(result.stderr, new RegExp(`to   ${repository.commits.old}`));
 });

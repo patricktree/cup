@@ -4,14 +4,14 @@ This CLI rejects changes that move a submodule pointer, such as `.patricktree-st
 
 ## Checks
 
-A pointer moves backwards when a change records a commit that is an ancestor of the pointer it replaces or of the pointer on `origin/main`. Unchanged pointers pass, so a branch that predates a submodule update on `main` is not affected. Forward moves and moves to unrelated commits pass as well.
+A pointer moves backwards when a change records a commit that is an ancestor of the pointer it replaces or of the pointer on `origin/main`. Merge commits are compared against each parent. A pointer is compared against `origin/main` only if the branch changed it, so a branch that predates a submodule update on `main` is not affected. Forward moves and moves to unrelated commits pass as well.
 
-| Command                                                       | Runs in                               | Checks                                                                                                                     |
-| ------------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm submodule:check`                                        | `pnpm validate:fast`, pre-commit hook | Staged pointers against `HEAD` and `origin/main`                                                                           |
-| `node tooling/submodule-check/src/cli.ts commits <revisions>` | Pre-push hook, for every pushed ref   | Each commit that is reachable from the revisions but not on a remote-tracking branch, against its parent and `origin/main` |
+| Command                                                       | Runs in                               | Checks                                                                                                                      |
+| ------------------------------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm submodule:check`                                        | `pnpm validate:fast`, pre-commit hook | Staged pointers against `HEAD`, and against `origin/main` if they differ from the merge base                                |
+| `node tooling/submodule-check/src/cli.ts commits <revisions>` | Pre-push hook, for every pushed ref   | Each commit that is reachable from the revisions but not on a remote-tracking branch, against its parents and `origin/main` |
 
-The pre-push check exists because `git rebase --continue` creates commits without running the pre-commit hook. When `origin/main` is unavailable, both checks compare against `HEAD` or the parent commit only and say so.
+The pre-push check exists because `git rebase --continue` creates commits without running the pre-commit hook. When `origin/main` is unavailable, both checks compare against `HEAD` or the parent commits only and say so.
 
 ## Fix a failure
 
