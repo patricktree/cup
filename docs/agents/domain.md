@@ -36,4 +36,4 @@ For a health review, agree on or state the scope, then follow the index into rel
 
 ## Complete the change
 
-Check affected prose and diagrams against implementation, resolve contradictions, and ensure new pages are indexed. Run `pnpm docs:check` and applicable repository validation. Markdown and local-link checks also run in fast validation; they establish neither semantic accuracy nor deployment state or external URL validity.
+Check affected prose and diagrams against implementation, resolve contradictions, and ensure new pages are indexed. Run `pnpm docs:check` and applicable repository validation. Markdown, local-link, and Mermaid parse checks also run in fast validation; they establish neither semantic accuracy nor deployment state or external URL validity.
