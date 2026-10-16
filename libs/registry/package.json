@@ -41,6 +41,7 @@
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",
+    "@cup/drizzle-migrations": "workspace:*",
     "@cup/prepare-declaration-build": "workspace:*",
     "@patricktree-stack/config-typescript": "workspace:*",
     "@patricktree-stack/config-vitest": "workspace:*",

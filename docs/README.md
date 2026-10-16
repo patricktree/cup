@@ -31,6 +31,7 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 | [Terraform infrastructure](../terraform/README.md)                   | Manage infrastructure state, provider configuration, and manual prerequisites          |
 | [Declaration builds](declaration-builds.md)                          | Understand source and declaration package scopes, compiler settings, and build caching |
 | [Brand assets](../tooling/brand-assets/README.md)                    | Maintain generated application branding                                                |
+| [Migration generator](../tooling/drizzle-migrations/README.md)       | Generate SQLite migrations, snapshots, and Worker bundles                              |
 | [Submodule check](../tooling/submodule-check/README.md)              | Reject commits that move a submodule pointer backwards                                 |
 
 ## Decisions and evidence
