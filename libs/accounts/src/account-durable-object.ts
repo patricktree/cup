@@ -19,6 +19,8 @@ import { AccountLifecycle, AccountLifecycleConflictError } from "#src/account-li
 import type { AccountRegistry } from "#src/account-registry.ts";
 import { AccountSqlite } from "#src/account-sqlite.ts";
 
+const USAGE_PUBLICATION_RETRY_MS = 60_000;
+
 type AccountEnvironment = {
   CONVERSION_OWNER_LIMIT: string;
   AUDIO_BUCKET: R2Bucket;
@@ -64,6 +66,15 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     return this.sqlite.snapshot();
   }
 
+  /** The registry pulls usage for accounts whose projection it lacks, such as new accounts. */
+  registryUsageProjection() {
+    return this.sqlite.usageProjection();
+  }
+
+  confirmRegistryUsage(revision: number) {
+    this.sqlite.confirmRegistryUsage(revision);
+  }
+
   async startConversion(
     input: { idempotencyKey: string; sourceUrl: string },
     nowMs = Temporal.Now.instant().epochMilliseconds,
@@ -99,49 +110,57 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
       executionEpoch,
       narrationTextCharactersBySegment,
     );
+    await this.scheduleUsagePublication();
   }
 
-  reserveAudioSegment(
+  async reserveAudioSegment(
     conversionId: string,
     sequence: number,
     characters: number,
     executionEpoch: number,
   ) {
     this.assertExecution(conversionId, executionEpoch);
-    return this.sqlite.reserveAudioSegment(
+    const result = this.sqlite.reserveAudioSegment(
       conversionId,
       sequence,
       characters,
       Temporal.Now.instant().epochMilliseconds,
     );
+    await this.scheduleUsagePublication();
+    return result;
   }
 
-  completeAudioSegment(
+  async completeAudioSegment(
     conversionId: string,
     sequence: number,
     durationMilliseconds: number,
     executionEpoch: number,
   ) {
     this.assertExecution(conversionId, executionEpoch);
-    return this.sqlite.completeAudioSegment(
+    const result = this.sqlite.completeAudioSegment(
       conversionId,
       sequence,
       durationMilliseconds,
       Temporal.Now.instant().epochMilliseconds,
     );
+    await this.scheduleUsagePublication();
+    return result;
   }
 
   listAudioSegments(conversionId: string) {
     return this.sqlite.listAudioSegments(conversionId);
   }
 
-  adjustAllowance(
+  /** Operators list accounts right after adjusting them, so the projection is pushed at once. */
+  async adjustAllowance(
     requestId: string,
     amount: number,
     cause: string,
     nowMs = Temporal.Now.instant().epochMilliseconds,
   ) {
     this.sqlite.adjustAllowance(requestId, amount, cause, nowMs);
+    await this.publishRegistryUsage();
+    await this.scheduleUsagePublication();
   }
 
   inspectAccounting() {
@@ -219,9 +238,10 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     return { result: "started" as const };
   }
 
-  releaseAudioSegment(conversionId: string, sequence: number, executionEpoch: number) {
+  async releaseAudioSegment(conversionId: string, sequence: number, executionEpoch: number) {
     this.assertExecution(conversionId, executionEpoch);
     this.sqlite.releaseAudioSegment(conversionId, sequence);
+    await this.scheduleUsagePublication();
   }
 
   getPlaybackPosition(conversionId: string) {
@@ -282,14 +302,46 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     }
     await this.reconcileDispatch();
     await this.reconcileSynthesis();
+    await this.publishRegistryUsage();
     if (
       this.sqlite.snapshot().state === "active" &&
       this.lifecycle.outbox().length === 0 &&
       this.sqlite.unsettledConversions().length === 0 &&
       this.sqlite.reservedAudioSegments().length === 0 &&
-      this.artifactWriters.writers().length === 0
+      this.artifactWriters.writers().length === 0 &&
+      !this.sqlite.hasUnconfirmedUsage()
     ) {
       await this.ctx.storage.deleteAlarm();
+    }
+  }
+
+  /**
+   * Pushes the usage projection when the registry has not confirmed the current ledger revision.
+   * The projection is derived from the ledger, so a failed push is safe to retry indefinitely.
+   */
+  private async publishRegistryUsage() {
+    if (!this.sqlite.hasUnconfirmedUsage()) {
+      return;
+    }
+    const projection = this.sqlite.usageProjection();
+    try {
+      const registry = this.env.REGISTRY;
+      await registry.get(registry.idFromName("registry")).applyAccountUsageProjection(projection);
+      this.sqlite.confirmRegistryUsage(projection.revision);
+    } catch {
+      /* The alarm retries until the registry confirms this or a later revision. */
+    }
+  }
+
+  /** Arms the alarm, without postponing an earlier one, while the registry lags the ledger. */
+  private async scheduleUsagePublication() {
+    if (!this.sqlite.hasUnconfirmedUsage()) {
+      return;
+    }
+    const publishAtMs = Temporal.Now.instant().epochMilliseconds + USAGE_PUBLICATION_RETRY_MS;
+    const scheduledAtMs = await this.ctx.storage.getAlarm();
+    if (scheduledAtMs === null || scheduledAtMs > publishAtMs) {
+      await this.ctx.storage.setAlarm(publishAtMs);
     }
   }
 

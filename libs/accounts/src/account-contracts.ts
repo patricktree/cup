@@ -17,6 +17,26 @@ export type AccountSnapshot = AccountIdentity & {
   recoveryDeadlineMs: number | null;
   balance: { unit: "audio-millisecond"; available: number; reserved: number };
 };
+/** Increases when a projected field changes meaning, so the registry can tell older projections. */
+export const ACCOUNT_USAGE_PROJECTION_SCHEMA_VERSION = 1;
+
+/**
+ * The account's duration usage as the registry keeps it for operator listings. The account is
+ * authoritative; `revision` orders projections so that the registry never replaces newer usage.
+ */
+export const accountUsageProjectionSchema = z
+  .object({
+    accountId: z.uuidv4(),
+    revision: z.number().int().positive().safe(),
+    allowanceMilliseconds: z.number().int().nonnegative().safe(),
+    reservedMilliseconds: z.number().int().nonnegative().safe(),
+    spentMilliseconds: z.number().int().nonnegative().safe(),
+    schemaVersion: z.number().int().positive().safe(),
+  })
+  .strict();
+
+export type AccountUsageProjection = z.infer<typeof accountUsageProjectionSchema>;
+
 export type AccountConversion = {
   conversionId: string;
   idempotencyKey: string;

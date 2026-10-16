@@ -17,11 +17,14 @@ export const accounts = sqliteTable(
     state: text({ enum: ["active", "deletion_scheduled", "deleting"] }).notNull(),
     executionEpoch: integer("execution_epoch").notNull(),
     recoveryDeadlineMs: integer("recovery_deadline_ms"),
+    // The duration ledger revision the registry last confirmed for its usage projection.
+    registryConfirmedRevision: integer("registry_confirmed_revision").notNull().default(0),
   },
   (table) => [
     check("account_singleton", sql`${table.id} = 1`),
     check("account_state", sql`${table.state} IN ('active', 'deletion_scheduled', 'deleting')`),
     check("account_epoch", sql`${table.executionEpoch} > 0`),
+    check("account_registry_confirmed_revision", sql`${table.registryConfirmedRevision} >= 0`),
   ],
 );
 
