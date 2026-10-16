@@ -11,6 +11,10 @@
     "watchUsingTaskInputs": true,
   },
   "tasks": {
+    "turbo:cf-typegen": {
+      "cache": true,
+      "outputs": ["worker-configuration.d.ts"],
+    },
     "turbo:build": {
       "cache": false,
       "inputs": [

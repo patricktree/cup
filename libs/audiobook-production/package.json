@@ -22,14 +22,14 @@
   "scripts": {
     "build": "turbo run turbo:build",
     "cf-typegen": "wrangler types --config ../../apps/cloudflare-worker/wrangler.jsonc --include-env=false worker-configuration.d.ts",
-    "cf-typegen:check": "pnpm run cf-typegen --check",
     "clean": "del-cli --dot=true \"dist\" \"*.tsbuildinfo\" \".wrangler\"",
     "lint": "turbo run turbo:lint",
     "lint:fix": "turbo run turbo:lint:fix",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "turbo:build": "pnpm run cf-typegen:check && prepare-declaration-build --declaration-output-dir ./dist/types --build-info-file ./dist/tsconfig.build.tsbuildinfo --source-package-json ./src/package.json && tsc --build ./tsconfig.json",
+    "turbo:build": "prepare-declaration-build --declaration-output-dir ./dist/types --build-info-file ./dist/tsconfig.build.tsbuildinfo --source-package-json ./src/package.json && tsc --build ./tsconfig.json",
+    "turbo:cf-typegen": "pnpm run cf-typegen",
     "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
     "turbo:lint:fix": "pnpm run turbo:lint --fix",
     "turbo:test": "pnpm run test"

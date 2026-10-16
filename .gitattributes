@@ -1,11 +1,8 @@
 # Generated files: GitHub collapses them in diffs, and agent reviews exclude them with
 # the pathspec ':(exclude,attr:linguist-generated=true)'.
-**/worker-configuration.d.ts linguist-generated=true
 **/drizzle/**/meta/*_snapshot.json linguist-generated=true
 **/drizzle/**/meta/_journal.json linguist-generated=true
 libs/*/src/migrations/*.ts linguist-generated=true
 apps/web-app/src/routeTree.gen.ts linguist-generated=true
 apps/mobile-app/android/app/capacitor.build.gradle linguist-generated=true
 apps/mobile-app/android/capacitor.settings.gradle linguist-generated=true
-
-qa/e2e/worker-configuration.d.ts whitespace=-trailing-space

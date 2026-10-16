@@ -17,6 +17,9 @@ fi
 
 pnpm run env:check
 
+# Worker types are not committed; generate them so typechecking, lint, and tests work before a build
+pnpm run cf-typegen
+
 if [ "${CI}" = "true" ]; then
     # in CI/CD (i.e. GitHub Actions runners and Docker builds), we are finished
     exit 0
