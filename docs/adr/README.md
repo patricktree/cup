@@ -13,6 +13,6 @@ ADRs preserve decisions, alternatives, rationale, and consequences. Read them al
 | [0007](0007-require-active-grant-access-for-trial-audiobooks.md)     | Require active grant access for trial audiobooks                                                 |
 | [0008](0008-synthesize-the-whole-narration-document.md)              | Synthesize the whole narration document                                                          |
 | [0009](0009-use-xstate-for-client-lifecycle-state-machines.md)       | XState for client lifecycle state machines                                                       |
-| [0010](0010-keep-requests-strict-and-response-parsing-tolerant.md)   | Strict requests and tolerant response parsing                                                    |
+| [0010](0010-keep-requests-strict-and-response-parsing-tolerant.md)   | Tolerant listener API, strict operator and internal inputs                                       |
 
 Each decision's frontmatter records its status. For a substantive reversal, add a superseding ADR and link it from the previous decision while retaining the old rationale. The [maintenance instructions](../agents/domain.md) describe how decisions, implementation gaps, and research relate.
