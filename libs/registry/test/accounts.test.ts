@@ -9,6 +9,7 @@ import { accountArtifactBucket } from "@cup/accounts/artifact-writer";
 
 import type { RegistryDurableObject } from "#src/index.ts";
 
+import { registryMigrationCount } from "#test/migration-counts.ts";
 import type { AccountDispatchTestDurableObject, DeletionTestDurableObject } from "#test/worker.ts";
 
 type AccountEnvironment = {
@@ -397,7 +398,9 @@ test("grant bindings remain trial-owned after replaying migrations", async () =>
   const storage = await worker.getDurableObjectStorage("REGISTRY", {
     name: registryName,
   });
-  expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(1);
+  expect(await storage.exec("SELECT * FROM __drizzle_migrations")).toHaveLength(
+    registryMigrationCount,
+  );
   expect(await registry.migrate()).toBe(4);
   expect(await registry.findConversionOwner(conversionId)).toEqual({
     kind: "trial",
