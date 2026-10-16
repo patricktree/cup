@@ -10,10 +10,9 @@ import { insufficientDurationSchema } from "@cup/conversion-contracts/duration-a
 import {
   grantConversionSnapshotSchema,
   grantConversionsSchema,
-  grantSnapshotSchema,
+  grantSnapshotSchema as sharedGrantSnapshotSchema,
   type GrantConversionSnapshot,
   type GrantConversions,
-  type GrantSnapshot,
   type GrantState,
 } from "@cup/conversion-grants/contracts";
 import { SYNCHRONIZATION_UNIT_SCHEMA } from "@cup/narration-document-creation";
@@ -22,13 +21,22 @@ const LOWERCASE_UUID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const CREDENTIAL_PATTERN = /^v1\.[A-Za-z0-9_-]{43}$/;
 
-export {
-  sourceUrlSchema,
-  grantConversionSnapshotSchema,
-  grantConversionsSchema,
-  grantSnapshotSchema,
-};
-export type { GrantConversionSnapshot, GrantConversions, GrantSnapshot, GrantState };
+/*
+ * Request schemas are strict: the server rejects fields it does not know. Response schemas drop
+ * unknown fields instead, because installed apps keep parsing responses from newer Workers. Shared
+ * strict schemas that responses embed are rebuilt here from their shapes for the response side.
+ */
+
+export { sourceUrlSchema, grantConversionSnapshotSchema, grantConversionsSchema };
+export type { GrantConversionSnapshot, GrantConversions, GrantState };
+
+const durationBalanceResponseSchema = z.object(durationBalanceSchema.shape);
+
+export const grantSnapshotSchema = z.object({
+  ...sharedGrantSnapshotSchema.shape,
+  duration: durationBalanceResponseSchema,
+});
+export type GrantSnapshot = z.infer<typeof grantSnapshotSchema>;
 
 export const uuidV4Schema = z
   .string()
@@ -82,13 +90,11 @@ export const browserMutationHeadersSchema = z
     "x-create-audiobook-from-url-request": z.literal("1"),
   })
   .passthrough();
-export const startConversionResponseSchema = z
-  .object({
-    result: z.enum(["created", "replayed"]),
-    conversion: grantConversionSnapshotSchema,
-    duration: durationBalanceSchema,
-  })
-  .strict();
+export const startConversionResponseSchema = z.object({
+  result: z.enum(["created", "replayed"]),
+  conversion: grantConversionSnapshotSchema,
+  duration: durationBalanceResponseSchema,
+});
 export type StartConversionResponse = z.infer<typeof startConversionResponseSchema>;
 
 export { playbackPositionSchema };
@@ -96,7 +102,7 @@ export type { PlaybackPosition } from "@cup/conversion-contracts";
 export const segmentParamsSchema = conversionParamsSchema.extend({
   sequence: z.coerce.number().int().min(0).max(199),
 });
-const audioSegmentBaseSchema = z.object({ sequence: z.number().int().nonnegative() }).strict();
+const audioSegmentBaseSchema = z.object({ sequence: z.number().int().nonnegative() });
 export const audioSegmentSchema = z.discriminatedUnion("status", [
   audioSegmentBaseSchema.extend({ status: z.literal("absent") }),
   audioSegmentBaseSchema.extend({ status: z.literal("generating") }),
@@ -109,9 +115,10 @@ export const audioSegmentSchema = z.discriminatedUnion("status", [
 ]);
 export type AudioSegment = z.infer<typeof audioSegmentSchema>;
 /** Where to request the audiobook's cover image; the bytes are served with audio-file authorization. */
-export const coverImageSchema = z
-  .object({ url: z.url(), alternativeText: z.string().min(1).optional() })
-  .strict();
+export const coverImageSchema = z.object({
+  url: z.url(),
+  alternativeText: z.string().min(1).optional(),
+});
 export type CoverImage = z.infer<typeof coverImageSchema>;
 const readerBase = { originalUrl: sourceUrlSchema, canGenerate: z.boolean() };
 const preparedBase = {
@@ -119,53 +126,43 @@ const preparedBase = {
   title: z.string().min(1),
   // Absent when the audiobook has no cover image.
   coverImage: coverImageSchema.optional(),
-  narrationDocument: z
-    .object({
-      html: z.string().min(1),
-      synchronizationUnits: z.array(SYNCHRONIZATION_UNIT_SCHEMA).min(1),
-    })
-    .strict(),
+  narrationDocument: z.object({
+    html: z.string().min(1),
+    synchronizationUnits: z.array(z.object(SYNCHRONIZATION_UNIT_SCHEMA.shape)).min(1),
+  }),
   // One entry per synchronization unit, in document order.
   segments: z.array(audioSegmentSchema),
-  playbackPosition: playbackPositionSchema.nullable(),
+  playbackPosition: z.object(playbackPositionSchema.shape).nullable(),
 };
 export const audiobookSchema = z.discriminatedUnion("status", [
-  z.object({ ...readerBase, status: z.literal("pending") }).strict(),
-  z.object({ ...readerBase, status: z.literal("failed"), explanation: z.string() }).strict(),
+  z.object({ ...readerBase, status: z.literal("pending") }),
+  z.object({ ...readerBase, status: z.literal("failed"), explanation: z.string() }),
   // The whole narration document did not fit the available duration; nothing was reserved.
-  z
-    .object({
-      ...preparedBase,
-      status: z.literal("insufficient-duration"),
-      ...insufficientDurationSchema.shape,
-    })
-    .strict(),
-  z.object({ ...preparedBase, status: z.literal("synthesizing") }).strict(),
+  z.object({
+    ...preparedBase,
+    status: z.literal("insufficient-duration"),
+    ...insufficientDurationSchema.shape,
+  }),
+  z.object({ ...preparedBase, status: z.literal("synthesizing") }),
   // Every segment has audio or a final failure, so the total duration is known.
-  z.object({ ...preparedBase, status: z.literal("ready") }).strict(),
+  z.object({ ...preparedBase, status: z.literal("ready") }),
 ]);
 export type Audiobook = z.infer<typeof audiobookSchema>;
 
 /** A refused retry reserves nothing; the durations tell the reader why. */
 export const retryConversionResponseSchema = z.discriminatedUnion("result", [
-  z.object({ result: z.literal("started") }).strict(),
-  z
-    .object({ result: z.literal("insufficient-duration"), ...insufficientDurationSchema.shape })
-    .strict(),
+  z.object({ result: z.literal("started") }),
+  z.object({ result: z.literal("insufficient-duration"), ...insufficientDurationSchema.shape }),
 ]);
 export type RetryConversionResponse = z.infer<typeof retryConversionResponseSchema>;
 
-export const errorResponseSchema = z
-  .object({
-    error: z
-      .object({
-        code: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-        message: z.string().min(1),
-        requestId: uuidV4Schema,
-      })
-      .strict(),
-  })
-  .strict();
+export const errorResponseSchema = z.object({
+  error: z.object({
+    code: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+    message: z.string().min(1),
+    requestId: uuidV4Schema,
+  }),
+});
 export type ErrorResponse = z.infer<typeof errorResponseSchema>;
 
 export const accountConfirmationSchema = z
@@ -197,14 +194,12 @@ export const historyItemSchema = z.object({
   createdAtMs: z.number(),
   status: z.enum(["pending", "insufficient-duration", "synthesizing", "ready", "failed"]),
   outcome: z.union([
-    z
-      .object({
-        status: z.literal("ready"),
-        title: z.string(),
-        hasCoverImage: z.literal(true).optional(),
-      })
-      .passthrough(),
-    z.object({ status: z.literal("failed"), explanation: z.string() }).passthrough(),
+    z.object({
+      status: z.literal("ready"),
+      title: z.string(),
+      hasCoverImage: z.literal(true).optional(),
+    }),
+    z.object({ status: z.literal("failed"), explanation: z.string() }),
     z.null(),
   ]),
 });
