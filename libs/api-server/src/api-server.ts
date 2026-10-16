@@ -962,6 +962,7 @@ const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
   async listAccountDeletions(context) {
     const registry = context.env.REGISTRY;
     const accountRegistry = registry.get(registry.idFromName("registry"));
+    // Typed rather than parsed, like the account inspection below.
     return context.json(
       {
         attempts: await accountRegistry.inspectDeletions(),
@@ -975,7 +976,7 @@ const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
     const account = context.env.ACCOUNTS.get(context.env.ACCOUNTS.idFromName(accountId));
     // Checked against the contract at compile time, not parsed, so an unexpected shape reaches the
     // operator instead of failing as a server error; the route tests parse responses strictly.
-    // `satisfies` rejects missing or narrower properties, but not extra ones in nested values.
+    // `satisfies` rejects missing or mismatched properties, but not extra ones in nested values.
     return context.json(
       {
         account: await account.inspect(),
