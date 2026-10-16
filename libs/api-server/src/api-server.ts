@@ -20,8 +20,8 @@ import {
 } from "@cup/listener-api.routes";
 import {
   createOperatorApi,
-  inspectAccountResponseSchema,
-  listAccountDeletionsResponseSchema,
+  type InspectAccountResponse,
+  type ListAccountDeletionsResponse,
   type OperatorApiHandlers,
 } from "@cup/operator-api.routes";
 import type { RegistryDurableObject } from "@cup/registry";
@@ -962,24 +962,28 @@ const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
   async listAccountDeletions(context) {
     const registry = context.env.REGISTRY;
     const accountRegistry = registry.get(registry.idFromName("registry"));
+    // Typed rather than parsed, like the account inspection below.
     return context.json(
-      listAccountDeletionsResponseSchema.parse({
+      {
         attempts: await accountRegistry.inspectDeletions(),
         receipts: await accountRegistry.deletionReceipts(),
-      }),
+      } satisfies ListAccountDeletionsResponse,
       200,
     );
   },
   async inspectAccount(context) {
     const { accountId } = context.req.valid("param");
     const account = context.env.ACCOUNTS.get(context.env.ACCOUNTS.idFromName(accountId));
+    // Checked against the contract at compile time, not parsed, so an unexpected shape reaches the
+    // operator instead of failing as a server error; the route tests parse responses strictly.
+    // `satisfies` rejects missing or mismatched properties, but not extra ones in nested values.
     return context.json(
-      inspectAccountResponseSchema.parse({
+      {
         account: await account.inspect(),
         accounting: await account.inspectAccounting(),
         history: await account.history(),
         writers: await account.inspectArtifactWriters(),
-      }),
+      } satisfies InspectAccountResponse,
       200,
     );
   },
