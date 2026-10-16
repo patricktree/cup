@@ -1,12 +1,17 @@
 import { expect, test, vi } from "vitest";
 
+import type {
+  AccountAccountingInspection,
+  AccountArtifactWriter,
+  AccountHistoryPage,
+  AccountSnapshot,
+} from "@cup/accounts/contracts";
 import {
   LOCAL_OPERATOR_ACCESS_TOKEN,
   adjustAccountAllowanceResponseSchema,
   inspectAccountResponseSchema,
   listAccountDeletionsResponseSchema,
   listAccountsResponseSchema,
-  type InspectAccountResponse,
   type ListAccountDeletionsResponse,
 } from "@cup/operator-api.routes";
 
@@ -25,7 +30,15 @@ vi.mock("@cup/conversion-grants", async () => ({
 const accountId = "d1a52e64-3e4d-4a7f-a711-7fb11501e9af";
 const conversionId = "f9cc2e59-46a3-4890-b923-bda04d03b4d0";
 const balance = { unit: "audio-millisecond", available: 1_800_000, reserved: 0 } as const;
-const inspection: InspectAccountResponse = {
+// Typed by the account's result types rather than the operator contract, so the fixture can hold
+// anything the account returns, including cover images, derived statuses, and the balance unit,
+// and the strict parse of the response checks that the contract accepts it.
+const inspection: {
+  account: AccountSnapshot;
+  accounting: AccountAccountingInspection;
+  history: AccountHistoryPage;
+  writers: AccountArtifactWriter[];
+} = {
   account: {
     accountId,
     subject: accountId,
@@ -144,9 +157,7 @@ const projectedIdentity = {
 } as const;
 
 function fixture() {
-  const readAccount = vi.fn<() => Promise<InspectAccountResponse["account"]>>(
-    async () => inspection.account,
-  );
+  const readAccount = vi.fn<() => Promise<AccountSnapshot>>(async () => inspection.account);
   const adjustAllowance = vi.fn<
     (requestId: string, amount: number, cause: string) => Promise<void>
   >(async () => undefined);

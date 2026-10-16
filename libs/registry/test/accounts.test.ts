@@ -6,6 +6,12 @@ import { createTestHarness } from "wrangler";
 
 import type { AccountDurableObject } from "@cup/accounts";
 import { accountArtifactBucket } from "@cup/accounts/artifact-writer";
+import {
+  accountAccountingInspectionSchema,
+  accountArtifactWriterSchema,
+  accountHistoryPageSchema,
+  accountSnapshotSchema,
+} from "@cup/accounts/contracts";
 
 import { registryMigrationCount } from "#test/migration-counts.ts";
 import type {
@@ -428,6 +434,62 @@ test("successful settlement consumes once and rejects a foreign artifact prefix"
   expect((await account.inspectAccounting()).entries).toBe(3);
 });
 
+test("account inspection results match the account contracts the operator API composes", async () => {
+  const { account, accountId } = await createAccount();
+  async function startConversion(sourceUrl: string) {
+    const started = await account.startConversion(
+      { idempotencyKey: crypto.randomUUID(), sourceUrl },
+      nowMs,
+    );
+    if (started.conversion === undefined) {
+      throw new Error("Expected conversion");
+    }
+    return started.conversion.conversionId;
+  }
+  function readyOutcome(conversionId: string) {
+    return {
+      status: "ready",
+      title: "Book",
+      audiobookReference: {
+        key: `accounts/${accountId}/conversions/${conversionId}/executions/1/audiobook.json`,
+        contentType: "application/json",
+        byteLength: 123,
+        etag: "fixture",
+      },
+    } as const;
+  }
+
+  const ready = await startConversion("https://example.com/ready");
+  await account.reserveAudioSegment(ready, 0, 100, 1);
+  await account.completeAudioSegment(ready, 0, 8_000, 1);
+  await account.settleConversion(ready, { ...readyOutcome(ready), hasCoverImage: true }, nowMs);
+  const synthesizing = await startConversion("https://example.com/synthesizing");
+  await account.settleConversion(synthesizing, readyOutcome(synthesizing), nowMs, 1, [100]);
+  const insufficient = await startConversion("https://example.com/insufficient");
+  await account.settleConversion(insufficient, readyOutcome(insufficient), nowMs);
+  const pending = await startConversion("https://example.com/pending");
+
+  expect(accountSnapshotSchema.parse(await account.inspect()).balance.unit).toBe(
+    "audio-millisecond",
+  );
+  expect(
+    accountAccountingInspectionSchema.parse(await account.inspectAccounting()).balance.unit,
+  ).toBe("audio-millisecond");
+  accountArtifactWriterSchema.array().parse(await account.inspectArtifactWriters());
+  const history = accountHistoryPageSchema.parse(await account.history());
+  expect(Object.fromEntries(history.items.map((item) => [item.conversionId, item.status]))).toEqual(
+    {
+      [ready]: "ready",
+      [synthesizing]: "synthesizing",
+      [insufficient]: "insufficient-duration",
+      [pending]: "pending",
+    },
+  );
+  expect(history.items.find((item) => item.conversionId === ready)?.outcome).toMatchObject({
+    hasCoverImage: true,
+  });
+});
+
 test("invalid debits roll back operation and ledger while adjustments stay idempotent", async () => {
   const { account } = await createAccount();
   const requestId = crypto.randomUUID();
@@ -622,7 +684,7 @@ test("account history pages ties deterministically without crossing owners", asy
   const second = await account.history({ createdAtMs: Number(createdAtMs), conversionId });
   expect(second.items).toHaveLength(3);
   expect(second.nextCursor).toBeNull();
-  expect(new Set([...first.items, ...second.items].map((item) => item?.conversionId)).size).toBe(
+  expect(new Set([...first.items, ...second.items].map((item) => item.conversionId)).size).toBe(
     conversionCount,
   );
   const { account: other } = await createAccount();

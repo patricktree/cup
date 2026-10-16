@@ -4,7 +4,7 @@ import { Temporal } from "temporal-polyfill";
 
 import { getAccountConversionIdFromArtifactPrefix } from "@cup/conversion-contracts";
 
-import type { AccountSnapshot } from "#src/account-contracts.ts";
+import type { AccountArtifactWriter, AccountSnapshot } from "#src/account-contracts.ts";
 import { artifactWriters, accountConversions } from "#src/account-sqlite-schema.ts";
 import { requireRow } from "#src/sqlite-row.ts";
 
@@ -111,7 +111,7 @@ export class AccountArtifactWriters {
       .get();
   }
 
-  writers() {
+  writers(): AccountArtifactWriter[] {
     return this.database
       .select({
         writerId: artifactWriters.writerId,
