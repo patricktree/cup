@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-import { accountHistoryItemSchema, accountOutcomeSchema } from "@cup/accounts/contracts";
+import {
+  accountDurationBalanceSchema,
+  accountHistoryItemSchema,
+  accountOutcomeSchema,
+  accountSnapshotSchema as sharedAccountSnapshotSchema,
+} from "@cup/accounts/contracts";
 import {
   playbackPositionSchema as sharedPlaybackPositionSchema,
   conversionPhaseSchema,
@@ -175,18 +180,10 @@ export const accountConfirmationSchema = z.object({
 });
 export type AccountConfirmationRequest = z.infer<typeof accountConfirmationSchema>;
 
+/** The account snapshot with the account contract's fields, rebuilt without its strictness. */
 export const accountSnapshotSchema = z.object({
-  accountId: z.uuid(),
-  subject: z.uuid(),
-  createdAtMs: z.number(),
-  state: z.enum(["active", "deletion_scheduled", "deleting"]),
-  executionEpoch: z.number(),
-  recoveryDeadlineMs: z.number().nullable(),
-  balance: z.object({
-    unit: z.literal("audio-millisecond"),
-    available: z.number(),
-    reserved: z.number(),
-  }),
+  ...sharedAccountSnapshotSchema.shape,
+  balance: z.object(accountDurationBalanceSchema.shape),
 });
 
 export type AccountSnapshot = z.infer<typeof accountSnapshotSchema>;

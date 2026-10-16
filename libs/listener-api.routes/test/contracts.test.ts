@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   accountConfirmationSchema,
   accountHistorySchema,
+  accountSnapshotSchema,
   audiobookSchema,
   audioSegmentSchema,
   conversionParamsSchema,
@@ -22,6 +23,15 @@ import {
 const UUID = "b4ad28a8-bbd7-46af-a17c-59527becd745";
 const ACCEPTED_AT = "2026-08-28T12:00:00.000Z";
 const DURATION = { availableMilliseconds: 4, reservedMilliseconds: 0, spentMilliseconds: 1 };
+const ACCOUNT_SNAPSHOT = {
+  accountId: UUID,
+  subject: UUID,
+  createdAtMs: 1,
+  state: "active",
+  executionEpoch: 1,
+  recoveryDeadlineMs: null,
+  balance: { unit: "audio-millisecond", available: 4, reserved: 0 },
+};
 const PREPARED_AUDIOBOOK = {
   status: "ready",
   canGenerate: true,
@@ -159,6 +169,16 @@ describe("listener API transport contracts", () => {
       schema: retryConversionResponseSchema,
       response: { result: "started", newField: true },
       expected: { result: "started" },
+    },
+    {
+      name: "account snapshot",
+      schema: accountSnapshotSchema,
+      response: {
+        ...ACCOUNT_SNAPSHOT,
+        balance: { ...ACCOUNT_SNAPSHOT.balance, newField: true },
+        newField: true,
+      },
+      expected: ACCOUNT_SNAPSHOT,
     },
     {
       name: "account history",
