@@ -29,6 +29,12 @@ export const config = defineConfig({
             message: "Use `useSuspenseQuery` instead.",
           },
         ],
+        patterns: [
+          {
+            group: ["./**", "../**"],
+            message: "Use subpath imports (`#src/*`, `#test/*`, ...) instead of relative imports.",
+          },
+        ],
       },
     ],
   },
