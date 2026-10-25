@@ -48,6 +48,8 @@ Test suites can run concurrently in several checkouts. Each run starts its own s
 
 Tests are never retried: leave Vitest `retry` and Playwright `retries` at their default of 0 in configs and individual tests (an explicit 0 is fine), and fix a flaky test instead of retrying it.
 
+Tests that exercise Resend use the Resend stub (`@cup/resend-stub` in `qa/resend-stub`): a local stand-in for `POST /emails` that models Resend’s request checks and idempotency and lets a test script, hang, or hold the next answer. `pnpm test:resend-live` (in `qa/resend-stub/test-live/`, with its own Vitest config) is the opt-in contract test that checks the stub’s model against the real Resend API. It needs `RESEND_API_KEY` (`RESEND_FROM` defaults to `Cup <no-reply@cup.audio>`) and sends real emails to `delivered@resend.dev`, so it is part of no validation command and only the operator runs it; agents never run it.
+
 Use `pnpm test:e2e:app` or `pnpm test:e2e:source-material` to rerun a single E2E suite. `pnpm test:e2e` runs both. Builds use checked-in brand assets; after changing their sources, run `pnpm brand-assets:sync` and review the generated changes. `pnpm brand-assets:check` reports stale files without modifying them.
 
 When you commit a new kind of generated file, mark its path `linguist-generated=true` in `.gitattributes`. GitHub then collapses it in pull request diffs, and agent code reviews leave it out of the diff they read (`git diff -- . ':(exclude,attr:linguist-generated=true)'`).

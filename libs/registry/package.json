@@ -43,6 +43,7 @@
     "@cup/config-oxlint": "workspace:*",
     "@cup/drizzle-migrations": "workspace:*",
     "@cup/prepare-declaration-build": "workspace:*",
+    "@cup/resend-stub": "workspace:*",
     "@patricktree-stack/config-typescript": "workspace:*",
     "@patricktree-stack/config-vitest": "workspace:*",
     "@types/node": "catalog:",

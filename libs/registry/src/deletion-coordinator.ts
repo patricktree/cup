@@ -3,7 +3,6 @@ import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlit
 import { Temporal } from "temporal-polyfill";
 import { z } from "zod";
 
-import type { AccountDurableObject } from "@cup/accounts";
 import { deletionAttemptSchema, type DeletionAttempt } from "@cup/accounts/lifecycle";
 
 import {
@@ -15,10 +14,27 @@ import {
 import { requireRow } from "#src/sqlite-row.ts";
 import type { SupabaseAdminEnvironment } from "#src/supabase-identity.ts";
 
-export type DeletionEnvironment = SupabaseAdminEnvironment & {
-  ACCOUNTS: DurableObjectNamespace<AccountDurableObject>;
-  RESEND_API_KEY: string;
+/** The account calls deletion makes; the `ACCOUNTS` namespace provides them. */
+export type DeletionAccounts = {
+  idFromName(name: string): DurableObjectId;
+  get(id: DurableObjectId): {
+    fenceDeletion(attemptId: string): Promise<void>;
+    eraseAccount(attemptId: string): Promise<void>;
+  };
 };
+export type DeletionEnvironment = SupabaseAdminEnvironment & {
+  ACCOUNTS: DeletionAccounts;
+  RESEND_API_KEY: string;
+  /** Resend API origin, such as `https://api.resend.com`. */
+  RESEND_BASE_URL: string;
+};
+/** Outgoing provider calls, replaceable so tests can drive them against local stand-ins. */
+export type DeletionProviderOptions = {
+  request?: typeof fetch;
+  /** Applies to each Supabase and Resend call. */
+  timeoutMs?: number;
+};
+const PROVIDER_TIMEOUT_MS = 10_000;
 const DAY = 86_400_000;
 const jobSchema = deletionAttemptSchema.extend({
   googleRevocation: z.enum(["unavailable", "revoked", "failed"]).default("unavailable"),
@@ -46,15 +62,21 @@ export class DeletionCoordinator {
   private readonly storage: DurableObjectStorage;
   private readonly env: DeletionEnvironment;
   private readonly request: typeof fetch;
+  private readonly timeoutMs: number;
   constructor(
     storage: DurableObjectStorage,
     env: DeletionEnvironment,
-    request: typeof fetch = fetch,
+    {
+      // Workers reject `fetch` called as a method of another object, as `this.request()` does.
+      request = (...args) => fetch(...args),
+      timeoutMs = PROVIDER_TIMEOUT_MS,
+    }: DeletionProviderOptions = {},
   ) {
     this.storage = storage;
     this.database = drizzle(storage);
     this.env = env;
     this.request = request;
+    this.timeoutMs = timeoutMs;
   }
 
   async accept(input: DeletionAttempt) {
@@ -145,7 +167,7 @@ export class DeletionCoordinator {
       .limit(100)
       .all();
     for (const row of rows) {
-      const job = jobSchema.parse(JSON.parse(row.json));
+      let job = jobSchema.parse(JSON.parse(row.json));
       if (job.state === "restored") {
         this.receiptIfFinished(job, "restored");
         continue;
@@ -157,6 +179,13 @@ export class DeletionCoordinator {
       try {
         if (job.state === "scheduled") {
           await account.fenceDeletion(job.attemptId);
+          // The input gate stays open while an RPC is pending, so a restore or a Google revocation
+          // outcome may have been accepted meanwhile; continue from the stored job, not this copy.
+          const current = this.job(job.attemptId);
+          if (current?.state !== "scheduled") {
+            continue;
+          }
+          job = current;
           fenceIdentity(job.subject, job.accountId);
           job.state = "deleting";
           this.save(job);
@@ -194,12 +223,17 @@ export class DeletionCoordinator {
           throw new Error("Deletion dependencies are pending");
         }
       } catch {
-        job.failures += 1;
-        job.nextAttemptMs =
+        // A restore accepted while the failed call was pending supersedes this attempt.
+        const current = this.job(job.attemptId);
+        if (current?.state !== job.state) {
+          continue;
+        }
+        current.failures += 1;
+        current.nextAttemptMs =
           nowMs +
-          Math.min(3_600_000, 60_000 * 2 ** Math.min(job.failures - 1, 6)) +
+          Math.min(3_600_000, 60_000 * 2 ** Math.min(current.failures - 1, 6)) +
           Math.floor(Math.random() * 5_000);
-        this.save(job);
+        this.save(current);
       }
     }
     await this.sendNotifications();
@@ -396,13 +430,15 @@ export class DeletionCoordinator {
       this.saveNotification(notification); // Intent and window precede an ambiguous HTTP call.
       let retryAfterMs = 0;
       try {
-        const response = await this.request("https://api.resend.com/emails", {
+        const response = await this.request(`${this.env.RESEND_BASE_URL}/emails`, {
           method: "POST",
-          signal: AbortSignal.timeout(10_000),
+          signal: AbortSignal.timeout(this.timeoutMs),
           headers: {
             Authorization: `Bearer ${this.env.RESEND_API_KEY}`,
             "Content-Type": "application/json",
             "Idempotency-Key": notification.key,
+            // Resend refuses requests without a User-Agent with 403.
+            "User-Agent": "cup",
           },
           body: JSON.stringify({
             from: "Cup <no-reply@cup.audio>",
@@ -488,7 +524,7 @@ export class DeletionCoordinator {
   private async deleteIdentity(subject: string) {
     const response = await this.request(`${this.env.SUPABASE_URL}/auth/v1/admin/users/${subject}`, {
       method: "DELETE",
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(this.timeoutMs),
       headers: {
         apikey: this.env.SUPABASE_SECRET_KEY,
         Authorization: `Bearer ${this.env.SUPABASE_SECRET_KEY}`,

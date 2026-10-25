@@ -106,6 +106,7 @@
     "CONVERSION_IP_LIMIT": "60",
     "CONVERSION_OWNER_LIMIT": "10",
     "SUPABASE_URL": "https://evwjipxgacwotgbmqtla.supabase.co",
+    "RESEND_BASE_URL": "https://api.resend.com",
     "CLOUDFLARE_ACCOUNT_ID": "a7648178b6a63bb8a13f0c9de89d253f",
     "OPERATOR_ACCESS_ISSUER": "https://patricktree.cloudflareaccess.com",
     "OPERATOR_ACCESS_AUDIENCE": "eb0bf97161ed0be7fdbaa018493cc84d3b25332315cfa8fec3569570035e3461",

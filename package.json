@@ -40,6 +40,7 @@
     "test:e2e:source-material": "pnpm --filter '@cup/prepare-source-material' test:e2e",
     "test:e2e:ui": "pnpm run build && pnpm --filter '@cup/e2e' test:e2e:ui",
     "test:e2e:update": "docker pull mcr.microsoft.com/playwright:v1.64.0-noble && pnpm run build && pnpm --filter '@cup/e2e' test:e2e:update",
+    "test:resend-live": "pnpm --filter '@cup/resend-stub' test:resend-live",
     "validate": "pnpm run validate:fast && pnpm run validate:extended",
     "validate:evals": "pnpm --filter '@cup/narration-content-selection' eval",
     "validate:extended": "pnpm run brand-assets:check && pnpm run zizmor && pnpm run test:e2e",

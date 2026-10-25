@@ -2,10 +2,13 @@ import { DurableObject } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 
 import { AccountDurableObject as BaseAccountDurableObject } from "@cup/accounts";
+import type { DeletionAttempt } from "@cup/accounts/lifecycle";
 
 import { DeletionCoordinator } from "#src/deletion-coordinator.ts";
 import { RegistryDurableObject as BaseRegistryDurableObject } from "#src/registry-durable-object.ts";
 import { migrateRegistry } from "#src/sqlite-migrations.ts";
+
+import { createHoldingAccounts, type AccountMethod, type Hold } from "#test/holding-accounts.ts";
 
 /** Simulates a launch acknowledgement loss followed by exhausted terminal RPC retries. */
 export class AccountDispatchTestDurableObject extends BaseAccountDurableObject {
@@ -126,15 +129,22 @@ export class DeletionTestDurableObject extends DurableObject<{
       SUPABASE_URL: "https://test.supabase.co",
       SUPABASE_SECRET_KEY: "test",
       RESEND_API_KEY: "test",
+      RESEND_BASE_URL: "https://resend.test",
     },
-    async () => {
-      this.requests += 1;
-      return new Response("{}", {
-        status: this.responseStatus,
-        headers: this.retryAfter ? { "Retry-After": this.retryAfter } : {},
-      });
+    {
+      request: async () => {
+        this.requests += 1;
+        return new Response("{}", {
+          status: this.responseStatus,
+          headers: this.retryAfter ? { "Retry-After": this.retryAfter } : {},
+        });
+      },
     },
   );
+  private readonly holdingAccounts = createHoldingAccounts(this.env.ACCOUNTS);
+  private accountHold: Hold | undefined;
+  /** `accept()` schedules a coordinator alarm; these tests reconcile explicitly instead. */
+  override async alarm() {}
   configureProviderForTest(status: number, retryAfter?: string) {
     this.responseStatus = status;
     this.retryAfter = retryAfter;
@@ -148,5 +158,43 @@ export class DeletionTestDurableObject extends DurableObject<{
       () => {},
     );
     return this.coordinator.receipts();
+  }
+
+  acceptForTest(attempt: DeletionAttempt) {
+    return this.coordinator.accept(attempt);
+  }
+  statusForTest() {
+    return this.coordinator.status();
+  }
+  /**
+   * Reconciles with real `fetch` against the given Resend origin, such as a Resend stub, and with
+   * account calls through the holding ACCOUNTS double.
+   */
+  async reconcileWithProvidersForTest(resendBaseUrl: string, timeoutMs: number) {
+    const coordinator = new DeletionCoordinator(
+      this.ctx.storage,
+      {
+        ACCOUNTS: this.holdingAccounts.accounts,
+        SUPABASE_URL: "http://127.0.0.1:9",
+        SUPABASE_SECRET_KEY: "test",
+        RESEND_API_KEY: "test-resend",
+        RESEND_BASE_URL: resendBaseUrl,
+      },
+      { timeoutMs },
+    );
+    await coordinator.reconcile(
+      () => {},
+      () => {},
+    );
+    return coordinator.receipts();
+  }
+  holdNextAccountCallForTest(method: AccountMethod) {
+    this.accountHold = this.holdingAccounts.holdNext(method);
+  }
+  async accountCallReachedForTest() {
+    await this.accountHold?.reached;
+  }
+  releaseAccountCallForTest() {
+    this.accountHold?.release();
   }
 }
