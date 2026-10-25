@@ -46,6 +46,8 @@ The groups are independent and stop on failure. Extended does not run the fast g
 
 Test suites can run concurrently in several checkouts. Each run starts its own servers on ports the operating system assigns and never attaches to a server that is already running, so keep fixed ports and `reuseExistingServer` out of test configuration.
 
+Tests are never retried: leave Vitest `retry` and Playwright `retries` at their default of 0 in configs and individual tests (an explicit 0 is fine), and fix a flaky test instead of retrying it.
+
 Use `pnpm test:e2e:app` or `pnpm test:e2e:source-material` to rerun a single E2E suite. `pnpm test:e2e` runs both. Builds use checked-in brand assets; after changing their sources, run `pnpm brand-assets:sync` and review the generated changes. `pnpm brand-assets:check` reports stale files without modifying them.
 
 When you commit a new kind of generated file, mark its path `linguist-generated=true` in `.gitattributes`. GitHub then collapses it in pull request diffs, and agent code reviews leave it out of the diff they read (`git diff -- . ':(exclude,attr:linguist-generated=true)'`).
