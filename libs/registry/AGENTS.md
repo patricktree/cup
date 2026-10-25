@@ -15,7 +15,7 @@ Tests stay flat in `test/` and import the Durable Object through `#src/index.ts`
 
 ## Follow-up: deletion coordinator provider calls
 
-`DeletionCoordinator` still makes its Resend `POST /emails` call and its Supabase identity deletion call itself. It moved whole so that open PR #37, which rewrites parts of it, keeps git's rename detection. Once #37 has merged, extract those calls into `providers/` and keep the retry and notice state in `account-deletion/`.
+`DeletionCoordinator` still makes its Resend `POST /emails` call and its Supabase identity deletion call itself. It moved whole to keep the folder split a pure move. Extracting those calls into `providers/`, with the retry and notice state staying in `account-deletion/`, is a follow-up.
 
 ## Migrations
 
