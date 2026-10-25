@@ -527,12 +527,21 @@ importers:
       '@cup/config-oxlint':
         specifier: workspace:*
         version: link:../../tooling/config-oxlint
+      '@cup/listener-api.routes':
+        specifier: workspace:*
+        version: link:../../libs/listener-api.routes
+      '@cup/operator-api.routes':
+        specifier: workspace:*
+        version: link:../../libs/operator-api.routes
       '@cup/prepare-declaration-build':
         specifier: workspace:*
         version: link:../../tooling/prepare-declaration-build
       '@patricktree-stack/config-typescript':
         specifier: workspace:*
         version: link:../../.patricktree-stack/tooling/config-typescript
+      '@patricktree-stack/config-vitest':
+        specifier: workspace:*
+        version: link:../../.patricktree-stack/tooling/config-vitest
       '@patricktree-stack/utils-ecma':
         specifier: workspace:*
         version: link:../../.patricktree-stack/libs/utils-ecma
@@ -554,9 +563,15 @@ importers:
       vite:
         specifier: catalog:web-app
         version: 8.3.4(@types/node@26.6.5)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5))
       wrangler:
         specifier: 'catalog:'
         version: 4.144.0(@types/node@26.6.5)
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
 
   apps/mobile-app:
     dependencies:
@@ -901,6 +916,9 @@ importers:
       '@cup/create-audiobook-from-url-workflow':
         specifier: workspace:*
         version: link:../create-audiobook-from-url-workflow
+      '@cup/errors':
+        specifier: workspace:*
+        version: link:../errors
       '@cup/listener-api.routes':
         specifier: workspace:*
         version: link:../listener-api.routes
@@ -1066,6 +1084,9 @@ importers:
       '@cup/duration-ledger':
         specifier: workspace:*
         version: link:../duration-ledger
+      '@cup/errors':
+        specifier: workspace:*
+        version: link:../errors
       '@cup/rolling-limits':
         specifier: workspace:*
         version: link:../rolling-limits
@@ -1139,6 +1160,9 @@ importers:
       '@cup/conversion-grants':
         specifier: workspace:*
         version: link:../conversion-grants
+      '@cup/errors':
+        specifier: workspace:*
+        version: link:../errors
       '@cup/narration-content-selection':
         specifier: workspace:*
         version: link:../narration-content-selection
@@ -1249,6 +1273,42 @@ importers:
       wrangler:
         specifier: 'catalog:'
         version: 4.144.0(@types/node@26.6.5)
+
+  libs/errors:
+    devDependencies:
+      '@cup/config-oxlint':
+        specifier: workspace:*
+        version: link:../../tooling/config-oxlint
+      '@cup/prepare-declaration-build':
+        specifier: workspace:*
+        version: link:../../tooling/prepare-declaration-build
+      '@patricktree-stack/config-typescript':
+        specifier: workspace:*
+        version: link:../../.patricktree-stack/tooling/config-typescript
+      '@patricktree-stack/config-vitest':
+        specifier: workspace:*
+        version: link:../../.patricktree-stack/tooling/config-vitest
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.5
+      '@typescript/native':
+        specifier: 'catalog:'
+        version: typescript@7.0.2
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.87.0(oxlint-tsgolint@7.0.2004)
+      oxlint-tsgolint:
+        specifier: 'catalog:'
+        version: 7.0.2004
+      typescript:
+        specifier: 'catalog:'
+        version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.4(@types/node@26.6.5)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5))
 
   libs/listener-api.client:
     dependencies:

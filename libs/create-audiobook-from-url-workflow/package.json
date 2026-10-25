@@ -46,6 +46,7 @@
     "@cup/audiobook-production": "workspace:*",
     "@cup/conversion-contracts": "workspace:*",
     "@cup/conversion-grants": "workspace:*",
+    "@cup/errors": "workspace:*",
     "@cup/narration-content-selection": "workspace:*",
     "@cup/narration-document-creation": "workspace:*",
     "@cup/prepare-source-material": "workspace:*",

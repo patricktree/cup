@@ -34,17 +34,19 @@ Use an existing credentials file or another checkout’s env file as the source.
 
 Run `pnpm validate:fast` as needed during development. Shipping to production means pushing to `main`, the default branch. Run `pnpm validate` to complete both fast and extended checks on the changes being shipped. The pre-commit hook runs only the fast group. The pre-push hook rejects pushed commits that move a submodule pointer backwards (see the [submodule check](.patricktree-stack/tooling/submodule-check/README.md)) and runs extended validation when a push updates `main`.
 
-| Command                          | Scope                                                                                                                                                                     |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm validate:fast`             | Environment check, submodule pointer check, format check, Markdown/local-link/Mermaid checks, build/typecheck, lint, and existing tests including browser component tests |
-| `pnpm validate:extended`         | Declutter, brand-assets check, authenticated online zizmor, and both E2E suites                                                                                           |
-| `pnpm validate`                  | Fast, then extended                                                                                                                                                       |
-| `pnpm validate:update-snapshots` | Full validation with component and app E2E screenshot baseline updates                                                                                                    |
-| `pnpm validate:evals`            | Paid narration-content-selection evals; invoke explicitly                                                                                                                 |
+| Command                          | Scope                                                                                                                                                                                       |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm validate:fast`             | Environment check, submodule pointer check, format check, Markdown/local-link/Mermaid checks, build/typecheck, lint, existing tests including browser component tests, and declutter (Knip) |
+| `pnpm validate:extended`         | Brand-assets check, authenticated online zizmor, and both E2E suites                                                                                                                        |
+| `pnpm validate`                  | Fast, then extended                                                                                                                                                                         |
+| `pnpm validate:update-snapshots` | Full validation with component and app E2E screenshot baseline updates                                                                                                                      |
+| `pnpm validate:evals`            | Paid narration-content-selection evals; invoke explicitly                                                                                                                                   |
 
-The groups are independent and stop on failure. Extended does not run the fast group. Both free groups require Docker; extended also needs internet access, `uvx`, and GitHub CLI authentication for zizmor. Source-material E2E tests replay locally hosted page fixtures, including the scripts and content API responses needed for JavaScript rendering; see `libs/prepare-source-material/test-e2e/fixtures/README.md`. Fast validation requires the configured environment files but does not invoke paid AI services.
+The groups are independent and stop on failure. Extended does not run the fast group. Both free groups require Docker; extended also needs internet access, `uvx`, and GitHub CLI authentication for zizmor. Source-material E2E tests replay locally hosted page fixtures, including the scripts and content API responses needed for JavaScript rendering; see `libs/prepare-source-material/test-e2e/fixtures/README.md`. Fast validation requires the configured environment files but does not invoke paid AI services. Declutter runs after the build because Knip loads the Worker's Vite config, which requires the built web app.
 
 Test suites can run concurrently in several checkouts. Each run starts its own servers on ports the operating system assigns and never attaches to a server that is already running, so keep fixed ports and `reuseExistingServer` out of test configuration.
+
+Tests are never retried: leave Vitest `retry` and Playwright `retries` at their default of 0 in configs and individual tests (an explicit 0 is fine), and fix a flaky test instead of retrying it.
 
 Use `pnpm test:e2e:app` or `pnpm test:e2e:source-material` to rerun a single E2E suite. `pnpm test:e2e` runs both. Builds use checked-in brand assets; after changing their sources, run `pnpm brand-assets:sync` and review the generated changes. `pnpm brand-assets:check` reports stale files without modifying them.
 

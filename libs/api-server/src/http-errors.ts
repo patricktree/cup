@@ -1,3 +1,4 @@
+import { assertUnreachable } from "@cup/errors";
 import type { ErrorResponse } from "@cup/listener-api.routes";
 
 export function accountAuthError(
@@ -20,12 +21,15 @@ export function accountAuthError(
   if (result === "blocked") {
     return jsonError(requestId, "account-blocked", "Account access is blocked.", 403);
   }
-  return jsonError(
-    requestId,
-    "account-setup-pending",
-    "Account setup is temporarily unavailable. Please retry.",
-    503,
-  );
+  if (result === "unavailable") {
+    return jsonError(
+      requestId,
+      "account-setup-pending",
+      "Account setup is temporarily unavailable. Please retry.",
+      503,
+    );
+  }
+  return assertUnreachable(result);
 }
 
 function createErrorBody(requestId: string, code: string, message: string): ErrorResponse {

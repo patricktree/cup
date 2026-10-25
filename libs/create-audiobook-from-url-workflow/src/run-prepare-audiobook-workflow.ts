@@ -12,6 +12,7 @@ import {
 } from "@cup/audiobook-production";
 import { ConversionPhase, type ConversionFailureCategory } from "@cup/conversion-contracts";
 import { conversionParamsSchema, type ConversionParams } from "@cup/conversion-contracts";
+import { findRootCauseDescription } from "@cup/errors";
 import type {
   NarrationContentSelectionResult,
   SelectionChunkRunner,
@@ -310,10 +311,7 @@ async function storeDeclaredCoverImage({
 
     logMissingCoverImage(conversionId, outcome.reason);
   } catch (error) {
-    logMissingCoverImage(
-      conversionId,
-      error instanceof Error ? `${error.name}: ${error.message}` : String(error),
-    );
+    logMissingCoverImage(conversionId, findRootCauseDescription(error));
   }
 
   return undefined;
