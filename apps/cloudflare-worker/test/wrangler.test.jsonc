@@ -4,9 +4,8 @@
 //
 // It mirrors the production config (`wrangler.jsonc`) except for bindings that reach paid or external
 // services: `AI` (Workers AI) and `BROWSER` (Browser Rendering) are left out, so code that would call
-// them fails instead of incurring cost, and the Supabase and Cloudflare Access URLs point at the
-// discard port of 127.0.0.1. Resend's URL is fixed in libs/registry, so tests stay away from account
-// deletion. `wrangler-config.test.ts` checks that the remaining bindings match production.
+// them fails instead of incurring cost, and the Supabase, Cloudflare Access and Resend URLs point at
+// the discard port of 127.0.0.1. `wrangler-config.test.ts` checks that the remaining bindings match production.
 {
   "$schema": "../node_modules/wrangler/config-schema.json",
   "name": "create-audiobook-from-url-test",
@@ -65,8 +64,9 @@
     "SIGNUP_IP_LIMIT": "10",
     "CONVERSION_IP_LIMIT": "60",
     "CONVERSION_OWNER_LIMIT": "10",
-    // Unreachable on purpose (discard port): no test may call Supabase or Cloudflare Access.
+    // Unreachable on purpose (discard port): no test may call Supabase, Cloudflare Access or Resend.
     "SUPABASE_URL": "http://127.0.0.1:9",
+    "RESEND_BASE_URL": "http://127.0.0.1:9",
     "CLOUDFLARE_ACCOUNT_ID": "test-cloudflare-account",
     "OPERATOR_ACCESS_ISSUER": "http://127.0.0.1:9",
     "OPERATOR_ACCESS_AUDIENCE": "test-operator-audience",
