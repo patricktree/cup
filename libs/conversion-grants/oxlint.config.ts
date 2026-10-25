@@ -21,7 +21,7 @@ function restrictImports(message: string, groups: string[]) {
     severity,
     {
       paths: repoPaths,
-      patterns: [...repoPatterns, ...(groups.length > 0 ? [{ group: groups, message }] : [])],
+      patterns: [...repoPatterns, { group: groups, message }],
     },
   ];
 }
@@ -37,7 +37,12 @@ export default defineConfig({
   overrides: [
     {
       files: ["src/index.ts"],
-      rules: { "no-restricted-imports": restrictImports("", []) },
+      rules: {
+        "no-restricted-imports": restrictImports(
+          "`src/index.ts` reaches the generated migrations only through `storage/`.",
+          ["#src/migrations/**"],
+        ),
+      },
     },
     {
       files: ["src/encoding.ts", "src/time.ts"],
@@ -53,7 +58,7 @@ export default defineConfig({
       rules: {
         "no-restricted-imports": restrictImports(
           "`domain/` imports only `domain/` and the shared helpers.",
-          ["#src/storage/**", "#src/durable-object/**", "#src/migrations/**"],
+          ["#src/index.ts", "#src/storage/**", "#src/durable-object/**", "#src/migrations/**"],
         ),
       },
     },
@@ -61,8 +66,8 @@ export default defineConfig({
       files: ["src/storage/**"],
       rules: {
         "no-restricted-imports": restrictImports(
-          "`storage/` never imports `durable-object/`; the Durable Object calls storage.",
-          ["#src/durable-object/**"],
+          "`storage/` imports neither `durable-object/` nor the package interface; the Durable Object calls storage.",
+          ["#src/index.ts", "#src/durable-object/**"],
         ),
       },
     },

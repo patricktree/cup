@@ -62,4 +62,4 @@ Worker types (`worker-configuration.d.ts`) are generated, not committed: postins
 
 ## Package instructions
 
-Before editing a package, read its `AGENTS.md` when it has one: `apps/cloudflare-worker`, `apps/mobile-app`, `apps/web-app`, and `libs/conversion-grants` (source folder layout and the import directions its lint config enforces).
+Before editing a package, read its `AGENTS.md` when it has one, such as [`libs/conversion-grants/AGENTS.md`](libs/conversion-grants/AGENTS.md) for that library's source folders and import directions.
