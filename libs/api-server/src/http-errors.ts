@@ -36,6 +36,11 @@ export function accountAuthError(
   return assertUnreachable(result);
 }
 
+/** The error envelope both API contracts declare, with a code from either contract. */
+function createErrorBody(requestId: string, code: ErrorCode, message: string) {
+  return { error: { code, message, requestId } };
+}
+
 export function jsonError(
   requestId: string,
   code: ErrorCode,
@@ -43,11 +48,8 @@ export function jsonError(
   status: 400 | 401 | 403 | 404 | 405 | 409 | 413 | 415 | 429 | 500 | 503,
   headers?: HeadersInit,
 ): Response {
-  return Response.json(
-    { error: { code, message, requestId } },
-    {
-      status,
-      ...(headers === undefined ? {} : { headers }),
-    },
-  );
+  return Response.json(createErrorBody(requestId, code, message), {
+    status,
+    ...(headers === undefined ? {} : { headers }),
+  });
 }
