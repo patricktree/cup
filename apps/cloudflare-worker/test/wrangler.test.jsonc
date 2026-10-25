@@ -1,0 +1,74 @@
+// The Wrangler config of the integration tests (`useWorker()` in use-worker.ts). It lives in `test/`
+// rather than next to `wrangler.jsonc` because Wrangler loads `.dev.vars` and `.env` files from the
+// config's directory: the package's `.env.local` must never change what the integration tests see.
+//
+// It mirrors the production config (`wrangler.jsonc`) except for bindings that reach paid or external
+// services: `AI` (Workers AI) and `BROWSER` (Browser Rendering) are left out, so code that would call
+// them fails instead of incurring cost, and every external URL points at the discard port of
+// 127.0.0.1. `wrangler-config.test.ts` checks that the remaining bindings match production.
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "create-audiobook-from-url-test",
+  "main": "worker.ts",
+  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_date": "2026-08-18",
+  // A small fixed stand-in for the built web app, so the tests need no web build.
+  "assets": {
+    "directory": "./assets",
+    "binding": "ASSETS",
+    "not_found_handling": "none",
+    "html_handling": "none",
+    "run_worker_first": true,
+  },
+  // Local Workflow engines; no test starts a conversion, and one that did would fail on the missing `AI`.
+  "workflows": [
+    {
+      "name": "prepare-audiobook-test",
+      "binding": "PREPARE_AUDIOBOOK_WORKFLOW",
+      "class_name": "PrepareAudiobookWorkflow",
+    },
+    {
+      "name": "synthesize-audio-segment-test",
+      "binding": "SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW",
+      "class_name": "SynthesizeAudioSegmentWorkflow",
+    },
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "ACCOUNTS", "class_name": "AccountDurableObject" },
+      { "name": "CONVERSION_GRANTS", "class_name": "ConversionGrantDurableObject" },
+      { "name": "REGISTRY", "class_name": "RegistryDurableObject" },
+    ],
+  },
+  // Production reached this set of SQLite classes through several migrations, including a rename;
+  // a fresh test runtime needs only the result.
+  "migrations": [
+    {
+      "tag": "test",
+      "new_sqlite_classes": [
+        "AccountDurableObject",
+        "ConversionGrantDurableObject",
+        "RegistryDurableObject",
+      ],
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "AUDIO_BUCKET",
+      "bucket_name": "create-audiobook-from-url-audio-test",
+    },
+  ],
+  // The secrets of `secrets.required` in wrangler.jsonc come from `useWorker()` as dummy values.
+  "vars": {
+    "LOCAL_DEVELOPMENT": "false",
+    "SIGNUP_IP_LIMIT": "10",
+    "CONVERSION_IP_LIMIT": "60",
+    "CONVERSION_OWNER_LIMIT": "10",
+    // Unreachable on purpose (discard port): no test may call Supabase or Cloudflare Access.
+    "SUPABASE_URL": "http://127.0.0.1:9",
+    "CLOUDFLARE_ACCOUNT_ID": "test-cloudflare-account",
+    "OPERATOR_ACCESS_ISSUER": "http://127.0.0.1:9",
+    "OPERATOR_ACCESS_AUDIENCE": "test-operator-audience",
+    "OPERATOR_EMAIL": "operator@example.test",
+  },
+}

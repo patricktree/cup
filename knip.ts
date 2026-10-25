@@ -18,6 +18,10 @@ const config: KnipConfig = {
         "cf",
       ],
     },
+    "apps/cloudflare-worker": {
+      /* Wrangler loads this module-only Worker entry point from test/wrangler.test.jsonc. */
+      entry: ["test/worker.ts"],
+    },
     "libs/create-audiobook-from-url-workflow": {
       /* Wrangler loads this module-only Worker entry point from wrangler.test.jsonc. */
       entry: ["test/worker.ts"],
