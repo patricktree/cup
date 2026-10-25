@@ -25,7 +25,7 @@ Register the Android OAuth client for package `audio.cup.app` and its signing ce
 
 ## Email
 
-The [deletion coordinator](../libs/registry/src/deletion-coordinator.ts) sends through the Resend API at the `RESEND_BASE_URL` variable, `https://api.resend.com`, from the Resend domain declared in the [Terraform guide](../terraform/README.md#resend-domain). Inspect notification outcomes with the [operator CLI](../apps/operator/README.md#list-account-deletions); provider acceptance is not proof of inbox delivery.
+The [deletion coordinator](../libs/registry/src/account-deletion/deletion-coordinator.ts) sends through the Resend API at the `RESEND_BASE_URL` variable, `https://api.resend.com`, from the Resend domain declared in the [Terraform guide](../terraform/README.md#resend-domain). Inspect notification outcomes with the [operator CLI](../apps/operator/README.md#list-account-deletions); provider acceptance is not proof of inbox delivery.
 
 ## Pending rollout
 

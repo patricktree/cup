@@ -1,1 +1,1 @@
-export { RegistryDurableObject } from "#src/registry-durable-object.ts";
+export { RegistryDurableObject } from "#src/durable-object/registry-durable-object.ts";

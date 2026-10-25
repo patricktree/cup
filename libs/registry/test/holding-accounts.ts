@@ -6,7 +6,7 @@
  * Production code knows nothing about it: the test passes the wrapped namespace as `ACCOUNTS`.
  */
 
-import type { DeletionAccounts } from "#src/deletion-coordinator.ts";
+import type { DeletionAccounts } from "#src/account-deletion/deletion-coordinator.ts";
 
 export type AccountMethod = "fenceDeletion" | "eraseAccount";
 

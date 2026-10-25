@@ -5,14 +5,14 @@ import { z } from "zod";
 
 import { deletionAttemptSchema, type DeletionAttempt } from "@cup/accounts/lifecycle";
 
+import type { SupabaseAdminEnvironment } from "#src/providers/supabase-identity.ts";
 import {
   canceledDeletionAttempts,
   deletionJobs,
   deletionNotifications,
   deletionReceipts,
-} from "#src/registry-sqlite-schema.ts";
-import { requireRow } from "#src/sqlite-row.ts";
-import type { SupabaseAdminEnvironment } from "#src/supabase-identity.ts";
+} from "#src/storage/registry-sqlite-schema.ts";
+import { requireRow } from "#src/storage/sqlite-row.ts";
 
 /** The account calls deletion makes; the `ACCOUNTS` namespace provides them. */
 export type DeletionAccounts = {

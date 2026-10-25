@@ -45,7 +45,7 @@ The API verifies Supabase JWTs locally against the issuer's signing keys and val
 
 The web client sends every API request through one [request module](../../apps/web-app/src/data-fetching/api-request.ts). Each call states its account authorization: none, the signed-in account's token if there is one (audiobook reads and retries, whose conversion an account or a conversion grant may own), or a required signed-in account. Account operations name the account they were issued for, and the module refuses to send them once a different account is signed in. A fresh token is resolved per request. Grant sessions travel as cookies regardless of this choice. Every unsuccessful response rejects with one error type carrying the API error code, HTTP status, and retry delay.
 
-Sources: [session lifecycle](../../apps/web-app/src/auth/account-session-machine.ts), [web adapter](../../apps/web-app/src/platform/account-auth.web.ts), [Android adapter](../../apps/web-app/src/platform/account-auth.android.ts), [iOS adapter](../../apps/web-app/src/platform/account-auth.ios.ts), [token verification](../../libs/api-server/src/account-auth.ts), and [registry provisioning](../../libs/registry/src/registry-durable-object.ts).
+Sources: [session lifecycle](../../apps/web-app/src/auth/account-session-machine.ts), [web adapter](../../apps/web-app/src/platform/account-auth.web.ts), [Android adapter](../../apps/web-app/src/platform/account-auth.android.ts), [iOS adapter](../../apps/web-app/src/platform/account-auth.ios.ts), [token verification](../../libs/api-server/src/account-auth.ts), and [registry provisioning](../../libs/registry/src/durable-object/registry-durable-object.ts).
 
 ## Client session lifecycle
 

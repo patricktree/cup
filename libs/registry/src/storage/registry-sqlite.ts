@@ -3,13 +3,13 @@ import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlit
 
 import type { ConversionOwner } from "@cup/conversion-contracts";
 
-import type { RegistryEntry, RegistryRecord } from "#src/registry-model.ts";
+import type { RegistryEntry, RegistryRecord } from "#src/domain/registry-model.ts";
 import {
   registryGrants as registryGrantTable,
   registrySqliteSchema,
   conversionOwners,
-} from "#src/registry-sqlite-schema.ts";
-import { migrateRegistry } from "#src/sqlite-migrations.ts";
+} from "#src/storage/registry-sqlite-schema.ts";
+import { migrateRegistry } from "#src/storage/sqlite-migrations.ts";
 
 // https://developers.cloudflare.com/durable-objects/platform/limits/
 const MAX_SQL_PARAMETERS = 100;
