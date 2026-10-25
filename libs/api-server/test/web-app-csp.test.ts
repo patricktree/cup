@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 
 import { WEB_APP_CSP_NONCE_PLACEHOLDER } from "@cup/listener-api.routes/web-app-csp";
 
-import { applyWebAppCspNonce } from "#src/web-app-csp.ts";
+import { applyWebAppCspNonce } from "#src/http/web-app-csp.ts";
 
 test("replaces Vite's CSP nonce placeholder without retaining stale representation metadata", async () => {
   const response = new Response(

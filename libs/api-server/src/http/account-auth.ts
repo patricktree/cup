@@ -2,7 +2,7 @@ import { createRemoteJWKSet, errors, jwtVerify } from "jose";
 import type { JWTVerifyGetKey } from "jose";
 
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
-import { ingressIdentity } from "#src/ingress-identity.ts";
+import { ingressIdentity } from "#src/http/ingress-identity.ts";
 import { authenticateAccount as authenticateVerifiedAccount } from "#src/use-cases/authenticate-account.ts";
 
 const keySets = new Map<string, ReturnType<typeof createRemoteJWKSet>>();

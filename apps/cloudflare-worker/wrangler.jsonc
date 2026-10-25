@@ -11,7 +11,7 @@
       "pattern": "cup.audio",
       "custom_domain": true,
     },
-    // The remaining hostnames only redirect to cup.audio; see libs/api-server/src/domain-routing.ts.
+    // The remaining hostnames only redirect to cup.audio; see libs/api-server/src/http/domain-routing.ts.
     {
       "pattern": "www.cup.audio",
       "custom_domain": true,

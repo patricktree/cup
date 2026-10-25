@@ -7,8 +7,8 @@ import {
 import type { ErrorCode, ErrorResponse } from "@cup/listener-api.routes";
 import type { RegistryDurableObject } from "@cup/registry";
 
+import { resolveConversionReader, type ConversionReader } from "#src/adapters/conversion-reader.ts";
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
-import { resolveConversionReader, type ConversionReader } from "#src/conversion-reader.ts";
 import { loadReadyAudiobook } from "#src/use-cases/load-ready-audiobook.ts";
 
 type RegistryStub = DurableObjectStub<RegistryDurableObject>;

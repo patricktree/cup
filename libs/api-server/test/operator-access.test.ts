@@ -17,7 +17,7 @@ import {
 
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
 import { createApiServer } from "#src/api-server.ts";
-import { isDevelopmentOperatorRequest } from "#src/operator-access.ts";
+import { isDevelopmentOperatorRequest } from "#src/http/operator-access.ts";
 
 vi.mock("@cup/conversion-grants", async () => ({
   ...(await import("@cup/conversion-grants/contracts")),
