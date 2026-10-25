@@ -4,9 +4,9 @@ import { Temporal } from "temporal-polyfill";
 
 import { getAccountConversionIdFromArtifactPrefix } from "@cup/conversion-contracts";
 
-import type { AccountArtifactWriter, AccountSnapshot } from "#src/account-contracts.ts";
-import { artifactWriters, accountConversions } from "#src/account-sqlite-schema.ts";
-import { requireRow } from "#src/sqlite-row.ts";
+import type { AccountArtifactWriter, AccountSnapshot } from "#src/domain/account-contracts.ts";
+import { artifactWriters, accountConversions } from "#src/storage/account-sqlite-schema.ts";
+import { requireRow } from "#src/storage/sqlite-row.ts";
 
 /** Tracks account storage effects so deletion waits for acknowledged production writes. */
 export class AccountArtifactWriters {

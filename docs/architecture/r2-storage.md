@@ -75,13 +75,13 @@ The [segment storage implementation](../../libs/audiobook-production/src/audio-s
 | `synthesis-voice`             | Voice                                                  |
 | `synthesis-policy-version`    | Synthesis policy version                               |
 
-Account-owned writes additionally carry `cup-writer-id` on manifests, cover images, audio segments, and failure objects. The [account artifact writer](../../libs/accounts/src/artifact-writer.ts) derives this ID from the execution epoch and object key, registers the write before sending it to R2, and acknowledges and drains it afterward. This lets account deletion reconcile uncertain writes before erasing the prefix. Trial writes do not use this account wrapper.
+Account-owned writes additionally carry `cup-writer-id` on manifests, cover images, audio segments, and failure objects. The [account artifact writer](../../libs/accounts/src/artifacts/artifact-writer.ts) derives this ID from the execution epoch and object key, registers the write before sending it to R2, and acknowledges and drains it afterward. This lets account deletion reconcile uncertain writes before erasing the prefix. Trial writes do not use this account wrapper.
 
 ## Access and lifecycle
 
 The Worker loads manifests and serves audio through the listener API. Audio delivery requires a ready manifest, a valid synchronization-unit sequence, and a settled segment in the owner's duration ledger; an MP3 object's existence alone does not make it playable. The [audio delivery handler](../../libs/api-server/src/http/serve-audiobook.ts) supports HEAD requests, byte ranges, and conditional ETag requests. Cover image delivery in the same module requires a ready manifest that records a cover image and supports HEAD and conditional ETag requests. Private artifacts require the active owning account; trial artifacts require a session for the active owning grant under the [access rules](authentication.md).
 
-Account erasure deletes every object under `accounts/<accountId>/` after execution is fenced and artifact writers have drained. It leaves trial conversion prefixes and other accounts separate. See [account deletion](account-deletion.md) and the [erasure implementation](../../libs/accounts/src/account-durable-object.ts).
+Account erasure deletes every object under `accounts/<accountId>/` after execution is fenced and artifact writers have drained. It leaves trial conversion prefixes and other accounts separate. See [account deletion](account-deletion.md) and the [erasure implementation](../../libs/accounts/src/durable-object/account-durable-object.ts).
 
 For failed trial preparation, the [grant maintenance implementation](../../libs/conversion-grants/src/durable-object/conversion-grant-durable-object.ts) deletes the conversion prefix when cleanup is pending and no segment is settled. It preserves artifacts if any segment is settled. A failed audio unit does not by itself make preparation failed or trigger whole-conversion cleanup; the prepared document and completed audio remain available.
 
