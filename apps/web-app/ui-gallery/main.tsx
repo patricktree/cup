@@ -39,8 +39,14 @@ const mockingReady = parameters.has("canvas")
   : Promise.resolve();
 
 let root: Root | undefined;
+// Tests that block service workers mount stories on the index, because the canvas starts the mock
+// service worker. The index renders only after loading every story module, which can finish after
+// a story is mounted, so a mounted story replaces the index and keeps it from rendering.
+let galleryRoot: Root | undefined;
+let isStoryRequested = false;
 
 async function mount({ props = {}, story }: MountParams): Promise<void> {
+  isStoryRequested = true;
   await mockingReady;
   const definition = await resolveStory(story);
   if (definition === undefined) {
@@ -50,6 +56,8 @@ async function mount({ props = {}, story }: MountParams): Promise<void> {
   worker.resetHandlers(...(definition.handlers ?? []));
   await definition.beforeMount?.();
   const StoryComponent = definition.component;
+  galleryRoot?.unmount();
+  galleryRoot = undefined;
   const currentRoot = (root ??= createRoot(rootElement));
   flushSync(() => {
     currentRoot.render(
@@ -128,9 +136,13 @@ function requireRootElement(): HTMLElement {
 async function showGallery(): Promise<void> {
   const storyGroups = await collectStoryGroups();
   const requestedSelection = readStorySelection();
+  if (isStoryRequested) {
+    return;
+  }
 
   document.body.style.margin = "0";
-  createRoot(rootElement).render(
+  galleryRoot = createRoot(rootElement);
+  galleryRoot.render(
     requestedSelection === undefined ? (
       <StoryGrid storyGroups={storyGroups} />
     ) : (
