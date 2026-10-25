@@ -1,7 +1,7 @@
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { expect, test } from "vitest";
 
-import { verifyAccountToken } from "#src/account-auth.ts";
+import { verifyAccountToken } from "#src/http/account-auth.ts";
 
 const url = "https://cup-test.supabase.co";
 const subject = "f355f913-ba12-45d6-a7d2-4df95f7cf11f";

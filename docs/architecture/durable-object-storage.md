@@ -28,7 +28,7 @@ Writers may target pending or ready conversions; account lifecycle and execution
 
 `registry_confirmed_revision` records the duration ledger revision for which the registry confirmed the account's [usage projection](#registry). The revision is the number of ledger events, so every change to the allowance, reserved duration, or spent duration advances it without a separate counter.
 
-Sources: [account-sqlite-schema.ts](../../libs/accounts/src/account-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/rolling-limits/src/rate-limit-schema.ts), [duration-ledger-schema.ts](../../libs/duration-ledger/src/duration-ledger-schema.ts); [migrations](../../libs/accounts/drizzle/account/).
+Sources: [account-sqlite-schema.ts](../../libs/accounts/src/storage/account-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/rolling-limits/src/rate-limit-schema.ts), [duration-ledger-schema.ts](../../libs/duration-ledger/src/duration-ledger-schema.ts); [migrations](../../libs/accounts/drizzle/account/).
 
 ```mermaid
 erDiagram
@@ -320,7 +320,7 @@ Additional index: `rate_events_bucket` on `(bucket, created_at_ms)`.
 
 ## Migration metadata
 
-Every store also has Drizzle’s internal `__drizzle_migrations` table, created by the Durable SQLite migrator rather than the application schema. It tracks applied migration timestamps and hashes independently in each database. The linked [account migration entry points](../../libs/accounts/src/sqlite-migrations.ts), [grant migration entry point](../../libs/conversion-grants/src/storage/legacy-grant-migrations.ts) and [registry migration entry point](../../libs/registry/src/storage/sqlite-migrations.ts) invoke that migrator. The diagram preserves its declared SQL types; `SERIAL PRIMARY KEY` is the migrator’s SQLite declaration, rather than an application autoincrement column.
+Every store also has Drizzle’s internal `__drizzle_migrations` table, created by the Durable SQLite migrator rather than the application schema. It tracks applied migration timestamps and hashes independently in each database. The linked [account migration entry points](../../libs/accounts/src/storage/sqlite-migrations.ts), [grant migration entry point](../../libs/conversion-grants/src/storage/legacy-grant-migrations.ts) and [registry migration entry point](../../libs/registry/src/storage/sqlite-migrations.ts) invoke that migrator. The diagram preserves its declared SQL types; `SERIAL PRIMARY KEY` is the migrator’s SQLite declaration, rather than an application autoincrement column.
 
 ```mermaid
 erDiagram

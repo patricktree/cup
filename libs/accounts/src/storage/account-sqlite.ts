@@ -17,7 +17,7 @@ import {
   accountIdentitySchema,
   accountOutcomeSchema,
   startAccountConversionSchema,
-} from "#src/account-contracts.ts";
+} from "#src/domain/account-contracts.ts";
 import type {
   AccountAccountingInspection,
   AccountConversion,
@@ -26,7 +26,8 @@ import type {
   AccountIdentity,
   AccountSnapshot,
   AccountUsageProjection,
-} from "#src/account-contracts.ts";
+} from "#src/domain/account-contracts.ts";
+import { canonicalJson } from "#src/encoding.ts";
 import {
   accountPlaybackPositions,
   accounts,
@@ -40,11 +41,10 @@ import {
   deletionChallenges,
   deletionAttempts,
   accountTombstone,
-} from "#src/account-sqlite-schema.ts";
-import { canonicalJson } from "#src/encoding.ts";
-import { rateEvents } from "#src/rate-limit-schema.ts";
-import { migrateAccount } from "#src/sqlite-migrations.ts";
-import { requireRow } from "#src/sqlite-row.ts";
+} from "#src/storage/account-sqlite-schema.ts";
+import { rateEvents } from "#src/storage/rate-limit-schema.ts";
+import { migrateAccount } from "#src/storage/sqlite-migrations.ts";
+import { requireRow } from "#src/storage/sqlite-row.ts";
 
 const WELCOME_ALLOWANCE_MILLISECONDS = 30 * 60 * 1_000;
 

@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { routeApplicationDomain } from "#src/domain-routing.ts";
+import { routeApplicationDomain } from "#src/http/domain-routing.ts";
 
 const REDIRECTED_ORIGINS = [
   "https://www.cup.audio",

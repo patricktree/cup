@@ -45,7 +45,7 @@ The API verifies Supabase JWTs locally against the issuer's signing keys and val
 
 The web client sends every API request through one [request module](../../apps/web-app/src/data-fetching/api-request.ts). Each call states its account authorization: none, the signed-in account's token if there is one (audiobook reads and retries, whose conversion an account or a conversion grant may own), or a required signed-in account. Account operations name the account they were issued for, and the module refuses to send them once a different account is signed in. A fresh token is resolved per request. Grant sessions travel as cookies regardless of this choice. Every unsuccessful response rejects with one error type carrying the API error code, HTTP status, and retry delay.
 
-Sources: [session lifecycle](../../apps/web-app/src/auth/account-session-machine.ts), [web adapter](../../apps/web-app/src/platform/account-auth.web.ts), [Android adapter](../../apps/web-app/src/platform/account-auth.android.ts), [iOS adapter](../../apps/web-app/src/platform/account-auth.ios.ts), [token verification](../../libs/api-server/src/account-auth.ts), and [registry provisioning](../../libs/registry/src/durable-object/registry-durable-object.ts).
+Sources: [session lifecycle](../../apps/web-app/src/auth/account-session-machine.ts), [web adapter](../../apps/web-app/src/platform/account-auth.web.ts), [Android adapter](../../apps/web-app/src/platform/account-auth.android.ts), [iOS adapter](../../apps/web-app/src/platform/account-auth.ios.ts), [token verification](../../libs/api-server/src/http/account-auth.ts), and [registry provisioning](../../libs/registry/src/durable-object/registry-durable-object.ts).
 
 ## Client session lifecycle
 
@@ -117,7 +117,7 @@ Audiobook JSON lives at `/api/audiobooks/{conversionId}` and requires bearer ide
 
 The web application's [`PlaybackSession`](../../apps/web-app/src/app/player/playback-session.ts), one per loaded audiobook, authorizes media only for the signed-in user the audiobook was loaded for and refuses another signed-in user. The client requests the media cookie when the audiobook loads, again on every Play, so access revoked while paused is noticed promptly, and again before the browser preloads each following segment. Requests made while one is in flight share it, so loading and playing in one gesture issues one cookie. A settled cookie is never reused, because its lifetime is computed on the Worker's clock, which the client cannot compare with its own. A failed request is reported; after Play it also pauses playback. Native players send the bearer token themselves and receive it when loading and on every Play without waiting for the cookie, which on native platforms serves only WebView requests such as cover images. Anonymous and trial listeners need no media cookie, because the grant cookie or public access covers their media. Sign-out clears local identity and cached account data, stops and unloads media, and waits for outstanding cookie issuance before clearing media sessions so a late response cannot silently reestablish playback. Local sign-out is not an immediate global revocation mechanism for every existing JWT.
 
-Sources: [media cookie and token handling](../../libs/api-server/src/account-auth.ts), [ownership middleware](../../libs/api-server/src/api-server.ts), [delivery](../../libs/api-server/src/serve-audiobook.ts), and [client session transitions](../../apps/web-app/src/auth/account-session.ts).
+Sources: [media cookie and token handling](../../libs/api-server/src/http/account-auth.ts), [ownership middleware](../../libs/api-server/src/api-server.ts), [delivery](../../libs/api-server/src/http/serve-audiobook.ts), and [client session transitions](../../apps/web-app/src/auth/account-session.ts).
 
 ## Trial access
 
@@ -133,7 +133,7 @@ The operator CLI authenticates through Cloudflare Access. The Worker validates t
 
 Deletion and recovery require an additional one-use challenge and Google authentication after that challenge was issued. They also enforce request origin and content-type constraints. See [account deletion](account-deletion.md) for why ordinary sign-in does not restore access.
 
-Sources: [operator guide](../../apps/operator/README.md), [Access verification and routing](../../libs/api-server/src/api-server.ts), [development access](../../libs/api-server/src/operator-access.ts), and [lifecycle handlers](../../libs/api-server/src/api-server.ts). Provider configuration and outstanding rollout verification belong in [production configuration](../production-configuration.md) and the [Terraform guide](../../terraform/README.md).
+Sources: [operator guide](../../apps/operator/README.md), [Access verification and routing](../../libs/api-server/src/api-server.ts), [development access](../../libs/api-server/src/http/operator-access.ts), and [lifecycle handlers](../../libs/api-server/src/api-server.ts). Provider configuration and outstanding rollout verification belong in [production configuration](../production-configuration.md) and the [Terraform guide](../../terraform/README.md).
 
 ## Historical evidence and deferred work
 

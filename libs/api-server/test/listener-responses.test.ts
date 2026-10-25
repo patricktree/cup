@@ -33,9 +33,9 @@ vi.mock("cloudflare:workers", () => ({
 const mocks = vi.hoisted(() => ({
   authenticate: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
 }));
-vi.mock("#src/ingress-identity.ts", () => ({ ingressIdentity: async () => "ingress-key" }));
-vi.mock("#src/account-auth.ts", async (original) => ({
-  ...(await original<typeof import("#src/account-auth.ts")>()),
+vi.mock("#src/http/ingress-identity.ts", () => ({ ingressIdentity: async () => "ingress-key" }));
+vi.mock("#src/http/account-auth.ts", async (original) => ({
+  ...(await original<typeof import("#src/http/account-auth.ts")>()),
   authenticateAccountRequest: mocks.authenticate,
 }));
 

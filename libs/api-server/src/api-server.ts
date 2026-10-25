@@ -32,14 +32,14 @@ import {
 } from "@cup/operator-api.routes";
 import type { RegistryDurableObject } from "@cup/registry";
 
-import { authenticateAccountRequest, mediaCookie, mediaRequest } from "#src/account-auth.ts";
+import { resolveConversionDispatch } from "#src/adapters/conversion-dispatch.ts";
+import { resolveConversionReader } from "#src/adapters/conversion-reader.ts";
+import { revokeVerifiedGoogleToken } from "#src/adapters/google-token-revocation.ts";
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
-import { resolveConversionDispatch } from "#src/conversion-dispatch.ts";
-import { resolveConversionReader } from "#src/conversion-reader.ts";
-import { APPLICATION_ORIGIN, routeApplicationDomain } from "#src/domain-routing.ts";
-import { revokeVerifiedGoogleToken } from "#src/google-token-revocation.ts";
-import { accountAuthError, jsonError } from "#src/http-errors.ts";
-import { ingressIdentity } from "#src/ingress-identity.ts";
+import { authenticateAccountRequest, mediaCookie, mediaRequest } from "#src/http/account-auth.ts";
+import { APPLICATION_ORIGIN, routeApplicationDomain } from "#src/http/domain-routing.ts";
+import { accountAuthError, jsonError } from "#src/http/http-errors.ts";
+import { ingressIdentity } from "#src/http/ingress-identity.ts";
 import {
   toAccountHistoryResponse,
   toAccountSnapshotResponse,
@@ -48,18 +48,18 @@ import {
   toGrantSnapshotResponse,
   toNarrationDocumentResponse,
   toPlaybackPositionResponse,
-} from "#src/listener-responses.ts";
-import { isDevelopmentOperatorRequest } from "#src/operator-access.ts";
+} from "#src/http/listener-responses.ts";
+import { isDevelopmentOperatorRequest } from "#src/http/operator-access.ts";
 import {
   loadReadyAudiobookFromEnvironment,
   serveAudio,
   serveCoverImage,
-} from "#src/serve-audiobook.ts";
+} from "#src/http/serve-audiobook.ts";
+import { applyWebAppCspNonce } from "#src/http/web-app-csp.ts";
 import { createConversionGrant } from "#src/use-cases/create-conversion-grant.ts";
 import { getGrantConversion as loadGrantConversion } from "#src/use-cases/get-grant-conversion.ts";
 import { getSynthesisState } from "#src/use-cases/get-synthesis-state.ts";
 import { startAudiobookConversion } from "#src/use-cases/start-audiobook-conversion.ts";
-import { applyWebAppCspNonce } from "#src/web-app-csp.ts";
 
 type GrantStub = DurableObjectStub<ConversionGrantDurableObject>;
 type RegistryStub = DurableObjectStub<RegistryDurableObject>;

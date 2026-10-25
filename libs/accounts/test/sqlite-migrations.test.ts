@@ -4,9 +4,9 @@ import sqlite from "node:sqlite";
 import { expect, test } from "vitest";
 import { z } from "zod";
 
-import * as accountSchema from "#src/account-sqlite-schema.ts";
 import accountMigrations from "#src/migrations/account.ts";
-import { rateEvents } from "#src/rate-limit-schema.ts";
+import * as accountSchema from "#src/storage/account-sqlite-schema.ts";
+import { rateEvents } from "#src/storage/rate-limit-schema.ts";
 
 const stores = [
   { name: "account", schema: { ...accountSchema, rateEvents }, bundle: accountMigrations },

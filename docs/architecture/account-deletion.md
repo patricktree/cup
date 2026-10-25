@@ -24,7 +24,7 @@ Lifecycle endpoints use the shared listener API contracts, request validation, a
 
 Scheduling stops playback on the requesting client and blocks subsequent private access checks. Lifecycle inspection and explicit recovery remain available until the deadline. Recovery preserves history and allowance; once the deadline is reached, recovery is refused.
 
-Sources: [client confirmation](../../apps/web-app/src/data-fetching/account-confirmation.ts), [lifecycle API](../../libs/api-server/src/api-server.ts), and [atomic account transitions](../../libs/accounts/src/account-lifecycle.ts).
+Sources: [client confirmation](../../apps/web-app/src/data-fetching/account-confirmation.ts), [lifecycle API](../../libs/api-server/src/api-server.ts), and [atomic account transitions](../../libs/accounts/src/storage/account-lifecycle.ts).
 
 ## Fencing and cleanup
 
@@ -36,7 +36,7 @@ The coordinator awaits account and provider calls with its Durable Object input 
 
 Failures retain durable progress and retry with backoff. Operators can inspect overdue cleanup with the [operator CLI](../../apps/operator/README.md#list-account-deletions); there is no force-complete action that discards uncertain writers.
 
-Sources: [account cleanup](../../libs/accounts/src/account-durable-object.ts), [writer reconciliation](../../libs/accounts/src/account-artifact-writers.ts), [registry alarms](../../libs/registry/src/durable-object/registry-durable-object.ts), [coordinator](../../libs/registry/src/account-deletion/deletion-coordinator.ts), and [Supabase identity deletion](../../libs/registry/src/providers/supabase-identity.ts).
+Sources: [account cleanup](../../libs/accounts/src/durable-object/account-durable-object.ts), [writer reconciliation](../../libs/accounts/src/storage/account-artifact-writers.ts), [registry alarms](../../libs/registry/src/durable-object/registry-durable-object.ts), [coordinator](../../libs/registry/src/account-deletion/deletion-coordinator.ts), and [Supabase identity deletion](../../libs/registry/src/providers/supabase-identity.ts).
 
 ## Notifications and retained evidence
 
