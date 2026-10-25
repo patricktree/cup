@@ -4,7 +4,7 @@ This package defines the operator API's routes, request and response schemas, an
 
 ## OpenAPI snapshot
 
-The [OpenAPI test](test/openapi.test.ts) generates the operator API's OpenAPI document with `createOperatorOpenApiDocument` and compares it with the committed [snapshot](test/__snapshots__/openapi.json). The document is not exported to a build output. The test also checks that every operation declares error responses with the shared error schema and that request bodies are required JSON.
+The [OpenAPI test](test/openapi.test.ts) generates the operator API's OpenAPI document with `createOperatorOpenApiDocument` and compares it with the committed [snapshot](test/__snapshots__/openapi.json). The document is not exported to a build output. The test also checks that every operation declares error responses with the shared error schema, that every POST declares the `400 invalid-input` response its validation hook returns, and that request bodies are required JSON.
 
 After an intended contract change, update the snapshot and review its diff:
 
