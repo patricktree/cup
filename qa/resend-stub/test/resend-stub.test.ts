@@ -94,6 +94,26 @@ test("the same key while the first request is in flight answers 409 concurrent_i
   expect(stub.emails).toStrictEqual([{ id, idempotencyKey: "key-1", email: EMAIL }]);
 });
 
+test("a held replay answers from the ledger as it stands on release", async ({
+  expect,
+  onTestFinished,
+}) => {
+  const stub = await useResendStub({ onTestFinished });
+  const heldFirst = stub.holdNext();
+  const heldReplay = stub.holdNext();
+  const first = postEmail(stub, "key-1", EMAIL);
+  await heldFirst.received;
+  const replay = postEmail(stub, "key-1", EMAIL);
+  await heldReplay.received;
+
+  heldFirst.release();
+  const id = await readEmailId(await first);
+  heldReplay.release();
+
+  expect(await readEmailId(await replay)).toBe(id);
+  expect(stub.emails).toHaveLength(1);
+});
+
 test("a key is kept for 24 hours from its first request; after that the same request sends again", async ({
   expect,
   onTestFinished,

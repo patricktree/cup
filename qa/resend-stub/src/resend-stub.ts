@@ -168,7 +168,8 @@ export async function startResendStub(options: ResendStubOptions = {}): Promise<
     if (entry !== undefined && now() < entry.firstRequestMs + IDEMPOTENCY_KEY_LIFETIME_MS) {
       hold?.markReceived();
       await hold?.released;
-      return answerReplay(entry, body);
+      // The first request may have finished while this replay was held.
+      return answerReplay(ledger.get(idempotencyKey ?? "") ?? entry, body);
     }
 
     const firstRequestMs = now();

@@ -8,7 +8,7 @@ import { DeletionCoordinator } from "#src/deletion-coordinator.ts";
 import { RegistryDurableObject as BaseRegistryDurableObject } from "#src/registry-durable-object.ts";
 import { migrateRegistry } from "#src/sqlite-migrations.ts";
 
-import { createHoldingAccounts } from "#test/holding-accounts.ts";
+import { createHoldingAccounts, type AccountMethod, type Hold } from "#test/holding-accounts.ts";
 
 /** Simulates a launch acknowledgement loss followed by exhausted terminal RPC retries. */
 export class AccountDispatchTestDurableObject extends BaseAccountDurableObject {
@@ -142,7 +142,7 @@ export class DeletionTestDurableObject extends DurableObject<{
     },
   );
   private readonly holdingAccounts = createHoldingAccounts(this.env.ACCOUNTS);
-  private accountHold: { reached: Promise<void>; release(): void } | undefined;
+  private accountHold: Hold | undefined;
   /** `accept()` schedules a coordinator alarm; these tests reconcile explicitly instead. */
   override async alarm() {}
   configureProviderForTest(status: number, retryAfter?: string) {
@@ -188,7 +188,7 @@ export class DeletionTestDurableObject extends DurableObject<{
     );
     return coordinator.receipts();
   }
-  holdNextAccountCallForTest(method: "fenceDeletion" | "eraseAccount") {
+  holdNextAccountCallForTest(method: AccountMethod) {
     this.accountHold = this.holdingAccounts.holdNext(method);
   }
   async accountCallReachedForTest() {

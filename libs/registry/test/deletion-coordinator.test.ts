@@ -14,13 +14,15 @@ import { resendError, useResendStub, type ResendStub } from "@cup/resend-stub";
 
 import type { DeletionTestDurableObject } from "#test/worker.ts";
 
-type DeletionEnvironment = {
+type TestEnvironment = {
   ACCOUNTS: DurableObjectNamespace<AccountDurableObject>;
   DELETION_TEST: DurableObjectNamespace<DeletionTestDurableObject>;
 };
 
-/** Short enough to keep tests fast; the production timeout is 10 s. */
-const TEST_TIMEOUT_MS = 300;
+/** The provider timeout for tests that hang or hold a request; the production timeout is 10 s. */
+const SHORT_TIMEOUT_MS = 300;
+/** Generous enough for a loaded machine, for tests whose requests get an answer. */
+const DEFAULT_TIMEOUT_MS = 5_000;
 const RECIPIENT = "listener@example.com";
 
 const harness = createTestHarness({
@@ -28,12 +30,12 @@ const harness = createTestHarness({
   workers: [{ configPath: "./wrangler.test.jsonc" }],
 });
 const worker = harness.getWorker();
-let bindings: DeletionEnvironment;
+let bindings: TestEnvironment;
 
 beforeAll(async () => {
   await harness.listen();
   const environment: unknown = await worker.getEnv();
-  if (!isDeletionEnvironment(environment)) {
+  if (!isTestEnvironment(environment)) {
     throw new Error("Deletion test bindings unavailable");
   }
   bindings = environment;
@@ -79,7 +81,7 @@ test("a retry after a lost response replays the key and delivers exactly one ema
   const coordinator = await scheduledCoordinator();
   const held = stub.holdNext();
 
-  const reconciling = coordinator.reconcile(stub);
+  const reconciling = coordinator.reconcile(stub, SHORT_TIMEOUT_MS);
   await held.received;
   await reconciling;
   expect(await coordinator.notification()).toMatchObject({ state: "pending", attempts: 1 });
@@ -101,12 +103,12 @@ test("a retry while the first request is still in progress gets 409 and retries 
   const stub = await useResendStub({ onTestFinished });
   const coordinator = await scheduledCoordinator();
   const held = stub.holdNext();
-  const reconciling = coordinator.reconcile(stub);
+  const reconciling = coordinator.reconcile(stub, SHORT_TIMEOUT_MS);
   await held.received;
   await reconciling;
 
   await coordinator.makeNotificationDue();
-  await coordinator.reconcile(stub);
+  await coordinator.reconcile(stub, SHORT_TIMEOUT_MS);
   expect(await coordinator.notification()).toMatchObject({ state: "pending", attempts: 2 });
   held.release();
   await expect.poll(() => stub.emails).toHaveLength(1);
@@ -126,7 +128,7 @@ test("a request timeout leaves the notice pending, and the retry delivers exactl
   stub.hangNext();
   const before = Temporal.Now.instant().epochMilliseconds;
 
-  await coordinator.reconcile(stub);
+  await coordinator.reconcile(stub, SHORT_TIMEOUT_MS);
 
   const pending = await coordinator.notification();
   expect(pending).toMatchObject({ state: "pending", attempts: 1 });
@@ -216,7 +218,7 @@ test("a restore accepted while the coordinator awaits the account fence supersed
   );
   await coordinator.holdNextAccountCallForTest("fenceDeletion");
 
-  const reconciling = coordinator.reconcileWithProvidersForTest(stub.url, TEST_TIMEOUT_MS);
+  const reconciling = coordinator.reconcileWithProvidersForTest(stub.url, DEFAULT_TIMEOUT_MS);
   await coordinator.accountCallReachedForTest();
   await coordinator.acceptForTest({ ...attempt, state: "restored" });
   await coordinator.releaseAccountCallForTest();
@@ -248,8 +250,8 @@ async function scheduledCoordinator() {
   const key = `${attempt.attemptId}:scheduled`;
   return {
     key,
-    reconcile: (stub: ResendStub) =>
-      object.reconcileWithProvidersForTest(stub.url, TEST_TIMEOUT_MS),
+    reconcile: (stub: ResendStub, timeoutMs = DEFAULT_TIMEOUT_MS) =>
+      object.reconcileWithProvidersForTest(stub.url, timeoutMs),
     async notification() {
       const [row] = await storage.exec(
         `SELECT json_extract(payload_json, '$.state') AS state,
@@ -285,26 +287,23 @@ async function restoredAccountAttempt(): Promise<DeletionAttempt> {
   });
   // The account is initialized directly, so each registry delivery rejects after the state change.
   const schedule = await account.deletionChallenge();
-  await account
-    .scheduleDeletion({
+  await expectRejection(
+    account.scheduleDeletion({
       challengeId: schedule.challengeId,
       authenticatedAtSeconds: Math.floor(schedule.issuedAtMs / 1000) + 1,
       email: RECIPIENT,
-    })
-    .catch(() => {});
+    }),
+  );
   const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
   const [row] = await storage.exec("SELECT payload_json FROM deletion_attempts");
   const restore = await account.deletionChallenge();
-  await account
-    .restoreAccount(restore.challengeId, Math.floor(restore.issuedAtMs / 1000) + 1)
-    .catch(() => {});
-  if (typeof row?.["payload_json"] !== "string") {
-    throw new Error("The scheduled deletion attempt is missing");
+  await expectRejection(
+    account.restoreAccount(restore.challengeId, Math.floor(restore.issuedAtMs / 1000) + 1),
+  );
+  if ((await account.inspect()).state !== "active" || typeof row?.["payload_json"] !== "string") {
+    throw new Error("The account was not scheduled for deletion and restored");
   }
   const scheduled: DeletionAttempt = JSON.parse(row["payload_json"]);
-  if ((await account.inspect()).state !== "active") {
-    throw new Error("The account was not restored");
-  }
   return { ...scheduled, state: "scheduled" };
 }
 
@@ -320,7 +319,17 @@ function expectExactlyOneEmail(expect: TestContext["expect"], stub: ResendStub, 
   expect(new Set(bodies).size).toBe(1);
 }
 
-function isDeletionEnvironment(value: unknown): value is DeletionEnvironment {
+/** Wrangler hides the original rejection behind its RPC transport; state checks verify the effect. */
+async function expectRejection(operation: Promise<unknown>): Promise<void> {
+  try {
+    await operation;
+  } catch {
+    return;
+  }
+  throw new Error("Expected the Durable Object operation to reject");
+}
+
+function isTestEnvironment(value: unknown): value is TestEnvironment {
   return (
     typeof value === "object" && value !== null && "ACCOUNTS" in value && "DELETION_TEST" in value
   );

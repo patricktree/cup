@@ -8,10 +8,10 @@
 
 import type { DeletionAccounts } from "#src/deletion-coordinator.ts";
 
-type AccountMethod = "fenceDeletion" | "eraseAccount";
+export type AccountMethod = "fenceDeletion" | "eraseAccount";
 
 /** A held call, waiting for the test. */
-type Hold = {
+export type Hold = {
   /** Resolves once the matching call has arrived and is being held. */
   reached: Promise<void>;
   /** Lets the held call run on the real account. */
