@@ -10,7 +10,7 @@ import https from "node:https";
 import { test } from "vitest";
 
 const RESEND_BASE_URL = "https://api.resend.com";
-/** The sender of deletion notices in `libs/registry/src/account-deletion/deletion-coordinator.ts`. */
+/** The sender of deletion notices in `libs/registry/src/providers/resend-email.ts`. */
 const DEFAULT_FROM = "Cup <no-reply@cup.audio>";
 
 const resendApiKey = process.env["RESEND_API_KEY"] ?? "";

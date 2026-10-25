@@ -5,7 +5,12 @@ import { z } from "zod";
 
 import { deletionAttemptSchema, type DeletionAttempt } from "@cup/accounts/lifecycle";
 
-import type { SupabaseAdminEnvironment } from "#src/providers/supabase-identity.ts";
+import type { ProviderRequest } from "#src/providers/provider-request.ts";
+import { sendResendEmail, type ResendEnvironment } from "#src/providers/resend-email.ts";
+import {
+  deleteSupabaseIdentity,
+  type SupabaseAdminEnvironment,
+} from "#src/providers/supabase-identity.ts";
 import {
   canceledDeletionAttempts,
   deletionJobs,
@@ -22,12 +27,10 @@ export type DeletionAccounts = {
     eraseAccount(attemptId: string): Promise<void>;
   };
 };
-export type DeletionEnvironment = SupabaseAdminEnvironment & {
-  ACCOUNTS: DeletionAccounts;
-  RESEND_API_KEY: string;
-  /** Resend API origin, such as `https://api.resend.com`. */
-  RESEND_BASE_URL: string;
-};
+export type DeletionEnvironment = SupabaseAdminEnvironment &
+  ResendEnvironment & {
+    ACCOUNTS: DeletionAccounts;
+  };
 /** Outgoing provider calls, replaceable so tests can drive them against local stand-ins. */
 export type DeletionProviderOptions = {
   request?: typeof fetch;
@@ -61,13 +64,14 @@ export class DeletionCoordinator {
   private readonly database: DrizzleSqliteDODatabase;
   private readonly storage: DurableObjectStorage;
   private readonly env: DeletionEnvironment;
+  private readonly provider: ProviderRequest;
   private readonly request: typeof fetch;
   private readonly timeoutMs: number;
   constructor(
     storage: DurableObjectStorage,
     env: DeletionEnvironment,
     {
-      // Workers reject `fetch` called as a method of another object, as `this.request()` does.
+      // Workers reject `fetch` called as a method of another object, such as `provider.request()`.
       request = (...args) => fetch(...args),
       timeoutMs = PROVIDER_TIMEOUT_MS,
     }: DeletionProviderOptions = {},
@@ -75,6 +79,7 @@ export class DeletionCoordinator {
     this.storage = storage;
     this.database = drizzle(storage);
     this.env = env;
+    this.provider = { request, timeoutMs };
     this.request = request;
     this.timeoutMs = timeoutMs;
   }
@@ -193,7 +198,7 @@ export class DeletionCoordinator {
         // Identity unavailability must not block independent Cup storage cleanup.
         if (!job.identityDone) {
           try {
-            await this.deleteIdentity(job.subject);
+            await deleteSupabaseIdentity(this.env, job.subject, this.provider);
             job.identityDone = true;
             this.save(job);
           } catch {
@@ -428,43 +433,24 @@ export class DeletionCoordinator {
       notification.firstAttemptMs ??= nowMs;
       notification.attempts += 1;
       this.saveNotification(notification); // Intent and window precede an ambiguous HTTP call.
-      let retryAfterMs = 0;
-      try {
-        const response = await this.request(`${this.env.RESEND_BASE_URL}/emails`, {
-          method: "POST",
-          signal: AbortSignal.timeout(this.timeoutMs),
-          headers: {
-            Authorization: `Bearer ${this.env.RESEND_API_KEY}`,
-            "Content-Type": "application/json",
-            "Idempotency-Key": notification.key,
-            // Resend refuses requests without a User-Agent with 403.
-            "User-Agent": "cup",
-          },
-          body: JSON.stringify({
-            from: "Cup <no-reply@cup.audio>",
-            to: [notification.email],
-            subject: notification.subject,
-            text: notification.text,
-          }),
-        });
-        if (response.ok) {
-          notification.state = "sent";
-        } else if (
-          response.status >= 400 &&
-          response.status < 500 &&
-          ![408, 409, 429].includes(response.status)
-        ) {
-          notification.state = "failed";
-        } else {
-          const delay = response.headers.get("Retry-After");
-          if (delay) {
-            retryAfterMs = providerRetryDelay(delay, nowMs);
-          }
-        }
-        await response.body?.cancel();
-      } catch {
-        /* The immutable key is replayed only inside its provider deduplication window. */
+      // A retry replays the immutable key only inside its provider deduplication window.
+      const outcome = await sendResendEmail(
+        this.env,
+        {
+          idempotencyKey: notification.key,
+          to: notification.email,
+          subject: notification.subject,
+          text: notification.text,
+        },
+        this.provider,
+        nowMs,
+      );
+      if (outcome.kind === "sent") {
+        notification.state = "sent";
+      } else if (outcome.kind === "rejected") {
+        notification.state = "failed";
       }
+      const retryAfterMs = outcome.kind === "retry" ? outcome.retryAfterMs : 0;
       notification.nextAttemptMs =
         nowMs +
         Math.max(
@@ -520,54 +506,5 @@ export class DeletionCoordinator {
         .run();
       this.database.delete(deletionJobs).where(eq(deletionJobs.attemptId, job.attemptId)).run();
     });
-  }
-  private async deleteIdentity(subject: string) {
-    const response = await this.request(`${this.env.SUPABASE_URL}/auth/v1/admin/users/${subject}`, {
-      method: "DELETE",
-      signal: AbortSignal.timeout(this.timeoutMs),
-      headers: {
-        apikey: this.env.SUPABASE_SECRET_KEY,
-        Authorization: `Bearer ${this.env.SUPABASE_SECRET_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ should_soft_delete: false }),
-    });
-    await response.body?.cancel();
-    if (!response.ok && response.status !== 404) {
-      throw new Error("Identity deletion unavailable");
-    }
-  }
-}
-
-function providerRetryDelay(value: string, nowMs: number) {
-  if (/^\d+$/.test(value)) {
-    return Number(value) * 1000;
-  }
-  const match = /^[A-Za-z]{3}, (\d{2}) ([A-Za-z]{3}) (\d{4}) (\d{2}):(\d{2}):(\d{2}) GMT$/.exec(
-    value,
-  );
-  if (!match) {
-    return 0;
-  }
-  const month =
-    ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(
-      match[2]!,
-    ) + 1;
-  try {
-    const date = Temporal.ZonedDateTime.from(
-      {
-        timeZone: "UTC",
-        year: Number(match[3]),
-        month,
-        day: Number(match[1]),
-        hour: Number(match[4]),
-        minute: Number(match[5]),
-        second: Number(match[6]),
-      },
-      { overflow: "reject" },
-    );
-    return Math.max(0, date.epochMilliseconds - nowMs);
-  } catch {
-    return 0;
   }
 }

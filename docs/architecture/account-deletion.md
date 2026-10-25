@@ -36,7 +36,7 @@ The coordinator awaits account and provider calls with its Durable Object input 
 
 Failures retain durable progress and retry with backoff. Operators can inspect overdue cleanup with the [operator CLI](../../apps/operator/README.md#list-account-deletions); there is no force-complete action that discards uncertain writers.
 
-Sources: [account cleanup](../../libs/accounts/src/account-durable-object.ts), [writer reconciliation](../../libs/accounts/src/account-artifact-writers.ts), [registry alarms](../../libs/registry/src/durable-object/registry-durable-object.ts), and [coordinator](../../libs/registry/src/account-deletion/deletion-coordinator.ts).
+Sources: [account cleanup](../../libs/accounts/src/account-durable-object.ts), [writer reconciliation](../../libs/accounts/src/account-artifact-writers.ts), [registry alarms](../../libs/registry/src/durable-object/registry-durable-object.ts), [coordinator](../../libs/registry/src/account-deletion/deletion-coordinator.ts), and [Supabase identity deletion](../../libs/registry/src/providers/supabase-identity.ts).
 
 ## Notifications and retained evidence
 
@@ -46,6 +46,6 @@ Terminal notification payloads are redacted. After cleanup and notification proc
 
 Notices go to `RESEND_BASE_URL`, `https://api.resend.com` in production, with a 10-second timeout. A 4xx response other than 408, 409, or 429 is final; other failures, timeouts, and lost responses retry with backoff, no earlier than `Retry-After`. The [coordinator tests](../../libs/registry/test/deletion-coordinator.test.ts) drive these outcomes against the [Resend stub](../../qa/resend-stub/src/resend-stub.ts) and assert exactly one email per notification key, including after a retry that follows a lost response and one that meets a request still in progress. The opt-in `pnpm test:resend-live` contract test checks the stub's idempotency model against the real API.
 
-Source: [notification and receipt implementation](../../libs/registry/src/account-deletion/deletion-coordinator.ts), including retry timing. See [production configuration](../production-configuration.md#email) for configuration and the [operator CLI](../../apps/operator/README.md#list-account-deletions) for inspection.
+Sources: [notification and receipt implementation](../../libs/registry/src/account-deletion/deletion-coordinator.ts), including retry timing, and the [Resend call](../../libs/registry/src/providers/resend-email.ts), including response classification and `Retry-After` parsing. See [production configuration](../production-configuration.md#email) for configuration and the [operator CLI](../../apps/operator/README.md#list-account-deletions) for inspection.
 
 Related research: [provider deletion](../research/social-signup/account-deletion-research.md), [transactional email](../research/social-signup/transactional-email-research.md), and [telemetry retention](../research/social-signup/telemetry-retention-research.md).
