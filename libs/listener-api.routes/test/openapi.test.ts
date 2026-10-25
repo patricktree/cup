@@ -85,6 +85,15 @@ describe("listener OpenAPI document", () => {
     ).toStrictEqual([]);
   });
 
+  test("every POST declares the 400 response that the validation hook returns", () => {
+    // `defaultHook` answers a request that fails its route's schemas with `400 invalid-input`.
+    const postsWithout400 = listOperations().flatMap(({ name, method, operation }) =>
+      method === "post" && operation.responses["400"] === undefined ? [name] : [],
+    );
+
+    expect(postsWithout400).toStrictEqual([]);
+  });
+
   test("every request body is required JSON", () => {
     const operationsWithOtherBodies = listOperations().flatMap(({ name, operation }) =>
       operation.requestBody !== undefined &&

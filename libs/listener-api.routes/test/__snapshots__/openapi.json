@@ -2222,6 +2222,75 @@
               }
             }
           },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "conversion-not-found",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
           "401": {
             "description": "Sign in required.",
             "content": {
@@ -2531,6 +2600,75 @@
         "responses": {
           "204": {
             "description": "Media cookie issued."
+          },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "conversion-not-found",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
           },
           "401": {
             "description": "Sign in required.",
@@ -6114,6 +6252,75 @@
                         "availableMilliseconds"
                       ]
                     }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "conversion-not-found",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
                   ]
                 }
               }

@@ -175,6 +175,7 @@ const filesSessionRoute = createRoute({
   },
   responses: {
     204: { description: "Media cookie issued." },
+    400: errorResponse("Invalid request."),
     401: errorResponse("Sign in required."),
     403: errorResponse("Account blocked."),
     503: errorResponse("Unavailable."),
@@ -209,6 +210,7 @@ const startAccountConversionRoute = createRoute({
       content: { "application/json": { schema: accountStartResponseSchema } },
       description: "Account conversion replayed.",
     },
+    400: errorResponse("Invalid request."),
     401: errorResponse("Sign in required."),
     403: errorResponse("Account blocked."),
     409: errorResponse("Credits unavailable or request conflict."),
@@ -325,6 +327,7 @@ const retryConversionRoute = createRoute({
       content: { "application/json": { schema: retryConversionResponseSchema } },
       description: "Preparation restarted, or the outcome of requesting the missing segments.",
     },
+    400: errorResponse("Invalid request."),
     401: errorResponse("Authorization required."),
     403: errorResponse("Blocked."),
     404: errorResponse("Not found."),
