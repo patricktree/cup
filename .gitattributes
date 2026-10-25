@@ -6,3 +6,5 @@ libs/*/src/migrations/*.ts linguist-generated=true
 apps/web-app/src/routeTree.gen.ts linguist-generated=true
 apps/mobile-app/android/app/capacitor.build.gradle linguist-generated=true
 apps/mobile-app/android/capacitor.settings.gradle linguist-generated=true
+libs/listener-api.routes/test/__snapshots__/openapi.json linguist-generated=true
+libs/operator-api.routes/test/__snapshots__/openapi.json linguist-generated=true

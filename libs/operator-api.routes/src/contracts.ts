@@ -120,11 +120,34 @@ export const migrationReportSchema = z
   })
   .strict();
 
+/**
+ * Every `code` of an operator API error response, including the codes of the server-wide middleware
+ * that also guards operator routes, such as `method-not-allowed`.
+ */
+export const ERROR_CODE = {
+  ACCOUNT_NOT_ACTIVE: "account-not-active",
+  ACCOUNT_NOT_FOUND: "account-not-found",
+  ACCOUNT_UNAVAILABLE: "account-unavailable",
+  ADJUSTMENT_EXCEEDS_AVAILABLE_DURATION: "adjustment-exceeds-available-duration",
+  ALLOWANCE_BELOW_USED_DURATION: "allowance-below-used-duration",
+  GRANT_NOT_FOUND: "grant-not-found",
+  IDEMPOTENCY_CONFLICT: "idempotency-conflict",
+  INVALID_CURSOR: "invalid-cursor",
+  INVALID_INPUT: "invalid-input",
+  METHOD_NOT_ALLOWED: "method-not-allowed",
+  NOT_FOUND: "not-found",
+  OPERATIONAL_ERROR: "operational-error",
+  OPERATOR_UNAUTHORIZED: "operator-unauthorized",
+  REQUEST_TOO_LARGE: "request-too-large",
+  UNSUPPORTED_MEDIA_TYPE: "unsupported-media-type",
+} as const;
+export type ErrorCode = (typeof ERROR_CODE)[keyof typeof ERROR_CODE];
+
 export const errorResponseSchema = z
   .object({
     error: z
       .object({
-        code: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+        code: z.enum(ERROR_CODE),
         message: z.string().min(1),
         requestId: uuidV4Schema,
       })

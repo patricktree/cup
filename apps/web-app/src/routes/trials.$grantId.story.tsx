@@ -22,7 +22,7 @@ export const OpenGrant = {
       HttpResponse.json(
         {
           error: {
-            code: "auth-unavailable",
+            code: "operational-error",
             message: "Sign-in is unavailable in this trial story.",
             requestId: "trial-story",
           },

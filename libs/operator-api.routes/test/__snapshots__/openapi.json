@@ -1,0 +1,3205 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "create-audiobook-from-url operator API",
+    "version": "1.0.0"
+  },
+  "components": {
+    "schemas": {},
+    "parameters": {}
+  },
+  "paths": {
+    "/api/operator/accounts": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "provisioning",
+                "active",
+                "deleting_identity"
+              ]
+            },
+            "required": false,
+            "name": "phase",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Registry identity mappings, oldest first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accounts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "accountId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "subject": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "phase": {
+                            "type": "string",
+                            "enum": [
+                              "provisioning",
+                              "active",
+                              "deleting_identity"
+                            ]
+                          },
+                          "usage": {
+                            "type": "object",
+                            "properties": {
+                              "allowanceMilliseconds": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "reservedMilliseconds": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "spentMilliseconds": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "availableMilliseconds": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "allowanceMilliseconds",
+                              "reservedMilliseconds",
+                              "spentMilliseconds",
+                              "availableMilliseconds"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "accountId",
+                          "subject",
+                          "createdAt",
+                          "phase"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "accounts"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor or filter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Operational error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/operator/accounts/deletions": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Account deletion attempts and retained receipts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "attempts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "attemptId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "accountId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "scheduled",
+                              "restored",
+                              "deleting",
+                              "erased"
+                            ]
+                          },
+                          "identityDone": {
+                            "type": "boolean"
+                          },
+                          "accountDone": {
+                            "type": "boolean"
+                          },
+                          "failures": {
+                            "type": "integer"
+                          },
+                          "overdue": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "attemptId",
+                          "accountId",
+                          "state",
+                          "identityDone",
+                          "accountDone",
+                          "failures",
+                          "overdue"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "receipts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "attemptId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "completedAtMs": {
+                            "type": "number"
+                          },
+                          "expiresAtMs": {
+                            "type": "number"
+                          },
+                          "result": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "attemptId",
+                          "completedAtMs",
+                          "expiresAtMs",
+                          "result"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "attempts",
+                    "receipts"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Operational error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Account registry unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/operator/accounts/{accountId}/allowance-adjustments": {
+      "post": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "accountId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "requestId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                  },
+                  "amountMilliseconds": {
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "requestId",
+                  "amountMilliseconds",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Adjustment recorded or replayed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accountId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "balance": {
+                      "type": "object",
+                      "properties": {
+                        "unit": {
+                          "type": "string",
+                          "enum": [
+                            "audio-millisecond"
+                          ]
+                        },
+                        "available": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "unit",
+                        "available",
+                        "reserved"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "accountId",
+                    "balance"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Account inactive, adjustment exceeds available duration, or conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Operational error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/operator/accounts/{accountId}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "accountId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account state, accounting, conversions, and artifact writers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "account": {
+                      "type": "object",
+                      "properties": {
+                        "accountId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "subject": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "createdAtMs": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "deletion_scheduled",
+                            "deleting"
+                          ]
+                        },
+                        "executionEpoch": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        },
+                        "recoveryDeadlineMs": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "balance": {
+                          "type": "object",
+                          "properties": {
+                            "unit": {
+                              "type": "string",
+                              "enum": [
+                                "audio-millisecond"
+                              ]
+                            },
+                            "available": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "reserved": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "unit",
+                            "available",
+                            "reserved"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "accountId",
+                        "subject",
+                        "createdAtMs",
+                        "state",
+                        "executionEpoch",
+                        "recoveryDeadlineMs",
+                        "balance"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "accounting": {
+                      "type": "object",
+                      "properties": {
+                        "balance": {
+                          "type": "object",
+                          "properties": {
+                            "unit": {
+                              "type": "string",
+                              "enum": [
+                                "audio-millisecond"
+                              ]
+                            },
+                            "available": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "reserved": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "unit",
+                            "available",
+                            "reserved"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "reconstructed": {
+                          "type": "object",
+                          "properties": {
+                            "available": {
+                              "type": "number"
+                            },
+                            "reserved": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "available",
+                            "reserved"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "entries": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "balance",
+                        "reconstructed",
+                        "entries"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "history": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "conversionId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "idempotencyKey": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "sourceUrl": {
+                                "type": "string"
+                              },
+                              "createdAtMs": {
+                                "type": "number"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "pending",
+                                  "insufficient-duration",
+                                  "synthesizing",
+                                  "ready",
+                                  "failed"
+                                ]
+                              },
+                              "outcome": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "ready"
+                                        ]
+                                      },
+                                      "title": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "audiobookReference": {
+                                        "type": "object",
+                                        "properties": {
+                                          "key": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          },
+                                          "contentType": {
+                                            "type": "string",
+                                            "enum": [
+                                              "application/json"
+                                            ]
+                                          },
+                                          "byteLength": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "exclusiveMinimum": true
+                                          },
+                                          "etag": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          }
+                                        },
+                                        "required": [
+                                          "key",
+                                          "contentType",
+                                          "byteLength",
+                                          "etag"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "hasCoverImage": {
+                                        "type": "boolean",
+                                        "enum": [
+                                          true
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "status",
+                                      "title",
+                                      "audiobookReference"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "failed"
+                                        ]
+                                      },
+                                      "failureCategory": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "explanation": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "required": [
+                                      "status",
+                                      "failureCategory",
+                                      "explanation"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "nullable": true
+                                  }
+                                ]
+                              },
+                              "completedAtMs": {
+                                "type": "number",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "conversionId",
+                              "idempotencyKey",
+                              "sourceUrl",
+                              "createdAtMs",
+                              "status",
+                              "outcome",
+                              "completedAtMs"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "nextCursor": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "nextCursor"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "writers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "writerId": {
+                            "type": "string"
+                          },
+                          "prefix": {
+                            "type": "string"
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "running",
+                              "drained",
+                              "uncertain"
+                            ]
+                          },
+                          "effect": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        },
+                        "required": [
+                          "writerId",
+                          "prefix",
+                          "state",
+                          "effect"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "account",
+                    "accounting",
+                    "history",
+                    "writers"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Operational error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/operator/grants": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "requestId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                  }
+                },
+                "required": [
+                  "label",
+                  "requestId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Previously issued grant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "grantId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "provisioning",
+                            "open",
+                            "temporarily-full",
+                            "exhausted",
+                            "expired",
+                            "revoked"
+                          ]
+                        },
+                        "result": {
+                          "type": "string",
+                          "enum": [
+                            "issued"
+                          ]
+                        },
+                        "trialLink": {
+                          "type": "string",
+                          "format": "uri"
+                        }
+                      },
+                      "required": [
+                        "grantId",
+                        "requestId",
+                        "label",
+                        "createdAt",
+                        "expiresAt",
+                        "state",
+                        "result",
+                        "trialLink"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "grantId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "provisioning",
+                            "open",
+                            "temporarily-full",
+                            "exhausted",
+                            "expired",
+                            "revoked"
+                          ]
+                        },
+                        "result": {
+                          "type": "string",
+                          "enum": [
+                            "already-issued"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "grantId",
+                        "requestId",
+                        "label",
+                        "createdAt",
+                        "expiresAt",
+                        "state",
+                        "result"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Grant issued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "grantId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "provisioning",
+                            "open",
+                            "temporarily-full",
+                            "exhausted",
+                            "expired",
+                            "revoked"
+                          ]
+                        },
+                        "result": {
+                          "type": "string",
+                          "enum": [
+                            "issued"
+                          ]
+                        },
+                        "trialLink": {
+                          "type": "string",
+                          "format": "uri"
+                        }
+                      },
+                      "required": [
+                        "grantId",
+                        "requestId",
+                        "label",
+                        "createdAt",
+                        "expiresAt",
+                        "state",
+                        "result",
+                        "trialLink"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "grantId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "provisioning",
+                            "open",
+                            "temporarily-full",
+                            "exhausted",
+                            "expired",
+                            "revoked"
+                          ]
+                        },
+                        "result": {
+                          "type": "string",
+                          "enum": [
+                            "already-issued"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "grantId",
+                        "requestId",
+                        "label",
+                        "createdAt",
+                        "expiresAt",
+                        "state",
+                        "result"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Provisioning conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Operational error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "label",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "provisioning",
+                "open",
+                "temporarily-full",
+                "exhausted",
+                "expired",
+                "revoked"
+              ]
+            },
+            "required": false,
+            "name": "state",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Projected Registry listing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "grants": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "grantId": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                          },
+                          "requestId": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "expiresAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "provisioning",
+                              "open",
+                              "temporarily-full",
+                              "exhausted",
+                              "expired",
+                              "revoked"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "grantId",
+                          "requestId",
+                          "label",
+                          "createdAt",
+                          "expiresAt",
+                          "state"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "grants"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor or filter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Operational error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/operator/grants/{grantId}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "required": true,
+            "name": "grantId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authoritative grant inspection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "registry": {
+                      "type": "object",
+                      "properties": {
+                        "grantId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "provisioning",
+                            "open",
+                            "temporarily-full",
+                            "exhausted",
+                            "expired",
+                            "revoked"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "grantId",
+                        "requestId",
+                        "label",
+                        "createdAt",
+                        "expiresAt",
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "authoritative": {
+                      "type": "object",
+                      "properties": {
+                        "grantId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "revokedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "open",
+                            "temporarily-full",
+                            "exhausted",
+                            "expired",
+                            "revoked"
+                          ]
+                        },
+                        "duration": {
+                          "type": "object",
+                          "properties": {
+                            "availableMilliseconds": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "reservedMilliseconds": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "spentMilliseconds": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "availableMilliseconds",
+                            "reservedMilliseconds",
+                            "spentMilliseconds"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "allowanceMilliseconds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        },
+                        "conversions": {
+                          "type": "array",
+                          "items": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "conversionId": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                                  },
+                                  "sourceUrl": {
+                                    "type": "string",
+                                    "format": "uri"
+                                  },
+                                  "title": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "acceptedAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  "completedAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "pending"
+                                    ]
+                                  },
+                                  "idempotencyKey": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                                  },
+                                  "workflowId": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                                  },
+                                  "reconciliation": {
+                                    "type": "object",
+                                    "properties": {
+                                      "state": {
+                                        "type": "string",
+                                        "enum": [
+                                          "unconfirmed",
+                                          "confirmed",
+                                          "cutoff-ambiguous"
+                                        ]
+                                      },
+                                      "workflowStartedAt": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      }
+                                    },
+                                    "required": [
+                                      "state"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "conversionId",
+                                  "sourceUrl",
+                                  "acceptedAt",
+                                  "status",
+                                  "idempotencyKey",
+                                  "workflowId",
+                                  "reconciliation"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "conversionId": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                                  },
+                                  "sourceUrl": {
+                                    "type": "string",
+                                    "format": "uri"
+                                  },
+                                  "title": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "acceptedAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  "completedAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ready"
+                                    ]
+                                  },
+                                  "idempotencyKey": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                                  },
+                                  "workflowId": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                                  },
+                                  "audiobookUrl": {
+                                    "type": "string",
+                                    "pattern": "^\\/app\\/audiobooks\\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                                  },
+                                  "measurements": {
+                                    "type": "object",
+                                    "properties": {
+                                      "narrationTextCharacters": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      },
+                                      "narrationChunks": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      }
+                                    },
+                                    "required": [
+                                      "narrationTextCharacters",
+                                      "narrationChunks"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "providerUsage": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                      "nullable": true
+                                    }
+                                  },
+                                  "reconciliation": {
+                                    "type": "object",
+                                    "properties": {
+                                      "state": {
+                                        "type": "string",
+                                        "enum": [
+                                          "unconfirmed",
+                                          "confirmed",
+                                          "cutoff-ambiguous"
+                                        ]
+                                      },
+                                      "workflowStartedAt": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      }
+                                    },
+                                    "required": [
+                                      "state"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "conversionId",
+                                  "sourceUrl",
+                                  "acceptedAt",
+                                  "completedAt",
+                                  "status",
+                                  "idempotencyKey",
+                                  "workflowId",
+                                  "audiobookUrl",
+                                  "reconciliation"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "conversionId": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                                  },
+                                  "sourceUrl": {
+                                    "type": "string",
+                                    "format": "uri"
+                                  },
+                                  "title": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "acceptedAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  "completedAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "failed"
+                                    ]
+                                  },
+                                  "idempotencyKey": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                                  },
+                                  "workflowId": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                                  },
+                                  "failure": {
+                                    "type": "object",
+                                    "properties": {
+                                      "category": {
+                                        "type": "string",
+                                        "enum": [
+                                          "workflow-start",
+                                          "source-preparation",
+                                          "content-selection",
+                                          "content-limit",
+                                          "narration-synthesis",
+                                          "audiobook-assembly",
+                                          "workflow-platform",
+                                          "internal"
+                                        ]
+                                      },
+                                      "explanation": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "required": [
+                                      "category",
+                                      "explanation"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "diagnosticReference": {
+                                    "type": "string",
+                                    "maxLength": 500
+                                  },
+                                  "cleanupState": {
+                                    "type": "string",
+                                    "enum": [
+                                      "pending",
+                                      "complete",
+                                      "cleanup_failed"
+                                    ]
+                                  },
+                                  "reconciliation": {
+                                    "type": "object",
+                                    "properties": {
+                                      "state": {
+                                        "type": "string",
+                                        "enum": [
+                                          "unconfirmed",
+                                          "confirmed",
+                                          "cutoff-ambiguous"
+                                        ]
+                                      },
+                                      "workflowStartedAt": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      }
+                                    },
+                                    "required": [
+                                      "state"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "conversionId",
+                                  "sourceUrl",
+                                  "acceptedAt",
+                                  "completedAt",
+                                  "status",
+                                  "idempotencyKey",
+                                  "workflowId",
+                                  "failure",
+                                  "reconciliation"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        },
+                        "signingKeyGeneration": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        },
+                        "registrySnapshotRevision": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        },
+                        "registryConfirmedSnapshotRevision": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "grantId",
+                        "createdAt",
+                        "expiresAt",
+                        "state",
+                        "duration",
+                        "allowanceMilliseconds",
+                        "conversions",
+                        "signingKeyGeneration",
+                        "registrySnapshotRevision",
+                        "registryConfirmedSnapshotRevision"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "registrySnapshotDisagreement": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "registry",
+                    "authoritative",
+                    "registrySnapshotDisagreement"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Grant not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Operational error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/operator/grants/{grantId}/allowance": {
+      "put": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "required": true,
+            "name": "grantId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "allowanceMilliseconds": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  }
+                },
+                "required": [
+                  "allowanceMilliseconds"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conversion allowance updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "changed": {
+                      "type": "boolean"
+                    },
+                    "grant": {
+                      "type": "object",
+                      "properties": {
+                        "grantId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "revokedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "open",
+                            "temporarily-full",
+                            "exhausted",
+                            "expired",
+                            "revoked"
+                          ]
+                        },
+                        "duration": {
+                          "type": "object",
+                          "properties": {
+                            "availableMilliseconds": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "reservedMilliseconds": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "spentMilliseconds": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "availableMilliseconds",
+                            "reservedMilliseconds",
+                            "spentMilliseconds"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "grantId",
+                        "createdAt",
+                        "expiresAt",
+                        "state",
+                        "duration"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "changed",
+                    "grant"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Grant not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Allowance is below reserved and spent duration.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Operational error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/operator/grants/{grantId}/revocation": {
+      "post": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "required": true,
+            "name": "grantId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Grant revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "changed": {
+                      "type": "boolean"
+                    },
+                    "grant": {
+                      "type": "object",
+                      "properties": {
+                        "grantId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "revokedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "open",
+                            "temporarily-full",
+                            "exhausted",
+                            "expired",
+                            "revoked"
+                          ]
+                        },
+                        "duration": {
+                          "type": "object",
+                          "properties": {
+                            "availableMilliseconds": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "reservedMilliseconds": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "spentMilliseconds": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "availableMilliseconds",
+                            "reservedMilliseconds",
+                            "spentMilliseconds"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "grantId",
+                        "createdAt",
+                        "expiresAt",
+                        "state",
+                        "duration"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "changed",
+                    "grant"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Grant not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Operational error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/operator/grants/{grantId}/session-invalidations": {
+      "post": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "required": true,
+            "name": "grantId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sessions invalidated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "invalidatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "grant": {
+                      "type": "object",
+                      "properties": {
+                        "grantId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "revokedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "open",
+                            "temporarily-full",
+                            "exhausted",
+                            "expired",
+                            "revoked"
+                          ]
+                        },
+                        "duration": {
+                          "type": "object",
+                          "properties": {
+                            "availableMilliseconds": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "reservedMilliseconds": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "spentMilliseconds": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "availableMilliseconds",
+                            "reservedMilliseconds",
+                            "spentMilliseconds"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "grantId",
+                        "createdAt",
+                        "expiresAt",
+                        "state",
+                        "duration"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "invalidatedAt",
+                    "grant"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Grant not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Operational error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/operator/grant-migrations": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Complete migration report.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "complete": {
+                      "type": "boolean"
+                    },
+                    "registryVersion": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "exclusiveMinimum": true
+                    },
+                    "grants": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "grantId": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                          },
+                          "success": {
+                            "type": "boolean"
+                          },
+                          "schemaVersion": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": true
+                          },
+                          "error": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "grantId",
+                          "success"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "complete",
+                    "registryVersion",
+                    "grants"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Operational error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

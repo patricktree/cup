@@ -272,6 +272,39 @@ export function createOperatorApi<Bindings extends object>(
     .openapi(migrateGrantsRoute, handlers.migrateGrants);
 }
 
+const unavailable = (): never => {
+  throw new Error("Contract application cannot handle requests.");
+};
+
+/** Creates a handler-less application used only by local OpenAPI generation. */
+export function createOperatorContractApp() {
+  return createOperatorApi({
+    listAccounts: unavailable,
+    adjustAccountAllowance: unavailable,
+    inspectAccount: unavailable,
+    listAccountDeletions: unavailable,
+    createGrant: unavailable,
+    listGrants: unavailable,
+    inspectGrant: unavailable,
+    setGrantAllowance: unavailable,
+    revokeGrant: unavailable,
+    invalidateSessions: unavailable,
+    migrateGrants: unavailable,
+  });
+}
+
+type OpenApiDocument = ReturnType<
+  ReturnType<typeof createOperatorContractApp>["getOpenAPIDocument"]
+>;
+
+/** Generates the operator API's OpenAPI document, which the snapshot test compares. */
+export function createOperatorOpenApiDocument(): OpenApiDocument {
+  return createOperatorContractApp().getOpenAPIDocument({
+    openapi: "3.0.0",
+    info: { title: "create-audiobook-from-url operator API", version: "1.0.0" },
+  });
+}
+
 function defaultHook(
   result: { success: boolean; error?: { issues: Array<{ message: string }> } },
   context: {

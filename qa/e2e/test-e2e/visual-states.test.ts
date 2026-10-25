@@ -1,5 +1,7 @@
 import type { Page, Route } from "@playwright/test";
 
+import { ERROR_CODE, type ErrorCode } from "@cup/listener-api.routes";
+
 import { expect, gotoPage, test } from "#test-e2e/fixtures.ts";
 
 const GRANT_ID = "b4ad28a8-bbd7-46af-a17c-59527becd745";
@@ -44,7 +46,12 @@ test("rejects malformed and invalid trial links", async ({
 
   await gotoPage(page, workerEnvironment.origin);
   await page.route(`${workerEnvironment.origin}/api/grants/${GRANT_ID}/sessions`, async (route) => {
-    await fulfillError(route, 401, "invalid-grant-credential", "The grant credential is invalid.");
+    await fulfillError(
+      route,
+      401,
+      ERROR_CODE.INVALID_CREDENTIAL,
+      "The grant credential is invalid.",
+    );
   });
   expectConsoleError(CONSOLE_ERRORS.unauthorized);
   expectConsoleError(/^RpcError: The grant credential is invalid\./);
@@ -54,7 +61,7 @@ test("rejects malformed and invalid trial links", async ({
 
 test("shows a revoked trial link", async ({ expectConsoleError, page, workerEnvironment }) => {
   await page.route(`${workerEnvironment.origin}/api/grants/${GRANT_ID}/sessions`, async (route) => {
-    await fulfillError(route, 403, "grant-revoked", "The grant was revoked.");
+    await fulfillError(route, 403, ERROR_CODE.GRANT_REVOKED, "The grant was revoked.");
   });
   expectConsoleError(CONSOLE_ERRORS.forbidden);
   expectConsoleError(/^RpcError: The grant was revoked\./);
@@ -72,7 +79,12 @@ test("recovers from an operational credential exchange error", async ({
   await page.route(`${workerEnvironment.origin}/api/grants/${GRANT_ID}/sessions`, async (route) => {
     exchangeAttempts += 1;
     if (exchangeAttempts === 1) {
-      await fulfillError(route, 503, "dependency-unavailable", "The service is unavailable.");
+      await fulfillError(
+        route,
+        503,
+        ERROR_CODE.DEPENDENCY_UNAVAILABLE,
+        "The service is unavailable.",
+      );
       return;
     }
     await fulfillJson(route, 201, createGrant());
@@ -101,7 +113,12 @@ test("retries an initial grant loading failure", async ({
   await page.route(`${workerEnvironment.origin}/api/grants/${GRANT_ID}`, async (route) => {
     grantAttempts += 1;
     if (grantAttempts === 1) {
-      await fulfillError(route, 500, "operational-error", "The Trial could not be loaded.");
+      await fulfillError(
+        route,
+        500,
+        ERROR_CODE.OPERATIONAL_ERROR,
+        "The Trial could not be loaded.",
+      );
       return;
     }
     await fulfillJson(route, 200, createGrant());
@@ -187,7 +204,12 @@ test("retries a conversion loading failure", async ({
   await page.route(`${workerEnvironment.origin}/api/audiobooks/${CONVERSION_ID}`, async (route) => {
     attempts += 1;
     if (attempts === 1) {
-      await fulfillError(route, 500, "operational-error", "The conversion could not be loaded.");
+      await fulfillError(
+        route,
+        500,
+        ERROR_CODE.OPERATIONAL_ERROR,
+        "The conversion could not be loaded.",
+      );
       return;
     }
     await fulfillJson(route, 200, createPendingConversion());
@@ -222,7 +244,7 @@ test("shows an article not-found state", async ({
   workerEnvironment,
 }) => {
   await page.route(`${workerEnvironment.origin}/api/audiobooks/${CONVERSION_ID}`, async (route) => {
-    await fulfillError(route, 404, "audiobook-not-found", "The audiobook was not found.");
+    await fulfillError(route, 404, ERROR_CODE.AUDIOBOOK_NOT_FOUND, "The audiobook was not found.");
   });
   expectConsoleError(CONSOLE_ERRORS.notFound);
   expectConsoleError(/^RpcError: The audiobook was not found\./);
@@ -245,7 +267,12 @@ test("retries an audiobook loading failure", async ({
   await page.route(`${workerEnvironment.origin}/api/audiobooks/${CONVERSION_ID}`, async (route) => {
     attempts += 1;
     if (attempts === 1) {
-      await fulfillError(route, 500, "operational-error", "The article could not be loaded.");
+      await fulfillError(
+        route,
+        500,
+        ERROR_CODE.OPERATIONAL_ERROR,
+        "The article could not be loaded.",
+      );
       return;
     }
     await fulfillJson(route, 200, createAudiobook(workerEnvironment.origin));
@@ -374,7 +401,7 @@ async function fulfillJson(route: Route, status: number, body: unknown): Promise
 async function fulfillError(
   route: Route,
   status: number,
-  code: string,
+  code: ErrorCode,
   message: string,
 ): Promise<void> {
   await fulfillJson(route, status, { error: { code, message, requestId: REQUEST_ID } });
