@@ -527,12 +527,21 @@ importers:
       '@cup/config-oxlint':
         specifier: workspace:*
         version: link:../../tooling/config-oxlint
+      '@cup/listener-api.routes':
+        specifier: workspace:*
+        version: link:../../libs/listener-api.routes
+      '@cup/operator-api.routes':
+        specifier: workspace:*
+        version: link:../../libs/operator-api.routes
       '@cup/prepare-declaration-build':
         specifier: workspace:*
         version: link:../../tooling/prepare-declaration-build
       '@patricktree-stack/config-typescript':
         specifier: workspace:*
         version: link:../../.patricktree-stack/tooling/config-typescript
+      '@patricktree-stack/config-vitest':
+        specifier: workspace:*
+        version: link:../../.patricktree-stack/tooling/config-vitest
       '@patricktree-stack/utils-ecma':
         specifier: workspace:*
         version: link:../../.patricktree-stack/libs/utils-ecma
@@ -554,9 +563,15 @@ importers:
       vite:
         specifier: catalog:web-app
         version: 8.3.4(@types/node@26.6.5)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5))
       wrangler:
         specifier: 'catalog:'
         version: 4.144.0(@types/node@26.6.5)
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
 
   apps/mobile-app:
     dependencies:

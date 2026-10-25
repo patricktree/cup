@@ -5,6 +5,10 @@
     "src/**"
   ],
   "type": "module",
+  "imports": {
+    "#src/*": "./src/*",
+    "#test/*.ts": "./test/*.ts"
+  },
   "exports": {
     "./package.json": "./package.json",
     ".": {
@@ -14,6 +18,7 @@
   },
   "scripts": {
     "build": "turbo run turbo:build",
+    "cf-typegen": "wrangler types --config test/wrangler.test.jsonc --include-env=false worker-configuration.d.ts",
     "clean": "del-cli --dot=true \"dist\" \"*.tsbuildinfo\" \".wrangler\"",
     "deploy": "pnpm run build && wrangler deploy",
     "dev": "vite",
@@ -21,9 +26,13 @@
     "lint:fix": "turbo run turbo:lint:fix",
     "preview": "vite preview",
     "start": "pnpm run dev",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "turbo:build": "prepare-declaration-build --declaration-output-dir ./dist/types --build-info-file ./dist/tsconfig.build.tsbuildinfo --source-package-json ./src/package.json && tsc --build ./tsconfig.json && vite build",
+    "turbo:cf-typegen": "pnpm run cf-typegen",
     "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
-    "turbo:lint:fix": "pnpm run turbo:lint --fix"
+    "turbo:lint:fix": "pnpm run turbo:lint --fix",
+    "turbo:test": "pnpm run test"
   },
   "dependencies": {
     "@cup/accounts": "workspace:*",
@@ -36,8 +45,11 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "catalog:web-app",
     "@cup/config-oxlint": "workspace:*",
+    "@cup/listener-api.routes": "workspace:*",
+    "@cup/operator-api.routes": "workspace:*",
     "@cup/prepare-declaration-build": "workspace:*",
     "@patricktree-stack/config-typescript": "workspace:*",
+    "@patricktree-stack/config-vitest": "workspace:*",
     "@patricktree-stack/utils-ecma": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native": "catalog:",
@@ -45,6 +57,8 @@
     "oxlint-tsgolint": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:web-app",
-    "wrangler": "catalog:"
+    "vitest": "catalog:",
+    "wrangler": "catalog:",
+    "zod": "^4.6.5"
   }
 }
