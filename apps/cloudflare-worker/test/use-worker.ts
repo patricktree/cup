@@ -8,7 +8,7 @@ import type * as testWorkerModule from "#test/worker.ts";
 
 export type TestWorker = WorkerHandle<ApiServerEnvironment, typeof testWorkerModule>;
 
-type UseWorkerOptions = {
+type UseWorkerOptions = Pick<TestContext, "onTestFinished"> & {
   /** Test-only vars that override wrangler.test.jsonc, for example `LOCAL_DEVELOPMENT`. */
   vars?: Record<string, string>;
   /** Test-only secrets that override the dummy values of `TEST_SECRETS`. */
@@ -38,17 +38,18 @@ export const TEST_SECRETS = {
  * Pass `onTestFinished` from the test's own context: Vitest tracks hooks per test only through the
  * context, which keeps concurrent tests in one file apart.
  */
-export async function useWorker(
-  { onTestFinished }: Pick<TestContext, "onTestFinished">,
-  options: UseWorkerOptions = {},
-): Promise<TestWorker> {
+export async function useWorker({
+  onTestFinished,
+  vars = {},
+  secrets = {},
+}: UseWorkerOptions): Promise<TestWorker> {
   const testRuntime = createTestHarness({
     root: PACKAGE_DIRECTORY,
     workers: [
       {
         configPath: "./test/wrangler.test.jsonc",
-        vars: options.vars ?? {},
-        secrets: { ...TEST_SECRETS, ...options.secrets },
+        vars,
+        secrets: { ...TEST_SECRETS, ...secrets },
       },
     ],
   });

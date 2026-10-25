@@ -47,10 +47,10 @@ test("the CSP lets the web app connect to the configured Supabase origin", async
   expect,
   onTestFinished,
 }) => {
-  const worker = await useWorker(
-    { onTestFinished },
-    { vars: { SUPABASE_URL: "https://project.supabase.example/auth/v1" } },
-  );
+  const worker = await useWorker({
+    onTestFinished,
+    vars: { SUPABASE_URL: "https://project.supabase.example/auth/v1" },
+  });
 
   const response = await worker.fetch("/app/");
 

@@ -14,7 +14,7 @@ const DEVELOPMENT_OPERATOR_HEADERS = {
 };
 
 /**
- * Shared by the concurrent tests below, so shared storage would answer one of them
+ * Both concurrent tests below reuse this ID; if they shared storage, one would get
  * "already-issued".
  */
 const SHARED_REQUEST_ID = "4a0c2b4e-8f5d-4c39-9a51-0d7f3c2e6b18";
