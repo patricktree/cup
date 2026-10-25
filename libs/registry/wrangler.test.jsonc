@@ -4,7 +4,8 @@
   "main": "test/worker.ts",
   "compatibility_flags": ["nodejs_compat"],
   "compatibility_date": "2026-08-15",
-  "vars": { "CONVERSION_OWNER_LIMIT": "10" },
+  /* Registry tests that send through a Resend stub pass its origin explicitly; nothing reaches Resend. */
+  "vars": { "CONVERSION_OWNER_LIMIT": "10", "RESEND_BASE_URL": "http://127.0.0.1:9" },
   "durable_objects": {
     "bindings": [
       { "name": "DELETION_TEST", "class_name": "DeletionTestDurableObject" },

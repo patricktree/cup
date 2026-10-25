@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import {
   accountUsageProjectionSchema,
+  type AccountDurableObject,
   type AccountSnapshot,
   type AccountUsageProjection,
 } from "@cup/accounts";
@@ -69,7 +70,8 @@ const LACKS_USAGE_PROJECTION = and(
   isNull(identityAccounts.projectionRevision),
 );
 
-type RegistryEnvironment = DeletionEnvironment & {
+type RegistryEnvironment = Omit<DeletionEnvironment, "ACCOUNTS"> & {
+  ACCOUNTS: DurableObjectNamespace<AccountDurableObject>;
   SIGNUP_IP_LIMIT?: string;
   CONVERSION_IP_LIMIT?: string;
 };

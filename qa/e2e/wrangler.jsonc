@@ -50,6 +50,8 @@
     "QA_SCENARIO": "success",
     "LOCAL_DEVELOPMENT": "true",
     "SUPABASE_URL": "http://127.0.0.1:54321",
+    /* An unreachable discard port, so that deletion notices never reach Resend. */
+    "RESEND_BASE_URL": "http://127.0.0.1:9",
     "SUPABASE_PUBLISHABLE_KEY": "qa-key",
     "SUPABASE_SECRET_KEY": "qa-admin",
     "GOOGLE_WEB_CLIENT_ID": "qa-google-client",

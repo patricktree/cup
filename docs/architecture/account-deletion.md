@@ -32,6 +32,8 @@ The account persists lifecycle changes and delivery intent together, then delive
 
 Account erasure removes the account's R2 prefix, conversion-owner routes, and account records, retaining a constant erasure marker to reject late execution. The registry deletes the exact old Supabase identity and removes its mapping only after both identity and account cleanup succeed. Original trial conversions and other accounts remain separate.
 
+The coordinator awaits account and provider calls with its Durable Object input gate open, so a restore delivery or a Google revocation outcome can be accepted while it waits. It continues from the stored job after an awaited fence, and a failed attempt does not overwrite a restore accepted meanwhile. A [holding `ACCOUNTS` double](../../libs/registry/test/holding-accounts.ts) pins this interleaving in the [coordinator tests](../../libs/registry/test/deletion-coordinator.test.ts).
+
 Failures retain durable progress and retry with backoff. Operators can inspect overdue cleanup with the [operator CLI](../../apps/operator/README.md#list-account-deletions); there is no force-complete action that discards uncertain writers.
 
 Sources: [account cleanup](../../libs/accounts/src/account-durable-object.ts), [writer reconciliation](../../libs/accounts/src/account-artifact-writers.ts), [registry alarms](../../libs/registry/src/registry-durable-object.ts), and [coordinator](../../libs/registry/src/deletion-coordinator.ts).
@@ -41,6 +43,8 @@ Sources: [account cleanup](../../libs/accounts/src/account-durable-object.ts), [
 Scheduled and completed notices have durable intent and distinct immutable idempotency keys. Retries stop before the provider deduplication window expires to avoid duplicate sends after ambiguous outcomes. Provider acceptance does not establish inbox delivery.
 
 Terminal notification payloads are redacted. After cleanup and notification processing finish, receipts retain identifiers, timestamps, and outcomes for 90 days, excluding email, tokens, and provider response bodies. The account's erasure marker carries no deletion-attempt identifier. These application rules do not establish retention in external provider logs or backups.
+
+Notices go to `RESEND_BASE_URL`, `https://api.resend.com` in production, with a 10-second timeout. A 4xx response other than 408, 409, or 429 is final; other failures, timeouts, and lost responses retry with backoff, no earlier than `Retry-After`. The [coordinator tests](../../libs/registry/test/deletion-coordinator.test.ts) drive these outcomes against the [Resend stub](../../qa/resend-stub/src/resend-stub.ts) and assert exactly one email per notification key, including after a retry that follows a lost response and one that meets a request still in progress. The opt-in `pnpm test:resend-live` contract test checks the stub's idempotency model against the real API.
 
 Source: [notification and receipt implementation](../../libs/registry/src/deletion-coordinator.ts), including retry timing. See [production configuration](../production-configuration.md#email) for configuration and the [operator CLI](../../apps/operator/README.md#list-account-deletions) for inspection.
 
