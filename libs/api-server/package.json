@@ -39,6 +39,7 @@
     "@cup/conversion-contracts": "workspace:*",
     "@cup/conversion-grants": "workspace:*",
     "@cup/create-audiobook-from-url-workflow": "workspace:*",
+    "@cup/errors": "workspace:*",
     "@cup/listener-api.routes": "workspace:*",
     "@cup/operator-api.routes": "workspace:*",
     "@cup/registry": "workspace:*",

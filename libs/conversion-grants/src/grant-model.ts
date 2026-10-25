@@ -7,6 +7,7 @@ import type {
 } from "@cup/conversion-contracts";
 import type { SegmentUsage } from "@cup/conversion-contracts/duration-accounting";
 import type { DurationTotals } from "@cup/duration-ledger";
+import { assertUnreachable } from "@cup/errors";
 
 import type {
   GrantConversionSnapshot,
@@ -219,7 +220,10 @@ export function createOperatorGrantSnapshot(
               : { cleanupState: conversion.cleanupState }),
           };
         }
-        return facts;
+        if (conversion.status === "pending") {
+          return facts;
+        }
+        return assertUnreachable(conversion);
       }),
   };
 }
