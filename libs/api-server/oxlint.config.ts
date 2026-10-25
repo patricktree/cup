@@ -51,7 +51,7 @@ export default defineConfig({
       files: ["src/use-cases/**"],
       rules: {
         "no-restricted-imports": restrictImports(
-          "`use-cases/` imports neither `http/` nor the package entry; `http/` calls the use cases.",
+          "`use-cases/` imports neither `http/` nor the package entry; the package entry and `http/` call the use cases.",
           ["#src/api-server.ts", "#src/http/**"],
         ),
       },
@@ -60,7 +60,7 @@ export default defineConfig({
       files: ["src/adapters/**"],
       rules: {
         "no-restricted-imports": restrictImports(
-          "`adapters/` imports neither `http/`, `use-cases/`, nor the package entry; they call the adapters.",
+          "`adapters/` imports neither `http/`, `use-cases/`, nor the package entry; the package entry and `http/` call the adapters.",
           ["#src/api-server.ts", "#src/http/**", "#src/use-cases/**"],
         ),
       },
