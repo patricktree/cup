@@ -277,7 +277,7 @@ const unavailable = (): never => {
 };
 
 /** Creates a handler-less application used only by local OpenAPI generation. */
-export function createOperatorContractApp() {
+function createOperatorContractApp() {
   return createOperatorApi({
     listAccounts: unavailable,
     adjustAccountAllowance: unavailable,
