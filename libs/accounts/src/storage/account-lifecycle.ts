@@ -3,8 +3,12 @@ import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlit
 import { Temporal } from "temporal-polyfill";
 import { z } from "zod";
 
-import type { AccountSnapshot } from "#src/account-contracts.ts";
-import { accounts, deletionChallenges, deletionAttempts } from "#src/account-sqlite-schema.ts";
+import type { AccountSnapshot } from "#src/domain/account-contracts.ts";
+import {
+  accounts,
+  deletionChallenges,
+  deletionAttempts,
+} from "#src/storage/account-sqlite-schema.ts";
 
 export type DeletionAttempt = {
   attemptId: string;

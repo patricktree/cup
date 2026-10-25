@@ -197,7 +197,7 @@ Read the account's lifecycle state, balance, ledger totals, first history page, 
 pnpm operator account inspect "ACCOUNT_ID"
 ```
 
-The history reports each conversion's status as account history does: a prepared conversion shows the [state of its audio](../../docs/architecture/conversion.md#whole-document-synthesis-and-accounting) (`insufficient-duration`, `synthesizing`, or `ready`) next to its stored outcome. The account defines the shapes of this response in its [contracts](../../libs/accounts/src/account-contracts.ts).
+The history reports each conversion's status as account history does: a prepared conversion shows the [state of its audio](../../docs/architecture/conversion.md#whole-document-synthesis-and-accounting) (`insufficient-duration`, `synthesizing`, or `ready`) next to its stored outcome. The account defines the shapes of this response in its [contracts](../../libs/accounts/src/domain/account-contracts.ts).
 
 ### Adjust an account allowance
 

@@ -9,15 +9,15 @@ import {
   createAccountArtifactPrefix,
 } from "@cup/conversion-contracts";
 
-import { AccountArtifactWriters } from "#src/account-artifact-writers.ts";
 import type {
   AccountConversionOutcome,
   AccountIdentity,
   AccountWorkflowParams,
-} from "#src/account-contracts.ts";
-import { AccountLifecycle, AccountLifecycleConflictError } from "#src/account-lifecycle.ts";
-import type { AccountRegistry } from "#src/account-registry.ts";
-import { AccountSqlite } from "#src/account-sqlite.ts";
+} from "#src/domain/account-contracts.ts";
+import type { AccountRegistry } from "#src/durable-object/account-registry.ts";
+import { AccountArtifactWriters } from "#src/storage/account-artifact-writers.ts";
+import { AccountLifecycle, AccountLifecycleConflictError } from "#src/storage/account-lifecycle.ts";
+import { AccountSqlite } from "#src/storage/account-sqlite.ts";
 
 const USAGE_PUBLICATION_RETRY_MS = 60_000;
 

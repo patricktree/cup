@@ -16,16 +16,16 @@
       "default": "./src/index.ts"
     },
     "./contracts": {
-      "types": "./dist/types/account-contracts.d.ts",
-      "default": "./src/account-contracts.ts"
+      "types": "./dist/types/domain/account-contracts.d.ts",
+      "default": "./src/domain/account-contracts.ts"
     },
     "./artifact-writer": {
-      "types": "./dist/types/artifact-writer.d.ts",
-      "default": "./src/artifact-writer.ts"
+      "types": "./dist/types/artifacts/artifact-writer.d.ts",
+      "default": "./src/artifacts/artifact-writer.ts"
     },
     "./lifecycle": {
-      "types": "./dist/types/account-lifecycle.d.ts",
-      "default": "./src/account-lifecycle.ts"
+      "types": "./dist/types/storage/account-lifecycle.d.ts",
+      "default": "./src/storage/account-lifecycle.ts"
     }
   },
   "scripts": {
