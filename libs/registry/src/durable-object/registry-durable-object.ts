@@ -19,8 +19,10 @@ import type {
 } from "@cup/conversion-grants";
 import { RollingLimits } from "@cup/rolling-limits";
 
-import { DeletionCoordinator, type DeletionEnvironment } from "#src/deletion-coordinator.ts";
-import { canonicalJson } from "#src/encoding.ts";
+import {
+  DeletionCoordinator,
+  type DeletionEnvironment,
+} from "#src/account-deletion/deletion-coordinator.ts";
 import {
   applyGrantRegistrySnapshot,
   decodeAccountCursor,
@@ -32,12 +34,13 @@ import {
   GRANT_LIFETIME_MS,
   REGISTRY_SCHEMA_VERSION,
   type RegistryEntry,
-} from "#src/registry-model.ts";
-import { toOperatorFacts } from "#src/registry-model.ts";
-import { identityAccounts, provisioningJobs } from "#src/registry-sqlite-schema.ts";
-import { RegistrySqlite } from "#src/registry-sqlite.ts";
-import { requireRow } from "#src/sqlite-row.ts";
-import { verifySupabaseIdentity } from "#src/supabase-identity.ts";
+} from "#src/domain/registry-model.ts";
+import { toOperatorFacts } from "#src/domain/registry-model.ts";
+import { canonicalJson } from "#src/encoding.ts";
+import { verifySupabaseIdentity } from "#src/providers/supabase-identity.ts";
+import { identityAccounts, provisioningJobs } from "#src/storage/registry-sqlite-schema.ts";
+import { RegistrySqlite } from "#src/storage/registry-sqlite.ts";
+import { requireRow } from "#src/storage/sqlite-row.ts";
 
 export type IdentityAccount = {
   subject: string;

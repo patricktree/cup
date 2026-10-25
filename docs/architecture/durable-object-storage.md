@@ -248,7 +248,7 @@ Additional indexes:
 
 The `projection_*` columns of `registry_grants` and `identity_accounts` are usage projections: copies of each owner's allowance, reserved duration, and spent duration that let the operator list grants and accounts from this one database instead of calling every owner object. The owner object stays authoritative. Each projection carries the owner's revision, and the registry keeps only the newest: an older revision is ignored as stale, and a repeated revision must match what is stored. The owner records the revision the registry confirmed and retries from its alarm until the registry has confirmed the current one. Grants count their own revisions; an account's revision is its duration ledger's event count. The registry also pulls usage from an account when provisioning activates it, and its alarm backfills active accounts whose projection is still missing, including accounts created before account projections existed. A projection disappears with its identity mapping when account deletion completes.
 
-Sources: [registry-sqlite-schema.ts](../../libs/registry/src/registry-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/registry/src/rate-limit-schema.ts); [migrations](../../libs/registry/drizzle/registry/).
+Sources: [registry-sqlite-schema.ts](../../libs/registry/src/storage/registry-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/registry/src/storage/rate-limit-schema.ts); [migrations](../../libs/registry/drizzle/registry/).
 
 ```mermaid
 erDiagram
@@ -320,7 +320,7 @@ Additional index: `rate_events_bucket` on `(bucket, created_at_ms)`.
 
 ## Migration metadata
 
-Every store also has Drizzle’s internal `__drizzle_migrations` table, created by the Durable SQLite migrator rather than the application schema. It tracks applied migration timestamps and hashes independently in each database. The linked [account migration entry points](../../libs/accounts/src/sqlite-migrations.ts), [grant migration entry point](../../libs/conversion-grants/src/storage/legacy-grant-migrations.ts) and [registry migration entry point](../../libs/registry/src/sqlite-migrations.ts) invoke that migrator. The diagram preserves its declared SQL types; `SERIAL PRIMARY KEY` is the migrator’s SQLite declaration, rather than an application autoincrement column.
+Every store also has Drizzle’s internal `__drizzle_migrations` table, created by the Durable SQLite migrator rather than the application schema. It tracks applied migration timestamps and hashes independently in each database. The linked [account migration entry points](../../libs/accounts/src/sqlite-migrations.ts), [grant migration entry point](../../libs/conversion-grants/src/storage/legacy-grant-migrations.ts) and [registry migration entry point](../../libs/registry/src/storage/sqlite-migrations.ts) invoke that migrator. The diagram preserves its declared SQL types; `SERIAL PRIMARY KEY` is the migrator’s SQLite declaration, rather than an application autoincrement column.
 
 ```mermaid
 erDiagram

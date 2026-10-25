@@ -5,8 +5,8 @@ import { expect, test } from "vitest";
 import { z } from "zod";
 
 import registryMigrations from "#src/migrations/registry.ts";
-import { rateEvents } from "#src/rate-limit-schema.ts";
-import * as registrySchema from "#src/registry-sqlite-schema.ts";
+import { rateEvents } from "#src/storage/rate-limit-schema.ts";
+import * as registrySchema from "#src/storage/registry-sqlite-schema.ts";
 
 const stores = [
   {

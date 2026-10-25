@@ -4,9 +4,9 @@ import { drizzle } from "drizzle-orm/durable-sqlite";
 import { AccountDurableObject as BaseAccountDurableObject } from "@cup/accounts";
 import type { DeletionAttempt } from "@cup/accounts/lifecycle";
 
-import { DeletionCoordinator } from "#src/deletion-coordinator.ts";
-import { RegistryDurableObject as BaseRegistryDurableObject } from "#src/registry-durable-object.ts";
-import { migrateRegistry } from "#src/sqlite-migrations.ts";
+import { DeletionCoordinator } from "#src/account-deletion/deletion-coordinator.ts";
+import { RegistryDurableObject as BaseRegistryDurableObject } from "#src/durable-object/registry-durable-object.ts";
+import { migrateRegistry } from "#src/storage/sqlite-migrations.ts";
 
 import { createHoldingAccounts, type AccountMethod, type Hold } from "#test/holding-accounts.ts";
 

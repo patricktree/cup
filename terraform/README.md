@@ -74,7 +74,7 @@ Configure social providers against callback <https://evwjipxgacwotgbmqtla.supaba
 
 ## Resend domain
 
-The configuration declares `cup.audio`, the domain the [deletion coordinator](../libs/registry/src/deletion-coordinator.ts) sends from.
+The configuration declares `cup.audio`, the domain the [deletion coordinator](../libs/registry/src/account-deletion/deletion-coordinator.ts) sends from.
 It was created in the Resend dashboard with its DNS records added in Cloudflare, then imported (c9699e52-23e4-4fa7-a86c-b1a21f3e0d16) on 2026-10-12 using y0n0zawa/resend 1.0.1; the import reported the domain as verified.
 The domain stays in Ireland with tracking disabled, opportunistic TLS and deletion protection.
 Import omits tracking/TLS values, so the same apply recorded those settings with an in-place update.
