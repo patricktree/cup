@@ -14,11 +14,13 @@ const mocks = vi.hoisted(() => ({
   authenticate: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   revoke: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
 }));
-vi.mock("#src/account-auth.ts", async (original) => ({
-  ...(await original<typeof import("#src/account-auth.ts")>()),
+vi.mock("#src/http/account-auth.ts", async (original) => ({
+  ...(await original<typeof import("#src/http/account-auth.ts")>()),
   authenticateAccountRequest: mocks.authenticate,
 }));
-vi.mock("#src/google-token-revocation.ts", () => ({ revokeVerifiedGoogleToken: mocks.revoke }));
+vi.mock("#src/adapters/google-token-revocation.ts", () => ({
+  revokeVerifiedGoogleToken: mocks.revoke,
+}));
 
 const challengeId = "d1a52e64-3e4d-4a7f-a711-7fb11501e9af";
 const account = {

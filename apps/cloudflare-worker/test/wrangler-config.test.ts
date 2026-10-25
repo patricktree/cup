@@ -26,7 +26,7 @@ function readTestConfig() {
 test("the Worker is served only on its custom domains", ({ expect }) => {
   const config = readProductionConfig();
 
-  // libs/api-server/src/domain-routing.ts redirects the other hostnames to cup.audio; routing.test.ts
+  // libs/api-server/src/http/domain-routing.ts redirects the other hostnames to cup.audio; routing.test.ts
   // checks that for each route listed here.
   expect(config.routes).toStrictEqual([
     { pattern: "cup.audio", custom_domain: true },

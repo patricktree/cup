@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { ingressIdentity, normalizeIp } from "#src/ingress-identity.ts";
+import { ingressIdentity, normalizeIp } from "#src/http/ingress-identity.ts";
 
 test("canonicalizes IPv6 variants and IPv4-mapped addresses into one rate bucket", () => {
   expect(normalizeIp("2001:0db8:0000:0000:0000:0000:0000:0001")).toBe(normalizeIp("2001:db8::1"));
