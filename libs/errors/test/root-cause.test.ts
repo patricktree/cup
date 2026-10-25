@@ -1,6 +1,14 @@
 import { expect, test } from "vitest";
 
-import { findRootCause, findRootCauseMessage } from "#src/root-cause.ts";
+import { findRootCause, findRootCauseDescription, findRootCauseMessage } from "#src/root-cause.ts";
+
+test("describes the root cause by its name and message", () => {
+  const rootCause = new TypeError("fetch failed");
+  const error = new Error("Cover image step failed", { cause: rootCause });
+
+  expect(findRootCauseDescription(error)).toBe("TypeError: fetch failed");
+  expect(findRootCauseDescription(new Error("Step failed", { cause: "timeout" }))).toBe("timeout");
+});
 
 test("follows a cause chain to its innermost error", () => {
   const rootCause = new Error("SQLITE_CONSTRAINT: UNIQUE constraint failed");

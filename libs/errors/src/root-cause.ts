@@ -23,3 +23,9 @@ export function findRootCauseMessage(error: unknown): string {
   const rootCause = findRootCause(error);
   return rootCause instanceof Error ? rootCause.message : String(rootCause);
 }
+
+/** The name and message of an error's root cause, for log lines that also report the error type. */
+export function findRootCauseDescription(error: unknown): string {
+  const rootCause = findRootCause(error);
+  return rootCause instanceof Error ? `${rootCause.name}: ${rootCause.message}` : String(rootCause);
+}

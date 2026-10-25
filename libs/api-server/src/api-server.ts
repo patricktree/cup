@@ -14,7 +14,7 @@ import {
   toGrantConversionSnapshot,
   type ConversionGrantDurableObject,
 } from "@cup/conversion-grants";
-import { assertUnreachable, findRootCause, findRootCauseMessage } from "@cup/errors";
+import { assertUnreachable, findRootCauseDescription, findRootCauseMessage } from "@cup/errors";
 import {
   createListenerApi,
   type Audiobook,
@@ -1493,16 +1493,12 @@ export function createApiServer(dependencies: ApiServerDependencies = production
   });
 
   app.onError((error, context) => {
-    const rootCause = findRootCause(error);
     console.error(
       JSON.stringify({
         event: "request-failed",
         requestId: context.get("requestId"),
         route: context.req.routePath,
-        error:
-          rootCause instanceof Error
-            ? `${rootCause.name}: ${rootCause.message}`
-            : findRootCauseMessage(rootCause),
+        error: findRootCauseDescription(error),
       }),
     );
     return jsonError(

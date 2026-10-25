@@ -12,7 +12,7 @@ import {
 } from "@cup/audiobook-production";
 import { ConversionPhase, type ConversionFailureCategory } from "@cup/conversion-contracts";
 import { conversionParamsSchema, type ConversionParams } from "@cup/conversion-contracts";
-import { findRootCause, findRootCauseMessage } from "@cup/errors";
+import { findRootCauseDescription } from "@cup/errors";
 import type {
   NarrationContentSelectionResult,
   SelectionChunkRunner,
@@ -311,13 +311,7 @@ async function storeDeclaredCoverImage({
 
     logMissingCoverImage(conversionId, outcome.reason);
   } catch (error) {
-    const rootCause = findRootCause(error);
-    logMissingCoverImage(
-      conversionId,
-      rootCause instanceof Error
-        ? `${rootCause.name}: ${rootCause.message}`
-        : findRootCauseMessage(rootCause),
-    );
+    logMissingCoverImage(conversionId, findRootCauseDescription(error));
   }
 
   return undefined;
