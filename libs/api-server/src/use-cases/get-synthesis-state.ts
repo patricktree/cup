@@ -3,6 +3,7 @@ import {
   type InsufficientDuration,
   type SegmentUsage,
 } from "@cup/conversion-contracts/duration-accounting";
+import { assertUnreachable } from "@cup/errors";
 import type { AudioSegment } from "@cup/listener-api.routes";
 
 export type SynthesisState =
@@ -56,14 +57,16 @@ export async function getSynthesisState(
           url: `${origin}/api/files/audiobooks/${conversionId}/segments/${sequence}/audio.mp3`,
         };
       }
-
-      return {
-        sequence,
-        status: "failed",
-        explanation:
-          (await dependencies.getFailureExplanation(sequence)) ??
-          "Speech generation failed. Retry to generate this segment.",
-      };
+      if (segment.state === "released") {
+        return {
+          sequence,
+          status: "failed",
+          explanation:
+            (await dependencies.getFailureExplanation(sequence)) ??
+            "Speech generation failed. Retry to generate this segment.",
+        };
+      }
+      return assertUnreachable(segment.state);
     }),
   );
 

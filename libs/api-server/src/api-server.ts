@@ -14,6 +14,7 @@ import {
   toGrantConversionSnapshot,
   type ConversionGrantDurableObject,
 } from "@cup/conversion-grants";
+import { assertUnreachable, findRootCause, findRootCauseMessage } from "@cup/errors";
 import {
   createListenerApi,
   type Audiobook,
@@ -168,7 +169,17 @@ async function getAccountConversion(
     sourceUrl: conversion.sourceUrl,
     acceptedAt: toIsoString(conversion.createdAtMs),
   };
-  if (conversion.outcome?.status === "ready") {
+  if (conversion.outcome === null) {
+    return context.json(
+      {
+        ...base,
+        status: "pending",
+        lastStartedPhase: "conversion-start",
+      } satisfies ConversionDetail,
+      200,
+    );
+  }
+  if (conversion.outcome.status === "ready") {
     return context.json(
       {
         ...base,
@@ -180,7 +191,7 @@ async function getAccountConversion(
       200,
     );
   }
-  if (conversion.outcome?.status === "failed") {
+  if (conversion.outcome.status === "failed") {
     return context.json(
       {
         ...base,
@@ -191,10 +202,7 @@ async function getAccountConversion(
       200,
     );
   }
-  return context.json(
-    { ...base, status: "pending", lastStartedPhase: "conversion-start" } satisfies ConversionDetail,
-    200,
-  );
+  return assertUnreachable(conversion.outcome);
 }
 
 const validateAccountLifecycleRequest: MiddlewareHandler<{
@@ -783,12 +791,15 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
         200,
       );
     }
-    return jsonError(
-      context.get("requestId"),
-      `grant-${result.result}`,
-      "This trial no longer permits new speech generation.",
-      403,
-    );
+    if (result.result === "expired" || result.result === "revoked") {
+      return jsonError(
+        context.get("requestId"),
+        `grant-${result.result}`,
+        "This trial no longer permits new speech generation.",
+        403,
+      );
+    }
+    return assertUnreachable(result.result);
   },
 
   async savePosition(context) {
@@ -1045,16 +1056,11 @@ const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
           409,
         );
       }
-      // Drizzle's wrapper includes SQL parameters; log only the underlying error.
-      let cause = error;
-      while (cause instanceof Error && cause.cause instanceof Error) {
-        cause = cause.cause;
-      }
       console.error(
         JSON.stringify({
           event: "grant-creation-failed",
           requestId: context.get("requestId"),
-          error: cause instanceof Error ? cause.message : "Unknown error",
+          error: findRootCauseMessage(error),
         }),
       );
       return jsonError(
@@ -1487,17 +1493,16 @@ export function createApiServer(dependencies: ApiServerDependencies = production
   });
 
   app.onError((error, context) => {
-    // Drizzle's wrapper includes SQL parameters; log only the underlying error.
-    let cause: unknown = error;
-    while (cause instanceof Error && cause.cause instanceof Error) {
-      cause = cause.cause;
-    }
+    const rootCause = findRootCause(error);
     console.error(
       JSON.stringify({
         event: "request-failed",
         requestId: context.get("requestId"),
         route: context.req.routePath,
-        error: cause instanceof Error ? `${cause.name}: ${cause.message}` : "Unknown error",
+        error:
+          rootCause instanceof Error
+            ? `${rootCause.name}: ${rootCause.message}`
+            : findRootCauseMessage(rootCause),
       }),
     );
     return jsonError(

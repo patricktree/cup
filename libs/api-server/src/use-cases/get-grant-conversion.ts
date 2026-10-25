@@ -3,6 +3,7 @@ import {
   type SegmentUsage,
 } from "@cup/conversion-contracts/duration-accounting";
 import { toGrantConversionSnapshot, type GrantConversion } from "@cup/conversion-grants";
+import { assertUnreachable } from "@cup/errors";
 import type { ConversionDetail } from "@cup/listener-api.routes";
 
 export type GetGrantConversionDependencies = {
@@ -25,8 +26,11 @@ export async function getGrantConversion(
   if (snapshot.status === "failed") {
     return snapshot;
   }
-  return {
-    ...snapshot,
-    status: derivePreparedConversionStatus(await dependencies.listAudioSegments(conversionId)),
-  };
+  if (snapshot.status === "ready") {
+    return {
+      ...snapshot,
+      status: derivePreparedConversionStatus(await dependencies.listAudioSegments(conversionId)),
+    };
+  }
+  return assertUnreachable(snapshot);
 }
