@@ -152,7 +152,7 @@ Additional indexes:
 
 Both owners store a conversion's outcome in typed columns with the same names. Only grants keep `workflow_started_at_ms`, `last_started_phase`, measurements, provider usage, diagnostic references, and `cleanup_state`: they serve the operator's inspection of trial conversions and the grant's own cleanup of failed artifacts, while account conversions are reconciled through dispatch jobs and artifact writers and their artifacts are removed by account erasure. Grant failure categories are limited to the conversion failure categories; account failures also record `execution-failed`.
 
-Sources: [grant-sqlite-schema.ts](../../libs/conversion-grants/src/grant-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/rolling-limits/src/rate-limit-schema.ts), [duration-ledger-schema.ts](../../libs/duration-ledger/src/duration-ledger-schema.ts); [migrations](../../libs/conversion-grants/drizzle/grant/).
+Sources: [grant-sqlite-schema.ts](../../libs/conversion-grants/src/storage/grant-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/rolling-limits/src/rate-limit-schema.ts), [duration-ledger-schema.ts](../../libs/duration-ledger/src/duration-ledger-schema.ts); [migrations](../../libs/conversion-grants/drizzle/grant/).
 
 ```mermaid
 erDiagram
@@ -320,7 +320,7 @@ Additional index: `rate_events_bucket` on `(bucket, created_at_ms)`.
 
 ## Migration metadata
 
-Every store also has Drizzle’s internal `__drizzle_migrations` table, created by the Durable SQLite migrator rather than the application schema. It tracks applied migration timestamps and hashes independently in each database. The linked [account migration entry points](../../libs/accounts/src/sqlite-migrations.ts), [grant migration entry point](../../libs/conversion-grants/src/legacy-grant-migrations.ts) and [registry migration entry point](../../libs/registry/src/sqlite-migrations.ts) invoke that migrator. The diagram preserves its declared SQL types; `SERIAL PRIMARY KEY` is the migrator’s SQLite declaration, rather than an application autoincrement column.
+Every store also has Drizzle’s internal `__drizzle_migrations` table, created by the Durable SQLite migrator rather than the application schema. It tracks applied migration timestamps and hashes independently in each database. The linked [account migration entry points](../../libs/accounts/src/sqlite-migrations.ts), [grant migration entry point](../../libs/conversion-grants/src/storage/legacy-grant-migrations.ts) and [registry migration entry point](../../libs/registry/src/sqlite-migrations.ts) invoke that migrator. The diagram preserves its declared SQL types; `SERIAL PRIMARY KEY` is the migrator’s SQLite declaration, rather than an application autoincrement column.
 
 ```mermaid
 erDiagram

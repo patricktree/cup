@@ -16,12 +16,11 @@ import {
 } from "@cup/conversion-contracts";
 import { RollingLimits } from "@cup/rolling-limits";
 
-import { canonicalJson, encodeBase64Url } from "#src/encoding.ts";
 import type {
   GrantConversions,
   GrantSnapshot,
   OperatorGrantSnapshot,
-} from "#src/grant-contracts.ts";
+} from "#src/domain/grant-contracts.ts";
 import type {
   ExchangeCredentialResult,
   GrantConversion,
@@ -31,7 +30,7 @@ import type {
   StartGrantConversionResult,
   TerminalOutcome,
   ValidateSessionResult,
-} from "#src/grant-model.ts";
+} from "#src/domain/grant-model.ts";
 import {
   createGrantConversions,
   createGrantRegistrySnapshot,
@@ -42,10 +41,11 @@ import {
   GRANT_SCHEMA_VERSION,
   DEFAULT_ALLOWANCE_MILLISECONDS,
   RECONCILIATION_CUTOFF_MS,
-} from "#src/grant-model.ts";
-import type { GrantRegistry } from "#src/grant-registry.ts";
-import { signSession, verifyRootCredential, verifySession } from "#src/grant-session.ts";
-import { ConversionGrantSqlite } from "#src/grant-sqlite.ts";
+} from "#src/domain/grant-model.ts";
+import { signSession, verifyRootCredential, verifySession } from "#src/domain/grant-session.ts";
+import type { GrantRegistry } from "#src/durable-object/grant-registry.ts";
+import { canonicalJson, encodeBase64Url } from "#src/encoding.ts";
+import { ConversionGrantSqlite } from "#src/storage/grant-sqlite.ts";
 
 // Migration 0002_shared_rate_events moved existing start attempts into this bucket and window.
 const START_RATE_BUCKET = "grant-conversion-start";

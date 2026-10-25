@@ -16,12 +16,12 @@
       "default": "./src/index.ts"
     },
     "./contracts": {
-      "types": "./dist/types/grant-contracts.d.ts",
-      "default": "./src/grant-contracts.ts"
+      "types": "./dist/types/domain/grant-contracts.d.ts",
+      "default": "./src/domain/grant-contracts.ts"
     },
     "./session": {
-      "types": "./dist/types/grant-session.d.ts",
-      "default": "./src/grant-session.ts"
+      "types": "./dist/types/domain/grant-session.d.ts",
+      "default": "./src/domain/grant-session.ts"
     }
   },
   "scripts": {

@@ -5,14 +5,14 @@ import { Temporal } from "temporal-polyfill";
 import { conversionPhaseSchema } from "@cup/conversion-contracts";
 import { DurationLedger } from "@cup/duration-ledger";
 
-import type { GrantConversion, GrantRecord } from "#src/grant-model.ts";
+import type { GrantConversion, GrantRecord } from "#src/domain/grant-model.ts";
 import {
   audioSegments,
   conversions as conversionTable,
   grants as grantTable,
   grantSqliteSchema,
-} from "#src/grant-sqlite-schema.ts";
-import { migrateLegacyGrant } from "#src/legacy-grant-migrations.ts";
+} from "#src/storage/grant-sqlite-schema.ts";
+import { migrateLegacyGrant } from "#src/storage/legacy-grant-migrations.ts";
 
 export class ConversionGrantSqlite {
   readonly duration: DurationLedger;

@@ -4,9 +4,9 @@ import sqlite from "node:sqlite";
 import { expect, test } from "vitest";
 import { z } from "zod";
 
-import * as grantSchema from "#src/grant-sqlite-schema.ts";
 import grantMigrations from "#src/migrations/grant.ts";
-import { rateEvents } from "#src/rate-limit-schema.ts";
+import * as grantSchema from "#src/storage/grant-sqlite-schema.ts";
+import { rateEvents } from "#src/storage/rate-limit-schema.ts";
 
 const stores = [{ name: "grant", schema: { ...grantSchema, rateEvents }, bundle: grantMigrations }];
 

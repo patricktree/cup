@@ -61,3 +61,7 @@ Worker types (`worker-configuration.d.ts`) are generated, not committed: postins
 | Issue tracker and specifications    | `docs/agents/issue-tracker.md` |
 | Triage labels                       | `docs/agents/triage-labels.md` |
 | Domain terminology and ADR guidance | `docs/agents/domain.md`        |
+
+## Package instructions
+
+Before editing a package, read its `AGENTS.md` when it has one, such as [`libs/conversion-grants/AGENTS.md`](libs/conversion-grants/AGENTS.md) for that library's source folders and import directions.
