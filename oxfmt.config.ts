@@ -7,7 +7,12 @@ const baseConfig = createBaseConfig({
 
 export default defineConfig({
   ...baseConfig,
-  ignorePatterns: [...baseConfig.ignorePatterns, "**/worker-configuration.d.ts"],
+  ignorePatterns: [
+    ...baseConfig.ignorePatterns,
+    "**/worker-configuration.d.ts",
+    /* written by the OpenAPI snapshot tests, which compare them byte for byte */
+    "libs/*-api.routes/test/__snapshots__/openapi.json",
+  ],
   overrides: [
     ...baseConfig.overrides,
     {

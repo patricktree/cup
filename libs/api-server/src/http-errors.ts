@@ -1,5 +1,9 @@
 import { assertUnreachable } from "@cup/errors";
-import type { ErrorResponse } from "@cup/listener-api.routes";
+import type { ErrorCode as ListenerErrorCode } from "@cup/listener-api.routes";
+import type { ErrorCode as OperatorErrorCode } from "@cup/operator-api.routes";
+
+/** Every code an API error response can carry; each API's contract lists the codes it returns. */
+type ErrorCode = ListenerErrorCode | OperatorErrorCode;
 
 export function accountAuthError(
   result: "unauthorized" | "unavailable" | "blocked" | "rate-limited",
@@ -32,13 +36,14 @@ export function accountAuthError(
   return assertUnreachable(result);
 }
 
-function createErrorBody(requestId: string, code: string, message: string): ErrorResponse {
+/** The error envelope both API contracts declare, with a code from either contract. */
+function createErrorBody(requestId: string, code: ErrorCode, message: string) {
   return { error: { code, message, requestId } };
 }
 
 export function jsonError(
   requestId: string,
-  code: string,
+  code: ErrorCode,
   message: string,
   status: 400 | 401 | 403 | 404 | 405 | 409 | 413 | 415 | 429 | 500 | 503,
   headers?: HeadersInit,

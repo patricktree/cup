@@ -166,9 +166,48 @@ export const retryConversionResponseSchema = z.discriminatedUnion("result", [
 ]);
 export type RetryConversionResponse = z.infer<typeof retryConversionResponseSchema>;
 
+/**
+ * Every `code` of a listener API error response, including the codes of the server-wide middleware
+ * that also guards listener routes, such as `request-too-large`.
+ */
+export const ERROR_CODE = {
+  ACCOUNT_BLOCKED: "account-blocked",
+  ACCOUNT_SESSION_REQUIRED: "account-session-required",
+  ACCOUNT_SETUP_PENDING: "account-setup-pending",
+  ACCOUNT_START_CONFLICT: "account-start-conflict",
+  AUDIOBOOK_NOT_FOUND: "audiobook-not-found",
+  CONFIRMATION_UNAVAILABLE: "confirmation-unavailable",
+  CONVERSION_NOT_FOUND: "conversion-not-found",
+  COVER_IMAGE_NOT_FOUND: "cover-image-not-found",
+  CREDITS_UNAVAILABLE: "credits-unavailable",
+  DEPENDENCY_UNAVAILABLE: "dependency-unavailable",
+  FRESH_AUTH_REQUIRED: "fresh-auth-required",
+  GRANT_EXHAUSTED: "grant-exhausted",
+  GRANT_EXPIRED: "grant-expired",
+  GRANT_REVOKED: "grant-revoked",
+  GRANT_SESSION_INVALID: "grant-session-invalid",
+  GRANT_SESSION_REQUIRED: "grant-session-required",
+  GRANT_TEMPORARILY_FULL: "grant-temporarily-full",
+  IDEMPOTENCY_CONFLICT: "idempotency-conflict",
+  INGRESS_UNAVAILABLE: "ingress-unavailable",
+  INVALID_CREDENTIAL: "invalid-credential",
+  INVALID_INPUT: "invalid-input",
+  METHOD_NOT_ALLOWED: "method-not-allowed",
+  NOT_FOUND: "not-found",
+  OPERATIONAL_ERROR: "operational-error",
+  ORIGIN_BLOCKED: "origin-blocked",
+  ORIGIN_FORBIDDEN: "origin-forbidden",
+  RANGE_NOT_SATISFIABLE: "range-not-satisfiable",
+  RATE_LIMITED: "rate-limited",
+  REQUEST_TOO_LARGE: "request-too-large",
+  START_RATE_LIMITED: "start-rate-limited",
+  UNSUPPORTED_MEDIA_TYPE: "unsupported-media-type",
+} as const;
+export type ErrorCode = (typeof ERROR_CODE)[keyof typeof ERROR_CODE];
+
 export const errorResponseSchema = z.object({
   error: z.object({
-    code: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+    code: z.enum(ERROR_CODE),
     message: z.string().min(1),
     requestId: uuidV4Schema,
   }),

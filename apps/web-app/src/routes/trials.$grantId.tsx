@@ -14,7 +14,7 @@ import { ErrorScreen } from "#src/app/components/error-message.js";
 import { StartConversionForm } from "#src/app/components/start-conversion-form.js";
 import { getResourceAccountSession } from "#src/auth/account-session.js";
 import { useAccountSession } from "#src/auth/hooks.js";
-import type { RpcError } from "#src/data-fetching/api-request.js";
+import { ERROR_CODE, type RpcError } from "#src/data-fetching/api-request.js";
 import {
   createGrantQuery,
   createGrantQueryKey,
@@ -90,10 +90,13 @@ function TrialConversionPage(): React.JSX.Element {
 
 /** Opening a trial link words its refusals in terms of the link rather than the grant. */
 function describeTrialLinkRefusal(error: RpcError): ErrorCopy {
-  if (error.code === "grant-session-required" || error.code === "grant-session-invalid") {
+  if (
+    error.code === ERROR_CODE.GRANT_SESSION_REQUIRED ||
+    error.code === ERROR_CODE.GRANT_SESSION_INVALID
+  ) {
     return TRIAL_SESSION_LOST;
   }
-  if (error.code === "grant-revoked") {
+  if (error.code === ERROR_CODE.GRANT_REVOKED) {
     return TRIAL_LINK_REVOKED;
   }
   return TRIAL_LINK_INVALID;

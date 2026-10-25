@@ -1,5 +1,9 @@
 export * from "#src/contracts.ts";
-export { createOperatorApi, type OperatorApiHandlers } from "#src/hono-app.ts";
+export {
+  createOperatorApi,
+  createOperatorOpenApiDocument,
+  type OperatorApiHandlers,
+} from "#src/hono-app.ts";
 export type { OperatorApiApp, OperatorApiClient } from "#src/hono-client.ts";
 export {
   isDevelopmentOperatorUrl,

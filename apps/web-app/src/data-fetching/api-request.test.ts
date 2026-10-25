@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { ERROR_CODE } from "@cup/listener-api.client";
+
 import { ACCOUNT_SESSION_STORAGE_KEY } from "#src/auth/account-session-storage.ts";
 
 test.use({ serviceWorkers: "block" });
@@ -52,7 +54,7 @@ async function recordAudiobookAuthorization(page: Page) {
 
 type ApiRequestModule = typeof import("#src/data-fetching/api-request.ts");
 
-test("unsuccessful responses reject with the API error code, status, and retry delay", async ({
+test("unsuccessful responses reject with the API error code, status, retry delay, and request ID", async ({
   page,
 }) => {
   let response = 0;
@@ -64,7 +66,7 @@ test("unsuccessful responses reject with the API error code, status, and retry d
         headers: { "Retry-After": "7" },
         json: {
           error: {
-            code: "rate-limited",
+            code: ERROR_CODE.RATE_LIMITED,
             message: "Try again shortly.",
             requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
           },
@@ -74,7 +76,13 @@ test("unsuccessful responses reject with the API error code, status, and retry d
     if (response === 2) {
       return route.fulfill({
         status: 401,
-        json: { error: { code: "grant-session-invalid", message: "No access." } },
+        json: { error: { code: ERROR_CODE.GRANT_SESSION_INVALID, message: "No access." } },
+      });
+    }
+    if (response === 3) {
+      return route.fulfill({
+        status: 409,
+        json: { error: { code: "code-from-a-newer-server", message: "Not now." } },
       });
     }
     return route.fulfill({ status: 502, contentType: "text/html", body: "<h1>Bad gateway</h1>" });
@@ -84,7 +92,7 @@ test("unsuccessful responses reject with the API error code, status, and retry d
     const path = "/src/data-fetching/api-request.ts";
     const { requestApi, RpcError }: ApiRequestModule = await import(path);
     const results = [];
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (let attempt = 0; attempt < 4; attempt += 1) {
       const failure: unknown = await requestApi("none", (client) =>
         client.getGrant({ grantId }),
       ).then(
@@ -94,19 +102,39 @@ test("unsuccessful responses reject with the API error code, status, and retry d
       if (!(failure instanceof RpcError)) {
         throw new Error("Expected an RpcError");
       }
-      const { code, message, status, retryAfter } = failure;
-      results.push({ code, message, status, retryAfter });
+      const { code, message, status, retryAfter, requestId } = failure;
+      results.push({ code, message, status, retryAfter, requestId });
     }
     return results;
   }, GRANT_ID);
   expect(failures).toEqual([
-    { code: "rate-limited", message: "Try again shortly.", status: 429, retryAfter: 7 },
-    { code: "grant-session-invalid", message: "No access.", status: 401, retryAfter: 60 },
     {
-      code: "operational-error",
+      code: ERROR_CODE.RATE_LIMITED,
+      message: "Try again shortly.",
+      status: 429,
+      retryAfter: 7,
+      requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
+    },
+    {
+      code: ERROR_CODE.GRANT_SESSION_INVALID,
+      message: "No access.",
+      status: 401,
+      retryAfter: 60,
+      requestId: undefined,
+    },
+    {
+      code: ERROR_CODE.OPERATIONAL_ERROR,
+      message: "Not now.",
+      status: 409,
+      retryAfter: 60,
+      requestId: undefined,
+    },
+    {
+      code: ERROR_CODE.OPERATIONAL_ERROR,
       message: "The request could not be completed.",
       status: 502,
       retryAfter: 60,
+      requestId: undefined,
     },
   ]);
 });

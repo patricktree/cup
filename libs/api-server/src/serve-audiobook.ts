@@ -4,7 +4,7 @@ import {
   loadAudiobook,
   type Audiobook,
 } from "@cup/audiobook-production";
-import type { ErrorResponse } from "@cup/listener-api.routes";
+import type { ErrorCode, ErrorResponse } from "@cup/listener-api.routes";
 import type { RegistryDurableObject } from "@cup/registry";
 
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
@@ -186,6 +186,6 @@ function coverImageNotFound(requestId: string): Response {
   );
 }
 
-function createErrorBody(requestId: string, code: string, message: string): ErrorResponse {
+function createErrorBody(requestId: string, code: ErrorCode, message: string): ErrorResponse {
   return { error: { code, message, requestId } };
 }

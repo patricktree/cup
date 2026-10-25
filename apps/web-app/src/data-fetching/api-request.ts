@@ -8,8 +8,11 @@ import { createListenerApiClient } from "#src/api-client.js";
 import { getFreshAccountSession, getResourceAccountSession } from "#src/auth/account-session.js";
 import { UserFacingError } from "#src/errors.js";
 
-/** Every unsuccessful API response rejects with this error; see {@link requestApi}. */
-export { RpcError } from "@cup/listener-api.client";
+/**
+ * Every unsuccessful API response rejects with `RpcError`, see {@link requestApi}; compare its
+ * `code` with `ERROR_CODE`.
+ */
+export { ERROR_CODE, RpcError } from "@cup/listener-api.client";
 
 type ApiResponse = Awaited<Parameters<typeof parseOkResponse>[0]>;
 type ApiResult<Response extends ApiResponse> = ReturnType<typeof parseOkResponse<Response>>;

@@ -474,6 +474,21 @@ export function createListenerContractApp() {
   });
 }
 
+type OpenApiDocument = ReturnType<
+  ReturnType<typeof createListenerContractApp>["getOpenAPIDocument"]
+>;
+
+/**
+ * Generates the listener API's OpenAPI document. The listener client build exports it, and the
+ * snapshot test compares it with the committed copy.
+ */
+export function createListenerOpenApiDocument(): OpenApiDocument {
+  return createListenerContractApp().getOpenAPIDocument({
+    openapi: "3.0.0",
+    info: { title: "create-audiobook-from-url listener API", version: "1.0.0" },
+  });
+}
+
 function defaultHook(
   result: { success: boolean; error?: { issues: Array<{ message: string }> } },
   context: {
