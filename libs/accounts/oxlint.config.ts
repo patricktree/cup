@@ -21,8 +21,11 @@ function restrictImports(...patterns: RestrictedImportsPattern[]) {
   return [severity, { paths: repoPaths, patterns: [...repoPatterns, ...patterns] }];
 }
 
-const ARTIFACTS_MESSAGE =
-  "`artifacts/` runs in the callers' Workers and is reached only through the `./artifact-writer` export.";
+const ARTIFACTS_RESTRICTION: RestrictedImportsPattern = {
+  group: ["#src/artifacts/**"],
+  message:
+    "`artifacts/` runs in the callers' Workers and is reached only through the `./artifact-writer` export.",
+};
 
 export default defineConfig({
   extends: [repoConfig],
@@ -33,7 +36,7 @@ export default defineConfig({
         message:
           "Only `src/index.ts` imports `durable-object/`; import the package interface instead.",
       },
-      { group: ["#src/artifacts/**"], message: ARTIFACTS_MESSAGE },
+      ARTIFACTS_RESTRICTION,
     ),
   },
   overrides: [
@@ -45,7 +48,7 @@ export default defineConfig({
             group: ["#src/migrations/**"],
             message: "`src/index.ts` reaches the generated migrations only through `storage/`.",
           },
-          { group: ["#src/artifacts/**"], message: ARTIFACTS_MESSAGE },
+          ARTIFACTS_RESTRICTION,
         ),
       },
     },
@@ -91,7 +94,7 @@ export default defineConfig({
             group: ["#src/migrations/**"],
             message: "`durable-object/` reaches the generated migrations only through `storage/`.",
           },
-          { group: ["#src/artifacts/**"], message: ARTIFACTS_MESSAGE },
+          ARTIFACTS_RESTRICTION,
         ),
       },
     },
