@@ -111,8 +111,8 @@ export default defineConfig({
       files: ["src/durable-object/**"],
       rules: {
         "no-restricted-imports": restrictImports(
-          "`durable-object/` reaches the generated migrations only through `storage/`.",
-          ["#src/migrations/**"],
+          "`durable-object/` never imports the package interface that re-exports it, and reaches the generated migrations only through `storage/`.",
+          ["#src/index.ts", "#src/migrations/**"],
         ),
       },
     },
