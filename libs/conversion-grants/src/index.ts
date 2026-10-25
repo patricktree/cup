@@ -1,4 +1,4 @@
-export { ConversionGrantDurableObject } from "#src/conversion-grant-durable-object.ts";
+export { ConversionGrantDurableObject } from "#src/durable-object/conversion-grant-durable-object.ts";
 
 export {
   grantConversionSnapshotSchema,
@@ -18,7 +18,7 @@ export {
   type OperatorGrantFacts,
   type OperatorGrantSnapshot,
   type ProjectedGrantState,
-} from "#src/grant-contracts.ts";
+} from "#src/domain/grant-contracts.ts";
 export type {
   ExchangeCredentialResult,
   FailedConversion,
@@ -29,13 +29,13 @@ export type {
   ReadyConversion,
   StartGrantConversionResult,
   ValidateSessionResult,
-} from "#src/grant-model.ts";
+} from "#src/domain/grant-model.ts";
 export {
   createGrantConversions,
   createGrantRegistrySnapshot,
   createGrantSnapshot,
   toGrantConversionSnapshot,
-} from "#src/grant-model.ts";
+} from "#src/domain/grant-model.ts";
 export {
   clearGrantSessionCookie,
   createGrantSessionCookie,
@@ -43,4 +43,4 @@ export {
   getGrantSessionCookie,
   GRANT_SESSION_COOKIE_NAME,
   GRANT_SESSION_MAX_AGE_SECONDS,
-} from "#src/grant-session.ts";
+} from "#src/domain/grant-session.ts";

@@ -1,4 +1,4 @@
-import type { GrantRegistrySnapshot } from "#src/grant-model.ts";
+import type { GrantRegistrySnapshot } from "#src/domain/grant-model.ts";
 
 export type GrantRegistry = {
   idFromName(name: string): DurableObjectId;

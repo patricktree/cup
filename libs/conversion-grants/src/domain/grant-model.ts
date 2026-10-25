@@ -14,7 +14,7 @@ import type {
   GrantSnapshot,
   GrantState,
   OperatorGrantSnapshot,
-} from "#src/grant-contracts.ts";
+} from "#src/domain/grant-contracts.ts";
 import { toIsoString } from "#src/time.ts";
 
 export const GRANT_SCHEMA_VERSION = 6;

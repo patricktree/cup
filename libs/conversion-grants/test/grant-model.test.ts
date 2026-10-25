@@ -2,8 +2,12 @@ import { describe, expect, test } from "vitest";
 
 import { ConversionPhase } from "@cup/conversion-contracts";
 
-import { createGrantConversions, createGrantSnapshot, type GrantRecord } from "#src/grant-model.ts";
-import { createGrantSessionCookie, createRootCredential } from "#src/grant-session.ts";
+import {
+  createGrantConversions,
+  createGrantSnapshot,
+  type GrantRecord,
+} from "#src/domain/grant-model.ts";
+import { createGrantSessionCookie, createRootCredential } from "#src/domain/grant-session.ts";
 
 const CREATED_AT_MS = 1_767_225_600_000;
 const EXPIRES_AT_MS = 1_775_001_600_000;

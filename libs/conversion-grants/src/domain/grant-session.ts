@@ -1,5 +1,5 @@
+import type { GrantRecord } from "#src/domain/grant-model.ts";
 import { decodeBase64Url, encodeBase64Url } from "#src/encoding.ts";
-import type { GrantRecord } from "#src/grant-model.ts";
 
 const SESSION_COOKIE_LIFETIME_SECONDS = 400 * 24 * 60 * 60;
 
