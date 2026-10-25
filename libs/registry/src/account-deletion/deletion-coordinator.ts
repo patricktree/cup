@@ -32,11 +32,7 @@ export type DeletionEnvironment = SupabaseAdminEnvironment &
     ACCOUNTS: DeletionAccounts;
   };
 /** Outgoing provider calls, replaceable so tests can drive them against local stand-ins. */
-export type DeletionProviderOptions = {
-  request?: typeof fetch;
-  /** Applies to each Supabase and Resend call. */
-  timeoutMs?: number;
-};
+export type DeletionProviderOptions = Partial<ProviderRequest>;
 const PROVIDER_TIMEOUT_MS = 10_000;
 const DAY = 86_400_000;
 const jobSchema = deletionAttemptSchema.extend({
@@ -65,13 +61,11 @@ export class DeletionCoordinator {
   private readonly storage: DurableObjectStorage;
   private readonly env: DeletionEnvironment;
   private readonly provider: ProviderRequest;
-  private readonly request: typeof fetch;
-  private readonly timeoutMs: number;
   constructor(
     storage: DurableObjectStorage,
     env: DeletionEnvironment,
     {
-      // Workers reject `fetch` called as a method of another object, such as `provider.request()`.
+      // Workers reject `fetch` called as a method of another object, so the default wraps it.
       request = (...args) => fetch(...args),
       timeoutMs = PROVIDER_TIMEOUT_MS,
     }: DeletionProviderOptions = {},
@@ -80,8 +74,6 @@ export class DeletionCoordinator {
     this.database = drizzle(storage);
     this.env = env;
     this.provider = { request, timeoutMs };
-    this.request = request;
-    this.timeoutMs = timeoutMs;
   }
 
   async accept(input: DeletionAttempt) {
@@ -445,12 +437,18 @@ export class DeletionCoordinator {
         this.provider,
         nowMs,
       );
-      if (outcome.kind === "sent") {
-        notification.state = "sent";
-      } else if (outcome.kind === "rejected") {
-        notification.state = "failed";
+      let retryAfterMs = 0;
+      switch (outcome.kind) {
+        case "sent":
+          notification.state = "sent";
+          break;
+        case "rejected":
+          notification.state = "failed";
+          break;
+        case "retry":
+          retryAfterMs = outcome.retryAfterMs;
+          break;
       }
-      const retryAfterMs = outcome.kind === "retry" ? outcome.retryAfterMs : 0;
       notification.nextAttemptMs =
         nowMs +
         Math.max(
