@@ -12,12 +12,12 @@ type LibraryLayer = { name: string; libraries: string[] };
  * of one layer stay independent of each other. `docs/architecture/README.md` draws the graph.
  */
 export const LIBRARY_LAYERS: LibraryLayer[] = [
+  { name: "error helpers", libraries: ["@cup/errors"] },
   {
     name: "foundations",
     libraries: [
       "@cup/api-rpc.client",
       "@cup/conversion-contracts",
-      "@cup/errors",
       "@cup/mp3-encoding",
       "@cup/narration-document-creation",
       "@cup/prepare-source-material",
@@ -49,17 +49,17 @@ export const LIBRARY_LAYERS: LibraryLayer[] = [
 ];
 
 export function findLayerViolations(manifests: LibraryManifest[]): string[] {
-  const layerIndexByLibrary = new Map(
-    LIBRARY_LAYERS.flatMap((layer, index) =>
-      layer.libraries.map((library) => [library, index] as const),
+  const layerByLibrary = new Map(
+    LIBRARY_LAYERS.flatMap((layer, rank) =>
+      layer.libraries.map((library) => [library, { name: layer.name, rank }] as const),
     ),
   );
   const libraryNames = new Set(manifests.map((manifest) => manifest.name));
 
   const violations: string[] = [];
   for (const manifest of manifests) {
-    const layerIndex = layerIndexByLibrary.get(manifest.name);
-    if (layerIndex === undefined) {
+    const layer = layerByLibrary.get(manifest.name);
+    if (layer === undefined) {
       violations.push(
         `\`${manifest.name}\` has no layer; add it to \`LIBRARY_LAYERS\` in \`tooling/library-layers/src/library-layers.ts\`.`,
       );
@@ -71,10 +71,10 @@ export function findLayerViolations(manifests: LibraryManifest[]): string[] {
       ...manifest.devDependencies,
     }).filter((dependency) => libraryNames.has(dependency));
     for (const dependency of dependencyNames) {
-      const dependencyLayerIndex = layerIndexByLibrary.get(dependency);
-      if (dependencyLayerIndex !== undefined && dependencyLayerIndex >= layerIndex) {
+      const dependencyLayer = layerByLibrary.get(dependency);
+      if (dependencyLayer !== undefined && dependencyLayer.rank >= layer.rank) {
         violations.push(
-          `\`${manifest.name}\` (${LIBRARY_LAYERS[layerIndex]?.name}) depends on \`${dependency}\` (${LIBRARY_LAYERS[dependencyLayerIndex]?.name}); a library may depend only on libraries in lower layers.`,
+          `\`${manifest.name}\` (${layer.name}) depends on \`${dependency}\` (${dependencyLayer.name}); a library may depend only on libraries in lower layers.`,
         );
       }
     }

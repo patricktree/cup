@@ -24,7 +24,7 @@ type DrizzleJson = {
 const RELATIONSHIP_LINE = /^(\w+)\s+[|o}{]{2}--[|o}{]{2}\s+(\w+)\s*:\s*"([^"]*)"$/;
 const ENTITY_LINE = /^(\w+)$/;
 
-export function describeSchema(drizzleJson: DrizzleJson): SchemaOutline {
+export function outlineSchema(drizzleJson: DrizzleJson): SchemaOutline {
   const tables = Object.values(drizzleJson.tables);
   return {
     tables: tables.map((table) => table.name).sort(),
@@ -45,7 +45,7 @@ export function describeSchema(drizzleJson: DrizzleJson): SchemaOutline {
 export function readSchemaDiagram(markdown: string, heading: string): SchemaOutline {
   const section = markdown.split(/^## /m).find((part) => part.startsWith(`${heading}\n`));
   if (section === undefined) {
-    throw new Error(`The storage page has no section "## ${heading}".`);
+    throw new Error(`The Markdown has no section "## ${heading}".`);
   }
   const diagram = /```mermaid\nerDiagram\n([\s\S]*?)```/.exec(section)?.[1];
   if (diagram === undefined) {

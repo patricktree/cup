@@ -4,7 +4,7 @@ import sqlite from "node:sqlite";
 import { expect, test } from "vitest";
 import { z } from "zod";
 
-import { describeSchema, readSchemaDiagram } from "@cup/drizzle-migrations/schema-diagram";
+import { outlineSchema, readSchemaDiagram } from "@cup/drizzle-migrations/schema-diagram";
 
 import registryMigrations from "#src/migrations/registry.ts";
 import { rateEvents } from "#src/storage/rate-limit-schema.ts";
@@ -54,7 +54,7 @@ for (const { name, schema, diagramHeading, bundle } of stores) {
   test(`${name} schema diagram shows its tables and foreign keys`, async () => {
     const page = await fs.readFile(STORAGE_PAGE, "utf8");
     const current = await generateSQLiteDrizzleJson(schema);
-    expect(readSchemaDiagram(page, diagramHeading)).toEqual(describeSchema(current));
+    expect(readSchemaDiagram(page, diagramHeading)).toEqual(outlineSchema(current));
   });
 }
 

@@ -66,7 +66,7 @@ The libraries are code boundaries inside the deployed system, not separate netwo
 - [Duration ledger](../../libs/duration-ledger/README.md): the allowance, reservation, and charge storage that accounts and grants share.
 - [Conversion contracts](../../libs/conversion-contracts/README.md): runtime-independent shared schemas, types, and duration calculations; its [lint configuration](../../libs/conversion-contracts/oxlint.config.ts) refuses `cloudflare:` and `node:` imports, because the Worker, the workflows, and the browser load it.
 - [Rolling limits](../../libs/rolling-limits/README.md): the rolling-window rate limiter, whose table each of the three objects keeps in its own database.
-- [Errors](../../libs/errors/README.md): error helpers shared by server code: server logs record only a caught error's root cause, so wrapper errors carrying SQL parameters or request data are never logged. It sits in the bottom layer, so any library can depend on it; the graph below leaves it out.
+- [Errors](../../libs/errors/README.md): error helpers shared by server code: server logs record only a caught error's root cause, so wrapper errors carrying SQL parameters or request data are never logged. It sits alone in the bottom layer and imports no Cup package, so any library can depend on it; the graph below leaves it out.
 
 ```mermaid
 flowchart TD
@@ -107,7 +107,7 @@ Durable Object RPC and Workflow invocation are internal platform interfaces, not
 [ADR 0010](../adr/0010-tolerate-unknown-keys-at-the-listener-api.md) sets how strictly each boundary validates:
 
 - The server parses every request against its route's schemas and answers one that fails them with `400 invalid-input`, except operator account inspection, which answers an invalid account ID with `404 account-unavailable`. Each contract package's `openapi.test.ts` checks that every operation with request schemas declares that response.
-- Listener requests and responses drop unknown keys, so installed apps running older code keep working when the server adds or stops reading a field. Operator requests and internal inputs, such as Durable Object RPC, storage, and workflow parameters, stay strict ([`strict-schema.test.ts`](../../libs/api-server/test/strict-schema.test.ts)).
+- Listener requests and responses drop unknown keys, so installed apps running older code keep working when the server adds or stops reading a field. Operator requests and internal inputs, such as Durable Object RPC, storage, and workflow parameters, stay strict.
 - The server does not parse its own responses. Handlers are checked against the contract types at compile time, and route tests parse responses with strict schemas, so drift fails in tests instead of as a server error in production.
 - Listener responses carry only the fields their contract declares. The [listener response mappings](../../libs/api-server/src/http/listener-responses.ts) copy declared fields out of Durable Object results, so internal fields, such as an outcome's storage reference, never reach listeners; [`listener-responses.test.ts`](../../libs/api-server/test/listener-responses.test.ts) parses each response strictly.
 - A contract that exposes another package's data derives its shapes from that package's contracts, such as the [account contracts](../../libs/accounts/src/domain/account-contracts.ts), instead of copying them.
