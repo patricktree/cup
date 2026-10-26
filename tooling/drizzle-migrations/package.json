@@ -13,6 +13,10 @@
     ".": {
       "types": "./dist/types/generate-migrations.d.ts",
       "default": "./src/generate-migrations.ts"
+    },
+    "./schema-diagram": {
+      "types": "./dist/types/schema-diagram.d.ts",
+      "default": "./src/schema-diagram.ts"
     }
   },
   "scripts": {

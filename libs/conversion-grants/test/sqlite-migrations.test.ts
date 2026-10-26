@@ -4,13 +4,24 @@ import sqlite from "node:sqlite";
 import { expect, test } from "vitest";
 import { z } from "zod";
 
+import { describeSchema, readSchemaDiagram } from "@cup/drizzle-migrations/schema-diagram";
+
 import grantMigrations from "#src/migrations/grant.ts";
 import * as grantSchema from "#src/storage/grant-sqlite-schema.ts";
 import { rateEvents } from "#src/storage/rate-limit-schema.ts";
 
-const stores = [{ name: "grant", schema: { ...grantSchema, rateEvents }, bundle: grantMigrations }];
+const STORAGE_PAGE = "../../docs/architecture/durable-object-storage.md";
 
-for (const { name, schema, bundle } of stores) {
+const stores = [
+  {
+    name: "grant",
+    schema: { ...grantSchema, rateEvents },
+    diagramHeading: "Conversion grant object",
+    bundle: grantMigrations,
+  },
+];
+
+for (const { name, schema, diagramHeading, bundle } of stores) {
   test(`${name} migration bundle matches the checked-in SQL and journal`, async () => {
     const journal: unknown = JSON.parse(
       await fs.readFile(`drizzle/${name}/meta/_journal.json`, "utf8"),
@@ -38,6 +49,12 @@ for (const { name, schema, bundle } of stores) {
     const current = await generateSQLiteDrizzleJson(schema);
     expect(current.tables).toEqual(snapshot.tables);
     expect(current.views).toEqual(snapshot.views);
+  });
+
+  test(`${name} schema diagram shows its tables and foreign keys`, async () => {
+    const page = await fs.readFile(STORAGE_PAGE, "utf8");
+    const current = await generateSQLiteDrizzleJson(schema);
+    expect(readSchemaDiagram(page, diagramHeading)).toEqual(describeSchema(current));
   });
 }
 
