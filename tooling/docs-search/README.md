@@ -22,7 +22,7 @@ pnpm docs:search query "Why charge by audio duration?" -c cup-decisions --json
 pnpm docs:search search "Gemini" -c cup-research --json
 ```
 
-Search current documentation for implemented behavior; choose `cup-guides`, `cup-decisions`, or `cup-research` for procedures, rationale, or historical evidence. Omit `--json` for readable terminal output. To save results as JSON, use `pnpm --silent docs:search search "media session" --json > /tmp/cup-search.json`.
+Search current documentation for implemented behavior; choose `cup-guides` (operational guides, package READMEs, and `AGENTS.md` files), `cup-decisions`, or `cup-research` for procedures, rationale, or historical evidence. Omit `--json` for readable terminal output. To save results as JSON, use `pnpm --silent docs:search search "media session" --json > /tmp/cup-search.json`.
 
 From a nested directory, use `pnpm --workspace-root docs:search ...`.
 

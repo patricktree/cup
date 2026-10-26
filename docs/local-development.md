@@ -13,7 +13,7 @@ pnpm dev:services
 pnpm --filter @cup/cloudflare-worker dev
 ```
 
-The [helper](../tooling/env-setup/src/dev-services.ts) generates an ignored ES256 signing key, starts the local Supabase stack, and writes its URL and API keys into the ignored Worker environment file. It preserves the previous environment in `supabase/.local/worker.env.local`. Local JWTs expire after five minutes. The API runs on port 55321, the database on 55322, and Studio on 55323; see the [local Supabase configuration](../supabase/config.toml). Cup does not store application history or credit data in Supabase Postgres.
+The [helper](../tooling/env-setup/src/dev-services.ts) generates an ignored signing key, starts the local Supabase stack, and writes its URL, API keys, Google client ID, and `LOCAL_DEVELOPMENT=true` into the ignored Worker environment file, keeping a copy of the previous environment to restore. The [local Supabase configuration](../supabase/config.toml) sets the ports and the short local JWT lifetime. Cup does not store application history or duration data in Supabase Postgres.
 
 Stop the stack and restore the previous Worker environment:
 
@@ -25,6 +25,6 @@ Restart the development server after either command.
 
 ## Development boundaries
 
-Android continues to use the production API origin; local services configure web development only. The API server requires all bindings and authentication settings in its [environment contract](../libs/api-server/src/api-server-environment.ts); missing configuration is not a supported reduced-functionality mode.
+Native apps always use the production API origin; local services configure web development only. The API server requires all bindings and authentication settings in its [environment contract](../libs/api-server/src/api-server-environment.ts); missing configuration is not a supported reduced-functionality mode.
 
-Wrangler defaults `LOCAL_DEVELOPMENT` to `false`. Local fixture bypasses require `LOCAL_DEVELOPMENT=true`; never enable that flag in production.
+The Worker configuration defaults `LOCAL_DEVELOPMENT` to `false`. With `true`, the API accepts requests to a localhost address, which carry no Cloudflare client IP, as one local client for ingress limits (see [ingress identity](../libs/api-server/src/http/ingress-identity.ts)); never enable it in production.

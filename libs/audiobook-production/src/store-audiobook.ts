@@ -85,7 +85,7 @@ export const audiobookSchema = z.object({
   coverImage: coverImageSchema.optional(),
 });
 
-/** Derives synchronization cues and stores the canonical audiobook manifest. */
+/** Stores the canonical audiobook manifest. */
 export async function storeAudiobook({
   artifactPrefix,
   bucket,

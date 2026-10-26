@@ -89,5 +89,5 @@ The Google Web application OAuth client is created manually in the cup-productio
 Store its ID and secret in `terraform/.env.local` as `TF_VAR_google_web_client_id` and `TF_VAR_google_web_client_secret`.
 Terraform configures Supabase's Google provider from these values, with nonce validation enabled.
 Google must allow the new Supabase callback shown above and JavaScript origin <https://cup.audio>.
-The Android OAuth client must be registered for package `audio.cup.app`. Android OAuth registration and end-to-end web/Android sign-in still require rollout verification. Native iOS account support is deferred.
+The Android OAuth client must be registered for package `audio.cup.app`. Native iOS account support is deferred.
 The Supabase provider preserves masked OAuth secrets in state, so a no-change plan does not prove the secret works or detect an out-of-band secret change.

@@ -58,11 +58,11 @@ Worker types (`worker-configuration.d.ts`) are generated, not committed: postins
 
 ## Repository References
 
-| Need                                | File                           |
-| ----------------------------------- | ------------------------------ |
-| Issue tracker and specifications    | `docs/agents/issue-tracker.md` |
-| Triage labels                       | `docs/agents/triage-labels.md` |
-| Domain terminology and ADR guidance | `docs/agents/domain.md`        |
+| Need                                | File                                                           |
+| ----------------------------------- | -------------------------------------------------------------- |
+| Issue tracker and specifications    | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md) |
+| Triage labels                       | [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md) |
+| Domain terminology and ADR guidance | [`docs/agents/domain.md`](docs/agents/domain.md)               |
 
 ## Package instructions
 

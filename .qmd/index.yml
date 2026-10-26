@@ -23,10 +23,10 @@ collections:
       /: Historical investigations and experimental evidence. Recommendations, prices, and provider capabilities may be superseded.
   cup-guides:
     path: .
-    pattern: README.md,apps/*/README.md,terraform/README.md,tooling/*/README.md,qa/*/README.md
+    pattern: README.md,AGENTS.md,apps/*/README.md,apps/*/AGENTS.md,libs/*/README.md,libs/*/AGENTS.md,libs/*/test/evals/README.md,libs/*/test-e2e/fixtures/README.md,terraform/README.md,tooling/*/README.md,qa/*/README.md
     includeByDefault: false
     context:
-      /: Cup operational and development guides. Verify external configuration separately from repository declarations.
+      /: Cup operational, development, and package guides, including AGENTS.md instructions. Verify external configuration separately from repository declarations.
 models:
   embed: hf:ggml-org/embeddinggemma-300M-GGUF/embeddinggemma-300M-Q8_0.gguf
   generate: hf:tobil/qmd-query-expansion-1.7B-gguf/qmd-query-expansion-1.7B-q4_k_m.gguf
