@@ -19,7 +19,7 @@ The Worker's Resend key is sending-only; Terraform uses a separate management ke
 
 ## Identity providers
 
-Use Supabase project `evwjipxgacwotgbmqtla` exclusively. Terraform configures its Google provider, JWT lifetime, and redirect settings in the [Supabase configuration](../terraform/production/supabase.tf); see the [Google sign-in configuration](../terraform/README.md#google-sign-in-configuration). Configure ES256 JWT signing, which Terraform does not manage. Known gap: the production redirect allow-list holds only a local development address, `http://127.0.0.1:5174/web.html`, so Supabase presumably sends sign-ins that start on another path back to the site URL; this is unverified. The fix belongs in the Terraform configuration. Keep Google client secrets in Supabase and Terraform.
+Use Supabase project `evwjipxgacwotgbmqtla` exclusively. Terraform configures its Google provider, JWT lifetime, and redirect settings in the [Supabase configuration](../terraform/production/supabase.tf); see the [Google sign-in configuration](../terraform/README.md#google-sign-in-configuration). Configure ES256 JWT signing, which Terraform does not manage. Keep Google client secrets in Supabase and Terraform.
 
 Register the Android OAuth client for package `audio.cup.app` and its signing certificate; a client registered for the former package `com.cup_audio.app` does not match.
 
