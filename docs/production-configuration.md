@@ -19,7 +19,7 @@ The Worker's Resend key is sending-only; Terraform uses a separate management ke
 
 ## Identity providers
 
-Use Supabase project `evwjipxgacwotgbmqtla` exclusively. Configure Google as the enabled social provider, ES256 JWT signing, a 300-second JWT lifetime, and the production redirect allow-list. Keep Google client secrets in Supabase and Terraform.
+Use Supabase project `evwjipxgacwotgbmqtla` exclusively. Configure Google as the enabled social provider, ES256 JWT signing, a 300-second JWT lifetime, and the redirect allow-list `https://cup.audio/app` and `https://cup.audio/app/**`. Keep Google client secrets in Supabase and Terraform.
 
 Register the Android OAuth client for package `audio.cup.app` and its signing certificate; a client registered for the former package `com.cup_audio.app` does not match.
 
