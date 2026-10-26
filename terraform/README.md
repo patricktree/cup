@@ -70,7 +70,7 @@ Retain it for subsequent plans; sensitive marking suppresses terminal output but
 On 2026-10-02, the operator confirmed that the manually created Supabase project `oiehcntuiazvunyzngmi` had been deleted. It was never managed by this Terraform configuration; use the replacement project below.
 
 The Terraform-created project reference is `evwjipxgacwotgbmqtla`, with URL <https://evwjipxgacwotgbmqtla.supabase.co>.
-Configure social providers against callback <https://evwjipxgacwotgbmqtla.supabase.co/auth/v1/callback>. On 2026-10-01, the replacement management token successfully authenticated, the operator-verified Google OAuth secret was applied, and the subsequent production plan reported no changes. The bootstrap plan also reported no changes. These checks do not establish end-to-end sign-in or application deployment.
+Configure social providers against callback <https://evwjipxgacwotgbmqtla.supabase.co/auth/v1/callback>. On 2026-10-01, the replacement management token successfully authenticated, the operator-verified Google OAuth secret was applied, and the subsequent production plan reported no changes. The bootstrap plan also reported no changes. These checks do not establish end-to-end sign-in or application deployment; the [Google sign-in configuration](#google-sign-in-configuration) records the later web sign-in check.
 
 ## Resend domain
 
@@ -91,4 +91,5 @@ Terraform configures Supabase's Google provider from these values, with nonce va
 The web client asks Supabase to return to the current page, so the redirect allow-list holds `https://cup.audio/app` and `https://cup.audio/app/**`; Supabase also accepts any URL with the site URL's scheme and host. Native Android exchanges a Google ID token directly and needs no redirect URL.
 Google must allow the new Supabase callback shown above and JavaScript origin <https://cup.audio>.
 The Android OAuth client must be registered for package `audio.cup.app`. Native iOS account support is deferred.
+On 2026-10-26, after the allow-list apply, the operator signed in with Google on <https://cup.audio/app> and was returned to the starting page. Native Android sign-in remains unverified.
 The Supabase provider preserves masked OAuth secrets in state, so a no-change plan does not prove the secret works or detect an out-of-band secret change.
