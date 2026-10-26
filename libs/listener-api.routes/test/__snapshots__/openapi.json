@@ -5637,7 +5637,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Unlisted audiobook.",
+            "description": "Audiobook.",
             "content": {
               "application/json": {
                 "schema": {

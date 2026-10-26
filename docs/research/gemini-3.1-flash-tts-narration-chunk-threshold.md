@@ -1,5 +1,7 @@
 # Gemini 3.1 Flash TTS narration chunk threshold
 
+Historical research, noted 2026-10-26: this study measured `gemini-3.1-flash-tts-preview`, which the [speech configuration](../../libs/audiobook-production/src/speech-synthesis-config.ts) now keeps only for resumed conversions; new conversions use `gemini-3.8-flash-lite-tts`, for which this repository holds no separate threshold measurement.
+
 ## Question
 
 How large may one narration chunk be when synthesized with

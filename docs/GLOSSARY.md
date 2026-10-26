@@ -50,7 +50,7 @@ _Avoid_: account deletion for the cleanup step alone
 
 ## account conversion allowance
 
-The duration allowance issued to an account. Its spent duration remains spent when completed conversions are deleted.
+The duration allowance issued to an account. Its spent duration remains spent; deleting a conversion, once supported, will not refund it.
 
 _Avoid_: conversion grant, trial allowance
 
@@ -68,9 +68,9 @@ _Avoid_: deep link, invite link
 
 ## conversion grant
 
-A shared allowance for producing audiobooks, available to anyone possessing its grant credential.
+A shared allowance for producing audiobooks, available to anyone possessing its grant credential. User-facing copy and documentation qualify what a conversion grant owns as trial, such as a trial link, a trial conversion, or a trial audiobook; the grant itself is a conversion grant.
 
-_Avoid_: trial link, user quota
+_Avoid_: trial link, trial grant, user quota
 
 ## duration allowance
 
@@ -96,6 +96,18 @@ The unspent portion of a duration allowance that is not held by active duration 
 
 _Avoid_: total allowance, reserved duration
 
+## duration balance
+
+The available duration and reserved duration of one duration allowance, derived from its duration ledger and reported together.
+
+_Avoid_: credit balance, ledger
+
+## usage projection
+
+The registry's copy of one account's or conversion grant's allowance, reserved duration, and spent duration, tagged with the owner's ledger revision. It lets operators list owners without calling every owner object; the owner's duration ledger stays authoritative.
+
+_Avoid_: snapshot, usage snapshot
+
 ## grant credential
 
 The secret carried by a trial link that proves access to its conversion grant.
@@ -104,13 +116,13 @@ _Avoid_: trial link, user identity
 
 ## grant session
 
-Browser or native-app authorization derived from a grant credential. Session validity and grant availability are checked separately. It may inspect its conversion grant and, while the grant remains unexpired and unrevoked, prepare articles, including when its duration allowance is exhausted. Speech synthesis additionally requires available duration covering the whole narration document. A grant session does not authorize listing the grant’s conversions. Reading prepared trial text and replaying completed audio require a session for the owning grant while it remains unexpired and unrevoked, including when its duration allowance is exhausted. An audiobook link alone does not authorize access.
+Browser or native-app authorization derived from a grant credential. It authorizes work for its conversion grant only while the grant remains unexpired and unrevoked; it never authorizes listing the grant’s conversions, and an audiobook link alone never substitutes for it. [Trial access](architecture/authentication.md#trial-access) states the current rules.
 
 _Avoid_: grant credential, user session
 
 ## conversion status
 
-The state of a conversion: pending while its narration document is being prepared; synthesizing while audio is generated for the whole document, during which the text can already be read; ready when every segment has audio or a final failure; failed when preparation could not finish; or insufficient duration when the narration document needs more than the available duration, in which case the document stays readable and synthesis can be requested again.
+The state of a conversion: pending while its narration document is being prepared; synthesizing while audio is generated for any of its segments, during which the text can already be read; ready when every segment has audio or a final failure; failed when preparation could not finish; or insufficient duration when the narration document needs more than the available duration, in which case the document stays readable and synthesis can be requested again.
 
 _Avoid_: workflow status
 
@@ -158,7 +170,7 @@ _Avoid_: paragraph, section, HTML block
 
 ## narration chunk
 
-A bounded portion of one narration block processed as a single narration-synthesis input. A narration block normally produces one chunk but may be divided when it is oversized.
+A bounded portion of narration text processed as a single narration-synthesis input: one narration block, together with any headings directly preceding it. A narration block normally produces one chunk but may be divided when it is oversized.
 
 _Avoid_: text chunk, audio chunk
 
@@ -182,9 +194,9 @@ _Avoid_: transcript, transcription
 
 ## synchronization unit
 
-The smallest independently navigable portion of a narration document associated with one continuous interval of narration audio.
+The smallest independently navigable portion of a narration document associated with one continuous interval of narration audio. Each unit has its own audio segment; a position on the whole audiobook is derived from the durations of the preceding segments plus the offset within the unit's segment.
 
-_Avoid_: sentence, paragraph, narration chunk
+_Avoid_: sentence, paragraph, narration chunk, synchronization cue
 
 ## segment
 
@@ -192,17 +204,11 @@ The user-facing name for a synchronization unit: an independently selectable par
 
 _Avoid_: passage, paragraph, section
 
-## synchronization cue
-
-A relationship between one synchronization unit and its corresponding interval in narration audio. Playback uses a separate audio segment per unit and a local offset within that segment; a position on the whole audiobook is derived from the durations of the preceding segments.
-
-_Avoid_: timestamp, subtitle, caption
-
 ## audiobook
 
-The adaptation produced from source content, comprising a prepared narration document and one narration audio segment per synchronization unit. Its text can be read while speech is generated. It becomes playable once every segment has audio or a final failure, so its total duration is known before playback starts.
+The adaptation produced from source content, comprising a prepared narration document and one narration audio segment per synchronization unit. Its text can be read while speech is generated. It becomes playable once every segment has audio, so its total duration is known before playback starts; when some segments finally failed, it plays only after the listener chooses to skip them.
 
-_Avoid_: audio file, audio output, workflow output
+_Avoid_: audio file, audio output, workflow output, article
 
 ## cover image
 
@@ -216,20 +222,14 @@ A user's remembered synchronization unit and offset within that unit's audio. It
 
 _Avoid_: bookmark, complete-track timestamp, shared grant progress
 
-## unlisted audiobook
-
-An audiobook accessible to anyone who possesses its link but absent from public listings.
-
-_Avoid_: private audiobook, public audiobook
-
 ## private audiobook
 
-An audiobook accessible only to its owning user.
+An audiobook accessible only to its owning account.
 
-_Avoid_: unlisted audiobook, personal audiobook
+_Avoid_: personal audiobook
 
 ## public audiobook
 
-An audiobook intentionally accessible without signing in.
+A planned audiobook intentionally accessible without signing in. No audiobook is public yet, and no audiobook is reachable by its link alone.
 
 _Avoid_: unlisted audiobook, shared audiobook

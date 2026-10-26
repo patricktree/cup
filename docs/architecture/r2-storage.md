@@ -37,7 +37,7 @@ create-audiobook-from-url-audio
 
 `<sequence>` is the zero-based index of a synchronization unit in the prepared narration document. Segment names use plain decimal numbers without zero padding. A conversion can have a manifest before any MP3 objects exist, and later have only some sequences generated. Failure objects exist only for units whose workflow records a failure.
 
-Omitting the owner when constructing a conversion prefix selects the trial layout. Ownership and authorization come from Durable Object records and registry routes, rather than being inferred from a key alone. See [storage ownership](README.md#storage-ownership) and [authentication and authorization](authentication.md).
+Ownership and authorization come from Durable Object records and registry routes, rather than being inferred from a key alone. See [storage ownership](README.md#storage-ownership) and [authentication and authorization](authentication.md).
 
 ## Objects within a conversion
 
@@ -52,9 +52,9 @@ The following paths are relative to either conversion prefix.
 
 The manifest uses HTTP content type `application/json`. The owner stores its object reference, including key, content type, byte length, and ETag; loading validates the object against that reference. The manifest contains prepared text and synthesis configuration, not a list of generated audio objects.
 
-The cover image has no file extension; its HTTP content type is `image/jpeg`, `image/png`, `image/webp`, `image/avif`, or `image/gif`, as identified from its bytes. It is written before the manifest that records it. The manifest is authoritative: a conversion can hold a `cover-image` object that no manifest records, left by a preparation attempt that later failed, and such an object is never served. When preparation is retried for an account under the same execution epoch, the account artifact writer answers the repeated write with the object it already stored, so the manifest describes that stored object.
+The cover image has no file extension; its HTTP content type is the image type identified from its bytes, as described under [cover image](conversion.md#cover-image). It is written before the manifest that records it. The manifest is authoritative: a conversion can hold a `cover-image` object that no manifest records, left by a preparation attempt that later failed, and such an object is never served. When preparation is retried for an account under the same execution epoch, the account artifact writer answers the repeated write with the object it already stored, so the manifest describes that stored object.
 
-MP3 objects use HTTP content type `audio/mpeg`. The [audio format](../../libs/audiobook-production/src/audio-format.ts) is mono at 24,000 Hz; production encodes at 128 kbit/s. Segment publication uses a conditional write with `If-None-Match: *`. Retries validate an existing object's synthesis identity and reuse it instead of replacing audio already published for that sequence.
+MP3 objects use HTTP content type `audio/mpeg`. The [audio format](../../libs/audiobook-production/src/audio-format.ts) and [segment production](../../libs/audiobook-production/src/produce-audio-segment.ts) define the channel layout, sample rate, and bitrate. Segment publication uses a conditional write with `If-None-Match: *`. Retries validate an existing object's synthesis identity and reuse it instead of replacing audio already published for that sequence.
 
 Failure JSON is written with `application/json` HTTP content-type metadata. A later successful retry can leave the failure object in storage: the [synthesis-state reader](../../libs/api-server/src/use-cases/get-synthesis-state.ts) reads it only for a segment whose reservation was released, and the segment workflow does not delete the earlier failure object.
 
@@ -79,7 +79,7 @@ Account-owned writes additionally carry `cup-writer-id` on manifests, cover imag
 
 ## Access and lifecycle
 
-The Worker loads manifests and serves audio through the listener API. Audio delivery requires a ready manifest, a valid synchronization-unit sequence, and a settled segment in the owner's duration ledger; an MP3 object's existence alone does not make it playable. The [audio delivery handler](../../libs/api-server/src/http/serve-audiobook.ts) supports HEAD requests, byte ranges, and conditional ETag requests. Cover image delivery in the same module requires a ready manifest that records a cover image and supports HEAD and conditional ETag requests. Private artifacts require the active owning account; trial artifacts require a session for the active owning grant under the [access rules](authentication.md).
+The Worker loads manifests and serves audio through the listener API. Audio delivery requires a ready manifest, a valid synchronization-unit sequence, and a settled segment in the owner's duration ledger, so an MP3 object's existence alone does not make it playable; likewise only a cover image the manifest records is served. [Delivery](conversion.md#delivery-positions-and-lifecycle) describes the request handling and [authentication](authentication.md) the access rules.
 
 Account erasure deletes every object under `accounts/<accountId>/` after execution is fenced and artifact writers have drained. It leaves trial conversion prefixes and other accounts separate. See [account deletion](account-deletion.md) and the [erasure implementation](../../libs/accounts/src/durable-object/account-durable-object.ts).
 

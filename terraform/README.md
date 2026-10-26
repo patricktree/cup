@@ -90,5 +90,5 @@ Store its ID and secret in `terraform/.env.local` as `TF_VAR_google_web_client_i
 Terraform configures Supabase's Google provider from these values, with nonce validation enabled.
 The web client asks Supabase to return to the current page, so the redirect allow-list holds `https://cup.audio/app` and `https://cup.audio/app/**`; Supabase also accepts any URL with the site URL's scheme and host. Native Android exchanges a Google ID token directly and needs no redirect URL.
 Google must allow the new Supabase callback shown above and JavaScript origin <https://cup.audio>.
-The Android OAuth client must be registered for package `audio.cup.app`. Android OAuth registration and end-to-end web/Android sign-in still require rollout verification. Native iOS account support is deferred.
+The Android OAuth client must be registered for package `audio.cup.app`. Native iOS account support is deferred.
 The Supabase provider preserves masked OAuth secrets in state, so a no-change plan does not prove the secret works or detect an out-of-band secret change.
