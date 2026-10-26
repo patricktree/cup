@@ -2,9 +2,7 @@
 
 ## Documentation
 
-Before working on the project, read [the glossary](docs/GLOSSARY.md) and [documentation maintenance instructions](docs/agents/domain.md), then consult relevant architecture pages and ADRs from [the documentation index](docs/README.md). Update affected documentation and diagrams in the same change as the implementation.
-
-Before changing, renaming, or removing a domain concept or cross-component behavior, run `pnpm docs:search query "question" --json` and review relevant results, even when the exact phrase or affected page is already known. Follow the [documentation search procedure](docs/agents/domain.md#find-supporting-documentation) to find related descriptions and verify removals.
+Before working on the project, read the [glossary](docs/GLOSSARY.md) and the [wiki schema](docs/agents/domain.md), then the architecture pages and ADRs relevant to the task from the [documentation index](docs/README.md). Update affected documentation and diagrams in the same change as the implementation. Before changing, renaming, or removing a domain concept or cross-component behavior, run `pnpm docs:search` by the schema's [documentation search procedure](docs/agents/domain.md#find-supporting-documentation), even when the affected page is already known.
 
 ## Package Manager
 
@@ -58,11 +56,11 @@ Worker types (`worker-configuration.d.ts`) are generated, not committed: postins
 
 ## Repository References
 
-| Need                                | File                                                           |
-| ----------------------------------- | -------------------------------------------------------------- |
-| Issue tracker and specifications    | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md) |
-| Triage labels                       | [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md) |
-| Domain terminology and ADR guidance | [`docs/agents/domain.md`](docs/agents/domain.md)               |
+| Need                                                              | File                                                           |
+| ----------------------------------------------------------------- | -------------------------------------------------------------- |
+| Issue tracker (GitHub Issues), specifications, and wayfinder maps | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md) |
+| Triage labels                                                     | [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md) |
+| Documentation wiki schema                                         | [`docs/agents/domain.md`](docs/agents/domain.md)               |
 
 ## Package instructions
 

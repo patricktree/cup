@@ -45,20 +45,18 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 
 ## Decisions and evidence
 
-[ADRs](adr/README.md) preserve accepted decisions and their rationale. Acceptance does not imply every consequence is implemented. Architecture pages identify material implementation gaps and link to the relevant decisions.
-
-[Research](research/README.md) preserves investigations, sources, and experiment artifacts. Its recommendations reflect the investigation's context and may have been superseded.
+[ADRs](adr/README.md) and [research](research/README.md) are dated history: ADRs record accepted decisions and why they were made, research keeps investigations with their sources and observation dates. An accepted decision may not be fully built, and a research recommendation may have been superseded; architecture pages identify material implementation gaps and link to the relevant decisions.
 
 ## Maintain this documentation
 
-Use [local documentation search](../tooling/docs-search/README.md) to discover related explanations as well as locate pages. Follow the [required search procedure for concept and behavior changes](agents/domain.md#find-supporting-documentation), including removals where the exact phrase is already known. Search supports keyword and semantic retrieval with a separate index for each checkout. Read the current source files before relying on results.
+Agents maintain these pages by the [wiki schema](agents/domain.md).
 
-For Cloudflare runtime, configuration, and design decisions, follow the [Cloudflare documentation guidance](agents/cloudflare.md), including product references and the AI Gateway binding requirement.
+| Page                                                           | Purpose                                                                                   |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [Wiki schema](agents/domain.md)                                | Layers, size budget, documentation search, decisions and evidence, landing, health review |
+| [Local documentation search](../tooling/docs-search/README.md) | Keyword and semantic search over this checkout's documentation                            |
+| [Issue tracker](agents/issue-tracker.md)                       | GitHub Issues conventions and wayfinder maps                                              |
+| [Triage labels](agents/triage-labels.md)                       | Label strings for the canonical triage roles                                              |
+| [Cloudflare documentation guidance](agents/cloudflare.md)      | Product references and the AI Gateway binding requirement                                 |
 
-Before design or implementation, read the glossary and relevant architecture pages and ADRs. Update affected explanations, diagrams, and source links in the same change as the implementation. Follow the [documentation maintenance instructions](agents/domain.md).
-
-Keep implementation detail in code: link to route contracts, schemas, and configuration instead of copying their contents. Document responsibilities, relationships, guarantees, and behavior that requires reading across components. Extend existing pages before adding another explanation of the same subject.
-
-Run `pnpm docs:check` for Markdown, local-link, and [Mermaid diagram](../.patricktree-stack/tooling/mermaid-check/README.md) validation; it also runs in `pnpm validate:fast`. These checks detect structural problems, not architectural correctness. Review diagrams and explanations against the linked implementation when changing behavior.
-
-Label unverified configuration and future plans explicitly. Use Git history for the chronology of documentation changes.
+Run `pnpm docs:check` for Markdown, local-link, and [Mermaid diagram](../.patricktree-stack/tooling/mermaid-check/README.md) validation.
