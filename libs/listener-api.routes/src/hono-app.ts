@@ -311,7 +311,7 @@ const audiobookRoute = createRoute({
   responses: {
     200: {
       content: { "application/json": { schema: audiobookSchema } },
-      description: "Unlisted audiobook.",
+      description: "Audiobook.",
     },
     400: errorResponse("Invalid request."),
     404: errorResponse("Audiobook not found."),

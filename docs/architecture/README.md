@@ -41,7 +41,7 @@ flowchart TD
     Registry --> Email[Resend deletion notifications]
 ```
 
-The Worker is the HTTP boundary. Separate preparation and audio segment synthesis workflows perform durable conversion work inside the same Worker; account and trial objects control ownership, allowance, and lifecycle. The shared registry also coordinates cleanup across R2 and Supabase and sends lifecycle notifications. The diagram groups resources by responsibility; a Durable Object class creates multiple isolated objects where required.
+The Worker is the HTTP boundary. Separate preparation and audio segment synthesis workflows perform durable conversion work inside the same Worker; account and conversion grant objects control ownership, allowance, and lifecycle. The shared registry also coordinates cleanup across R2 and Supabase and sends lifecycle notifications. The diagram groups resources by responsibility; a Durable Object class creates multiple isolated objects where required.
 
 ## Responsibilities and code boundaries
 
@@ -86,7 +86,7 @@ flowchart TD
     Grants --> Contracts
     Registry --> Contracts
     Accounts -. ownership, usage, and deletion RPC .-> Registry
-    Grants -. snapshot RPC .-> Registry
+    Grants -. usage projection RPC .-> Registry
 ```
 
 ## API definitions
@@ -123,7 +123,7 @@ The one-time transition from handwritten trial schemas preserves grant identitie
 | Store                   | Ownership and purpose                                                                                                                          | Primary source                                                                                     |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | Account object          | One per account; private conversion history, duration ledger, and lifecycle state                                                              | [Account object](../../libs/accounts/src/durable-object/account-durable-object.ts)                 |
-| Conversion grant object | One per trial grant; shared allowance and duration ledger, credentials, sessions, and conversions                                              | [Grant object](../../libs/conversion-grants/src/durable-object/conversion-grant-durable-object.ts) |
+| Conversion grant object | One per conversion grant; shared allowance and duration ledger, credentials, sessions, and conversions                                         | [Grant object](../../libs/conversion-grants/src/durable-object/conversion-grant-durable-object.ts) |
 | Registry                | Singleton identity-to-account mapping, grant inventory, owner usage projections, conversion ownership, provisioning, and deletion coordination | [Registry](../../libs/registry/src/durable-object/registry-durable-object.ts)                      |
 | Supabase Auth           | Identity-provider data; Cup application state remains in Durable Objects                                                                       | [Auth configuration](../../supabase/config.toml)                                                   |
 | R2 audiobook bucket     | Conversion artifacts: prepared manifests, cover images, audio segments, and unit failure details                                               | [Artifact storage](../../libs/audiobook-production/src/audio-segment-storage.ts)                   |

@@ -1,6 +1,6 @@
 # Conversion from source URL to audiobook
 
-The API admits preparation, an account or trial grant owns allowance and outcomes, and Cloudflare Workflows runs durable processing steps. R2 stores the prepared narration document and one independently stored audio segment per synchronization unit. [ADR 0008](../adr/0008-synthesize-the-whole-narration-document.md) records why the whole document is synthesized as part of the conversion; [glossary](../GLOSSARY.md) defines the representations.
+The API admits preparation, an account or conversion grant owns allowance and outcomes, and Cloudflare Workflows runs durable processing steps. R2 stores the prepared narration document and one independently stored audio segment per synchronization unit. [ADR 0008](../adr/0008-synthesize-the-whole-narration-document.md) records why the whole document is synthesized as part of the conversion; [glossary](../GLOSSARY.md) defines the representations.
 
 Two workflows run in the same Worker: [PrepareAudiobookWorkflow](../../libs/create-audiobook-from-url-workflow/src/prepare-audiobook-workflow.ts) prepares the document, and [SynthesizeAudioSegmentWorkflow](../../libs/create-audiobook-from-url-workflow/src/synthesize-audio-segment-workflow.ts) generates one segment. Each instance has a stable identity derived from its conversion, and for a segment its sequence, so dispatch, recovery, and retries resolve to the same instance. The [Worker configuration](../../apps/cloudflare-worker/wrangler.jsonc) declares their bindings. Runs of the former combined workflow are not moved into these workflows; settled audio remains reusable through the owner's ledger and stored artifacts.
 
@@ -19,7 +19,7 @@ sequenceDiagram
     API->>Owner: Authorize and admit preparation
     Owner->>Preparation: Dispatch preparation
     API-->>Client: Conversion identity
-    Client->>Client: Navigate to article skeletons
+    Client->>Client: Navigate to reader skeletons
     Preparation->>Preparation: Prepare source material
     par Beside content selection
         Preparation->>AI: Select narration content
@@ -30,7 +30,7 @@ sequenceDiagram
     Preparation->>Owner: Set ready outcome with every segment's text length
     alt Whole-document estimate exceeds available duration
         Owner->>Owner: Record outcome, reserve nothing
-        Client->>API: Poll article
+        Client->>API: Poll audiobook
         API-->>Client: Document, needed and available duration
     else Estimate fits
         Owner->>Owner: Record outcome and reserve every segment
@@ -42,7 +42,7 @@ sequenceDiagram
             Segment->>Owner: Settle encoded duration
         end
         loop Until every segment has audio or a final failure
-            Client->>API: Poll article
+            Client->>API: Poll audiobook
             API->>Owner: Check authorization, read segment states
             API-->>Client: Document and per-segment state
         end
@@ -52,9 +52,9 @@ sequenceDiagram
 
 ## Preparation
 
-After the server accepts the request and returns a conversion ID, the app navigates to the article view. The reader shows title and paragraph skeletons until preparation finishes. Preparation uses [source material](../../libs/prepare-source-material/), [narration selection](../../libs/narration-content-selection/), and [document creation](../../libs/narration-document-creation/). It stores the title, safe structured HTML, synchronization units, source URL, speech configuration, and a record of the cover image when one was kept, and records the preparation outcome together with every segment's text length. The owner reserves the whole document, or nothing, in the same transaction that records the outcome, so a prepared conversion never has undecided reservations. As its final step the workflow asks the owner to dispatch the reserved segments. The owners keep storing that outcome as `pending`, `ready`, or `failed`; the conversion status shown to clients is derived from it together with the segment states, as described below.
+After the server accepts the request and returns a conversion ID, the app navigates to the reader. The reader shows title and paragraph skeletons until preparation finishes. Preparation uses [source material](../../libs/prepare-source-material/), [narration selection](../../libs/narration-content-selection/), and [document creation](../../libs/narration-document-creation/). It stores the title, safe structured HTML, synchronization units, source URL, speech configuration, and a record of the cover image when one was kept, and records the preparation outcome together with every segment's text length. The owner reserves the whole document, or nothing, in the same transaction that records the outcome, so a prepared conversion never has undecided reservations. As its final step the workflow asks the owner to dispatch the reserved segments. The owners keep storing that outcome as `pending`, `ready`, or `failed`; the conversion status shown to clients is derived from it together with the segment states, as described below.
 
-Active accounts and open, unexpired trial grants may prepare articles without available duration; such an article stays readable without audio. Existing per-owner admission limits still apply. If preparation fails, the article view shows an error and a Retry button. Retry restarts preparation for the same conversion. Speech configuration is stored with the document so later generation and retries use the same choice (model, voice, ...).
+Active accounts and open, unexpired conversion grants may prepare audiobooks without available duration; such an audiobook stays readable without audio. Existing per-owner admission limits still apply. If preparation fails, the reader shows an error and a Retry button. Retry restarts preparation for the same conversion. Speech configuration is stored with the document so later generation and retries use the same choice (model, voice, ...).
 
 Narration content selection retains complete paragraphs of main prose, including instructional prose, while excluding standalone code blocks and shell command snippets. Selection reconstructs narration source material from the original HTML, so source wording and native anchors are preserved. The [live evals](../../libs/narration-content-selection/test/evals/README.md) compare the resulting synchronization units exactly against committed goldens.
 
@@ -64,7 +64,7 @@ Generated audio duration is recorded per segment by the owner's duration account
 
 Preparation keeps the cover image a source page declares, when it can. No client displays it yet: it is stored, recorded, and served, so a surface that shows it needs only client work.
 
-Source preparation reads the declaration from page metadata, Open Graph before Twitter, never from images in the article body. The rendered page load's declaration wins over the static load's, because a static shell often declares nothing or only a site-wide image. [Declaration extraction](../../libs/prepare-source-material/src/prepare-source-material.ts) defines the candidates and which declarations are unusable.
+Source preparation reads the declaration from page metadata, Open Graph before Twitter, never from images in the source content. The rendered page load's declaration wins over the static load's, because a static shell often declares nothing or only a site-wide image. [Declaration extraction](../../libs/prepare-source-material/src/prepare-source-material.ts) defines the candidates and which declarations are unusable.
 
 A separate workflow step fetches the image while narration content is selected, and the manifest is stored only after both finish. The step opens its own browser session after source preparation has closed the first, which keeps it self-contained and retryable; the two sessions never overlap. A browser is used instead of a Worker `fetch` because publishers refuse non-browser clients: on 2026-10-13 Gates Notes answered a plain request carrying a browser user agent with `403 Access Denied`.
 
@@ -84,7 +84,7 @@ The owner estimates every segment still lacking audio and reserves all of them i
 
 Dispatch bounds its requests in flight but does not pace them, and owners do not coordinate, so it does not enforce the Workflows limit on instance creations per second, which all conversions share. A creation refused for that limit fails the dispatch; the preparation workflow retries its dispatch step, and the owner alarm creates whatever is still missing, so the affected segments start late rather than being lost. This has not been observed or load-tested. No ceiling limits how many segments synthesize concurrently.
 
-Each segment workflow synthesizes, publishes, and settles independently. Settlement uses the actual encoded duration and records each segment once; stored immutable audio is reused if a previous attempt already published it. Transient provider errors are retried within the step, and a provider rate limit makes the workflow wait and try again so a burst outlasts a per-minute limit rather than failing. A segment that still fails releases only its own reservation and stores an explanation; completed segments remain stored and charged. A segment workflow never reserves for itself: it runs only for a segment the owner reserved or already settled, so a reservation always comes from the whole-document step.
+Each segment workflow synthesizes, publishes, and settles independently. Settlement uses the actual encoded duration and records each segment once; stored immutable audio is reused if a previous attempt already published it. Transient provider errors are retried within the step, and a provider rate limit makes the workflow wait and try again so a burst outlasts a per-minute limit rather than failing. A segment that still fails releases only its own reservation and stores an explanation; completed segments remain stored and charged. A segment workflow never reserves for itself: it runs only for a segment the owner reserved or already settled, so a reservation always comes from the whole-document step. The owner objects still expose a per-segment reservation that only tests call, so all-or-none reservation holds by convention rather than through their interfaces.
 
 While segments are reserved, each owner's alarm treats a reservation as synthesis that is still owed. It creates the workflow of a reserved segment that has none and restarts one that errored, which recovers a dispatch that failed partway, including a retry's; a restarted run that fails again releases its own reservation. The alarm releases a reservation itself only when its workflow was terminated, or errored after the account can no longer execute work. [ADR 0003](../adr/0003-charge-for-accessible-generated-narration.md) defines capped overruns and free reuse.
 
