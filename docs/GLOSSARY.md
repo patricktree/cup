@@ -104,7 +104,7 @@ _Avoid_: trial link, user identity
 
 ## grant session
 
-Browser or native-app authorization derived from a grant credential. Session validity and grant availability are checked separately. It may inspect its conversion grant and, while the grant remains unexpired and unrevoked, prepare articles, including when its duration allowance is exhausted. Speech synthesis additionally requires available duration covering the whole narration document. A grant session does not authorize listing the grant’s conversions. Reading prepared trial text and replaying completed audio require a session for the owning grant while it remains unexpired and unrevoked, including when its duration allowance is exhausted. An audiobook link alone does not authorize access.
+Browser or native-app authorization derived from a grant credential. It authorizes work for its conversion grant only while the grant remains unexpired and unrevoked; it never authorizes listing the grant’s conversions, and an audiobook link alone never substitutes for it. [Trial access](architecture/authentication.md#trial-access) states the current rules.
 
 _Avoid_: grant credential, user session
 

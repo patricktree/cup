@@ -1,6 +1,6 @@
 # Production configuration
 
-Use this guide to supply the production Worker's configuration and the provider settings that Terraform does not manage. The [authentication](architecture/authentication.md) and [account deletion](architecture/account-deletion.md) pages explain the behavior this configuration enables. The [Terraform guide](../terraform/README.md) covers infrastructure state, the Supabase project, the Resend domain, and Supabase's Google provider. Apple sign-in and native iOS account support are deferred.
+Use this guide to supply the production Worker's configuration and the provider settings that Terraform does not manage, and to find those it does. The [authentication](architecture/authentication.md) and [account deletion](architecture/account-deletion.md) pages explain the behavior this configuration enables. The [Terraform guide](../terraform/README.md) covers infrastructure state, the Supabase project, the Resend domain, and Supabase's Google provider. Apple sign-in and native iOS account support are deferred.
 
 ## Worker configuration
 
@@ -19,13 +19,13 @@ The Worker's Resend key is sending-only; Terraform uses a separate management ke
 
 ## Identity providers
 
-Use Supabase project `evwjipxgacwotgbmqtla` exclusively. Configure Google as the enabled social provider, ES256 JWT signing, a 300-second JWT lifetime, and the production redirect allow-list. Keep Google client secrets in Supabase and Terraform.
+Use Supabase project `evwjipxgacwotgbmqtla` exclusively. Terraform configures its Google provider, JWT lifetime, and redirect settings in the [Supabase configuration](../terraform/production/supabase.tf); see the [Google sign-in configuration](../terraform/README.md#google-sign-in-configuration). Configure ES256 JWT signing, which Terraform does not manage. Keep Google client secrets in Supabase and Terraform.
 
 Register the Android OAuth client for package `audio.cup.app` and its signing certificate; a client registered for the former package `com.cup_audio.app` does not match.
 
 ## Email
 
-The [deletion coordinator](../libs/registry/src/account-deletion/deletion-coordinator.ts) sends notices through the [Resend provider](../libs/registry/src/providers/resend-email.ts) to the Resend API at the `RESEND_BASE_URL` variable, `https://api.resend.com`, from the Resend domain declared in the [Terraform guide](../terraform/README.md#resend-domain). Inspect notification outcomes with the [operator CLI](../apps/operator/README.md#list-account-deletions); provider acceptance is not proof of inbox delivery.
+Deletion notices go to the Resend API at the `RESEND_BASE_URL` variable, `https://api.resend.com`, from the Resend domain declared in the [Terraform guide](../terraform/README.md#resend-domain). Inspect notification outcomes with the [operator CLI](../apps/operator/README.md#list-account-deletions); provider acceptance is not proof of inbox delivery.
 
 ## Pending rollout
 

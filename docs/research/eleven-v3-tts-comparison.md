@@ -1,5 +1,7 @@
 # Eleven v3 and Gemini TTS comparison
 
+Historical research, noted 2026-10-26: its default-provider instruction no longer describes the checkout. The [speech configuration](../../libs/audiobook-production/src/speech-synthesis-config.ts) selects Gemini `gemini-3.8-flash-lite-tts`; ElevenLabs remains implemented as an alternative configuration. The comparison's findings below are unchanged.
+
 On 2026-09-23, configure ElevenLabs `eleven_v3` with the stock George voice (`JBFqnCBsd6RMkjVDRZzb`) as the backend default. Gemini `gemini-3.1-flash-tts-preview` with Charon remains implemented. Switch back by assigning `GEMINI_SPEECH_CONFIG` to `SPEECH_CONFIG` in `libs/audiobook-production/src/speech-synthesis-config.ts` and redeploying. There is no user-facing choice or automatic provider fallback.
 
 Requests use the default Cloudflare AI Gateway and its stored provider credentials. ElevenLabs receives unchanged narration text, stability 0.5, and requests for 24 kHz signed 16-bit mono PCM. The existing MP3 encoder and synchronization pipeline remain in use. A durable workflow step records the synthesis configuration before producing segments; stored segment identities prevent incompatible reuse and mixed-provider assembly. Completed Gemini audiobooks remain exportable. A pre-existing conversion resumes its stored configuration when segment zero is available; incompatible partial segments fail rather than silently mixing providers.
