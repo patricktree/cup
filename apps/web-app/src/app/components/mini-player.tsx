@@ -159,7 +159,7 @@ function PlayPauseButton({ loaded }: { loaded: LoadedAudiobook }): React.JSX.Ele
         isPlaying ? <PauseMiniIcon /> : <PlayIcon width={PLAY_ICON_SIZE} height={PLAY_ICON_SIZE} />
       }
       className={controlAbovePill}
-      onClick={() => (isPlaying ? host.pause() : host.play())}
+      onClick={host.togglePlayback}
     />
   );
 }

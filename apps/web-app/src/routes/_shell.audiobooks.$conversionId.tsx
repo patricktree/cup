@@ -6,8 +6,9 @@ import React from "react";
 
 import { DetailTopBar } from "#src/app/components/detail-top-bar.js";
 import type { DetailBackTarget } from "#src/app/components/detail-top-bar.js";
+import { fadeFooterClearance } from "#src/app/components/fade-footer.js";
 import { ShellContent } from "#src/app/components/main.tsx";
-import { PLAYER_SHEET_CLEARANCE, PlayerSheet } from "#src/app/components/player-sheet.js";
+import { PLAYER_SHEET_HEIGHTS, PlayerSheet } from "#src/app/components/player-sheet.js";
 import { QueryBoundary, QueryErrorScreen } from "#src/app/components/query-boundary.js";
 import { DSButton } from "#src/app/design-system/button.js";
 import { DSCoverImage } from "#src/app/design-system/cover-image.js";
@@ -69,7 +70,7 @@ function DetailLayout({
       <ShellContent
         headerContent={topBar}
         mainContent={<div {...interTypefaceScope}>{children}</div>}
-        mainPaddingBlockEnd={PLAYER_SHEET_CLEARANCE}
+        mainPaddingBlockEnd={fadeFooterClearance(PLAYER_SHEET_HEIGHTS)}
       />
       <PlayerSheet statusLine={statusLine} />
     </>

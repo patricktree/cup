@@ -23,10 +23,25 @@ const TOKEN_QUERY_PARAMETER = "token";
 const TOKEN_VERSION = "v1";
 
 /** A media route under `/api/files/audiobooks/{conversionId}/`. */
-export type AudiobookMediaResource = "cover-image" | "narration-track.mp3";
+type AudiobookMediaResource = "cover-image" | "narration-track.mp3";
+
+/** Signs media URLs on the request's origin for one principal, which must have access. */
+export function createMediaUrlSigner(
+  context: { req: { url: string }; env: { MEDIA_URL_SIGNING_KEY: string } },
+  principal: MediaUrlPrincipal,
+): (conversionId: string, resource: AudiobookMediaResource) => Promise<string> {
+  return (conversionId, resource) =>
+    signAudiobookMediaUrl({
+      requestUrl: context.req.url,
+      signingKey: context.env.MEDIA_URL_SIGNING_KEY,
+      conversionId,
+      principal,
+      resource,
+    });
+}
 
 /** Issues the signed media URL of one media resource of an audiobook, on the request's origin. */
-export function signAudiobookMediaUrl({
+function signAudiobookMediaUrl({
   requestUrl,
   signingKey,
   conversionId,

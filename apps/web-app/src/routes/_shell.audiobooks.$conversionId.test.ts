@@ -178,6 +178,37 @@ test("the player sheet skips 15 seconds back and forward, within the track", asy
   expect((await readNarrationAudio(page)).paused).toBe(true);
 });
 
+test("before an audiobook is loaded, the player sheet skips from its stored position", async ({
+  mount,
+  page,
+}) => {
+  await captureNarrationAudio(page);
+
+  const component = await mount("routes/_shell.audiobooks.$conversionId/ResumingAcrossPages");
+  const playerSheet = component.getByRole("contentinfo", { name: "Player" });
+
+  await component.getByRole("button", { name: "Play segment 2", exact: true }).click();
+  await expectPlayingFrom(page, 5);
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+  await component
+    .getByRole("listitem")
+    .filter({ hasText: "A second document about listening" })
+    .getByRole("link")
+    .click();
+  await expect(playerSheet.getByText("0:00", { exact: true })).toBeVisible();
+  await expect(playerSheet.getByText("-0:30", { exact: true })).toBeVisible();
+
+  // The listener stopped 12 s in.
+  await playerSheet.getByRole("button", { name: "Forward 15 seconds", exact: true }).click();
+  await expect(playerSheet.getByText("0:27", { exact: true })).toBeVisible();
+  expect((await readNarrationAudio(page)).src).toContain("audiobook=second");
+  await expect.poll(async () => (await readNarrationAudio(page)).currentTime).toBe(27);
+
+  await playerSheet.getByRole("button", { name: "Back 15 seconds", exact: true }).click();
+  await expect.poll(async () => (await readNarrationAudio(page)).currentTime).toBe(12);
+  expect((await readNarrationAudio(page)).paused).toBe(true);
+});
+
 test("the player sheet shows the start of an audiobook with a narration track", async ({
   mount,
 }) => {

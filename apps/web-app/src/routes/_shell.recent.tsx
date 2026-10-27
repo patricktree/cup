@@ -4,7 +4,8 @@ import { createFileRoute, Link, Navigate, Outlet } from "@tanstack/react-router"
 import React from "react";
 
 import { AccountAvatar } from "#src/app/components/account-avatar.js";
-import { AccountTabBar, TAB_BAR_CLEARANCE } from "#src/app/components/account-tab-bar.js";
+import { AccountTabBar, TAB_BAR_HEIGHTS } from "#src/app/components/account-tab-bar.js";
+import { fadeFooterClearance } from "#src/app/components/fade-footer.js";
 import { Main } from "#src/app/components/main.tsx";
 import { MiniPlayer } from "#src/app/components/mini-player.js";
 import { RecentsCard } from "#src/app/components/recents-card.js";
@@ -89,7 +90,7 @@ function RecentPage(): React.ReactNode {
             padding-block: 24px;
 
             /* the tab bar's fade reaches this far over the end of <main> */
-            padding-block-end: ${TAB_BAR_CLEARANCE};
+            padding-block-end: ${fadeFooterClearance(TAB_BAR_HEIGHTS)};
           `,
         )}
       >

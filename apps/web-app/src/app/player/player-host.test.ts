@@ -308,6 +308,20 @@ test("Play starts the element within the call, before anything is awaited", () =
   expect(player().getSnapshot().isBuffering).toBe(false);
 });
 
+test("toggling pauses a playing audiobook and plays a paused one", () => {
+  const { host, element } = createHost();
+  host.showConversion("first", FIRST);
+  host.playShown();
+
+  host.togglePlayback();
+  expect(element.calls.at(-1)).toBe("pause");
+  expect(element.paused).toBe(true);
+
+  host.togglePlayback();
+  expect(element.calls.at(-1)).toBe("play");
+  expect(element.paused).toBe(false);
+});
+
 test("a unit tap sets the element's time to the unit's start offset", () => {
   const { host, element, player } = createHost();
   host.showConversion("first", FIRST);

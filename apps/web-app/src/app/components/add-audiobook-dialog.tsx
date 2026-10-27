@@ -5,7 +5,6 @@ import { SignInButtons } from "#src/app/components/sign-in-dialog.js";
 import { SourceUrlForm } from "#src/app/components/source-url-form.js";
 import { DSDialog } from "#src/app/design-system/dialog.js";
 import { useAccountConversionSubmission } from "#src/app/use-cases/account-conversions.js";
-import { summarizeError } from "#src/errors.js";
 
 /**
  * Starts an account conversion from a source URL. Sign-in, the rate-limit countdown and errors stay
@@ -14,6 +13,8 @@ import { summarizeError } from "#src/errors.js";
  */
 export function AddAudiobookDialog({ onClose }: { onClose: () => void }): React.ReactNode {
   const submission = useAccountConversionSubmission({
+    // The dialog's start never resumes on home or in a later dialog.
+    requestStorage: "memory",
     // The start mutation has already invalidated the history query that Recents lists.
     onStarted: async () => onClose(),
   });
@@ -37,6 +38,9 @@ export function AddAudiobookDialog({ onClose }: { onClose: () => void }): React.
         shouldReceiveSharedUrl
         isPending={submission.isPending}
         retryIn={submission.retryIn}
+        // Sign-in explains itself in place of the failure.
+        error={submission.requiresSignIn ? undefined : submission.error}
+        errorFallbackMessage="The track could not be added."
         onSubmit={submission.submit}
         submitLabel="Add"
         submittingLabel="Adding…"
@@ -48,7 +52,6 @@ export function AddAudiobookDialog({ onClose }: { onClose: () => void }): React.
         }}
       />
 
-      {submission.retryIn > 0 && <output>Try again in {submission.retryIn} seconds.</output>}
       {submission.requiresSignIn ? (
         <section aria-label="Sign in">
           <p>Sign in to listen.</p>
@@ -59,8 +62,6 @@ export function AddAudiobookDialog({ onClose }: { onClose: () => void }): React.
           />
           {submission.signIn.error && <p role="alert">{submission.signIn.error.message}</p>}
         </section>
-      ) : submission.error ? (
-        <p role="alert">{summarizeError(submission.error, "The track could not be added.")}</p>
       ) : null}
     </DSDialog>
   );

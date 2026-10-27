@@ -14,7 +14,6 @@ export function PlaybackError({ player }: { player: Player }): React.ReactNode {
   }
 
   return (
-    /* TODO: implement some general error handling like toasts/snackbars and put it there */
     <p
       role="alert"
       className={composeClassnames(

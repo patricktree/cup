@@ -5,6 +5,7 @@ import React from "react";
 import type {
   Audiobook,
   ErrorResponse,
+  PlaybackPosition,
   PreparationPhase,
   RetryConversionResponse,
 } from "@cup/listener-api.routes";
@@ -162,40 +163,63 @@ export const AudiobookLoadError = {
 const SECOND_CONVERSION_ID = "c4be3f43-4a43-4d6b-9a3f-6f0d2f6e2d51";
 
 /** A signed-in listener moves between an audiobook, Recents, and a second audiobook. */
-export const ListeningAcrossPages = accountStory({
-  path: `/audiobooks/${CONVERSION_ID}`,
-  recents: {
-    items: [
-      createRecentsItem(CONVERSION_ID, "A deterministic document about careful testing"),
-      createRecentsItem(SECOND_CONVERSION_ID, "A second document about listening"),
-    ],
-    nextCursor: null,
-  },
-  handlers: [
-    http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(createAudiobook())),
-    http.get(`/api/audiobooks/${SECOND_CONVERSION_ID}`, () =>
-      HttpResponse.json({
-        ...PREPARED_AUDIOBOOK,
-        status: "ready",
-        title: "A second document about listening",
-        segments: [0, 1, 2].map(createReadySegment),
-        narrationTrack: createStoryNarrationTrack(
-          [
-            SEGMENT_DURATION_MILLISECONDS,
-            SEGMENT_DURATION_MILLISECONDS,
-            SEGMENT_DURATION_MILLISECONDS,
-          ],
-          "second",
-        ),
-      } satisfies Audiobook),
-    ),
-    storyNarrationTrackHandler,
-    http.put(
-      "/api/audiobooks/:conversionId/position",
-      () => new HttpResponse(null, { status: 204 }),
-    ),
-  ],
+export const ListeningAcrossPages = createListeningAcrossPagesStory({
+  secondUnitDurationMilliseconds: SEGMENT_DURATION_MILLISECONDS,
+  secondPlaybackPosition: null,
 });
+
+/**
+ * Like `ListeningAcrossPages`, but the listener stopped 12 s into the second audiobook, whose units
+ * last 10 s each.
+ */
+export const ResumingAcrossPages = createListeningAcrossPagesStory({
+  secondUnitDurationMilliseconds: 10_000,
+  secondPlaybackPosition: { synchronizationUnitId: "unit-2", offsetMilliseconds: 2_000 },
+});
+
+function createListeningAcrossPagesStory({
+  secondUnitDurationMilliseconds,
+  secondPlaybackPosition,
+}: {
+  secondUnitDurationMilliseconds: number;
+  secondPlaybackPosition: PlaybackPosition | null;
+}) {
+  return accountStory({
+    path: `/audiobooks/${CONVERSION_ID}`,
+    recents: {
+      items: [
+        createRecentsItem(CONVERSION_ID, "A deterministic document about careful testing"),
+        createRecentsItem(SECOND_CONVERSION_ID, "A second document about listening"),
+      ],
+      nextCursor: null,
+    },
+    handlers: [
+      http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(createAudiobook())),
+      http.get(`/api/audiobooks/${SECOND_CONVERSION_ID}`, () =>
+        HttpResponse.json({
+          ...PREPARED_AUDIOBOOK,
+          status: "ready",
+          playbackPosition: secondPlaybackPosition,
+          title: "A second document about listening",
+          segments: [0, 1, 2].map(createReadySegment),
+          narrationTrack: createStoryNarrationTrack(
+            [
+              secondUnitDurationMilliseconds,
+              secondUnitDurationMilliseconds,
+              secondUnitDurationMilliseconds,
+            ],
+            "second",
+          ),
+        } satisfies Audiobook),
+      ),
+      storyNarrationTrackHandler,
+      http.put(
+        "/api/audiobooks/:conversionId/position",
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    ],
+  });
+}
 
 function createRecentsItem(conversionId: string, title: string) {
   return {

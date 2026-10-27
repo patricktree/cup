@@ -4,6 +4,7 @@ import React from "react";
 import { startConversionRequestSchema } from "@cup/listener-api.routes";
 
 import { useAppForm } from "#src/app/form.js";
+import { summarizeError } from "#src/errors.js";
 import { subscribeToSharedUrl } from "#src/platform/share-intake.js";
 
 type SourceUrlFormProps = {
@@ -12,6 +13,10 @@ type SourceUrlFormProps = {
   shouldReceiveSharedUrl: boolean;
   isPending: boolean;
   retryIn: number;
+  /** The failed start, shown below the form; omit it while something else explains the failure. */
+  error: unknown;
+  /** Shown for a failure that carries no message for the listener. */
+  errorFallbackMessage: string;
   onSubmit: (value: { sourceUrl: string }) => Promise<void>;
   submitLabel: string;
   submittingLabel: string;
@@ -20,14 +25,17 @@ type SourceUrlFormProps = {
 };
 
 /**
- * The source-URL field and submit button of every start form, with today's validation. A URL shared
- * to the app fills the field without submitting it.
+ * The source-URL field and submit button of every start form, with today's validation, and below
+ * them the rate-limit countdown and the failed start. A URL shared to the app fills the field
+ * without submitting it.
  */
 export function SourceUrlForm({
   initialSourceUrl,
   shouldReceiveSharedUrl,
   isPending,
   retryIn,
+  error,
+  errorFallbackMessage,
   onSubmit,
   submitLabel,
   submittingLabel,
@@ -54,41 +62,45 @@ export function SourceUrlForm({
   }, [form, shouldReceiveSharedUrl]);
 
   return (
-    <form
-      noValidate
-      className={sx.form}
-      onSubmit={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        void form.handleSubmit();
-      }}
-    >
-      <form.AppForm>
-        <form.AppField name="sourceUrl">
-          {(field) => (
-            <field.TextField
-              sx={sx.input === undefined ? undefined : { input: sx.input }}
-              label="URL"
-              maxLength={2048}
-              required
-              type="url"
-              placeholder="Paste URL here"
-              hideLabel
-            />
-          )}
-        </form.AppField>
-        <form.Subscribe selector={(state) => state.values.sourceUrl}>
-          {(sourceUrl) => (
-            <form.SubmitButton
-              refs={{ button: refs?.submitButton }}
-              sx={{ button: sx.submitButton }}
-              disabled={isPending || retryIn > 0 || !sourceUrl.trim()}
-              label={submitLabel}
-              submittingLabel={submittingLabel}
-            />
-          )}
-        </form.Subscribe>
-      </form.AppForm>
-    </form>
+    <>
+      <form
+        noValidate
+        className={sx.form}
+        onSubmit={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void form.handleSubmit();
+        }}
+      >
+        <form.AppForm>
+          <form.AppField name="sourceUrl">
+            {(field) => (
+              <field.TextField
+                sx={sx.input === undefined ? undefined : { input: sx.input }}
+                label="URL"
+                maxLength={2048}
+                required
+                type="url"
+                placeholder="Paste URL here"
+                hideLabel
+              />
+            )}
+          </form.AppField>
+          <form.Subscribe selector={(state) => state.values.sourceUrl}>
+            {(sourceUrl) => (
+              <form.SubmitButton
+                refs={{ button: refs?.submitButton }}
+                sx={{ button: sx.submitButton }}
+                disabled={isPending || retryIn > 0 || !sourceUrl.trim()}
+                label={submitLabel}
+                submittingLabel={submittingLabel}
+              />
+            )}
+          </form.Subscribe>
+        </form.AppForm>
+      </form>
+      {retryIn > 0 && <output>Try again in {retryIn} seconds.</output>}
+      {error ? <p role="alert">{summarizeError(error, errorFallbackMessage)}</p> : null}
+    </>
   );
 }

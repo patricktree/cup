@@ -24,16 +24,15 @@ import {
 import type { LoadedAudiobook } from "#src/app/player/player-host.js";
 import { composeClassnames } from "#src/app/utils.js";
 
-/** Height of the drawn fade, from its transparent top to the bottom of the screen. */
-const FADE_HEIGHT_PIXELS = 305;
-/** The sheet's own row, without a playback error; the rest of the fade reaches over the page. */
-const SHEET_HEIGHT_PIXELS = 200;
-
 /**
- * Bottom padding of the page above the sheet, so its last text ends where the fade begins. A
- * playback error makes the sheet taller, which only moves the page further up.
+ * The player sheet's fade and own row, without a playback error. The page above leaves
+ * `fadeFooterClearance(PLAYER_SHEET_HEIGHTS)` free at its end; a playback error makes the sheet
+ * taller, which only moves the page further up.
  */
-export const PLAYER_SHEET_CLEARANCE = `${FADE_HEIGHT_PIXELS - SHEET_HEIGHT_PIXELS}px`;
+export const PLAYER_SHEET_HEIGHTS = {
+  fadeHeightPixels: 305,
+  footerHeightPixels: 200,
+};
 
 type SheetPlayback =
   | { status: "disabled"; title: string | undefined }
@@ -52,7 +51,8 @@ type SheetPlayback =
  * The detail view's player, fixed at the bottom on the drawn fade: the status line, a scrubber, the
  * elapsed and remaining time, and −15 s / play-pause / +15 s. It controls the shown audiobook and
  * is disabled until that audiobook has a narration track. Before the shown audiobook is loaded it
- * shows the start; Play, seeking and skipping load it, replacing another loaded audiobook.
+ * shows the start; Play, seeking and skipping load it, replacing another loaded audiobook, and a
+ * skip starts from the listener's stored position.
  */
 export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.Element {
   const host = usePlayerHost();
@@ -65,7 +65,7 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
   if (shownLoaded) {
     controls = <LoadedControls loaded={shownLoaded} />;
   } else if (audiobook) {
-    // Shows the start, so −15 s and +15 s skip from there.
+    // Shows the start, but −15 s and +15 s skip from the position the loaded player resumes from.
     controls = (
       <SheetControls
         playback={{
@@ -75,7 +75,7 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
           durationMilliseconds: audiobook.narrationTrack.durationMilliseconds,
           isPlaying: false,
           seekTo: (positionMilliseconds) => host.loadShown()?.seekTo(positionMilliseconds),
-          skipBy: (deltaMilliseconds) => host.loadShown()?.seekTo(Math.max(0, deltaMilliseconds)),
+          skipBy: (deltaMilliseconds) => host.loadShown()?.skipBy(deltaMilliseconds),
           togglePlayback: () => host.playShown(),
         }}
       />
@@ -91,13 +91,13 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
       className={composeClassnames(
         fadeFooter,
         css`
-          --fade-height: ${FADE_HEIGHT_PIXELS}px;
+          --fade-height: ${PLAYER_SHEET_HEIGHTS.fadeHeightPixels}px;
           --fade-background: var(--background-fade-player-sheet);
 
           display: grid;
           grid-area: shell-player;
           align-content: end;
-          min-height: ${SHEET_HEIGHT_PIXELS}px;
+          min-height: ${PLAYER_SHEET_HEIGHTS.footerHeightPixels}px;
           padding-block: 0 24px;
           padding-inline: 24px;
         `,
@@ -139,7 +139,7 @@ function LoadedControls({ loaded }: { loaded: LoadedAudiobook }): React.JSX.Elem
         isPlaying,
         seekTo: player.seekTo,
         skipBy: player.skipBy,
-        togglePlayback: () => (isPlaying ? host.pause() : host.play()),
+        togglePlayback: host.togglePlayback,
       }}
     />
   );
