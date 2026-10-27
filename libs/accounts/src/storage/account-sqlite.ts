@@ -233,10 +233,6 @@ export class AccountSqlite {
     });
   }
 
-  reserveAudioSegment(conversionId: string, sequence: number, characters: number, nowMs: number) {
-    return this.duration.reserve(conversionId, sequence, characters, nowMs);
-  }
-
   reserveMissingAudioSegments(
     conversionId: string,
     narrationTextCharactersBySegment: readonly number[],

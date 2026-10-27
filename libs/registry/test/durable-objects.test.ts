@@ -463,6 +463,32 @@ function grantStub(name: string) {
   return environment.CONVERSION_GRANTS.get(environment.CONVERSION_GRANTS.idFromName(name));
 }
 
+/**
+ * Records a ready outcome; passing the segment lengths reserves the whole document, as preparation
+ * does. Grant tests bind no synthesis Workflow, so a later `startSynthesis` rejects at dispatch
+ * once its reservation step has passed, while a refused reservation returns its result.
+ */
+function recordReadyWithSegments(
+  grant: ReturnType<typeof grantStub>,
+  conversionId: string,
+  narrationTextCharactersBySegment: number[],
+) {
+  return grant.recordReady(
+    conversionId,
+    {
+      completedAtMs: CREATED_AT_MS + 1,
+      title: "Ready",
+      audiobookReference: {
+        key: `conversions/${conversionId}/audiobook.json`,
+        contentType: "application/json",
+        byteLength: 42,
+        etag: "ready-etag",
+      },
+    },
+    narrationTextCharactersBySegment,
+  );
+}
+
 function registryStub(name: string) {
   const environment = getTestEnvironment();
   return environment.REGISTRY.get(environment.REGISTRY.idFromName(name));
@@ -530,9 +556,7 @@ test("changes duration allowance without replacing credentials or sessions", asy
   if (accepted.result !== "created") {
     throw new Error("Conversion not accepted");
   }
-  expect((await grant.reserveAudioSegment(accepted.conversion.conversionId, 0, 100)).result).toBe(
-    "reserved",
-  );
+  await recordReadyWithSegments(grant, accepted.conversion.conversionId, [100]);
   expect(await grant.setDurationAllowance(5_000, CREATED_AT_MS)).toEqual({
     result: "below-used-duration",
   });
@@ -627,14 +651,10 @@ test("persists segment usage as constrained rows without resetting the balance",
   if (first.result !== "created" || second.result !== "created") {
     throw new Error("Conversions not created");
   }
-  await grant.reserveAudioSegment(first.conversion.conversionId, 0, 10);
+  await recordReadyWithSegments(grant, first.conversion.conversionId, [10, 10]);
   await grant.completeAudioSegment(first.conversion.conversionId, 0, 800);
-  await grant.reserveAudioSegment(first.conversion.conversionId, 1, 10);
-  await grant.recordFailed(first.conversion.conversionId, {
-    failureCategory: "narration-synthesis",
-    explanation: "Later synthesis failed.",
-  });
-  await grant.reserveAudioSegment(second.conversion.conversionId, 0, 10);
+  await grant.releaseAudioSegment(first.conversion.conversionId, 1);
+  await recordReadyWithSegments(grant, second.conversion.conversionId, [10]);
   const before = await grant.inspect(CREATED_AT_MS);
   const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
   const selectUsage = `SELECT conversion_id AS conversionId, sequence, narration_text_characters AS narrationTextCharacters,
@@ -684,56 +704,55 @@ test("serializes concurrent duration reservations across conversions and absorbs
   const grant = grantStub("duration-concurrency");
   await grant.initialize(grantId("duration-concurrency"), CREATED_AT_MS, EXPIRES_AT_MS);
   await grant.setDurationAllowance(2_000, CREATED_AT_MS);
-  const first = await grant.startConversion(
-    "https://example.com/first",
-    crypto.randomUUID(),
-    CREATED_AT_MS,
-  );
-  const second = await grant.startConversion(
-    "https://example.com/second",
-    crypto.randomUUID(),
-    CREATED_AT_MS,
-  );
-  if (first.result !== "created" || second.result !== "created") {
-    throw new Error("Conversions not accepted");
+  const conversionIds = [];
+  for (const name of ["first", "second", "third"]) {
+    const accepted = await grant.startConversion(
+      `https://example.com/${name}`,
+      crypto.randomUUID(),
+      CREATED_AT_MS,
+    );
+    if (accepted.result !== "created") {
+      throw new Error("Conversions not accepted");
+    }
+    conversionIds.push(accepted.conversion.conversionId);
   }
-  const results = await Promise.all([
-    grant.reserveAudioSegment(first.conversion.conversionId, 0, 1),
-    grant.reserveAudioSegment(second.conversion.conversionId, 0, 1),
-    grant.reserveAudioSegment(second.conversion.conversionId, 1, 1),
-  ]);
-  expect(results.map((result) => result.result)).toEqual([
-    "reserved",
-    "reserved",
-    "temporarily-full",
-  ]);
-  expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual({
-    availableMilliseconds: 0,
-    reservedMilliseconds: 2_000,
-    spentMilliseconds: 0,
+  // Each document needs half the allowance, so whichever two reserve first leave none for the third.
+  await Promise.all(conversionIds.map((id) => recordReadyWithSegments(grant, id, [1])));
+  const segments = await Promise.all(conversionIds.map((id) => grant.listAudioSegments(id)));
+  const [first, second, ...rest] = conversionIds.filter(
+    (_, index) => (segments[index]?.length ?? 0) > 0,
+  );
+  expect(rest).toEqual([]);
+  expect(segments.filter((usage) => usage.length === 0)).toHaveLength(1);
+  if (first === undefined || second === undefined) {
+    throw new Error("Expected two reserved conversions");
+  }
+  expect(await grant.inspect(CREATED_AT_MS)).toMatchObject({
+    state: "temporarily-full",
+    duration: {
+      availableMilliseconds: 0,
+      reservedMilliseconds: 2_000,
+      spentMilliseconds: 0,
+    },
   });
-  await grant.completeAudioSegment(first.conversion.conversionId, 0, 1_500);
+  await grant.completeAudioSegment(first, 0, 1_500);
   expect(await grant.setDurationAllowance(2_000, CREATED_AT_MS)).toMatchObject({
     result: "updated",
     changed: false,
   });
-  await grant.completeAudioSegment(second.conversion.conversionId, 0, 1_600);
+  await grant.completeAudioSegment(second, 0, 1_600);
   expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual({
     availableMilliseconds: 0,
     reservedMilliseconds: 0,
     spentMilliseconds: 2_000,
   });
-  expect((await grant.completeAudioSegment(second.conversion.conversionId, 0, 1_600)).result).toBe(
-    "replayed",
-  );
-  expect(await grant.listAudioSegments(second.conversion.conversionId)).toMatchObject([
+  expect((await grant.completeAudioSegment(second, 0, 1_600)).result).toBe("replayed");
+  expect(await grant.listAudioSegments(second)).toMatchObject([
     { actualMilliseconds: 1_600, chargedMilliseconds: 500 },
   ]);
-  await grant.recordFailed(second.conversion.conversionId, {
-    failureCategory: "narration-synthesis",
-    explanation: "Later synthesis failed.",
-  });
-  expect(await grant.listAudioSegments(second.conversion.conversionId)).toHaveLength(1);
+  // A later segment failure releases only open reservations, so the settled charge stays.
+  await grant.releaseAudioSegment(second, 0);
+  expect(await grant.listAudioSegments(second)).toMatchObject([{ state: "settled" }]);
   expect((await grant.inspect(CREATED_AT_MS)).duration.spentMilliseconds).toBe(2_000);
 });
 
@@ -749,9 +768,9 @@ test("blocks an oversized reservation without spending or splitting the remainin
   if (accepted.result !== "created") {
     throw new Error("Conversion not accepted");
   }
-  expect((await grant.reserveAudioSegment(accepted.conversion.conversionId, 0, 30)).result).toBe(
-    "insufficient-duration",
-  );
+  // The first segment would fit alone, but the document reserves whole or not at all.
+  await recordReadyWithSegments(grant, accepted.conversion.conversionId, [10, 30]);
+  expect(await grant.listAudioSegments(accepted.conversion.conversionId)).toEqual([]);
   expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual({
     availableMilliseconds: 2_000,
     reservedMilliseconds: 0,
@@ -771,15 +790,13 @@ test("retries reuse reservations, failures release only unfinished work, and rep
     throw new Error("Conversion not accepted");
   }
   const id = accepted.conversion.conversionId;
-  await grant.reserveAudioSegment(id, 0, 10);
-  await grant.reserveAudioSegment(id, 1, 10);
-  expect((await grant.reserveAudioSegment(id, 0, 10)).result).toBe("reserved");
+  expect(await recordReadyWithSegments(grant, id, [10, 10])).toBe("recorded");
+  expect(await recordReadyWithSegments(grant, id, [10, 10])).toBe("replayed");
+  await expectWorkerRpcRejection(grant.startSynthesis(id, [10, 10]));
   expect((await grant.inspect(CREATED_AT_MS)).duration.reservedMilliseconds).toBe(2_000);
   await grant.completeAudioSegment(id, 0, 700.25);
-  await grant.recordFailed(id, {
-    failureCategory: "narration-synthesis",
-    explanation: "Second segment failed.",
-  });
+  // The second segment fails after retries and releases only its own reservation.
+  await grant.releaseAudioSegment(id, 1);
   expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual({
     availableMilliseconds: 7_199_299,
     reservedMilliseconds: 0,
@@ -804,14 +821,25 @@ test("revocation blocks new reservations while existing reservations may finish"
     crypto.randomUUID(),
     CREATED_AT_MS,
   );
-  if (accepted.result !== "created") {
+  const later = await grant.startConversion(
+    "https://example.com/revoked-later",
+    crypto.randomUUID(),
+    CREATED_AT_MS,
+  );
+  if (accepted.result !== "created" || later.result !== "created") {
     throw new Error("Conversion not accepted");
   }
   const id = accepted.conversion.conversionId;
-  await grant.reserveAudioSegment(id, 0, 10);
+  await recordReadyWithSegments(grant, id, [10]);
   await grant.revoke(CREATED_AT_MS);
-  expect((await grant.reserveAudioSegment(id, 0, 10)).result).toBe("reserved");
-  expect((await grant.reserveAudioSegment(id, 1, 10)).result).toBe("revoked");
+  // Retrying the reserved document passes the reservation step; extending it is refused.
+  await expectWorkerRpcRejection(grant.startSynthesis(id, [10]));
+  expect(await grant.startSynthesis(id, [10, 10])).toEqual({ result: "revoked" });
+  expect(await recordReadyWithSegments(grant, later.conversion.conversionId, [10])).toBe(
+    "recorded",
+  );
+  expect(await grant.listAudioSegments(later.conversion.conversionId)).toEqual([]);
+  expect((await grant.inspect(CREATED_AT_MS)).duration.reservedMilliseconds).toBe(1_000);
   expect((await grant.completeAudioSegment(id, 0, 800)).result).toBe("recorded");
   expect((await grant.inspect(CREATED_AT_MS)).duration.spentMilliseconds).toBe(800);
 });
@@ -829,7 +857,7 @@ test("unused receipt columns do not affect existing conversion replay or duratio
   const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
   await storage.exec("ALTER TABLE conversions ADD COLUMN import_receipt_hash TEXT");
   await storage.exec("UPDATE conversions SET import_receipt_hash = ?", "a".repeat(64));
-  await grant.reserveAudioSegment(accepted.conversion.conversionId, 0, 10);
+  await recordReadyWithSegments(grant, accepted.conversion.conversionId, [10]);
   await grant.completeAudioSegment(accepted.conversion.conversionId, 0, 800);
   const before = await grant.inspect(CREATED_AT_MS);
   expect(await grant.migrate()).toBe(6);
@@ -864,9 +892,8 @@ test.each([false, true])(
     if (accepted.result !== "created") {
       throw new Error("Conversion not accepted");
     }
-    await grant.reserveAudioSegment(accepted.conversion.conversionId, 0, 10);
+    await recordReadyWithSegments(grant, accepted.conversion.conversionId, [10, 10]);
     await grant.completeAudioSegment(accepted.conversion.conversionId, 0, 800);
-    await grant.reserveAudioSegment(accepted.conversion.conversionId, 1, 10);
     if (revoked) {
       await grant.revoke(CREATED_AT_MS);
     }
@@ -907,7 +934,7 @@ test.each([false, true])(
       if (next.result !== "created") {
         throw new Error("New conversion not accepted");
       }
-      await grant.reserveAudioSegment(next.conversion.conversionId, 0, 10);
+      await recordReadyWithSegments(grant, next.conversion.conversionId, [10]);
       await grant.completeAudioSegment(next.conversion.conversionId, 0, 900);
     }
     await grant.migrate();
@@ -1060,12 +1087,9 @@ test("adopting the duration ledger keeps a deployed grant's balance, segments, a
     throw new Error("Conversion not accepted");
   }
   const id = accepted.conversion.conversionId;
-  await grant.reserveAudioSegment(id, 0, 10);
+  await recordReadyWithSegments(grant, id, [10, 10, 10, 25]);
   await grant.completeAudioSegment(id, 0, 1_200);
-  await grant.reserveAudioSegment(id, 1, 10);
-  await grant.reserveAudioSegment(id, 2, 10);
   await grant.releaseAudioSegment(id, 2);
-  await grant.reserveAudioSegment(id, 3, 25);
   const before = await grant.inspectOperator(CREATED_AT_MS);
   const segmentsBefore = await grant.listAudioSegments(id);
   const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
@@ -1092,7 +1116,18 @@ test("adopting the duration ledger keeps a deployed grant's balance, segments, a
   // The migrated reservations settle and release through the ledger like new ones.
   expect((await grant.completeAudioSegment(id, 1, 900)).result).toBe("recorded");
   await grant.releaseAudioSegment(id, 3);
-  expect((await grant.reserveAudioSegment(id, 2, 10)).result).toBe("reserved");
+  const next = await grant.startConversion(
+    "https://example.com/after-adoption",
+    crypto.randomUUID(),
+    CREATED_AT_MS,
+  );
+  if (next.result !== "created") {
+    throw new Error("Conversion not accepted");
+  }
+  await recordReadyWithSegments(grant, next.conversion.conversionId, [10]);
+  expect(await grant.listAudioSegments(next.conversion.conversionId)).toMatchObject([
+    { state: "reserved" },
+  ]);
   expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual({
     availableMilliseconds: 16_900,
     reservedMilliseconds: 1_000,

@@ -54,7 +54,10 @@ export class AccountDispatchTestDurableObject extends BaseAccountDurableObject {
   }
 }
 
-/** Ledger and lifecycle tests settle conversions directly without running preparation. */
+/**
+ * Ledger and lifecycle tests settle conversions directly without running preparation. Synthesis
+ * dispatch is accepted but never runs, so tests complete or release segments themselves.
+ */
 export class AccountDurableObject extends BaseAccountDurableObject {
   constructor(
     context: DurableObjectState,
@@ -67,9 +70,7 @@ export class AccountDurableObject extends BaseAccountDurableObject {
     super(context, {
       ...env,
       SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW: {
-        create: async () => {
-          throw new Error("Synthesis is controlled by the test");
-        },
+        create: async () => {},
         get: async () => {
           throw new Error("Synthesis is controlled by the test");
         },
