@@ -106,13 +106,13 @@ export const AudiobookLoadError = {
 
 const SECOND_CONVERSION_ID = "c4be3f43-4a43-4d6b-9a3f-6f0d2f6e2d51";
 
-/** A signed-in listener moves between an audiobook, their history, and a second audiobook. */
+/** A signed-in listener moves between an audiobook, Recents, and a second audiobook. */
 export const ListeningAcrossPages = accountStory({
   path: `/audiobooks/${CONVERSION_ID}`,
-  history: {
+  recents: {
     items: [
-      createHistoryItem(CONVERSION_ID, "A deterministic document about careful testing"),
-      createHistoryItem(SECOND_CONVERSION_ID, "A second document about listening"),
+      createRecentsItem(CONVERSION_ID, "A deterministic document about careful testing"),
+      createRecentsItem(SECOND_CONVERSION_ID, "A second document about listening"),
     ],
     nextCursor: null,
   },
@@ -142,7 +142,7 @@ export const ListeningAcrossPages = accountStory({
   ],
 });
 
-function createHistoryItem(conversionId: string, title: string) {
+function createRecentsItem(conversionId: string, title: string) {
   return {
     conversionId,
     sourceUrl: SOURCE_URL,

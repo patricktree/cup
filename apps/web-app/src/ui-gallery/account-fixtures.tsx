@@ -18,17 +18,19 @@ const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/"] }
 export function accountStory({
   path,
   state = "active",
-  history = { items: [], nextCursor: null },
+  recents = { items: [], nextCursor: null },
   confirmation,
   setupFailure = false,
   handlers = [],
+  play,
 }: {
   path: string;
   state?: "active" | "deletion_scheduled" | "deleting";
-  history?: { items: Record<string, unknown>[]; nextCursor: string | null };
+  recents?: { items: Record<string, unknown>[]; nextCursor: string | null };
   confirmation?: "delete" | "restore";
   setupFailure?: boolean | "once";
   handlers?: RequestHandler[];
+  play?: Story["play"];
 }): Story {
   let setupFailed = false;
   function AccountStory(): React.ReactNode {
@@ -52,6 +54,7 @@ export function accountStory({
   }
   return {
     component: AccountStory,
+    ...(play && { play }),
     handlers: [
       ...handlers,
       http.get("/api/auth/config", () =>
@@ -95,7 +98,7 @@ export function accountStory({
                 ],
                 nextCursor: null,
               }
-            : history,
+            : recents,
         ),
       ),
     ],

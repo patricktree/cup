@@ -42,6 +42,8 @@ function AccountConversionForm(): React.ReactNode {
       <ConversionForm
         refs={{ submitButton: submitButtonRef }}
         initialSourceUrl={submission.initialSourceUrl}
+        // Until auth settles, a signed-in listener may still be redirected to the Add dialog, which takes a shared URL instead.
+        shouldReceiveSharedUrl={!submission.isAuthLoading}
         isPending={submission.isPending}
         retryIn={submission.retryIn}
         error={submission.requiresSignIn ? undefined : submission.error}
@@ -76,6 +78,7 @@ function TrialConversionForm({ grant }: { grant: GrantSnapshot }): React.ReactNo
   return (
     <ConversionForm
       initialSourceUrl=""
+      shouldReceiveSharedUrl
       isPending={start.isPending}
       retryIn={retryIn}
       error={start.error}
@@ -88,6 +91,7 @@ function TrialConversionForm({ grant }: { grant: GrantSnapshot }): React.ReactNo
 
 function ConversionForm({
   initialSourceUrl,
+  shouldReceiveSharedUrl,
   isPending,
   retryIn,
   error,
@@ -96,27 +100,19 @@ function ConversionForm({
 }: {
   refs?: { submitButton?: React.Ref<HTMLButtonElement> | undefined };
   initialSourceUrl: string;
+  shouldReceiveSharedUrl: boolean;
   isPending: boolean;
   retryIn: number;
   error: unknown;
   onSubmit: (value: { sourceUrl: string }) => Promise<void>;
 }): React.ReactNode {
-  const form = useAppForm({
-    defaultValues: { sourceUrl: initialSourceUrl },
-    validationLogic: revalidateLogic({ mode: "submit", modeAfterSubmission: "change" }),
-    validators: { onDynamic: startConversionRequestSchema },
-    onSubmit: async ({ value }) => {
-      if (isPending || retryIn > 0) {
-        return;
-      }
-      await onSubmit(value);
-    },
+  const form = useSourceUrlForm({
+    initialSourceUrl,
+    shouldReceiveSharedUrl,
+    isPending,
+    retryIn,
+    onSubmit,
   });
-
-  React.useEffect(
-    () => subscribeToSharedUrl((url) => form.setFieldValue("sourceUrl", url)),
-    [form],
-  );
 
   return (
     <>
@@ -185,4 +181,44 @@ function ConversionForm({
       ) : null}
     </>
   );
+}
+
+/**
+ * The source-URL form state of every start form: today's validation, and a URL shared to the app
+ * fills the field without submitting it.
+ */
+export function useSourceUrlForm({
+  initialSourceUrl,
+  shouldReceiveSharedUrl,
+  isPending,
+  retryIn,
+  onSubmit,
+}: {
+  initialSourceUrl: string;
+  /** False while this form may still be replaced, so a shared URL waits for the form that stays. */
+  shouldReceiveSharedUrl: boolean;
+  isPending: boolean;
+  retryIn: number;
+  onSubmit: (value: { sourceUrl: string }) => Promise<void>;
+}) {
+  const form = useAppForm({
+    defaultValues: { sourceUrl: initialSourceUrl },
+    validationLogic: revalidateLogic({ mode: "submit", modeAfterSubmission: "change" }),
+    validators: { onDynamic: startConversionRequestSchema },
+    onSubmit: async ({ value }) => {
+      if (isPending || retryIn > 0) {
+        return;
+      }
+      await onSubmit(value);
+    },
+  });
+
+  React.useEffect(() => {
+    if (!shouldReceiveSharedUrl) {
+      return undefined;
+    }
+    return subscribeToSharedUrl((url) => form.setFieldValue("sourceUrl", url));
+  }, [form, shouldReceiveSharedUrl]);
+
+  return form;
 }

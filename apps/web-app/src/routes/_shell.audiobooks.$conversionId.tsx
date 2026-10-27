@@ -378,10 +378,10 @@ function BackLink() {
         align-items: center;
       `}
     >
-      {/* Only accounts have a conversion history; trial listeners return to the start. */}
+      {/* Only accounts have Recents; trial listeners return to the start. */}
       <Link
-        to={session ? "/history" : "/"}
-        aria-label={session ? "Back to history" : "Back to home"}
+        to={session ? "/recent" : "/"}
+        aria-label={session ? "Back to Recents" : "Back to home"}
         className={iconButtonStyles}
       >
         <BackChevronIcon />

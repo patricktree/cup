@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { sourceUrlSchema } from "@cup/listener-api.routes";
 
-const PENDING_CONVERSION_KEY = "cup_pending_conversion";
+export const PENDING_CONVERSION_KEY = "cup_pending_conversion";
 
 const requestSchema = z.object({
   sourceUrl: sourceUrlSchema,

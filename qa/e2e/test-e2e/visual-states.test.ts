@@ -26,6 +26,17 @@ test("shows the conversion entry page", async ({ page, workerEnvironment }) => {
   await expect(page.getByRole("textbox", { name: "URL" })).toBeVisible();
 });
 
+test("shows the conversion entry page instead of Recents when signed out", async ({
+  page,
+  workerEnvironment,
+}) => {
+  await gotoPage(page, `${workerEnvironment.origin}/app/recent`);
+
+  await expect(page).toHaveURL(`${workerEnvironment.origin}/app/`);
+  await expect(page.getByRole("heading", { name: "Just listen." })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "URL" })).toBeVisible();
+});
+
 test("shows the open trial URL input screen", async ({ page, workerEnvironment }) => {
   await mockCredentialExchange(page, workerEnvironment.origin);
   await gotoPage(page, trialLink(workerEnvironment.origin));

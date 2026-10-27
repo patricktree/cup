@@ -37,6 +37,7 @@ export function useAccountConversionSubmission({
   return {
     initialSourceUrl: readPendingAccountConversion()?.sourceUrl ?? "",
     isPending: start.isPending || authState.status === "loading",
+    isAuthLoading: authState.status === "loading",
     retryIn,
     error: start.error,
     requiresSignIn: requiresSignIn && !session,
