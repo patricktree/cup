@@ -9,6 +9,8 @@ const ADDED_CONVERSION_ID = "c1d0f6a2-3b4e-4f5a-8b6c-7d8e9f0a1b2c";
 const ADDED_SOURCE_URL = "https://example.test/added";
 
 export const EmptyRecents = accountStory({ path: "/recent" });
+/** The session carries no name, so the avatar shows its glyph. */
+export const RecentsWithoutName = accountStory({ path: "/recent", userMetadata: {} });
 /** A signed-in listener opening the home page lands on Recents. */
 export const SignedInHome = accountStory({ path: "/" });
 export const Recents = accountStory({

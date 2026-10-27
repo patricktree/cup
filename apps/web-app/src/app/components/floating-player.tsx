@@ -32,8 +32,8 @@ export function FloatingPlayer(): React.ReactNode {
     <ShellFooter
       aria-label="Player"
       className={css`
-        /* put above shell <main> */
-        z-index: 1;
+        /* put above shell <main> and above the fade of the tab bar (account-tab-bar.tsx) below */
+        z-index: 2;
 
         /* one column as wide as the page above, centered */
         display: grid;

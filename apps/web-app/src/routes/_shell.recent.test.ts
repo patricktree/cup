@@ -101,13 +101,13 @@ for (const close of [
 ]) {
   test(`${close.name} closes the Add dialog opened from Recents`, async ({ mount, page }) => {
     const component = await mount("routes/_shell.recent/EmptyRecents");
-    await component.getByRole("link", { name: "Add a track" }).click();
+    await component.getByRole("link", { name: "Add", exact: true }).click();
     await expect(page.getByRole("dialog", { name: "Add a track" })).toBeVisible();
     await close.run(page);
     await expect(page.getByRole("dialog", { name: "Add a track" })).toHaveCount(0);
     await expect(component.getByRole("heading", { name: "Recents" })).toBeVisible();
     // Opening again proves closing went back to the entry below, not forward to a new one.
-    await component.getByRole("link", { name: "Add a track" }).click();
+    await component.getByRole("link", { name: "Add", exact: true }).click();
     await expect(page.getByRole("dialog", { name: "Add a track" })).toBeVisible();
   });
 }
@@ -128,7 +128,7 @@ test("a successful start closes the Add dialog and lists the new item", async ({
   await expect(
     component.getByText("Your conversions will appear here.", { exact: true }),
   ).toBeVisible();
-  await component.getByRole("link", { name: "Add a track" }).click();
+  await component.getByRole("link", { name: "Add", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Add a track" });
   await dialog.getByRole("textbox", { name: "URL" }).fill(ADDED_SOURCE_URL);
   await dialog.getByRole("button", { name: "Add" }).click();

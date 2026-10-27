@@ -3,6 +3,11 @@ import http from "node:http";
 import { Temporal } from "temporal-polyfill";
 
 const SUBJECT = "880ce5b5-6542-40fd-8f2d-380f3066e98a";
+/**
+ * Supabase fills `name` from Google's ID token; the web app shows its initials ("rd") in the
+ * avatar.
+ */
+const READER_NAME = "Reader Doe";
 const OTHER_SUBJECT = "70fcf2d9-63c5-48be-b897-d3670f24ed43";
 const nowSeconds = () => Math.floor(Temporal.Now.instant().epochMilliseconds / 1000);
 
@@ -97,7 +102,7 @@ export async function startAuthProvider() {
           email: "reader@example.test",
           aud: "authenticated",
           app_metadata: { provider: "google" },
-          user_metadata: {},
+          user_metadata: { name: READER_NAME, full_name: READER_NAME },
           identities: [{ provider: "google", identity_data: { sub: "qa-google" } }],
         },
       }),
