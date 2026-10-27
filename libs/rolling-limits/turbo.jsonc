@@ -1,7 +1,6 @@
 {
   "$schema": "../../node_modules/turbo/schema.json",
   "extends": ["//", "@patricktree-stack/config-turbo-typescript"],
-  "tags": ["layer:foundations"],
   "tasks": {
     /* Worker types are generated, not committed: every task that typechecks this package waits for them. */
     "turbo:build": { "dependsOn": ["$TURBO_EXTENDS$", "turbo:cf-typegen"] },

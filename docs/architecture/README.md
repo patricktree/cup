@@ -66,7 +66,7 @@ The libraries are code boundaries inside the deployed system, not separate netwo
 - [Duration ledger](../../libs/duration-ledger/README.md): the allowance, reservation, and charge storage that accounts and grants share.
 - [Conversion contracts](../../libs/conversion-contracts/README.md): runtime-independent shared schemas, types, and duration calculations; its [lint configuration](../../libs/conversion-contracts/oxlint.config.ts) refuses `cloudflare:` and `node:` imports, because the Worker, the workflows, and the browser load it.
 - [Rolling limits](../../libs/rolling-limits/README.md): the rolling-window rate limiter, whose table each of the three objects keeps in its own database.
-- [Errors](../../libs/errors/README.md): error helpers shared by server code: server logs record only a caught error's root cause, so wrapper errors carrying SQL parameters or request data are never logged. It sits alone in the bottom layer and imports no Cup package, so any library can depend on it; the graph below leaves it out.
+- [Errors](../../libs/errors/README.md): error helpers shared by server code: server logs record only a caught error's root cause, so wrapper errors carrying SQL parameters or request data are never logged. It imports no Cup package, so any library can depend on it; the graph below leaves it out.
 
 ```mermaid
 flowchart TD
@@ -89,7 +89,7 @@ flowchart TD
     Grants -. usage projection RPC .-> Registry
 ```
 
-[Library layers](../../tooling/library-layers/README.md) enforce these directions: every library carries a `layer:*` tag, and `turbo boundaries` fails when a library depends, directly or through another library, on one in the same or a higher layer. The owners therefore reach the registry only through the RPC interfaces drawn as dashed lines, never as a package dependency.
+The owners reach the registry only through the RPC interfaces drawn as dashed lines, never as a package dependency: the registry depends on both owner libraries, so such a dependency would form a cycle, which every `turbo run` refuses. `pnpm boundaries` (`turbo boundaries`, part of `pnpm validate:fast`) also fails when a package imports a package its `package.json` does not declare, or a file outside its own directory.
 
 ## API definitions
 
