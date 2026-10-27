@@ -39,7 +39,7 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 | [Declaration builds](declaration-builds.md)                                           | Understand source and declaration package scopes, compiler settings, and build caching |
 | [Brand assets](../tooling/brand-assets/README.md)                                     | Maintain generated application branding                                                |
 | [Library layers](../tooling/library-layers/README.md)                                 | Enforce the dependency directions between libraries with Turborepo Boundaries          |
-| [Migration generator](../tooling/drizzle-migrations/README.md)                        | Generate SQLite migrations, snapshots, and Worker bundles; check schema diagrams       |
+| [Migration generator](../tooling/drizzle-migrations/README.md)                        | Generate SQLite migrations, snapshots, Worker bundles, and schema diagrams             |
 | [Submodule check](../.patricktree-stack/tooling/submodule-check/README.md)            | Reject commits that move a submodule pointer backwards                                 |
 | [Mermaid check](../.patricktree-stack/tooling/mermaid-check/README.md)                | Parse Mermaid diagrams in documentation                                                |
 

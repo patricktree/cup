@@ -1,14 +1,9 @@
 /**
- * Compares the entity-relationship diagrams in `docs/architecture/durable-object-storage.md` with
- * the Drizzle schemas they draw. A diagram names every table and draws one line per declared
- * foreign key, from the referenced table to the referencing one, labelled with the referencing
- * columns; columns stay in the schemas.
+ * Renders the entity-relationship diagram of a Drizzle schema into
+ * `docs/architecture/durable-object-storage.md`. A diagram names every table and draws one line per
+ * declared foreign key, from the referenced table to the referencing one, labelled with the
+ * referencing columns; columns stay in the schemas.
  */
-
-export type SchemaOutline = {
-  tables: string[];
-  foreignKeys: string[];
-};
 
 /** The `tables` of a Drizzle Kit snapshot, as `generateSQLiteDrizzleJson` returns it. */
 type DrizzleJson = {
@@ -16,70 +11,82 @@ type DrizzleJson = {
     string,
     {
       name: string;
+      columns: Record<string, { name: string; primaryKey: boolean }>;
+      compositePrimaryKeys: Record<string, { columns: string[] }>;
+      indexes: Record<string, { columns: string[]; isUnique: boolean; where?: string | undefined }>;
+      uniqueConstraints: Record<string, { columns: string[] }>;
       foreignKeys: Record<string, { tableFrom: string; tableTo: string; columnsFrom: string[] }>;
     }
   >;
 };
 
-const RELATIONSHIP_LINE = /^(\w+)\s+[|o}{]{2}--[|o}{]{2}\s+(\w+)\s*:\s*"([^"]*)"$/;
-const ENTITY_LINE = /^(\w+)$/;
-
-export function outlineSchema(drizzleJson: DrizzleJson): SchemaOutline {
+/** Renders the Mermaid `erDiagram` block, including its code fence. */
+export function renderSchemaDiagram(drizzleJson: DrizzleJson): string {
   const tables = Object.values(drizzleJson.tables);
-  return {
-    tables: tables.map((table) => table.name).sort(),
-    foreignKeys: tables
-      .flatMap((table) => Object.values(table.foreignKeys))
-      .map((foreignKey) =>
-        formatForeignKey(
-          foreignKey.tableTo,
-          foreignKey.tableFrom,
-          foreignKey.columnsFrom.join(", "),
-        ),
-      )
-      .sort(),
-  };
+  const foreignKeys = tables.flatMap((table) =>
+    Object.values(table.foreignKeys).map((foreignKey) => ({ table, foreignKey })),
+  );
+  // `sort()` without a comparator orders by code unit, so the page does not depend on the locale.
+  const relationshipLines = foreignKeys
+    .map(({ table, foreignKey }) => {
+      // A referencing row that the foreign key columns identify uniquely makes it one-to-one.
+      const cardinality = isUniqueKey(table, foreignKey.columnsFrom) ? "||--o|" : "||--o{";
+      return `${foreignKey.tableTo} ${cardinality} ${foreignKey.tableFrom} : "${foreignKey.columnsFrom.join(", ")}"`;
+    })
+    .sort();
+  const relatedTables = new Set(
+    foreignKeys.flatMap(({ foreignKey }) => [foreignKey.tableTo, foreignKey.tableFrom]),
+  );
+  const unrelatedTables = tables
+    .map((table) => table.name)
+    .filter((name) => !relatedTables.has(name))
+    .sort();
+
+  const lines = [...unrelatedTables, ...relationshipLines];
+  return ["```mermaid", "erDiagram", ...lines.map((line) => `    ${line}`), "```"].join("\n");
 }
 
-/** Reads the first `erDiagram` block after the level-two heading `## <heading>`. */
-export function readSchemaDiagram(markdown: string, heading: string): SchemaOutline {
-  const section = markdown.split(/^## /m).find((part) => part.startsWith(`${heading}\n`));
-  if (section === undefined) {
-    throw new Error(`The Markdown has no section "## ${heading}".`);
-  }
-  const diagram = /```mermaid\nerDiagram\n([\s\S]*?)```/.exec(section)?.[1];
-  if (diagram === undefined) {
-    throw new Error(`The section "## ${heading}" has no Mermaid erDiagram block.`);
-  }
+/**
+ * Returns the diagram of `store` in `markdown`: the lines between the `<!-- schema-diagram:<store>
+ * -->` and `<!-- /schema-diagram:<store> -->` markers.
+ */
+export function readSchemaDiagram(markdown: string, store: string): string {
+  const { start, end } = findDiagram(markdown, store);
+  return markdown.slice(start, end);
+}
 
-  const tables = new Set<string>();
-  const foreignKeys: string[] = [];
-  for (const line of diagram.split("\n").map((rawLine) => rawLine.trim())) {
-    if (line === "") {
-      continue;
-    }
+/** Replaces the diagram of `store` in `markdown` with `diagram`. */
+export function writeSchemaDiagram(markdown: string, store: string, diagram: string): string {
+  const { start, end } = findDiagram(markdown, store);
+  return markdown.slice(0, start) + diagram + markdown.slice(end);
+}
 
-    const [, referencedTable, referencingTable, columns] = RELATIONSHIP_LINE.exec(line) ?? [];
-    if (referencedTable !== undefined && referencingTable !== undefined && columns !== undefined) {
-      tables.add(referencedTable);
-      tables.add(referencingTable);
-      foreignKeys.push(formatForeignKey(referencedTable, referencingTable, columns));
-      continue;
-    }
-
-    const [, entity] = ENTITY_LINE.exec(line) ?? [];
-    if (entity !== undefined) {
-      tables.add(entity);
-      continue;
-    }
-
+function findDiagram(markdown: string, store: string) {
+  const startMarker = `<!-- schema-diagram:${store} -->\n\n`;
+  const endMarker = `\n\n<!-- /schema-diagram:${store} -->`;
+  const startMarkerIndex = markdown.indexOf(startMarker);
+  const end = markdown.indexOf(endMarker);
+  if (startMarkerIndex === -1 || end < startMarkerIndex) {
     throw new Error(
-      `The "## ${heading}" diagram has a line that is neither a table name nor a relationship: ${line}`,
+      `The Markdown has no "${startMarker.trim()}" … "${endMarker.trim()}" block for the ${store} schema diagram.`,
     );
   }
-  return { tables: [...tables].sort(), foreignKeys: foreignKeys.sort() };
+  return { start: startMarkerIndex + startMarker.length, end };
 }
 
-function formatForeignKey(referencedTable: string, referencingTable: string, columns: string) {
-  return `${referencedTable} ← ${referencingTable} (${columns})`;
+function isUniqueKey(table: DrizzleJson["tables"][string], columns: string[]) {
+  const key = [...columns].sort().join();
+  const primaryKeyColumns = Object.values(table.columns)
+    .filter((column) => column.primaryKey)
+    .map((column) => column.name);
+  const uniqueColumnSets = [
+    primaryKeyColumns,
+    ...Object.values(table.compositePrimaryKeys).map((primaryKey) => primaryKey.columns),
+    ...Object.values(table.uniqueConstraints).map((constraint) => constraint.columns),
+    // A partial unique index allows duplicates outside its condition.
+    ...Object.values(table.indexes)
+      .filter((index) => index.isUnique && index.where === undefined)
+      .map((index) => index.columns),
+  ];
+  return uniqueColumnSets.some((uniqueColumns) => [...uniqueColumns].sort().join() === key);
 }

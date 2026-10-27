@@ -2,7 +2,7 @@
 
 Cup keeps application state in three kinds of SQLite stores: one per account, one per conversion grant, and the singleton registry. Each Durable Object instance has its own database; identifiers shared between stores do not establish cross-database foreign keys. See [storage ownership](README.md#storage-ownership) for how the objects cooperate.
 
-The Drizzle schemas linked in each section define the columns, types, constraints, and indexes. The diagrams name every table and draw each declared foreign key from the referenced table to the referencing one, labelled with the referencing columns; cardinality markers are illustrative. Each owning library's `sqlite-migrations.test.ts` checks that its diagram shows exactly the schema's tables and foreign keys, next to the check that the schema matches its latest migration snapshot.
+The Drizzle schemas linked in each section define the columns, types, constraints, and indexes. The diagrams are generated from those schemas by each owning library's `migrations:generate`: they name every table and draw each declared foreign key from the referenced table to the referencing one, labelled with the referencing columns, as one-to-one when those columns are unique in the referencing table. Do not edit them by hand; each library's `sqlite-migrations.test.ts` fails when its diagram differs from the generated one, next to the check that the schema matches its latest migration snapshot.
 
 All three stores define `rate_events` from the [shared rate-limit schema](../../libs/rolling-limits/src/rate-limit-schema.ts) and enforce their limits through the same [rolling-window implementation](../../libs/rolling-limits/src/rolling-limits.ts), which prunes expired rows in SQL. Each store keeps its own events, separated by bucket name.
 
@@ -28,21 +28,25 @@ Writers may target pending or ready conversions; account lifecycle and execution
 
 Sources: [account-sqlite-schema.ts](../../libs/accounts/src/storage/account-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/rolling-limits/src/rate-limit-schema.ts), [duration-ledger-schema.ts](../../libs/duration-ledger/src/duration-ledger-schema.ts); [migrations](../../libs/accounts/drizzle/account/).
 
+<!-- schema-diagram:account -->
+
 ```mermaid
 erDiagram
     account
+    account_playback_positions
     account_tombstone
     artifact_writers
     credit_balances
     deletion_attempts
     deletion_challenges
-    account_playback_positions
     rate_events
     account_conversions ||--o{ audio_segments : "conversion_id"
-    credit_operations ||--o| audio_segments : "operation_id"
-    credit_operations ||--o{ credit_ledger : "operation_id"
     account_conversions ||--o| pending_jobs : "conversion_id"
+    credit_operations ||--o{ credit_ledger : "operation_id"
+    credit_operations ||--o| audio_segments : "operation_id"
 ```
+
+<!-- /schema-diagram:account -->
 
 ## Conversion grant object
 
@@ -52,15 +56,19 @@ Both owners store a conversion's outcome in typed columns with the same names. O
 
 Sources: [grant-sqlite-schema.ts](../../libs/conversion-grants/src/storage/grant-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/rolling-limits/src/rate-limit-schema.ts), [duration-ledger-schema.ts](../../libs/duration-ledger/src/duration-ledger-schema.ts); [migrations](../../libs/conversion-grants/drizzle/grant/).
 
+<!-- schema-diagram:grant -->
+
 ```mermaid
 erDiagram
-    grant
     credit_balances
+    grant
     rate_events
     conversions ||--o{ audio_segments : "conversion_id"
-    credit_operations ||--o| audio_segments : "operation_id"
     credit_operations ||--o{ credit_ledger : "operation_id"
+    credit_operations ||--o| audio_segments : "operation_id"
 ```
+
+<!-- /schema-diagram:grant -->
 
 ## Registry
 
@@ -69,6 +77,8 @@ erDiagram
 The `projection_*` columns of `registry_grants` and `identity_accounts` are [usage projections](../GLOSSARY.md#usage-projection), which the code calls snapshots: copies of each owner's allowance, reserved duration, and spent duration that let the operator list grants and accounts from this one database instead of calling every owner object. The owner object stays authoritative. Each projection carries the owner's revision, and the registry keeps only the newest: an older revision is ignored as stale, and a repeated revision must match what is stored (the registry's `accounts.test.ts` and `durable-objects.test.ts` cover both). The owner records the revision the registry confirmed and retries from its alarm until the registry has confirmed the current one. Grants count their own revisions; an account's revision is its duration ledger's event count. The registry also pulls usage from an account when provisioning activates it, and its alarm backfills active accounts whose projection is still missing. A projection disappears with its identity mapping when account deletion completes.
 
 Sources: [registry-sqlite-schema.ts](../../libs/registry/src/storage/registry-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/rolling-limits/src/rate-limit-schema.ts); [migrations](../../libs/registry/drizzle/registry/).
+
+<!-- schema-diagram:registry -->
 
 ```mermaid
 erDiagram
@@ -82,6 +92,8 @@ erDiagram
     rate_events
     registry_grants
 ```
+
+<!-- /schema-diagram:registry -->
 
 ## Migration metadata
 

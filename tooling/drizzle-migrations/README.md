@@ -6,7 +6,7 @@ For each store, the generator runs the calling package's `drizzle-kit generate` 
 
 ## Schema diagrams
 
-[`schema-diagram.ts`](src/schema-diagram.ts) reads the entity-relationship diagram of one store from [Durable Object database schemas](../../docs/architecture/durable-object-storage.md) and outlines a Drizzle schema the same way: its table names and its foreign keys. Each consuming package's migration test compares the two, so a schema change that adds, drops, or renames a table or a foreign key fails until its diagram is updated.
+`generateMigrations` also renders each store's entity-relationship diagram with [`schema-diagram.ts`](src/schema-diagram.ts) into the page that its `schemaDiagramPage` option names, [Durable Object database schemas](../../docs/architecture/durable-object-storage.md): every table, and one relationship per foreign key, one-to-one when the referencing columns are unique (a partial unique index does not count). It replaces the lines between the `<!-- schema-diagram:<store> -->` and `<!-- /schema-diagram:<store> -->` markers, so the prose around them stays hand-written. Each consuming package's migration test fails when the page's diagram differs from the rendered one; rerun `migrations:generate`, which regenerates the diagram even when the schema has no migration to write.
 
 ## Validation
 
