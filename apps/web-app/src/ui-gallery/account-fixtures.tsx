@@ -98,15 +98,6 @@ export function accountStory({
             : history,
         ),
       ),
-      http.get(`/api/conversions/${CONVERSION_ID}`, () =>
-        HttpResponse.json({
-          conversionId: CONVERSION_ID,
-          sourceUrl: "https://example.test/article",
-          acceptedAt: "2026-09-30T10:00:00Z",
-          status: "pending",
-          lastStartedPhase: "audio-segment-production",
-        }),
-      ),
     ],
   };
 }

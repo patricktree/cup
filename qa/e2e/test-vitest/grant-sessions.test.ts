@@ -51,9 +51,6 @@ test("exchanges persistent cookies and authorizes native requests without a brow
   ) {
     throw new Error("Missing conversion ID");
   }
-  const detail = await fetch(`${origin}/api/conversions/${conversion.conversionId}`, { headers });
-  expect(detail.status).toBe(200);
-  expect(detail.headers.get("Set-Cookie")).toContain("HttpOnly");
   const audiobookUrl = `${origin}/api/audiobooks/${conversion.conversionId}`;
   const coverImageUrl = `${origin}/api/files/audiobooks/${conversion.conversionId}/cover-image`;
   const segmentAudioUrl = `${origin}/api/files/audiobooks/${conversion.conversionId}/segments/0/audio.mp3`;

@@ -9,7 +9,6 @@ import {
   accountStartResponseSchema,
   audiobookSchema,
   authConfigResponseSchema,
-  conversionDetailSchema,
   deletionChallengeSchema,
   grantSnapshotSchema,
   retryConversionResponseSchema,
@@ -424,25 +423,6 @@ test("grant session exchange and grant reads carry only the declared snapshot", 
       ...declaredSnapshot,
       duration,
     });
-  }
-});
-
-test("conversion details carry only declared fields for account and trial owners", async () => {
-  for (const [conversionId, headers, status] of [
-    [accountConversionId, {}, "ready"],
-    [failedConversionId, {}, "failed"],
-    [pendingConversionId, {}, "pending"],
-    [trialConversionId, { Cookie: grantCookie }, "pending"],
-    // A prepared trial conversion without reserved segments did not fit the available duration.
-    [readyTrialConversionId, { Cookie: grantCookie }, "insufficient-duration"],
-    [failedTrialConversionId, { Cookie: grantCookie }, "failed"],
-  ] as const) {
-    const detail = await parseStrictly(
-      await request(`/api/conversions/${conversionId}`, { headers }),
-      200,
-      conversionDetailSchema,
-    );
-    expect(detail).toMatchObject({ conversionId, status });
   }
 });
 

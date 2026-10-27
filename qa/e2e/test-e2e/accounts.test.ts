@@ -163,7 +163,7 @@ test("signup keeps trial conversions separate from the new account and its histo
   // Account authentication does not confer access to another grant's conversions. The isolated request context omits the trial session cookie this browser still holds.
   expect(
     (
-      await isolatedRequest.get(`${origin}/api/conversions/${originalId}`, {
+      await isolatedRequest.get(`${origin}/api/audiobooks/${originalId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
     ).status(),

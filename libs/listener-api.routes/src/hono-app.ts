@@ -17,7 +17,6 @@ import {
   conversionParamsSchema,
   errorResponseSchema,
   exchangeCredentialRequestSchema,
-  conversionDetailSchema,
   grantParamsSchema,
   grantSnapshotSchema,
   startConversionHeadersSchema,
@@ -233,22 +232,6 @@ const getGrantRoute = createRoute({
   },
 });
 
-const getConversionRoute = createRoute({
-  method: "get",
-  path: "/api/conversions/{conversionId}",
-  request: { params: conversionParamsSchema },
-  responses: {
-    200: {
-      content: { "application/json": { schema: conversionDetailSchema } },
-      description: "conversion.",
-    },
-    400: errorResponse("Invalid request."),
-    401: errorResponse("Grant session required or invalid."),
-    404: errorResponse("Conversion not found."),
-    500: errorResponse("Operational error."),
-  },
-});
-
 const startTrialConversionRoute = createRoute({
   method: "post",
   path: "/api/grants/{grantId}/conversions",
@@ -399,7 +382,6 @@ export type ListenerApiHandlers<Bindings extends object> = {
   startAccountConversion: ListenerApiRouteHandler<typeof startAccountConversionRoute, Bindings>;
   exchangeSession: ListenerApiRouteHandler<typeof exchangeSessionRoute, Bindings>;
   getGrant: ListenerApiRouteHandler<typeof getGrantRoute, Bindings>;
-  getConversion: ListenerApiRouteHandler<typeof getConversionRoute, Bindings>;
   startTrialConversion: ListenerApiRouteHandler<typeof startTrialConversionRoute, Bindings>;
   getAudiobook: ListenerApiRouteHandler<typeof audiobookRoute, Bindings>;
   retryConversion: ListenerApiRouteHandler<typeof retryConversionRoute, Bindings>;
@@ -424,7 +406,6 @@ export function createListenerApi<Bindings extends object>(
     .openapi(startAccountConversionRoute, handlers.startAccountConversion)
     .openapi(exchangeSessionRoute, handlers.exchangeSession)
     .openapi(getGrantRoute, handlers.getGrant)
-    .openapi(getConversionRoute, handlers.getConversion)
     .openapi(startTrialConversionRoute, handlers.startTrialConversion)
     .openapi(audiobookRoute, handlers.getAudiobook)
     .openapi(retryConversionRoute, handlers.retryConversion)
@@ -451,7 +432,6 @@ export function createListenerContractApp() {
     startAccountConversion: unavailable,
     exchangeSession: unavailable,
     getGrant: unavailable,
-    getConversion: unavailable,
     startTrialConversion: unavailable,
     getAudiobook: unavailable,
     getNarrationTrack: unavailable,
