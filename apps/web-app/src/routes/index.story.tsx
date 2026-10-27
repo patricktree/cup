@@ -41,7 +41,7 @@ export const SignInWithTestAccount = {
       HttpResponse.json({
         supabaseUrl: `${window.location.origin}/__story`,
         publishableKey: "story-key",
-        testAccount: { email: "test-account@cup.test", password: "story-password" },
+        testAccount: { email: "test@cup.test", password: "story-password" },
       }),
     ),
   ],

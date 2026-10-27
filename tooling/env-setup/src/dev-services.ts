@@ -8,7 +8,7 @@ import { parseEnv } from "node:util";
 import { $ } from "zx";
 
 /** The local-only account that replaces Google sign-in during development; see ADR 0012. */
-const TEST_ACCOUNT_EMAIL = "test-account@cup.test";
+const TEST_ACCOUNT_EMAIL = "test@cup.test";
 /** Fixed and short so it is easy to type on a phone; Supabase requires at least six characters. */
 const TEST_ACCOUNT_PASSWORD = "testtest";
 /** The web app's Vite port and the local Supabase API port from `supabase/config.toml`. */
