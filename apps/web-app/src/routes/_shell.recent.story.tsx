@@ -241,18 +241,41 @@ export const AddDialogStarts = (() => {
       }),
       http.get("/api/account/conversions", () =>
         HttpResponse.json({
-          items: isStarted
-            ? [
-                {
-                  conversionId: ADDED_CONVERSION_ID,
-                  sourceUrl: ADDED_SOURCE_URL,
-                  createdAtMs: 0,
-                  idempotencyKey: ADDED_CONVERSION_ID,
-                  status: "pending",
-                  outcome: null,
-                },
-              ]
-            : [],
+          items: isStarted ? [createAddedItem()] : [],
+          nextCursor: null,
+        }),
+      ),
+    ],
+  });
+})();
+
+function createAddedItem() {
+  return {
+    conversionId: ADDED_CONVERSION_ID,
+    sourceUrl: ADDED_SOURCE_URL,
+    createdAtMs: 0,
+    idempotencyKey: ADDED_CONVERSION_ID,
+    status: "pending",
+    outcome: null,
+  };
+}
+
+/** The start request answers only once the page calls `window.answerAddDialogStart()`. */
+export const AddDialogStartsLater = (() => {
+  let isStarted = false;
+  return accountStory({
+    path: "/recent",
+    handlers: [
+      http.post("/api/account/conversions", async () => {
+        await new Promise((resolve) => {
+          Object.assign(window, { answerAddDialogStart: resolve });
+        });
+        isStarted = true;
+        return HttpResponse.json({ conversionId: ADDED_CONVERSION_ID }, { status: 202 });
+      }),
+      http.get("/api/account/conversions", () =>
+        HttpResponse.json({
+          items: isStarted ? [createAddedItem()] : [],
           nextCursor: null,
         }),
       ),

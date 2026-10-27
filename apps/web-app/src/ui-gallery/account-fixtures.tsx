@@ -13,6 +13,9 @@ const ACCOUNT_ID = "70fcf2d9-63c5-48be-b897-d3670f24ed43";
 const CHALLENGE_ID = "a3fcb5d8-9162-4c1a-b804-3be130c5e92a";
 const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/"] }));
 
+// Lets tests go back as the system Back gesture does, which no element of the page sees.
+Object.assign(window, { goBackInAccountStory: () => router.history.back() });
+
 /** Exercise the real session adapter against local deterministic identity and API responses. */
 export function accountStory({
   path,

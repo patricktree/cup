@@ -18,7 +18,9 @@ function AddAudiobookPage(): React.ReactNode {
   const isClosing = React.useRef(false);
 
   const close = () => {
-    if (isClosing.current) {
+    // The system Back gesture leaves without closing, and a start can still succeed afterwards.
+    const isDialogShown = router.state.matches.some((match) => match.routeId === Route.id);
+    if (isClosing.current || !isDialogShown) {
       return;
     }
     isClosing.current = true;

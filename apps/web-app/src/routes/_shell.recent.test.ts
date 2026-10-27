@@ -332,6 +332,47 @@ for (const close of [
   });
 }
 
+test("a start that succeeds after Back closed the Add dialog leaves the listener where they went", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount("routes/_shell.recent/AddDialogStartsLater");
+  await component.getByRole("link", { name: "Add", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Add a track" });
+  await dialog.getByRole("textbox", { name: "URL" }).fill(ADDED_SOURCE_URL);
+  await dialog.getByRole("button", { name: "Add" }).click();
+  await expect(dialog.getByRole("button", { name: "Adding…" })).toBeVisible();
+
+  await page.evaluate(() => {
+    const goBack: unknown = Reflect.get(window, "goBackInAccountStory");
+    if (typeof goBack !== "function") {
+      throw new TypeError("The account story offers no Back");
+    }
+    Reflect.apply(goBack, window, []);
+  });
+  await expect(dialog).toHaveCount(0);
+  await component.getByRole("link", { name: "Account", exact: true }).click();
+  await expect(component.getByText("Delete account…")).toBeVisible();
+
+  // A successful start refreshes the account, then reports that the dialog's start succeeded.
+  const accountRefresh = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/account",
+  );
+  await page.evaluate(() => {
+    const answer: unknown = Reflect.get(window, "answerAddDialogStart");
+    if (typeof answer !== "function") {
+      throw new TypeError("The start request is not waiting");
+    }
+    Reflect.apply(answer, window, []);
+  });
+  await accountRefresh;
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
+  await expect(component.getByText("Delete account…")).toBeVisible();
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toHaveCount(0);
+});
+
 test("closing an Add dialog that was not opened from Recents shows Recents", async ({
   mount,
   page,
