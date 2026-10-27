@@ -5,6 +5,7 @@ import { createFileRoute, type ErrorComponentProps } from "@tanstack/react-route
 import React from "react";
 
 import { DetailTopBar } from "#src/app/components/detail-top-bar.js";
+import type { DetailBackTarget } from "#src/app/components/detail-top-bar.js";
 import { ShellContent } from "#src/app/components/main.tsx";
 import { PLAYER_SHEET_CLEARANCE, PlayerSheet } from "#src/app/components/player-sheet.js";
 import { QueryBoundary, QueryErrorScreen } from "#src/app/components/query-boundary.js";
@@ -40,7 +41,7 @@ function AudiobookRoute() {
   return (
     <QueryBoundary
       pending={
-        <DetailLayout topBar={<PlainTopBar />} status={toPreparationPhaseLabel(undefined)}>
+        <DetailLayout topBar={<PlainTopBar />} statusLine={toPreparationPhaseLabel(undefined)}>
           <PreparationView />
         </DetailLayout>
       }
@@ -55,12 +56,12 @@ function AudiobookRoute() {
 /** Every detail view has the player sheet, disabled until the shown audiobook can play. */
 function DetailLayout({
   topBar,
-  status = "",
+  statusLine = "",
   children,
 }: {
   topBar: React.ReactNode;
   /** The status line above the scrubber: the preparation phase or the synthesis progress. */
-  status?: string;
+  statusLine?: string;
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
@@ -70,7 +71,7 @@ function DetailLayout({
         mainContent={<div {...interTypefaceScope}>{children}</div>}
         mainPaddingBlockEnd={PLAYER_SHEET_CLEARANCE}
       />
-      <PlayerSheet status={status} />
+      <PlayerSheet statusLine={statusLine} />
     </>
   );
 }
@@ -81,7 +82,7 @@ function PlainTopBar() {
 }
 
 /** Only accounts have Recents; trial listeners return to the start. */
-function useBackTarget(): "/recent" | "/" {
+function useBackTarget(): DetailBackTarget {
   return useAccountSession() ? "/recent" : "/";
 }
 
@@ -121,7 +122,10 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
 
   if (audiobook.status === "pending") {
     return (
-      <DetailLayout topBar={topBar} status={toPreparationPhaseLabel(audiobook.preparationPhase)}>
+      <DetailLayout
+        topBar={topBar}
+        statusLine={toPreparationPhaseLabel(audiobook.preparationPhase)}
+      >
         <PreparationView />
       </DetailLayout>
     );
@@ -163,7 +167,7 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
   return (
     <DetailLayout
       topBar={topBar}
-      status={
+      statusLine={
         audiobook.status === "synthesizing"
           ? `Generating audio, ${audiobook.segments.filter((segment) => segment.status === "ready").length} of ${formatSegmentCount(audiobook.segments.length)} ready`
           : ""
@@ -364,6 +368,7 @@ function NarrationDocument({
       const title = findTitle(narrationDocumentElement, units);
       const host = document.createElement("p");
       host.dataset["sourceHost"] = "";
+      host.className = textStyles.tagline;
       host.textContent = sourceHost;
       title.after(host);
 
@@ -371,6 +376,29 @@ function NarrationDocument({
     },
     // A changed document is rendered anew, which drops the host.
     [sourceHost, units, narrationDocumentElementRef],
+  );
+
+  React.useLayoutEffect(
+    function applyHeadingTextStyles() {
+      const narrationDocumentElement = narrationDocumentElementRef.current;
+      check.assert(narrationDocumentElement);
+
+      const title = findTitle(narrationDocumentElement, units);
+      const subheadings = narrationDocumentElement.querySelectorAll("h2, h3, h4, h5, h6");
+      title.classList.add(textStyles.h2);
+      for (const subheading of subheadings) {
+        subheading.classList.add(textStyles.h4);
+      }
+
+      return () => {
+        title.classList.remove(textStyles.h2);
+        for (const subheading of subheadings) {
+          subheading.classList.remove(textStyles.h4);
+        }
+      };
+    },
+    // A changed document is rendered anew, which drops the classes.
+    [units, narrationDocumentElementRef],
   );
 
   const reportTitleScrolledAway = React.useEffectEvent((isScrolledAway: boolean) =>
@@ -482,30 +510,14 @@ function NarrationDocument({
           }
 
           /* the title and the host inserted below it open the page as drawn */
+          /* the title and headings take the h2 and h4 text styles from applyHeadingTextStyles */
           & > article > h1 {
             margin-block-end: var(--spacing-gutter);
-
-            font-size: var(--font-size-xxl);
-            font-weight: var(--font-weight-inter-figma-medium);
-            line-height: var(--line-height-h2);
             color: var(--color-ink);
-            letter-spacing: var(--letter-spacing-tight);
           }
 
           & > article > [data-source-host] {
-            font-size: var(--font-size-sm);
-            line-height: var(--line-height-tagline);
             color: var(--color-ink-40);
-          }
-
-          h2,
-          h3,
-          h4,
-          h5,
-          h6 {
-            font-size: var(--font-size-lg);
-            font-weight: var(--font-weight-inter-figma-medium);
-            line-height: var(--line-height-h4);
           }
 
           [id]:has(> [data-segment-control]) {
@@ -565,24 +577,28 @@ function findTitle(
 function ReaderNotice({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className={css`
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--spacing-gutter);
-        align-items: center;
-        padding: var(--spacing-gutter) calc(2 * var(--spacing-gutter));
-        margin-block-end: calc(2 * var(--spacing-gutter));
+      className={composeClassnames(
+        textStyles.h5,
+        css`
+          display: flex;
+          flex-wrap: wrap;
+          gap: var(--spacing-gutter);
+          align-items: center;
+          padding: var(--spacing-gutter) calc(2 * var(--spacing-gutter));
+          margin-block-end: calc(2 * var(--spacing-gutter));
 
-        font-size: var(--font-size-md);
-        line-height: var(--line-height-h5);
-        background-color: var(--color-surface);
-        border: 1px solid var(--color-ink-4);
-        border-radius: var(--border-radius-lg);
+          /* the h5 size and line height at the regular weight; notices are undrawn */
+          font-weight: 400;
 
-        p {
-          flex: 1 1 100%;
-        }
-      `}
+          background-color: var(--color-surface);
+          border: 1px solid var(--color-ink-4);
+          border-radius: var(--border-radius-lg);
+
+          p {
+            flex: 1 1 100%;
+          }
+        `,
+      )}
     >
       {children}
     </div>

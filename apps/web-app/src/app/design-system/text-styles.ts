@@ -8,7 +8,7 @@ export const textStyles = {
   /** Screen title, such as "Recent". */
   h1: css`
     font-family: var(--font-family-1);
-    font-size: var(--font-size-xxxl);
+    font-size: var(--font-size-h1);
     font-weight: var(--font-weight-inter-figma-medium);
     line-height: var(--line-height-h1);
     letter-spacing: var(--letter-spacing-tight);
@@ -16,7 +16,7 @@ export const textStyles = {
   /** Audiobook title in the detail view. */
   h2: css`
     font-family: var(--font-family-1);
-    font-size: var(--font-size-xxl);
+    font-size: var(--font-size-h2);
     font-weight: var(--font-weight-inter-figma-medium);
     line-height: var(--line-height-h2);
     letter-spacing: var(--letter-spacing-tight);
@@ -69,9 +69,16 @@ export const textStyles = {
   /** Unnamed in the designs: the empty-state text on Recents, the only 20 px text. */
   callout: css`
     font-family: var(--font-family-1);
-    font-size: var(--font-size-xl);
+    font-size: var(--font-size-callout);
     font-weight: var(--font-weight-inter-figma-medium);
     line-height: var(--line-height-h5);
     letter-spacing: var(--letter-spacing-tight);
   `,
 } as const;
+
+/** Keeps text to one line, cut off with an ellipsis. */
+export const singleLine = css`
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;

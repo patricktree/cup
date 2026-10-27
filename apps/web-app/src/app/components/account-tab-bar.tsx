@@ -2,17 +2,25 @@ import { css } from "@linaria/core";
 import { createLink, Link } from "@tanstack/react-router";
 import React from "react";
 
+import { fadeFooter } from "#src/app/components/fade-footer.js";
 import { TabAddIcon, TabRecentIcon } from "#src/app/design-system/icons.js";
 import { pressableOverlay } from "#src/app/design-system/interaction-states.js";
 import { textStyles } from "#src/app/design-system/text-styles.js";
 import { interTypefaceScope } from "#src/app/global-styles.js";
 import { composeClassnames } from "#src/app/utils.js";
 
-/**
- * Height of the drawn fade; the bar's own row is shorter, so the fade reaches over the content
- * above.
- */
-const FADE_HEIGHT = "194px";
+/** Height of the drawn fade, from its transparent top to the bottom of the screen. */
+const FADE_HEIGHT_PIXELS = 194;
+const PADDING_BLOCK_PIXELS = 32;
+const TAB_PADDING_PIXELS = 5;
+/** The bar's own row: its padding around the tabs' padding, 24 px icon, 4 px gap and caption. */
+const BAR_HEIGHT_PIXELS = 2 * PADDING_BLOCK_PIXELS + 2 * TAB_PADDING_PIXELS + 24 + 4 + 24;
+
+/** Bottom padding of the page above the tab bar, so its last content ends where the fade begins. */
+export const TAB_BAR_CLEARANCE = `${FADE_HEIGHT_PIXELS - BAR_HEIGHT_PIXELS}px`;
+
+/** Distance from the top of the tab bar down to its tab icons. */
+export const TAB_BAR_ICONS_OFFSET_PIXELS = PADDING_BLOCK_PIXELS + TAB_PADDING_PIXELS;
 
 /**
  * Tabs of the account shell pages (Recents and the account page), at the bottom of the page on the
@@ -24,28 +32,17 @@ export function AccountTabBar(): React.JSX.Element {
     <nav
       {...interTypefaceScope}
       aria-label="Tabs"
-      className={css`
-        /* containing block for the fade below */
-        position: relative;
+      className={composeClassnames(
+        fadeFooter,
+        css`
+          --fade-height: ${FADE_HEIGHT_PIXELS}px;
+          --fade-background: var(--background-fade-tab-bar);
 
-        /* above shell <main>, whose end scrolls under the fade */
-        z-index: 1;
-        grid-area: shell-tab-bar;
-        padding: 32px 24px;
-
-        &::before {
-          position: absolute;
-          inset-inline: 0;
-          bottom: 0;
-          z-index: -1;
-          height: ${FADE_HEIGHT};
-
-          /* let clicks reach the content fading underneath */
-          pointer-events: none;
-          content: "";
-          background: var(--background-fade-tab-bar);
-        }
-      `}
+          grid-area: shell-tab-bar;
+          min-height: ${BAR_HEIGHT_PIXELS}px;
+          padding: ${PADDING_BLOCK_PIXELS}px 24px;
+        `,
+      )}
     >
       <ul
         className={css`
@@ -95,7 +92,7 @@ const tabStyles = composeClassnames(
     gap: 4px;
     justify-items: center;
     min-width: 44px;
-    padding: 5px;
+    padding: ${TAB_PADDING_PIXELS}px;
 
     color: var(--color-ink-40);
     text-decoration: none;

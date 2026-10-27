@@ -37,7 +37,9 @@ await Promise.all([
 
 async function navigateToAccountConversionOrTrialConversion(): Promise<void> {
   // A share can arrive at app start, before the restored session is known; failing auth counts as signed out.
-  await ensureAuthInitialized().catch(() => undefined);
+  await ensureAuthInitialized().catch((error: unknown) => {
+    console.error("Failed to restore the account session before taking a share", error);
+  });
   if (sessionSnapshot()) {
     // The Add dialog takes the shared URL; leaving it replaces this entry with Recents.
     await router.navigate({ to: "/recent/add" });

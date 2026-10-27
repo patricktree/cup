@@ -6,13 +6,15 @@ import React from "react";
 import { iconButtonStyles } from "#src/app/design-system/icon-button.js";
 import { BackChevronIcon, MoreIcon } from "#src/app/design-system/icons.js";
 import { pressableOverlay } from "#src/app/design-system/interaction-states.js";
-import { textStyles } from "#src/app/design-system/text-styles.js";
+import { singleLine, textStyles } from "#src/app/design-system/text-styles.js";
 import { interTypefaceScope } from "#src/app/global-styles.js";
 import { composeClassnames } from "#src/app/utils.js";
 
+/** Only accounts have Recents; trial listeners return to the start. */
+export type DetailBackTarget = "/recent" | "/";
+
 type DetailTopBarProps = {
-  /** Only accounts have Recents; trial listeners return to the start. */
-  backTo: "/recent" | "/";
+  backTo: DetailBackTarget;
   /** Shown in the middle once the page's own title has scrolled out of view. */
   compactTitle: { title: string; host: string } | undefined;
   /** Absent until the audiobook has loaded. */
@@ -64,15 +66,13 @@ export function DetailTopBar({ backTo, compactTitle, menu }: DetailTopBarProps):
 
             & > p {
               max-width: 100%;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
             }
           `}
         >
           <p
             className={composeClassnames(
               textStyles.tagline,
+              singleLine,
               css`
                 font-weight: var(--font-weight-inter-figma-medium);
               `,
@@ -83,6 +83,7 @@ export function DetailTopBar({ backTo, compactTitle, menu }: DetailTopBarProps):
           <p
             className={composeClassnames(
               textStyles.tagline,
+              singleLine,
               css`
                 color: var(--color-ink-40);
               `,

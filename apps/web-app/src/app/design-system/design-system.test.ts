@@ -64,7 +64,7 @@ test("renders the text styles", async ({ mount }) => {
 test("renders the drawn icons", async ({ mount }) => {
   const component = await mount("app/design-system/design-system/Icons");
 
-  await expect(component.getByRole("listitem")).toHaveCount(11);
+  await expect(component.getByRole("listitem")).toHaveCount(10);
   await expect(component.getByRole("main")).toHaveScreenshot("icons.png");
 });
 

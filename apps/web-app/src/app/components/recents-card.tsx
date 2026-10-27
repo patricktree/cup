@@ -65,10 +65,6 @@ export function RecentsCard({ item }: { item: HistoryItem }): React.JSX.Element 
             &[data-cover="shown"] {
               padding-block-end: 0;
             }
-
-            & [data-shape] {
-              border-radius: 0;
-            }
           `,
         )}
         {...dataAttributes}
@@ -89,7 +85,7 @@ export function RecentsCard({ item }: { item: HistoryItem }): React.JSX.Element 
               : "Couldn't prepare this track"}
         </span>
         {/* the title names the card, so the cover is decorative */}
-        {coverUrl !== undefined && <DSCoverImage src={coverUrl} alt="" />}
+        {coverUrl !== undefined && <DSCoverImage src={coverUrl} alt="" corners="square" />}
       </Link>
       <p
         className={composeClassnames(
