@@ -6,6 +6,7 @@ import React from "react";
 import { AccountAvatar } from "#src/app/components/account-avatar.js";
 import { AccountTabBar } from "#src/app/components/account-tab-bar.js";
 import { Main } from "#src/app/components/main.tsx";
+import { MiniPlayer } from "#src/app/components/mini-player.js";
 import { RecentsCard } from "#src/app/components/recents-card.js";
 import { DSButton } from "#src/app/design-system/button.js";
 import { textStyles } from "#src/app/design-system/text-styles.js";
@@ -155,6 +156,7 @@ function RecentPage(): React.ReactNode {
           </div>
         )}
       </Main>
+      <MiniPlayer />
       <AccountTabBar />
       {/* the Add dialog (`_shell.recent.add.tsx`) opens over Recents */}
       <Outlet />

@@ -9,6 +9,7 @@ for (const state of [
   { story: "Recents", name: "recents", cards: FIRST_PAGE_SIZE },
   { story: "RecentsWithOneReadyItem", name: "recents-one-ready-item", cards: 1 },
   { story: "RecentsWithPendingAndFailed", name: "recents-pending-and-failed", cards: 5 },
+  { story: "RecentsWithMiniPlayer", name: "recents-with-mini-player", cards: 1 },
 ]) {
   test(`renders ${state.name}`, async ({ mount, page }) => {
     const component = await mount(`routes/_shell.recent/${state.story}`);
@@ -106,6 +107,83 @@ test("scrolling to the end loads the next page without moving existing cards", a
   await expect(cardsOf(component)).toHaveCount(FIRST_PAGE_SIZE + 12);
   await expectCoversLoaded(page);
   expect((await readCardBoxes(component)).slice(0, FIRST_PAGE_SIZE)).toEqual(firstPageBoxes);
+});
+
+for (const state of [
+  { story: "RecentsWithMiniPlayer", name: "mini-player" },
+  { story: "RecentsWithMiniPlayerWithoutCover", name: "mini-player-without-cover" },
+]) {
+  test(`renders the ${state.name}, paused and playing`, async ({ mount, page }) => {
+    const component = await mount(`routes/_shell.recent/${state.story}`);
+    const player = component.getByRole("region", { name: "Player" });
+    await expectCoversLoaded(page);
+
+    await expect(player.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+    await expect(player).toHaveScreenshot(`${state.name}-paused.png`);
+
+    await player.getByRole("button", { name: "Play", exact: true }).click();
+    await expect(player.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+    await expect(player).toHaveScreenshot(`${state.name}-playing.png`);
+  });
+}
+
+test("the mini player names the loaded audiobook and its host", async ({ mount }) => {
+  const component = await mount("routes/_shell.recent/RecentsWithMiniPlayer");
+  const player = component.getByRole("region", { name: "Player" });
+
+  await expect(player.getByRole("link")).toHaveAccessibleName(
+    "Sure, let’s smoosh SpaceX and xAI together theverge.com",
+  );
+  // the cover is decorative: the link names the audiobook
+  await expect(player.locator("img")).toHaveAttribute("alt", "");
+  await expect(player.getByRole("progressbar")).toHaveCount(0);
+});
+
+test("the mini player's −15 s skips the narration track back 15 seconds", async ({
+  mount,
+  page,
+}) => {
+  await captureNarrationAudio(page);
+  const component = await mount("routes/_shell.recent/RecentsWithMiniPlayer");
+  const player = component.getByRole("region", { name: "Player" });
+
+  await setNarrationAudioTime(page, 40);
+  await player.getByRole("button", { name: "Back 15 seconds" }).click();
+  await expect.poll(() => readNarrationAudioTime(page)).toBe(25);
+
+  await player.getByRole("button", { name: "Back 15 seconds" }).click();
+  await player.getByRole("button", { name: "Back 15 seconds" }).click();
+  await expect.poll(() => readNarrationAudioTime(page)).toBe(0);
+});
+
+test("pressing the mini player outside its buttons opens the loaded audiobook's detail view", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount("routes/_shell.recent/RecentsWithMiniPlayer");
+  const cover = component.getByRole("region", { name: "Player" }).locator("img");
+  await expectCoversLoaded(page);
+
+  const coverBox = await cover.boundingBox();
+  expect(coverBox).not.toBeNull();
+  await page.mouse.click(coverBox!.x + coverBox!.width / 2, coverBox!.y + coverBox!.height / 2);
+  await expect(
+    component.getByRole("heading", { name: "Sure, let’s smoosh SpaceX and xAI together" }),
+  ).toBeVisible();
+  // the detail view shows the full controls, not the mini player
+  await expect(component.getByRole("region", { name: "Player" })).toHaveCount(0);
+});
+
+test("the mini player stays on the account page", async ({ mount }) => {
+  const component = await mount("routes/_shell.recent/RecentsWithMiniPlayer");
+
+  await component.getByRole("link", { name: "Account" }).click();
+  await expect(component.getByRole("heading", { name: "Account settings" })).toBeVisible();
+  await expect(
+    component
+      .getByRole("region", { name: "Player" })
+      .getByRole("link", { name: /^Sure, let’s smoosh SpaceX and xAI together/ }),
+  ).toBeVisible();
 });
 
 test("a signed-in home redirects to Recents", async ({ mount }) => {
@@ -218,6 +296,43 @@ test("a successful start closes the Add dialog and lists the new item", async ({
   await expect(cardsOf(component).getByRole("link")).toHaveAccessibleName("Preparing");
   await expect(cardsOf(component).getByText("example.test", { exact: true })).toBeVisible();
 });
+
+/**
+ * Keeps the player host's audio element reachable, which is never attached to the document (see
+ * _shell.audiobooks.$conversionId.test.ts).
+ */
+async function captureNarrationAudio(page: Page) {
+  await page.addInitScript(() => {
+    const NativeAudio = window.Audio;
+    window.Audio = class extends NativeAudio {
+      constructor(source?: string) {
+        super(source);
+        if (!("narrationAudio" in window)) {
+          Object.assign(window, { narrationAudio: this });
+        }
+      }
+    };
+  });
+}
+
+async function setNarrationAudioTime(page: Page, seconds: number) {
+  await page.evaluate((value) => {
+    if ("narrationAudio" in window && window.narrationAudio instanceof HTMLAudioElement) {
+      window.narrationAudio.currentTime = value;
+    }
+  }, seconds);
+  await expect.poll(() => readNarrationAudioTime(page)).toBe(seconds);
+}
+
+function readNarrationAudioTime(page: Page) {
+  return page.evaluate(() => {
+    const audio = "narrationAudio" in window ? window.narrationAudio : undefined;
+    if (!(audio instanceof HTMLAudioElement)) {
+      throw new Error("The player host created no audio element.");
+    }
+    return audio.currentTime;
+  });
+}
 
 function cardsOf(component: Locator): Locator {
   return component.getByRole("list", { name: "Tracks" }).getByRole("listitem");

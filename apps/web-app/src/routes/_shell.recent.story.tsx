@@ -2,7 +2,13 @@ import { waitFor, within } from "@testing-library/dom";
 import { userEvent } from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
 
+import type { Audiobook } from "@cup/listener-api.routes";
+
 import { accountStory } from "#src/ui-gallery/account-fixtures.jsx";
+import {
+  createStoryNarrationTrack,
+  storyNarrationTrackHandler,
+} from "#src/ui-gallery/narration-track.js";
 import type { Story } from "#src/ui-gallery/story.js";
 
 const ADDED_CONVERSION_ID = "c1d0f6a2-3b4e-4f5a-8b6c-7d8e9f0a1b2c";
@@ -78,6 +84,71 @@ export const RecentsWithPendingAndFailed = accountStory({
     nextCursor: null,
   },
 });
+
+const LOADED_CONVERSION_ID = "5f0c8a52-2d3e-4b8f-9a61-0c7e4d2b9f13";
+const LOADED_TITLE = "Sure, let’s smoosh SpaceX and xAI together";
+
+/**
+ * The listener loaded an audiobook on its detail view and went back to Recents, where one track is
+ * pending, as drawn.
+ */
+export const RecentsWithMiniPlayer = createMiniPlayerStory({ hasCover: true });
+export const RecentsWithMiniPlayerWithoutCover = createMiniPlayerStory({ hasCover: false });
+
+function createMiniPlayerStory({ hasCover }: { hasCover: boolean }): Story {
+  return accountStory({
+    path: `/audiobooks/${LOADED_CONVERSION_ID}`,
+    recents: {
+      items: [
+        historyItem(0, { status: "pending", preparationPhase: "selecting-content", outcome: null }),
+      ],
+      nextCursor: null,
+    },
+    handlers: [
+      coverHandler(),
+      http.get(`/api/audiobooks/${LOADED_CONVERSION_ID}`, () =>
+        HttpResponse.json({
+          status: "ready",
+          canGenerate: true,
+          playbackPosition: null,
+          title: LOADED_TITLE,
+          originalUrl: "https://www.theverge.com/articles/smoosh",
+          ...(hasCover && {
+            coverImage: { url: `${window.location.origin}${COVER_PATH}/c4733d.svg` },
+          }),
+          narrationDocument: {
+            html: `<article><h1 id="unit-1">${LOADED_TITLE}</h1><p id="unit-2">Two.</p></article>`,
+            synchronizationUnits: [
+              { id: "unit-1", narrationText: LOADED_TITLE },
+              { id: "unit-2", narrationText: "Two." },
+            ],
+          },
+          segments: [
+            { sequence: 0, status: "ready" },
+            { sequence: 1, status: "ready" },
+          ],
+          narrationTrack: createStoryNarrationTrack([30_000, 30_000]),
+        } satisfies Audiobook),
+      ),
+      storyNarrationTrackHandler,
+      http.put(
+        `/api/audiobooks/${LOADED_CONVERSION_ID}/position`,
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    ],
+    play: goBackToRecentsOnceLoaded,
+  });
+}
+
+/** The detail view shows the full controls once the audiobook is loaded into the player. */
+async function goBackToRecentsOnceLoaded({
+  canvasElement,
+}: Parameters<NonNullable<Story["play"]>>[0]) {
+  const canvas = within(canvasElement);
+  await canvas.findByRole("slider", { name: /^Position in / }, { timeout: 10_000 });
+  await userEvent.setup().click(canvas.getByRole("link", { name: "Back" }));
+  await canvas.findByRole("region", { name: "Player" }, { timeout: 10_000 });
+}
 
 /** A stable conversion ID per generated history item. */
 function toStoryConversionId(index: number): string {

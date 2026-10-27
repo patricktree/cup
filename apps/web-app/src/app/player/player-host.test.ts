@@ -420,6 +420,55 @@ test("seeking saves the new position right away", async () => {
   ]);
 });
 
+test("skipping moves the element's time by the given amount and saves the new position", async () => {
+  const { host, element, player, saved } = createHost();
+  host.showConversion("first", FIRST);
+  element.loadMetadata(15);
+  host.play();
+  element.advanceTo(12.5);
+
+  player().skipBy(-5_000);
+  player().skipBy(2_000);
+  await settle();
+
+  expect(element.calls.slice(2)).toEqual(["currentTime:7.5", "currentTime:9.5"]);
+  expect(player().getSnapshot().currentUnitIndex).toBe(1);
+  expect(saved.map(({ position }) => position)).toEqual([
+    // the first time update during playback is due
+    { synchronizationUnitId: "unit-3", offsetMilliseconds: 2_500 },
+    { synchronizationUnitId: "unit-2", offsetMilliseconds: 3_500 },
+    { synchronizationUnitId: "unit-2", offsetMilliseconds: 5_500 },
+  ]);
+});
+
+test("skipping back stops at the start, and skipping forward short of the end", () => {
+  const { host, element, player } = createHost();
+  host.showConversion("first", FIRST);
+  element.loadMetadata(15);
+  host.play();
+
+  element.advanceTo(14);
+  player().skipBy(-15_000);
+  element.advanceTo(3);
+  player().skipBy(15_000);
+
+  expect(element.calls.slice(2)).toEqual(["currentTime:0", "currentTime:14.999"]);
+  expect(player().getSnapshot().positionMilliseconds).toBe(14_999);
+});
+
+test("skipping before metadata is loaded skips from the restored position once it is", () => {
+  const { host, element, player } = createHost({ subject: "user-1" });
+  host.showConversion(
+    "first",
+    createAudiobook("First", { synchronizationUnitId: "unit-3", offsetMilliseconds: 2_000 }),
+  );
+
+  player().skipBy(-5_000);
+  element.loadMetadata(15);
+
+  expect(element.calls).toEqual([`src:${FIRST_TRACK_URL}`, "currentTime:7"]);
+});
+
 test("a refused save is shown as the player's error", async () => {
   const { host, element, player } = createHost({
     subject: "user-1",

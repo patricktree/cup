@@ -115,29 +115,21 @@ test("playback continues across pages until another audiobook is played", async 
   await captureNarrationAudio(page);
 
   const component = await mount("routes/_shell.audiobooks.$conversionId/ListeningAcrossPages");
-  const player = component.getByRole("contentinfo", { name: "Player" });
+  const fullControls = component.getByRole("contentinfo", { name: "Player" });
+  const miniPlayer = component.getByRole("region", { name: "Player" });
 
   await component.getByRole("button", { name: "Play segment 2", exact: true }).click();
-  await expect(player.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await expect(fullControls.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   await expectPlayingFrom(page, 5);
   expect((await readNarrationAudio(page)).src).toContain("audiobook=story");
 
   await component.getByRole("link", { name: "Back", exact: true }).click();
   await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
   await expect(
-    player.getByRole("link", { name: "A deterministic document about careful testing" }),
+    miniPlayer.getByRole("link", { name: /^A deterministic document about careful testing/ }),
   ).toBeVisible();
-  await expect(player.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
-  // Paused, so the position bar holds still for the screenshot.
-  await player.getByRole("button", { name: "Pause", exact: true }).click();
-  await page.evaluate(() => {
-    if ("narrationAudio" in window && window.narrationAudio instanceof HTMLAudioElement) {
-      window.narrationAudio.currentTime = 5;
-    }
-  });
-  await expect.poll(async () => (await readNarrationAudio(page)).currentTime).toBe(5);
-  await expect(player).toHaveScreenshot("compact-player.png");
-  await player.getByRole("button", { name: "Play", exact: true }).click();
+  await expect(miniPlayer.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await expectPlayingFrom(page, 5);
 
   await component
     .getByRole("listitem")
@@ -147,16 +139,16 @@ test("playback continues across pages until another audiobook is played", async 
   await expect(
     component.getByRole("main").getByRole("button", { name: "Play", exact: true }),
   ).toBeEnabled();
-  // Opening another audiobook does not interrupt the one playing.
-  await expect(player.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
-  await expect(
-    player.getByRole("link", { name: "A deterministic document about careful testing" }),
-  ).toBeVisible();
+  // Opening another audiobook does not interrupt the one playing, and its view shows no player for it.
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toHaveCount(0);
+  await expect(miniPlayer).toHaveCount(0);
+  await expect(fullControls).toHaveCount(0);
+  expect((await readNarrationAudio(page)).paused).toBe(false);
   expect((await readNarrationAudio(page)).src).toContain("audiobook=story");
 
   await component.getByRole("main").getByRole("button", { name: "Play", exact: true }).click();
   await expect(
-    player.getByRole("slider", { name: "Position in A second document about listening" }),
+    fullControls.getByRole("slider", { name: "Position in A second document about listening" }),
   ).toBeVisible();
   expect((await readNarrationAudio(page)).src).toContain("audiobook=second");
   await expectPlayingFrom(page, 0);
