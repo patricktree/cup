@@ -37,6 +37,10 @@ export type Player = {
   pause: () => void;
   seekToUnit: (unitIndex: number) => void;
   seekTo: (positionMilliseconds: number) => void;
+  /** Loads the same track from a newly signed URL, keeping the position; plays nothing. */
+  replaceTrackUrl: (url: string) => void;
+  /** Shows a failure that happened outside the player, until the next Play. */
+  showError: (message: string) => void;
   close: () => void;
 };
 
@@ -97,11 +101,6 @@ export class NarrationTrackPlayer implements Player {
 
   play = () => {
     this.failure = null;
-    // A failed load stays failed; loading the track again resumes where playback stopped.
-    if (this.element.error) {
-      this.pendingPositionMilliseconds = this.readPosition();
-      this.element.load();
-    }
 
     // Called before anything is awaited: Safari refuses audio started after an await.
     const playing = this.element.play();
@@ -138,6 +137,18 @@ export class NarrationTrackPlayer implements Player {
     }
 
     this.save("now", position);
+    this.publish();
+  };
+
+  replaceTrackUrl = (url: string) => {
+    // A new source resets the element to the start and clears a failed load.
+    this.pendingPositionMilliseconds = this.readPosition();
+    this.element.src = url;
+    this.publish();
+  };
+
+  showError = (message: string) => {
+    this.failure = message;
     this.publish();
   };
 
@@ -233,7 +244,7 @@ export class NarrationTrackPlayer implements Player {
           : this.session.timeline.durationMilliseconds,
       isPlaying,
       isBuffering: isPlaying && element.readyState < HAVE_FUTURE_DATA,
-      error: element.error ? MEDIA_ERROR_MESSAGE : this.failure,
+      error: this.failure ?? (element.error ? MEDIA_ERROR_MESSAGE : null),
     };
   }
 

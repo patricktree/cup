@@ -1,4 +1,4 @@
-import type { PlaybackPosition } from "@cup/listener-api.routes";
+import type { Audiobook, PlaybackPosition } from "@cup/listener-api.routes";
 
 import {
   NarrationTrackPlayer,
@@ -54,7 +54,18 @@ export type PlayerHostServices = {
   getAccount(): PlayerHostAccount;
   /** The listening position stored on this device, used for listeners without an account. */
   getLocalPosition(conversionId: string): PlaybackPosition | null;
+  /** Requests the audiobook again, for a newly signed narration track URL. */
+  fetchAudiobook(conversionId: string): Promise<Audiobook>;
+  /** The client clock, in milliseconds. */
+  now(): number;
 };
+
+/**
+ * How old a track URL may be before Play renews it. The signed URL expires 24 hours after the
+ * server issued it, by the server clock; half of that tolerates a skewed client clock.
+ */
+const TRACK_URL_RENEWAL_AGE_MILLISECONDS = 12 * 60 * 60 * 1_000;
+const RENEWAL_ERROR_MESSAGE = "The audio could not be loaded again. Press Play to try again.";
 
 /**
  * Holds the app's one `<audio>` element and the audiobook loaded into it, so playback continues
@@ -72,6 +83,12 @@ export class PlayerHost {
   private readonly listeners = new Set<() => void>();
   private snapshot: PlayerHostSnapshot = { loaded: null, shown: null };
   private clearMediaMetadata: (() => void) | undefined;
+  /** When the client received the shown audiobook, whose track URL a load uses. */
+  private shownAudiobookReceivedAt = 0;
+  /** When the client received the loaded track's URL. */
+  private trackUrlReceivedAt = 0;
+  /** The renewal Play is waiting for; Pause and unloading cancel it. */
+  private pendingRenewal: symbol | null = null;
 
   constructor(services: PlayerHostServices) {
     this.services = services;
@@ -111,6 +128,9 @@ export class PlayerHost {
     const previous =
       this.snapshot.shown?.conversionId === conversionId ? this.snapshot.shown : null;
     const shownAudiobook = audiobook ?? previous?.audiobook ?? null;
+    if (shownAudiobook !== previous?.audiobook) {
+      this.shownAudiobookReceivedAt = this.services.now();
+    }
     this.update({
       shown: {
         conversionId,
@@ -134,12 +154,29 @@ export class PlayerHost {
   /**
    * Plays the loaded audiobook. Must be called from a user gesture: browsers only then allow audio
    * to start.
+   *
+   * When the track URL is older than the renewal age, or the previous playback ended in a media
+   * error, Play first requests the audiobook again and sets its newly signed URL at the same
+   * position. Only that path plays after an await, which browsers allow on an element an earlier
+   * gesture started; if one refuses, the next Play starts the renewed track within its gesture.
    */
   play = () => {
-    this.snapshot.loaded?.player.play();
+    const { loaded } = this.snapshot;
+    if (!loaded || this.pendingRenewal) {
+      return;
+    }
+
+    const trackUrlAge = this.services.now() - this.trackUrlReceivedAt;
+    if (this.element.error || trackUrlAge > TRACK_URL_RENEWAL_AGE_MILLISECONDS) {
+      void this.renewTrackUrlAndPlay(loaded);
+      return;
+    }
+
+    loaded.player.play();
   };
 
   pause = () => {
+    this.pendingRenewal = null;
     this.snapshot.loaded?.player.pause();
   };
 
@@ -199,11 +236,40 @@ export class PlayerHost {
       subject,
     });
     const player = new NarrationTrackPlayer(session, this.element);
+    this.trackUrlReceivedAt = this.shownAudiobookReceivedAt;
     this.clearMediaMetadata = this.services.publishMediaMetadata({
       title: audiobook.title,
       artworkUrl: audiobook.coverImage?.url,
     });
     this.update({ loaded: { conversionId, audiobook, subject, player } });
+  }
+
+  private async renewTrackUrlAndPlay(loaded: LoadedAudiobook) {
+    const renewal = Symbol("renewal");
+    this.pendingRenewal = renewal;
+
+    let audiobook: Audiobook | null;
+    try {
+      audiobook = await this.services.fetchAudiobook(loaded.conversionId);
+    } catch {
+      // The request layer reports the failure itself; the player shows that Play did not start.
+      audiobook = null;
+    }
+    // Pause, unloading or loading another audiobook during the request cancelled the renewal.
+    if (this.pendingRenewal !== renewal) {
+      return;
+    }
+    this.pendingRenewal = null;
+
+    // Without a narration track the audiobook is no longer playable, e.g. after a retry.
+    if (audiobook?.status !== "ready" || !audiobook.narrationTrack) {
+      loaded.player.showError(RENEWAL_ERROR_MESSAGE);
+      return;
+    }
+
+    this.trackUrlReceivedAt = this.services.now();
+    loaded.player.replaceTrackUrl(audiobook.narrationTrack.url);
+    loaded.player.play();
   }
 
   private loadShownIntoEmptyPlayer() {
@@ -217,6 +283,7 @@ export class PlayerHost {
   }
 
   private closeLoadedPlayer() {
+    this.pendingRenewal = null;
     this.snapshot.loaded?.player.close();
     this.clearMediaMetadata?.();
     this.clearMediaMetadata = undefined;

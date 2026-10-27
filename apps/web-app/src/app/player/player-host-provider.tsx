@@ -1,4 +1,5 @@
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
+import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
 
 import {
@@ -14,7 +15,7 @@ import {
   type PlayerHostSnapshot,
 } from "#src/app/player/player-host.js";
 import { authStateSnapshot, subscribeAuthState } from "#src/auth/account-session.js";
-import { getLocalPlaybackPosition } from "#src/data-fetching/reader.js";
+import { createAudiobookQuery, getLocalPlaybackPosition } from "#src/data-fetching/reader.js";
 import { publishMediaMetadata } from "#src/platform/media-session.js";
 import { STOP_PLAYBACK_EVENT_NAME } from "#src/playback-events.js";
 
@@ -25,6 +26,7 @@ const PlayerHostContext = React.createContext<PlayerHost | null>(null);
  * stops playback.
  */
 export function PlayerHostProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const [host] = React.useState(
     () =>
       new PlayerHost({
@@ -33,6 +35,10 @@ export function PlayerHostProvider({ children }: { children: React.ReactNode }) 
         publishMediaMetadata,
         getAccount: readPlayerHostAccount,
         getLocalPosition: getLocalPlaybackPosition,
+        // Through the audiobook query, so the page shows the response too.
+        fetchAudiobook: (conversionId) =>
+          queryClient.fetchQuery(createAudiobookQuery(conversionId)),
+        now: () => Date.now(),
       }),
   );
 
