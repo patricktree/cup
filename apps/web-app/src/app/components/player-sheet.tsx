@@ -52,7 +52,8 @@ type SheetPlayback =
  * The detail view's player, fixed at the bottom on the drawn fade: the status line, a scrubber, the
  * elapsed and remaining time, and −15 s / play-pause / +15 s. It controls the shown audiobook and
  * is disabled until that audiobook has a narration track. Before the shown audiobook is loaded it
- * shows the start; Play, seeking and skipping load it, replacing another loaded audiobook.
+ * shows the start; Play, seeking and skipping load it, replacing another loaded audiobook, and a
+ * skip starts from the listener's stored position.
  */
 export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.Element {
   const host = usePlayerHost();
@@ -65,7 +66,7 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
   if (shownLoaded) {
     controls = <LoadedControls loaded={shownLoaded} />;
   } else if (audiobook) {
-    // Shows the start, so −15 s and +15 s skip from there.
+    // Shows the start, but −15 s and +15 s skip from the position the loaded player resumes from.
     controls = (
       <SheetControls
         playback={{
@@ -75,7 +76,7 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
           durationMilliseconds: audiobook.narrationTrack.durationMilliseconds,
           isPlaying: false,
           seekTo: (positionMilliseconds) => host.loadShown()?.seekTo(positionMilliseconds),
-          skipBy: (deltaMilliseconds) => host.loadShown()?.seekTo(Math.max(0, deltaMilliseconds)),
+          skipBy: (deltaMilliseconds) => host.loadShown()?.skipBy(deltaMilliseconds),
           togglePlayback: () => host.playShown(),
         }}
       />
