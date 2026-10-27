@@ -9,6 +9,11 @@ import { $ } from "zx";
 
 /** The local-only account that replaces Google sign-in during development; see ADR 0012. */
 const TEST_ACCOUNT_EMAIL = "test@cup.test";
+/**
+ * Google sign-ins carry the name in `user_metadata`; the web app shows its initials ("ta") in the
+ * avatar.
+ */
+const TEST_ACCOUNT_USER_METADATA = { name: "Test Account" };
 /** Fixed and short so it is easy to type on a phone; Supabase requires at least six characters. */
 const TEST_ACCOUNT_PASSWORD = "testtest";
 /** The web app's Vite port and the local Supabase API port from `supabase/config.toml`. */
@@ -293,7 +298,10 @@ async function readIssuer(apiUrl: string) {
     : undefined;
 }
 
-/** Creates the test account, or resets its password when it already exists with another one. */
+/**
+ * Creates the test account, or resets its password and name when it already exists, possibly with
+ * another password or without a name.
+ */
 async function ensureTestAccount(apiUrl: string, secretKey: string, password: string) {
   const headers = {
     apikey: secretKey,
@@ -303,7 +311,12 @@ async function ensureTestAccount(apiUrl: string, secretKey: string, password: st
   const created = await fetch(`${apiUrl}/auth/v1/admin/users`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ email: TEST_ACCOUNT_EMAIL, password, email_confirm: true }),
+    body: JSON.stringify({
+      email: TEST_ACCOUNT_EMAIL,
+      password,
+      email_confirm: true,
+      user_metadata: TEST_ACCOUNT_USER_METADATA,
+    }),
   });
   if (created.ok) {
     return;
@@ -336,7 +349,7 @@ async function ensureTestAccount(apiUrl: string, secretKey: string, password: st
   const updated = await fetch(`${apiUrl}/auth/v1/admin/users/${user.id}`, {
     method: "PUT",
     headers,
-    body: JSON.stringify({ password }),
+    body: JSON.stringify({ password, user_metadata: TEST_ACCOUNT_USER_METADATA }),
   });
   if (!updated.ok) {
     throw new Error(`Resetting the local test account failed with status ${updated.status}.`);

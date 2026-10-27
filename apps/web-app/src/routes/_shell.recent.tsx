@@ -3,6 +3,8 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Navigate, Outlet } from "@tanstack/react-router";
 import React from "react";
 
+import { AccountAvatar } from "#src/app/components/account-avatar.js";
+import { AccountTabBar } from "#src/app/components/account-tab-bar.js";
 import { ShellContent } from "#src/app/components/main.tsx";
 import { DSButton } from "#src/app/design-system/button.js";
 import { useAccountSession, useAccountAuthState } from "#src/auth/hooks.js";
@@ -30,17 +32,15 @@ function RecentPage(): React.ReactNode {
           <div
             className={css`
               display: flex;
+              flex-grow: 1;
               flex-wrap: wrap;
               gap: var(--spacing-gutter);
-              align-items: baseline;
+              align-items: center;
               justify-content: space-between;
             `}
           >
             Recents
-            {/* Until the tab bar exists, this link is how the Add dialog is reached. */}
-            <Link to="/recent/add" state={{ isAddDialogOpenedInApp: true }}>
-              Add a track
-            </Link>
+            {session && <AccountAvatar userMetadata={session.user.user_metadata} />}
           </div>
         }
         mainContent={
@@ -120,6 +120,7 @@ function RecentPage(): React.ReactNode {
           </>
         }
       ></ShellContent>
+      <AccountTabBar />
       {/* the Add dialog (`_shell.recent.add.tsx`) opens over Recents */}
       <Outlet />
     </>

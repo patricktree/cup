@@ -40,6 +40,8 @@ The router uses `/app` as its base path. Generated JavaScript, CSS, and fonts li
 
 A signed-in listener on `/` is redirected to Recents (`/recent`), and a signed-out one on `/recent` back to `/`. The Add dialog is the child route `/recent/add`, rendered over Recents; a route mask in [`global-providers.tsx`](src/app/global-providers.tsx) keeps the URL bar on `/recent`, and a reload keeps the dialog open. Closing it goes back one history entry when the app opened it, and otherwise replaces the entry with `/recent`, for example after a share opened the app on the dialog.
 
+Only the account shell pages, Recents and the account page, show the [tab bar](src/app/components/account-tab-bar.tsx): Recent, and Add, which opens the Add dialog and never shows as the current page. The [avatar](src/app/components/account-avatar.tsx) links to the account page and shows initials derived from the name in the Supabase session (`user_metadata.name`, else `full_name`), which Supabase fills from the Google sign-in; Cup stores no name, and without one the avatar shows a person glyph.
+
 The shared bundle includes a CSP nonce placeholder. The API server replaces it with a fresh nonce per HTML response; Capacitor serves the same bundle locally without the server's CSP header.
 
 ## Manual verification checklist

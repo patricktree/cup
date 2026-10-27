@@ -19,8 +19,9 @@ function ShellLayout() {
           grid-template-areas:
             "shell-header"
             "shell-main"
-            "shell-floating-player";
-          grid-template-rows: max-content minmax(0, 1fr) auto;
+            "shell-floating-player"
+            "shell-tab-bar";
+          grid-template-rows: max-content minmax(0, 1fr) auto auto;
           height: 100dvh;
 
           /* create stacking context for <header> and <main> of the shell */
