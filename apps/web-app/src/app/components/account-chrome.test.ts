@@ -37,7 +37,7 @@ test("the tab bar's Recent tab leads from the account page to Recents", async ({
   const component = await mount("routes/_shell.account/ActiveAccount");
   await component.getByRole("link", { name: "Recent" }).click();
 
-  await expect(component.getByRole("heading", { name: "Recents" })).toBeVisible();
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
 });
 
 for (const story of [

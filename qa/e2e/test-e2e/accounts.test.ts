@@ -54,7 +54,7 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
     ).toBe(401);
   }
   await page.goto(`${origin}/app/recent`);
-  await expect(page.getByRole("link", { name: "Open audiobook" })).toHaveCount(1);
+  await expect(page.getByRole("list", { name: "Tracks" }).getByRole("link")).toHaveCount(1);
   await expect(page.locator("main")).toHaveScreenshot("private-recents.png");
   await page.goto(`${origin}/app/account`);
   await page.getByRole("button", { name: "Delete account…" }).click();
@@ -85,7 +85,7 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   ).toBeVisible();
   expect((await readAccount(page, origin)).balance.available).toBe(remainingAllowance);
   await page.goto(`${origin}/app/recent`);
-  await expect(page.getByRole("link", { name: "Open audiobook" })).toHaveCount(1);
+  await expect(page.getByRole("list", { name: "Tracks" }).getByRole("link")).toHaveCount(1);
   let resumedRequests = 0;
   page.on("request", (request) => {
     if (
@@ -99,7 +99,7 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
   expect(resumedRequests).toBe(1);
   await page.goto(`${origin}/app/recent`);
-  await expect(page.getByRole("link", { name: "Open audiobook" })).toHaveCount(2);
+  await expect(page.getByRole("list", { name: "Tracks" }).getByRole("link")).toHaveCount(2);
 });
 
 test("signup keeps trial conversions separate from the new account and its Recents", async ({
@@ -169,7 +169,7 @@ test("signup keeps trial conversions separate from the new account and its Recen
     ).status(),
   ).toBe(401);
   await page.goto(origin + "/app/recent");
-  const ownConversions = page.getByRole("link", { name: "Open audiobook" });
+  const ownConversions = page.getByRole("list", { name: "Tracks" }).getByRole("link");
   await expect(ownConversions).toHaveCount(1);
   await expect(ownConversions).toHaveAttribute("href", new URL(privateUrl).pathname);
   expect(importRequests).toBe(0);
