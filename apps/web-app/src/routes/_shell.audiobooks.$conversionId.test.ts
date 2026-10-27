@@ -123,7 +123,7 @@ test("playback continues across pages until another audiobook is played", async 
   expect((await readNarrationAudio(page)).src).toContain("audiobook=story");
 
   await component.getByRole("link", { name: "Back", exact: true }).click();
-  await expect(component.getByRole("heading", { name: "Recents" })).toBeVisible();
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
   await expect(
     player.getByRole("link", { name: "A deterministic document about careful testing" }),
   ).toBeVisible();

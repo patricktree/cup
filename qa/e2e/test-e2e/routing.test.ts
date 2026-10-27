@@ -188,7 +188,7 @@ test("signed in, home redirects to Recents, where the Add dialog opens on a mask
 
   await gotoPage(page, `${origin}/app/`);
   await expect(page).toHaveURL(`${origin}/app/recent`);
-  const recents = page.locator("main li");
+  const recents = page.getByRole("list", { name: "Tracks" }).getByRole("listitem");
   await expect(recents).toHaveCount(1);
   // The fake auth provider names the account holder "Reader Doe".
   await expect(page.getByRole("link", { name: "Account" })).toHaveText("rd", {
@@ -205,7 +205,7 @@ test("signed in, home redirects to Recents, where the Add dialog opens on a mask
   await expect(page).toHaveURL(`${origin}/app/recent`);
   await page.goBack();
   await expect(addDialog).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Recents", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
   await expect(page).toHaveURL(`${origin}/app/recent`);
 
   await addTab.click();
@@ -214,9 +214,12 @@ test("signed in, home redirects to Recents, where the Add dialog opens on a mask
   await expect(addDialog).toHaveCount(0, { timeout: 60_000 });
   await expect(page).toHaveURL(`${origin}/app/recent`);
   await expect(recents).toHaveCount(2);
-  // Recents lists the newest conversion first.
-  await recents.first().getByRole("link").click();
-  await expect(page).toHaveURL(/\/app\/audiobooks\//);
+  // Recents lists the newest conversion first, as a card linking to its detail view.
+  const newCard = recents.first().getByRole("link");
+  const newCardPath = await newCard.getAttribute("href");
+  await expect(recents.first().getByText("source.example.test", { exact: true })).toBeVisible();
+  await newCard.click();
+  await expect(page).toHaveURL(`${origin}${newCardPath}`);
   await page.getByRole("link", { name: "Back", exact: true }).click();
   await expect(page).toHaveURL(`${origin}/app/recent`);
 });

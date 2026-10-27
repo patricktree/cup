@@ -2,52 +2,130 @@ import { waitFor, within } from "@testing-library/dom";
 import { userEvent } from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
 
-import { accountStory, CONVERSION_ID } from "#src/ui-gallery/account-fixtures.jsx";
+import { accountStory } from "#src/ui-gallery/account-fixtures.jsx";
 import type { Story } from "#src/ui-gallery/story.js";
 
 const ADDED_CONVERSION_ID = "c1d0f6a2-3b4e-4f5a-8b6c-7d8e9f0a1b2c";
 const ADDED_SOURCE_URL = "https://example.test/added";
+
+const COVER_PATH = "/__story/covers";
+const SECOND_PAGE_CURSOR = "second-page";
+
+/** Titles of different lengths, so the cards differ in height. */
+const TITLES = [
+  "Trump sieht sich als legitimer Träger von acht Nobelpreisen und wütet gegen Norwegen",
+  "Our minds aren’t equipped to handle AI",
+  "China resumes curbs on Fuel Exports",
+  "Todeskandidatin Christa Pike aus Krankenhaus in Gefängnis verlegt",
+  "Bürgermeister in Peru heißt Hitler Mussolini Simeón",
+  "Trump is getting desperate",
+  "George A. Romero’s Season of the Witch is a slow-burn feminist occult drama",
+  "Midterms are ahead in the U.S.",
+  "A quiet revolution in battery chemistry",
+  "Why the night sky is getting brighter, and what astronomers can still do about it",
+  "The last lighthouse keepers",
+  "Inside the race to map every protein",
+];
+const HOSTS = ["derstandard.at", "www.theverge.com", "nytimes.com"];
+const COVER_COLORS = ["#5b7f95", "#c4733d", "#7a8f4e", "#8a5a83"];
 
 export const EmptyRecents = accountStory({ path: "/recent" });
 /** The session carries no name, so the avatar shows its glyph. */
 export const RecentsWithoutName = accountStory({ path: "/recent", userMetadata: {} });
 /** A signed-in listener opening the home page lands on Recents. */
 export const SignedInHome = accountStory({ path: "/" });
+
+/** Two pages of ready cards, most of them with a cover; the second page loads on scrolling. */
 export const Recents = accountStory({
   path: "/recent",
+  handlers: [
+    coverHandler(),
+    http.get("/api/account/conversions", ({ request }) => {
+      const isSecondPage = new URL(request.url).searchParams.get("cursor") === SECOND_PAGE_CURSOR;
+      return HttpResponse.json(
+        isSecondPage
+          ? { items: createReadyItems(24, 12), nextCursor: null }
+          : { items: createReadyItems(0, 24), nextCursor: SECOND_PAGE_CURSOR },
+      );
+    }),
+  ],
+});
+
+export const RecentsWithOneReadyItem = accountStory({
+  path: "/recent",
+  handlers: [coverHandler()],
+  recents: { items: createReadyItems(0, 1), nextCursor: null },
+});
+
+/** A pending card for each preparation phase label, next to ready and failed cards. */
+export const RecentsWithPendingAndFailed = accountStory({
+  path: "/recent",
+  handlers: [coverHandler()],
   recents: {
     items: [
-      {
-        conversionId: CONVERSION_ID,
-        sourceUrl: "https://example.test/article",
-        createdAtMs: 0,
-        idempotencyKey: CONVERSION_ID,
-        status: "ready",
-        outcome: { status: "ready", title: "A private audiobook" },
-      },
-      {
-        conversionId: "a3fcb5d8-9162-4c1a-b804-3be130c5e92a",
-        sourceUrl: "https://example.test/pending",
-        createdAtMs: 0,
-        idempotencyKey: CONVERSION_ID,
-        status: "pending",
-        outcome: null,
-      },
-      {
-        conversionId: "70fcf2d9-63c5-48be-b897-d3670f24ed43",
-        sourceUrl: "https://example.test/failed",
-        createdAtMs: 0,
-        idempotencyKey: CONVERSION_ID,
+      historyItem(0, { status: "pending", preparationPhase: "selecting-content", outcome: null }),
+      historyItem(1, { status: "pending", outcome: null }),
+      ...createReadyItems(2, 1),
+      historyItem(3, {
         status: "failed",
-        outcome: {
-          status: "failed",
-          explanation: "Audio production failed.",
-        },
-      },
+        outcome: { status: "failed", explanation: "Preparation failed." },
+      }),
+      historyItem(4, {
+        status: "synthesizing",
+        outcome: { status: "ready", title: "Generating audio still looks ready" },
+      }),
     ],
-    nextCursor: "next-page",
+    nextCursor: null,
   },
 });
+
+/** A stable conversion ID per generated history item. */
+function toStoryConversionId(index: number): string {
+  return `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+}
+
+function createReadyItems(firstIndex: number, count: number): Record<string, unknown>[] {
+  return Array.from({ length: count }, (_, offset) => {
+    const index = firstIndex + offset;
+    // every fourth card has no cover
+    const hasCoverImage = index % 4 !== 3;
+    return historyItem(index, {
+      status: "ready",
+      outcome: {
+        status: "ready",
+        title: TITLES[index % TITLES.length],
+        ...(hasCoverImage && {
+          hasCoverImage,
+          coverImage: {
+            url: `${window.location.origin}${COVER_PATH}/${COVER_COLORS[index % COVER_COLORS.length]?.slice(1)}.svg`,
+          },
+        }),
+      },
+    });
+  });
+}
+
+function historyItem(index: number, fields: Record<string, unknown>): Record<string, unknown> {
+  const conversionId = toStoryConversionId(index);
+  return {
+    conversionId,
+    idempotencyKey: conversionId,
+    sourceUrl: `https://${HOSTS[index % HOSTS.length]}/articles/${index}`,
+    createdAtMs: 0,
+    ...fields,
+  };
+}
+
+/** Flat-colored covers wider than 5:3, named by their hex color. */
+function coverHandler() {
+  return http.get(`${COVER_PATH}/:color`, ({ params }) => {
+    const color = `#${String(params["color"]).replace(/\.svg$/, "")}`;
+    return new HttpResponse(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect width="400" height="200" fill="${color}"/><circle cx="200" cy="100" r="60" fill="#fff"/></svg>`,
+      { headers: { "Content-Type": "image/svg+xml" } },
+    );
+  });
+}
 
 export const AddDialog = accountStory({ path: "/recent/add" });
 
