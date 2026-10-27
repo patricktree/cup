@@ -2,6 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 import { Temporal } from "temporal-polyfill";
 
 import {
+  type ConversionPhase,
   dispatchSegmentWorkflows,
   reconcileSegmentWorkflow,
   type SynthesisWorkflowDispatcher,
@@ -172,6 +173,15 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     ) {
       throw new Error("Account execution is fenced");
     }
+  }
+
+  /**
+   * Checks the execution and records the phase in one synchronous call, so a fenced execution
+   * cannot record a phase between the check and the write.
+   */
+  recordPhaseStarted(conversionId: string, phase: ConversionPhase, executionEpoch: number) {
+    this.assertExecution(conversionId, executionEpoch);
+    this.sqlite.recordPhaseStarted(conversionId, phase);
   }
 
   /** Reserves the whole narration document before dispatching any segment; see ADR 0008. */

@@ -1896,6 +1896,15 @@
                               "failed"
                             ]
                           },
+                          "preparationPhase": {
+                            "type": "string",
+                            "enum": [
+                              "starting",
+                              "reading-page",
+                              "selecting-content",
+                              "preparing-text"
+                            ]
+                          },
                           "outcome": {
                             "oneOf": [
                               {
@@ -4717,6 +4726,15 @@
                           "type": "string",
                           "enum": [
                             "pending"
+                          ]
+                        },
+                        "preparationPhase": {
+                          "type": "string",
+                          "enum": [
+                            "starting",
+                            "reading-page",
+                            "selecting-content",
+                            "preparing-text"
                           ]
                         }
                       },

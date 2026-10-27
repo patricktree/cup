@@ -941,6 +941,19 @@
                                   "failed"
                                 ]
                               },
+                              "lastStartedPhase": {
+                                "type": "string",
+                                "enum": [
+                                  "conversion-start",
+                                  "source-material-preparation",
+                                  "narration-content-selection",
+                                  "narration-document-creation",
+                                  "audio-segment-production",
+                                  "audiobook-assembly",
+                                  "audiobook-storage",
+                                  "finalization"
+                                ]
+                              },
                               "outcome": {
                                 "oneOf": [
                                   {
@@ -1042,6 +1055,7 @@
                               "sourceUrl",
                               "createdAtMs",
                               "status",
+                              "lastStartedPhase",
                               "outcome",
                               "completedAtMs"
                             ],

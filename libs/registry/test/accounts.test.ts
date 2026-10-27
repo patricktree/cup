@@ -4,7 +4,6 @@ import { Temporal } from "temporal-polyfill";
 import { afterAll, beforeAll, expect, test } from "vitest";
 import { createTestHarness } from "wrangler";
 
-import type { AccountDurableObject } from "@cup/accounts";
 import { accountArtifactBucket } from "@cup/accounts/artifact-writer";
 import {
   accountAccountingInspectionSchema,
@@ -16,6 +15,7 @@ import {
 import { registryMigrationCount } from "#test/migration-counts.ts";
 import type {
   AccountDispatchTestDurableObject,
+  AccountDurableObject,
   DeletionTestDurableObject,
   RegistryDurableObject,
 } from "#test/worker.ts";
@@ -637,6 +637,45 @@ test("obsolete execution cannot settle after an account execution epoch change",
   expect((await account.inspectAccounting()).entries).toBe(1);
 });
 
+test("an account conversion records the phase it last started and starts again on retry", async () => {
+  const { account, accountId } = await createAccount();
+  const started = await account.startConversion(
+    { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/" },
+    nowMs,
+  );
+  const conversionId = started.conversion?.conversionId;
+  if (conversionId === undefined) {
+    throw new Error("Expected accepted conversion");
+  }
+  expect((await account.getConversion(conversionId))?.lastStartedPhase).toBe("conversion-start");
+
+  await account.recordPhaseStarted(conversionId, "narration-content-selection", 1);
+  expect((await account.getConversion(conversionId))?.lastStartedPhase).toBe(
+    "narration-content-selection",
+  );
+  expect((await account.history()).items[0]?.lastStartedPhase).toBe("narration-content-selection");
+
+  const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
+  await storage.exec("UPDATE account SET execution_epoch = 2");
+  await expectWorkerRpcRejection(account.recordPhaseStarted(conversionId, "audiobook-storage", 1));
+  expect((await account.getConversion(conversionId))?.lastStartedPhase).toBe(
+    "narration-content-selection",
+  );
+
+  await account.settleConversion(
+    conversionId,
+    { status: "failed", failureCategory: "source-preparation", explanation: "Stopped." },
+    nowMs,
+    2,
+  );
+  await account.acceptPreparationForTest();
+  await account.retryPreparation(conversionId);
+  expect(await account.getConversion(conversionId)).toMatchObject({
+    status: "pending",
+    lastStartedPhase: "conversion-start",
+  });
+});
+
 test("lost dispatch acknowledgement and exhausted terminal retries fail the conversion", async () => {
   const accountId = crypto.randomUUID();
   const account = bindings.ACCOUNT_DISPATCH_TEST.get(
@@ -671,8 +710,8 @@ test("account history pages ties deterministically without crossing owners", asy
   const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
   // Copying the accepted conversion in one statement avoids 52 sequential RPCs, which exceed the test timeout under load.
   await storage.exec(
-    `INSERT INTO account_conversions (conversion_id, idempotency_key, source_url, created_at_ms, status)
-     SELECT copy.value, copy.value, source_url, created_at_ms, status
+    `INSERT INTO account_conversions (conversion_id, idempotency_key, source_url, created_at_ms, status, last_started_phase)
+     SELECT copy.value, copy.value, source_url, created_at_ms, status, last_started_phase
      FROM account_conversions, json_each(?) AS copy`,
     JSON.stringify(Array.from({ length: conversionCount - 1 }, () => crypto.randomUUID())),
   );
