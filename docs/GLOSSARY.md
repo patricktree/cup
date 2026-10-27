@@ -126,11 +126,17 @@ The state of a conversion: pending while its narration document is being prepare
 
 _Avoid_: workflow status
 
+## conversion phase
+
+A step of a conversion that it records as started, from conversion start through finalization. The preparation phase reports the steps among them that prepare a pending conversion's narration document.
+
+_Avoid_: workflow step, preparation phase for the steps after preparation
+
 ## preparation phase
 
 The step of preparing a pending conversion's narration document that the conversion last started.
 
-_Avoid_: conversion phase, workflow step
+_Avoid_: conversion phase for this reported step, workflow step
 
 ## audiobook source material
 

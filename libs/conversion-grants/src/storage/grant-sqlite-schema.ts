@@ -6,6 +6,7 @@ import type {
   AudiobookReference,
   ConversionMeasurements,
 } from "@cup/conversion-contracts";
+import { conversionPhaseOrder } from "@cup/conversion-contracts";
 import {
   creditBalances,
   creditLedger,
@@ -15,6 +16,11 @@ import {
 
 // Re-exported so that the grant migrations create the shared duration ledger tables.
 export { creditBalances, creditLedger, creditOperations };
+
+/** Every conversion phase as an SQL list, so the CHECK below follows the enum. */
+const CONVERSION_PHASE_SQL_LIST = sql.raw(
+  conversionPhaseOrder.map((phase) => `'${phase}'`).join(", "),
+);
 
 export const grants = sqliteTable(
   "grant",
@@ -82,10 +88,7 @@ export const conversions = sqliteTable(
   },
   (table) => [
     check("conversion_status", sql`${table.status} IN ('pending', 'ready', 'failed')`),
-    check(
-      "conversion_phase",
-      sql`${table.lastStartedPhase} IN ('conversion-start', 'source-material-preparation', 'narration-content-selection', 'narration-document-creation', 'audio-segment-production', 'audiobook-assembly', 'audiobook-storage', 'finalization')`,
-    ),
+    check("conversion_phase", sql`${table.lastStartedPhase} IN (${CONVERSION_PHASE_SQL_LIST})`),
     check(
       "conversion_failure_category",
       sql`${table.failureCategory} IS NULL OR ${table.failureCategory} IN ('workflow-start', 'source-preparation', 'content-selection', 'content-limit', 'narration-synthesis', 'audiobook-assembly', 'workflow-platform', 'internal')`,

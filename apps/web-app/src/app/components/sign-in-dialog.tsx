@@ -14,7 +14,7 @@ type SignInDialogProps = Pick<
   onSignIn: (method: SignInMethod) => void;
 };
 
-export const SIGN_IN_LABELS: Record<SignInMethod, string> = {
+const SIGN_IN_LABELS: Record<SignInMethod, string> = {
   google: "Continue with Google",
   "test-account": "Sign in with test account",
 };
@@ -44,10 +44,34 @@ export function SignInDialog({
       }
       cancelButtonText={<>Cancel</>}
       cancelButtonDisabled={pendingMethod !== undefined}
-      buttonGroupChildren={signInMethods.map((method, index) => (
+      buttonGroupChildren={
+        <SignInButtons
+          signInMethods={signInMethods}
+          pendingMethod={pendingMethod}
+          onSignIn={onSignIn}
+          refs={{ firstButton: signInButton }}
+        />
+      }
+      errorMessage={errorMessage}
+    />
+  );
+}
+
+/** One button per sign-in method, all disabled while a sign-in is in progress. */
+export function SignInButtons({
+  signInMethods,
+  pendingMethod,
+  onSignIn,
+  refs,
+}: Pick<SignInDialogProps, "signInMethods" | "pendingMethod" | "onSignIn"> & {
+  refs?: { firstButton?: React.Ref<HTMLButtonElement> | undefined };
+}): React.JSX.Element {
+  return (
+    <>
+      {signInMethods.map((method, index) => (
         <DSButton
           key={method}
-          ref={index === 0 ? signInButton : undefined}
+          ref={index === 0 ? refs?.firstButton : undefined}
           variant="contained"
           disabled={pendingMethod !== undefined}
           onClick={() => onSignIn(method)}
@@ -55,7 +79,6 @@ export function SignInDialog({
           {pendingMethod === method ? "Signing in…" : SIGN_IN_LABELS[method]}
         </DSButton>
       ))}
-      errorMessage={errorMessage}
-    />
+    </>
   );
 }

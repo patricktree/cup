@@ -1,18 +1,16 @@
 import { css } from "@linaria/core";
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
-import { revalidateLogic } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
 import React from "react";
 
-import { type GrantSnapshot, startConversionRequestSchema } from "@cup/listener-api.routes";
+import type { GrantSnapshot } from "@cup/listener-api.routes";
 
 import { SignInDialog } from "#src/app/components/sign-in-dialog.js";
-import { useAppForm } from "#src/app/form.js";
+import { SourceUrlForm } from "#src/app/components/source-url-form.js";
 import { useAccountConversionSubmission } from "#src/app/use-cases/account-conversions.js";
 import { useStartTrialConversionMutation } from "#src/data-fetching/conversion-grant.js";
 import { useRateLimitCountdown } from "#src/data-fetching/rate-limit.js";
 import { summarizeError } from "#src/errors.js";
-import { subscribeToSharedUrl } from "#src/platform/share-intake.js";
 
 type StartConversionFormProps =
   | { mode: "account"; grant?: never }
@@ -106,119 +104,46 @@ function ConversionForm({
   error: unknown;
   onSubmit: (value: { sourceUrl: string }) => Promise<void>;
 }): React.ReactNode {
-  const form = useSourceUrlForm({
-    initialSourceUrl,
-    shouldReceiveSharedUrl,
-    isPending,
-    retryIn,
-    onSubmit,
-  });
-
   return (
     <>
-      <form
-        noValidate
-        className={css`
-          display: grid;
-          gap: calc(3 * var(--spacing-base));
-          padding-block: calc(5 * var(--spacing-base));
-          padding-inline: calc(2 * var(--spacing-base));
-        `}
-        onSubmit={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          void form.handleSubmit();
+      <SourceUrlForm
+        initialSourceUrl={initialSourceUrl}
+        shouldReceiveSharedUrl={shouldReceiveSharedUrl}
+        isPending={isPending}
+        retryIn={retryIn}
+        onSubmit={onSubmit}
+        submitLabel="Load & listen"
+        submittingLabel="Starting conversion..."
+        refs={{ submitButton: refs?.submitButton }}
+        sx={{
+          form: css`
+            display: grid;
+            gap: calc(3 * var(--spacing-base));
+            padding-block: calc(5 * var(--spacing-base));
+            padding-inline: calc(2 * var(--spacing-base));
+          `,
+          input: css`
+            height: 64px;
+            padding-inline: 24px;
+
+            font-family: var(--font-family-1);
+            font-size: var(--font-size-md);
+            background: var(--color-surface) padding-box;
+            backdrop-filter: saturate(6);
+
+            &::placeholder {
+              color: var(--color-fg-emphasized-sm);
+            }
+          `,
+          submitButton: css`
+            justify-self: end;
+          `,
         }}
-      >
-        <form.AppForm>
-          <form.AppField name="sourceUrl">
-            {(field) => (
-              <field.TextField
-                sx={{
-                  input: css`
-                    height: 64px;
-                    padding-inline: 24px;
-
-                    font-family: var(--font-family-1);
-                    font-size: var(--font-size-md);
-                    background: var(--color-surface) padding-box;
-                    backdrop-filter: saturate(6);
-
-                    &::placeholder {
-                      color: var(--color-fg-emphasized-sm);
-                    }
-                  `,
-                }}
-                label="URL"
-                maxLength={2048}
-                required
-                type="url"
-                placeholder="Paste URL here"
-                hideLabel
-              />
-            )}
-          </form.AppField>
-          <form.Subscribe selector={(state) => state.values.sourceUrl}>
-            {(sourceUrl) => (
-              <form.SubmitButton
-                refs={{ button: refs?.submitButton }}
-                sx={{
-                  button: css`
-                    justify-self: end;
-                  `,
-                }}
-                disabled={isPending || retryIn > 0 || !sourceUrl.trim()}
-                label={"Load & listen"}
-                submittingLabel="Starting conversion..."
-              />
-            )}
-          </form.Subscribe>
-        </form.AppForm>
-      </form>
+      />
       {retryIn > 0 && <output>Try again in {retryIn} seconds.</output>}
       {error ? (
         <p role="alert">{summarizeError(error, "The conversion could not start.")}</p>
       ) : null}
     </>
   );
-}
-
-/**
- * The source-URL form state of every start form: today's validation, and a URL shared to the app
- * fills the field without submitting it.
- */
-export function useSourceUrlForm({
-  initialSourceUrl,
-  shouldReceiveSharedUrl,
-  isPending,
-  retryIn,
-  onSubmit,
-}: {
-  initialSourceUrl: string;
-  /** False while this form may still be replaced, so a shared URL waits for the form that stays. */
-  shouldReceiveSharedUrl: boolean;
-  isPending: boolean;
-  retryIn: number;
-  onSubmit: (value: { sourceUrl: string }) => Promise<void>;
-}) {
-  const form = useAppForm({
-    defaultValues: { sourceUrl: initialSourceUrl },
-    validationLogic: revalidateLogic({ mode: "submit", modeAfterSubmission: "change" }),
-    validators: { onDynamic: startConversionRequestSchema },
-    onSubmit: async ({ value }) => {
-      if (isPending || retryIn > 0) {
-        return;
-      }
-      await onSubmit(value);
-    },
-  });
-
-  React.useEffect(() => {
-    if (!shouldReceiveSharedUrl) {
-      return undefined;
-    }
-    return subscribeToSharedUrl((url) => form.setFieldValue("sourceUrl", url));
-  }, [form, shouldReceiveSharedUrl]);
-
-  return form;
 }

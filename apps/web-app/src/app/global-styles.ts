@@ -118,10 +118,14 @@ export const cssBase = css`
       --font-size-sm: 14px;
       --font-size-md: 16px;
       --font-size-lg: 18px;
-      --font-size-xl: 20px;
-      --font-size-xxl: 24px;
-      --font-size-xxxl: 32px;
+      --font-size-xl: 22px;
+      --font-size-xxl: 26px;
+      --font-size-xxxl: 30px;
       --font-size-display: 36px;
+      /* sizes of the text styles in text-styles.ts that the scale above does not hold */
+      --font-size-h1: 32px;
+      --font-size-h2: 24px;
+      --font-size-callout: 20px;
       --font-weight-inter-figma-medium: 500;
       /* line heights of the text styles in text-styles.ts; H1 is drawn at 24 px but kept at 1 or above */
       --line-height-h1: 32px;
@@ -160,12 +164,16 @@ export const cssBase = css`
       );
 
       --background-dialog-backdrop: rgb(var(--color-ink-rgb) / 35%);
+
+      /* the focus ring, also drawn by containers whose focused element shows none */
+      --focus-ring: 2px solid var(--color-ink);
+      --focus-ring-offset: 2px;
     }
 
     /* undrawn state: every interactive element shows the same focus ring */
     :focus-visible {
-      outline: 2px solid var(--color-ink);
-      outline-offset: 2px;
+      outline: var(--focus-ring);
+      outline-offset: var(--focus-ring-offset);
     }
 
     ::selection {

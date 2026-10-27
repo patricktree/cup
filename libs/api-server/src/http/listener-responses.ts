@@ -60,7 +60,7 @@ export function toDeletionChallengeResponse(challenge: ReturnType<AccountLifecyc
 export async function toAccountHistoryResponse(
   page: AccountHistoryPage,
   signCoverImageUrl: (conversionId: string) => Promise<string>,
-) {
+): Promise<AccountHistory> {
   return {
     items: await Promise.all(
       page.items.map(async (item): Promise<HistoryItem> => ({
@@ -117,7 +117,9 @@ export function toPreparationPhase(phase: ConversionPhase): PreparationPhase | u
 }
 
 /** Leaves the field out when no listener phase applies. */
-export function toPreparationPhaseField(phase: ConversionPhase) {
+export function toPreparationPhaseField(phase: ConversionPhase): {
+  preparationPhase?: PreparationPhase;
+} {
   const preparationPhase = toPreparationPhase(phase);
   return preparationPhase === undefined ? {} : { preparationPhase };
 }

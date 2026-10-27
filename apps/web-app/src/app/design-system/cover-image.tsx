@@ -14,6 +14,8 @@ type DSCoverImageProps = DSCoverImageCustomProps & {
 type DSCoverImageCustomProps = {
   /** `circle` crops to a circle, as in the mini player; its size comes from `className`. */
   shape?: "rectangle" | "circle";
+  /** `square` leaves the corners to a container that clips the cover, such as a card. */
+  corners?: "rounded" | "square";
 };
 
 type DSCoverImageDataAttributes = MapPropsToRequiredDataAttributeProps<DSCoverImageCustomProps>;
@@ -28,10 +30,14 @@ export function DSCoverImage({
   src,
   alt,
   shape = "rectangle",
+  corners = "rounded",
   className,
 }: DSCoverImageProps): React.JSX.Element {
   const [shownImage, setShownImage] = React.useState<ShownImage | undefined>(undefined);
-  const dataAttributes: DSCoverImageDataAttributes = { "data-shape": shape };
+  const dataAttributes: DSCoverImageDataAttributes = {
+    "data-shape": shape,
+    "data-corners": corners,
+  };
 
   const isLoading = src !== undefined && src !== shownImage?.src;
 
@@ -52,6 +58,10 @@ export function DSCoverImage({
           &[data-shape="circle"] {
             aspect-ratio: 1;
             border-radius: var(--border-radius-full);
+          }
+
+          &[data-corners="square"] {
+            border-radius: 0;
           }
 
           & > img {

@@ -451,7 +451,7 @@ test.each(["trial", "account"] as const)(
     expect(conversion).toMatchObject({
       status: "failed",
       failureCategory: "source-preparation",
-      explanation: "Preparation failed. Try again to prepare this article.",
+      explanation: "Preparation failed. Retry to load this track.",
     });
     const segments =
       kind === "account"

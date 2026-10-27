@@ -2,11 +2,13 @@ import { css } from "@linaria/core";
 import { Link } from "@tanstack/react-router";
 import React from "react";
 
+import { TAB_BAR_ICONS_OFFSET_PIXELS } from "#src/app/components/account-tab-bar.js";
 import { PlaybackError } from "#src/app/components/playback-error.js";
 import { DSCoverImage } from "#src/app/design-system/cover-image.js";
 import { DSIconButton } from "#src/app/design-system/icon-button.js";
-import { PauseMiniIcon, PlayIcon, SkipBack15MiniIcon } from "#src/app/design-system/icons.js";
-import { textStyles } from "#src/app/design-system/text-styles.js";
+import { PauseMiniIcon, PlayIcon, SkipBack15Icon } from "#src/app/design-system/icons.js";
+import { pressableOverlay } from "#src/app/design-system/interaction-states.js";
+import { singleLine, textStyles } from "#src/app/design-system/text-styles.js";
 import { interTypefaceScope } from "#src/app/global-styles.js";
 import { SKIP_MILLISECONDS } from "#src/app/player/narration-track-player.js";
 import {
@@ -20,6 +22,8 @@ import { composeClassnames } from "#src/app/utils.js";
 
 /** The mini player's play icon; only its pause icon is drawn, at this size. */
 const PLAY_ICON_SIZE = 32;
+/** The drawn gap between the pill and the tab icons below it. */
+const GAP_ABOVE_TAB_ICONS_PIXELS = 18;
 
 /**
  * A floating pill above the tab bar of the account pages that controls the loaded audiobook: −15 s
@@ -48,8 +52,8 @@ export function MiniPlayer(): React.ReactNode {
         max-width: var(--app-max-width);
         padding-inline: 10px;
 
-        /* the drawn pill ends 18 px above the tab icons, inside the tab bar's top padding */
-        margin-block-end: -19px;
+        /* the pill reaches into the tab bar's top padding, ending the drawn gap above its icons */
+        margin-block-end: ${GAP_ABOVE_TAB_ICONS_PIXELS - TAB_BAR_ICONS_OFFSET_PIXELS}px;
         margin-inline: auto;
       `}
     >
@@ -73,8 +77,8 @@ export function MiniPlayer(): React.ReactNode {
 
           /* the link is the pill's focus target, so the pill shows its focus ring */
           &:has(> a:focus-visible) {
-            outline: 2px solid var(--color-ink);
-            outline-offset: 2px;
+            outline: var(--focus-ring);
+            outline-offset: var(--focus-ring-offset);
           }
 
           /* 6 px between the 44 px hit areas draws the icons 16 px apart */
@@ -94,35 +98,30 @@ export function MiniPlayer(): React.ReactNode {
         <Link
           to="/audiobooks/$conversionId"
           params={{ conversionId: loaded.conversionId }}
-          className={css`
-            display: grid;
-            min-width: 0;
-            color: var(--color-ink);
-            text-decoration: none;
+          className={composeClassnames(
+            pressableOverlay,
+            css`
+              /* the pill is the containing block, so the overlay and the area below span it */
+              position: static;
+              display: grid;
+              min-width: 0;
 
-            &:focus-visible {
-              outline: none;
-            }
-
-            /* spans the whole pill, so pressing it outside the buttons opens the detail view */
-            &::before {
-              position: absolute;
-              inset: 0;
-              content: "";
+              color: var(--color-ink);
+              text-decoration: none;
               border-radius: inherit;
-            }
 
-            /* the undrawn pressed and hover state, as \`pressableOverlay\` draws it */
-            &:active::before {
-              background-color: var(--color-ink-8);
-            }
-
-            @media (hover: hover) {
-              &:hover::before {
-                background-color: var(--color-ink-8);
+              &:focus-visible {
+                outline: none;
               }
-            }
-          `}
+
+              /* pressing the pill outside the buttons opens the detail view */
+              &::before {
+                position: absolute;
+                inset: 0;
+                content: "";
+              }
+            `,
+          )}
         >
           <span className={composeClassnames(textStyles.h5, singleLine)}>{audiobook.title}</span>
           <span
@@ -139,7 +138,7 @@ export function MiniPlayer(): React.ReactNode {
         </Link>
         <DSIconButton
           label="Back 15 seconds"
-          icon={<SkipBack15MiniIcon />}
+          icon={<SkipBack15Icon />}
           className={controlAbovePill}
           onClick={() => player.skipBy(-SKIP_MILLISECONDS)}
         />
@@ -168,10 +167,4 @@ function PlayPauseButton({ loaded }: { loaded: LoadedAudiobook }): React.JSX.Ele
 /** Lifts a button above the link's pressable area, which spans the pill. */
 const controlAbovePill = css`
   z-index: 1;
-`;
-
-const singleLine = css`
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 `;

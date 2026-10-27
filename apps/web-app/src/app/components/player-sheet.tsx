@@ -2,6 +2,7 @@ import { Slider } from "@base-ui/react/slider";
 import { css } from "@linaria/core";
 import React from "react";
 
+import { fadeFooter } from "#src/app/components/fade-footer.js";
 import { PlaybackError } from "#src/app/components/playback-error.js";
 import { DSIconButton } from "#src/app/design-system/icon-button.js";
 import {
@@ -53,7 +54,7 @@ type SheetPlayback =
  * is disabled until that audiobook has a narration track. Before the shown audiobook is loaded it
  * shows the start; Play, seeking and skipping load it, replacing another loaded audiobook.
  */
-export function PlayerSheet({ status }: { status: string }): React.JSX.Element {
+export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.Element {
   const host = usePlayerHost();
   const { loaded, shown } = usePlayerHostSnapshot();
   const audiobook =
@@ -87,32 +88,20 @@ export function PlayerSheet({ status }: { status: string }): React.JSX.Element {
     <footer
       {...interTypefaceScope}
       aria-label="Player"
-      className={css`
-        /* containing block for the fade below */
-        position: relative;
+      className={composeClassnames(
+        fadeFooter,
+        css`
+          --fade-height: ${FADE_HEIGHT_PIXELS}px;
+          --fade-background: var(--background-fade-player-sheet);
 
-        /* above shell <main>, whose end scrolls under the fade */
-        z-index: 1;
-        display: grid;
-        grid-area: shell-player;
-        align-content: end;
-        min-height: ${SHEET_HEIGHT_PIXELS}px;
-        padding-block: 0 24px;
-        padding-inline: 24px;
-
-        &::before {
-          position: absolute;
-          inset-inline: 0;
-          bottom: 0;
-          z-index: -1;
-          height: ${FADE_HEIGHT_PIXELS}px;
-
-          /* let clicks reach the content fading underneath */
-          pointer-events: none;
-          content: "";
-          background: var(--background-fade-player-sheet);
-        }
-      `}
+          display: grid;
+          grid-area: shell-player;
+          align-content: end;
+          min-height: ${SHEET_HEIGHT_PIXELS}px;
+          padding-block: 0 24px;
+          padding-inline: 24px;
+        `,
+      )}
     >
       <div
         className={css`
@@ -125,7 +114,7 @@ export function PlayerSheet({ status }: { status: string }): React.JSX.Element {
         `}
       >
         {shownLoaded ? <PlaybackError player={shownLoaded.player} /> : null}
-        <output className={textStyles.h5}>{status}</output>
+        <output className={textStyles.h5}>{statusLine}</output>
         {controls}
       </div>
     </footer>
@@ -195,8 +184,8 @@ function SheetControls({ playback }: { playback: SheetPlayback }): React.JSX.Ele
 
             /* the thumb is invisible, so the scrubber shows its focus ring */
             &:has(:focus-visible) {
-              outline: 2px solid var(--color-ink);
-              outline-offset: 2px;
+              outline: var(--focus-ring);
+              outline-offset: var(--focus-ring-offset);
               border-radius: var(--border-radius-full);
             }
           `}

@@ -60,6 +60,7 @@ import {
   requireSignedMediaUrl,
   signAudiobookMediaUrl,
   type AudiobookMediaResource,
+  type MediaUrlPrincipal,
 } from "#src/http/signed-media-url.ts";
 import { applyWebAppCspNonce } from "#src/http/web-app-csp.ts";
 import { createConversionGrant } from "#src/use-cases/create-conversion-grant.ts";
@@ -219,16 +220,13 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     const page = await auth.account.history(
       split?.[1] ? { createdAtMs: Number(split[0]), conversionId: split[1] } : undefined,
     );
-    const principal = { kind: "account", accountId: auth.snapshot.accountId } as const;
+    const signMediaUrl = createMediaUrlSigner(context, {
+      kind: "account",
+      accountId: auth.snapshot.accountId,
+    });
     return context.json(
       await toAccountHistoryResponse(page, (conversionId) =>
-        signAudiobookMediaUrl({
-          requestUrl: context.req.url,
-          signingKey: context.env.MEDIA_URL_SIGNING_KEY,
-          conversionId,
-          principal,
-          resource: "cover-image",
-        }),
+        signMediaUrl(conversionId, "cover-image"),
       ),
       200,
     );
@@ -491,12 +489,12 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     const { conversionId } = context.req.valid("param");
     const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
     if (!owner) {
-      return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
+      return jsonError(context.get("requestId"), "audiobook-not-found", "Track not found.", 404);
     }
     const reader = resolveConversionReader(context.env, conversionId, owner);
     const conversion = await reader.getConversion();
     if (!conversion) {
-      return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
+      return jsonError(context.get("requestId"), "audiobook-not-found", "Track not found.", 404);
     }
     const canGenerate =
       owner.kind === "account" ||
@@ -526,17 +524,10 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     }
     const audiobook = await loadReadyAudiobookFromEnvironment(context.env, conversionId, reader);
     if (!audiobook) {
-      return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
+      return jsonError(context.get("requestId"), "audiobook-not-found", "Track not found.", 404);
     }
-    const signMediaUrlForOwner = (resource: AudiobookMediaResource) =>
-      signAudiobookMediaUrl({
-        requestUrl: context.req.url,
-        signingKey: context.env.MEDIA_URL_SIGNING_KEY,
-        conversionId,
-        // The ownership middleware admitted this request for the owner alone.
-        principal: owner,
-        resource,
-      });
+    // The ownership middleware admitted this request for the owner alone.
+    const signMediaUrl = createMediaUrlSigner(context, owner);
     const segmentUsage = await reader.listAudioSegments();
     const narrationTrackDurations = findNarrationTrackDurations(segmentUsage);
     const synthesis = await getSynthesisState(
@@ -579,7 +570,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
           ? {}
           : {
               coverImage: {
-                url: await signMediaUrlForOwner("cover-image"),
+                url: await signMediaUrl(conversionId, "cover-image"),
                 ...(audiobook.coverImage.alternativeText === undefined
                   ? {}
                   : { alternativeText: audiobook.coverImage.alternativeText }),
@@ -589,7 +580,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
           ? {}
           : {
               narrationTrack: toNarrationTrackResponse(
-                await signMediaUrlForOwner("narration-track.mp3"),
+                await signMediaUrl(conversionId, "narration-track.mp3"),
                 narrationTrackDurations,
               ),
             }),
@@ -608,7 +599,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     }
     const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
     if (!owner) {
-      return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
+      return jsonError(context.get("requestId"), "audiobook-not-found", "Track not found.", 404);
     }
     if (owner.kind === "trial") {
       if (
@@ -1395,6 +1386,21 @@ function isApplicationOrigin(origin: string | undefined): origin is string {
  * Lets the web app read the response with credentials when the request comes from one of its
  * origins.
  */
+/** Signs media URLs on the request's origin for one principal, which must have access. */
+function createMediaUrlSigner(
+  context: { req: { url: string }; env: { MEDIA_URL_SIGNING_KEY: string } },
+  principal: MediaUrlPrincipal,
+): (conversionId: string, resource: AudiobookMediaResource) => Promise<string> {
+  return (conversionId, resource) =>
+    signAudiobookMediaUrl({
+      requestUrl: context.req.url,
+      signingKey: context.env.MEDIA_URL_SIGNING_KEY,
+      conversionId,
+      principal,
+      resource,
+    });
+}
+
 function allowApplicationOrigin(context: Context, origin: string | undefined): void {
   if (!isApplicationOrigin(origin)) {
     return;

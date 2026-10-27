@@ -132,7 +132,7 @@ export const AudiobookNotFound = {
           error: {
             requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
             code: "audiobook-not-found",
-            message: "The audiobook was not found.",
+            message: "Track not found.",
           },
         } satisfies ErrorResponse,
         { status: 404 },
@@ -278,6 +278,19 @@ export const InsufficientDuration = createPreparedStory({
   status: "insufficient-duration",
   requiredMilliseconds: 754_000,
   availableMilliseconds: 95_000,
+  segments: [
+    { sequence: 0, status: "absent" },
+    { sequence: 1, status: "absent" },
+    { sequence: 2, status: "absent" },
+  ],
+});
+
+/** Duration was freed after generation was refused, so the audio waits for a Retry. */
+export const AudiobookNotYetGenerated = createPreparedStory({
+  ...PREPARED_AUDIOBOOK,
+  status: "insufficient-duration",
+  requiredMilliseconds: 95_000,
+  availableMilliseconds: 754_000,
   segments: [
     { sequence: 0, status: "absent" },
     { sequence: 1, status: "absent" },

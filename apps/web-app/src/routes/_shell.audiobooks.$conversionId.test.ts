@@ -387,6 +387,19 @@ test("a failed segment is marked and playback waits for a successful Retry", asy
       "Not enough audio duration to retry. The missing audio needs about 3 s, and 1 s is available.",
     ),
   ).toBeVisible();
+  await expect(component).toHaveScreenshot("retry-refused-for-duration.png");
+});
+
+test("an audiobook whose generation waits for freed duration asks for a Retry", async ({
+  mount,
+}) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/AudiobookNotYetGenerated");
+  await expect(
+    component.getByText("Audio has not been generated for this track yet.", { exact: true }),
+  ).toBeVisible();
+  await expect(component.getByRole("button", { name: "Retry", exact: true })).toBeEnabled();
+  await expect(component.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
+  await expect(component).toHaveScreenshot("audiobook-not-yet-generated.png");
 });
 
 test("an audiobook whose every segment failed offers only Retry", async ({ mount }) => {
@@ -398,6 +411,7 @@ test("an audiobook whose every segment failed offers only Retry", async ({ mount
   await expect(component.getByRole("button", { name: /Play without/ })).toHaveCount(0);
   await expect(component.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
   await expect(component.getByRole("button", { name: /^Play segment/ })).toHaveCount(0);
+  await expect(component).toHaveScreenshot("audiobook-without-audio.png");
 });
 
 test("renders audiobook-not-found", async ({ mount }) => {
@@ -405,7 +419,7 @@ test("renders audiobook-not-found", async ({ mount }) => {
   await expect(
     component.getByRole("heading", { name: "The track could not be loaded." }),
   ).toBeVisible();
-  await expect(component.getByText("The audiobook was not found.")).toBeVisible();
+  await expect(component.getByText("Track not found.")).toBeVisible();
   // Trying again cannot find an audiobook that does not exist.
   await expect(component.getByRole("button", { name: "Try again" })).toHaveCount(0);
   await expect(component).toHaveScreenshot("audiobook-not-found.png");
@@ -443,6 +457,8 @@ test("shows preparation skeletons with a disabled player sheet", async ({ mount 
     component.getByRole("contentinfo", { name: "Player" }).getByRole("status"),
   ).toHaveText("Preparing");
   await expect(component.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
+  // The loading state looks the same apart from the menu, which only the loaded page has.
+  await expect(component.getByRole("button", { name: "More", exact: true })).toBeVisible();
   await expect(component).toHaveScreenshot("pending-conversion.png");
 });
 

@@ -1,14 +1,14 @@
 import { createFileRoute, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
 import React from "react";
 
-import { AddTrackDialog } from "#src/app/components/add-track-dialog.js";
+import { AddAudiobookDialog } from "#src/app/components/add-audiobook-dialog.js";
 
 /** The Add dialog over Recents; a route mask in `createAppRouter` keeps the URL bar on `/recent`. */
 export const Route = createFileRoute("/_shell/recent/add")({
-  component: AddTrackPage,
+  component: AddAudiobookPage,
 });
 
-function AddTrackPage(): React.ReactNode {
+function AddAudiobookPage(): React.ReactNode {
   const router = useRouter();
   const navigate = useNavigate();
   const isOpenedInApp = useLocation({
@@ -32,5 +32,5 @@ function AddTrackPage(): React.ReactNode {
     }
   };
 
-  return <AddTrackDialog onClose={close} />;
+  return <AddAudiobookDialog onClose={close} />;
 }
