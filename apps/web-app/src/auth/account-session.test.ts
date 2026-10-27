@@ -304,8 +304,9 @@ function startMachine({
   };
   const connection: AccountAuthConnection = {
     client: { auth: fakeAuth },
-    signInWithGoogle: async (fresh) => {
-      effects.push(`signInWithGoogle(fresh: ${String(fresh)})`);
+    signInMethods: ["google"],
+    signIn: async ({ method, fresh }) => {
+      effects.push(`signIn(${method}, fresh: ${String(fresh)})`);
       if (fakes.shouldHoldSignIns) {
         await new Promise<void>((resolve) => {
           pendingSignIns.push(resolve);
@@ -383,7 +384,12 @@ function startMachine({
       }
     },
     readSession: () => request<Session | null>((reply) => ({ type: "READ_SESSION", reply })),
-    signIn: (fresh = false) => request<void>((reply) => ({ type: "SIGN_IN", fresh, reply })),
+    signIn: (fresh = false) =>
+      request<void>((reply) => ({
+        type: "SIGN_IN",
+        request: { method: "google", fresh },
+        reply,
+      })),
     signOut: () => request<void>((reply) => ({ type: "SIGN_OUT", reply })),
     authorizeMedia: () => request<void>((reply) => ({ type: "AUTHORIZE_MEDIA", reply })),
   };
@@ -469,7 +475,7 @@ test("a session read in flight when sign-in starts resolves to null", async () =
   expect(machine.effects).toEqual([
     "stopPlayback",
     "supabase.startAutoRefresh",
-    "signInWithGoogle(fresh: true)",
+    "signIn(google, fresh: true)",
   ]);
 });
 
@@ -504,7 +510,7 @@ test("an account session reported during sign-in signs in without clearing queri
     "supabase.startAutoRefresh",
     "stopPlayback",
     "clearLastGrantId",
-    "signInWithGoogle(fresh: false)",
+    "signIn(google, fresh: false)",
   ]);
   expect(
     machine.actor.getSnapshot().matches({ session: { connected: { ready: "signedIn" } } }),

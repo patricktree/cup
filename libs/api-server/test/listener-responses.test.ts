@@ -263,7 +263,7 @@ beforeEach(() => {
     identity: {
       subject,
       email: "listener@example.com",
-      googleAuthenticated: true,
+      provider: "google",
       authenticatedAtSeconds: 10,
     },
     snapshot: { ...accountSnapshot, internalRevision: 7 },
@@ -310,6 +310,33 @@ test("the auth configuration declares only the public sign-in settings", async (
     supabaseUrl: "https://access-test.supabase.co",
     publishableKey: "publishable-key",
     googleWebClientId: "google-client",
+  });
+});
+
+test("the auth configuration advertises the test account only in local development", async () => {
+  const testAccountEnv = {
+    ...env,
+    LOCAL_TEST_ACCOUNT_EMAIL: "test@cup.local",
+    LOCAL_TEST_ACCOUNT_PASSWORD: "local-password",
+  };
+  const config = async (overrides: Record<string, string>) =>
+    parseStrictly(
+      await createApiServer().request(
+        `${origin}/api/auth/config`,
+        {},
+        {
+          ...testAccountEnv,
+          ...overrides,
+        },
+      ),
+      200,
+      authConfigResponseSchema,
+    );
+  expect(await config({ LOCAL_DEVELOPMENT: "false" })).not.toHaveProperty("testAccount");
+  expect(await config({ LOCAL_DEVELOPMENT: "true", GOOGLE_WEB_CLIENT_ID: "" })).toEqual({
+    supabaseUrl: "https://access-test.supabase.co",
+    publishableKey: "publishable-key",
+    testAccount: { email: "test@cup.local", password: "local-password" },
   });
 });
 

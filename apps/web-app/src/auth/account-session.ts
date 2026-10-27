@@ -12,6 +12,7 @@ import {
   type AccountAuthConnection,
   type AccountAuthState,
   type Reply,
+  type SignInMethod,
 } from "#src/auth/account-session-machine.js";
 import {
   ACCOUNT_SESSION_CODE_VERIFIER_STORAGE_KEY,
@@ -28,6 +29,8 @@ import {
 import { stopNativePlayback } from "#src/platform/native-player.js";
 import { STOP_PLAYBACK_EVENT_NAME } from "#src/playback-events.js";
 import { trialBrowserState } from "#src/trial-browser-state.js";
+
+export type { SignInMethod };
 
 /*
  * A thin facade over the account session actor: callers and route loaders keep a promise-based API
@@ -78,6 +81,10 @@ export const sessionSnapshot = () => {
 };
 /** Whether `subject` is still the signed-in account, e.g. before applying a late response. */
 export const isSignedInAs = (subject: string) => sessionSnapshot()?.user.id === subject;
+const DEFAULT_SIGN_IN_METHODS: readonly SignInMethod[] = ["google"];
+/** The sign-in methods the auth configuration offers; Google until account auth initializes. */
+export const signInMethodsSnapshot = () =>
+  accountSessionActor.getSnapshot().context.connection?.signInMethods ?? DEFAULT_SIGN_IN_METHODS;
 /** Notifies `listener` when the shown auth state changes, not on every machine transition. */
 export const subscribeAuthState = (listener: () => void) => {
   let last = authStateSnapshot();
@@ -128,9 +135,21 @@ export async function getResourceAccountSession() {
 }
 
 /** Refused while signing out or while another sign-in is in progress. */
-export async function signInGoogle(fresh = false) {
+export async function signIn(method: SignInMethod) {
   await ensureAuthInitialized();
-  return request<void>((reply) => accountSessionActor.send({ type: "SIGN_IN", fresh, reply }));
+  return request<void>((reply) =>
+    accountSessionActor.send({ type: "SIGN_IN", request: { method, fresh: false }, reply }),
+  );
+}
+
+/** Authenticates the signed-in account again, with the method its session came from. */
+export async function signInAgain() {
+  await ensureAuthInitialized();
+  const method: SignInMethod =
+    sessionSnapshot()?.user.app_metadata.provider === "email" ? "test-account" : "google";
+  return request<void>((reply) =>
+    accountSessionActor.send({ type: "SIGN_IN", request: { method, fresh: true }, reply }),
+  );
 }
 
 /** Issues the media cookie for the signed-in account, after any issuance already in flight. */
@@ -164,9 +183,31 @@ async function loadConnection(): Promise<AccountAuthConnection> {
       storage: platformStorage.storage,
     },
   });
+  const { testAccount } = config;
+  const signInMethods: SignInMethod[] = [];
+  if (config.googleWebClientId) {
+    signInMethods.push("google");
+  }
+  if (testAccount) {
+    signInMethods.push("test-account");
+  }
   return {
     client,
-    signInWithGoogle: (fresh) => signInWithGoogle(client, config.googleWebClientId, fresh),
+    signInMethods,
+    signIn: async ({ method, fresh }) => {
+      if (method === "google") {
+        await signInWithGoogle(client, config.googleWebClientId, fresh);
+        return;
+      }
+      if (!testAccount) {
+        throw new Error("Sign-in is temporarily unavailable.");
+      }
+      // A password sign-in always authenticates again, so it is fresh either way.
+      const result = await client.auth.signInWithPassword(testAccount);
+      if (result.error) {
+        throw result.error;
+      }
+    },
     clearStoredSession: platformStorage.clearStoredSession,
   };
 }

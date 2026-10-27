@@ -6,7 +6,11 @@ import type { RegistryDurableObject } from "@cup/registry";
 
 export type ApiServerEnvironment = {
   LOCAL_DEVELOPMENT: string;
+  /** Local development only; read through `localTestAccount`. */
+  LOCAL_TEST_ACCOUNT_EMAIL?: string;
+  LOCAL_TEST_ACCOUNT_PASSWORD?: string;
   SUPABASE_PUBLISHABLE_KEY: string;
+  /** Empty only in local development without a Google client, which disables Google sign-in. */
   GOOGLE_WEB_CLIENT_ID: string;
   SUPABASE_URL: string;
   SUPABASE_SECRET_KEY: string;

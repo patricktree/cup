@@ -37,19 +37,20 @@ function isEnvironment(value: unknown): value is ApiServerEnvironment {
   return typeof value === "object" && value !== null && "REGISTRY" in value;
 }
 
-beforeEach(() => {
-  vi.resetAllMocks();
-  mocks.authenticate.mockResolvedValue({
+function authenticatedAs(identity: Record<string, unknown>) {
+  return {
     result: "authenticated",
-    identity: {
-      email: "user@example.com",
-      googleAuthenticated: true,
-      authenticatedAtSeconds: 10,
-      subject: challengeId,
-    },
+    identity: { subject: challengeId, authenticatedAtSeconds: 10, ...identity },
     snapshot: { state: "deletion_scheduled" },
     account,
-  });
+  };
+}
+
+beforeEach(() => {
+  vi.resetAllMocks();
+  mocks.authenticate.mockResolvedValue(
+    authenticatedAs({ email: "user@example.com", provider: "google" }),
+  );
   account.scheduleDeletion.mockResolvedValue({
     result: "scheduled",
     attempt: { attemptId: challengeId, deadlineMs: 100 },
@@ -140,6 +141,26 @@ test("provider revocation failure is recorded without failing deletion", async (
   const response = await request("", { challengeId, providerToken: "google-token" });
   expect(response.status).toBe(200);
   expect(recordGoogleRevocation).toHaveBeenCalledWith(challengeId, challengeId, "failed");
+});
+
+test("the local test account never triggers Google token revocation", async () => {
+  mocks.authenticate.mockResolvedValue(
+    authenticatedAs({ email: "test@cup.local", provider: "test-account" }),
+  );
+  const response = await request("", { challengeId, providerToken: "google-token" });
+  expect(response.status).toBe(200);
+  expect(account.scheduleDeletion).toHaveBeenCalledOnce();
+  expect(mocks.revoke).not.toHaveBeenCalled();
+  expect(recordGoogleRevocation).not.toHaveBeenCalled();
+});
+
+test.each(["", "/restore"])("%s requires fresh authentication", async (path) => {
+  mocks.authenticate.mockResolvedValue(
+    authenticatedAs({ email: "user@example.com", provider: "google", authenticatedAtSeconds: 0 }),
+  );
+  const response = await request(path);
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({ error: { code: "fresh-auth-required" } });
 });
 
 test("scheduled accounts retain explicit recovery access", async () => {

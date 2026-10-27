@@ -1,6 +1,7 @@
 import { createMemoryHistory } from "@tanstack/react-router";
 import { waitFor, within } from "@testing-library/dom";
 import { userEvent } from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
 import React from "react";
 
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
@@ -30,4 +31,18 @@ export const SignIn = {
     await user.click(submit);
     await within(document.body).findByRole("dialog", { name: "Sign in" });
   },
+} satisfies Story;
+
+/** Local development without a Google client: the configuration offers only the test account. */
+export const SignInWithTestAccount = {
+  ...SignIn,
+  handlers: [
+    http.get("/api/auth/config", () =>
+      HttpResponse.json({
+        supabaseUrl: `${window.location.origin}/__story`,
+        publishableKey: "story-key",
+        testAccount: { email: "test-account@cup.test", password: "story-password" },
+      }),
+    ),
+  ],
 } satisfies Story;

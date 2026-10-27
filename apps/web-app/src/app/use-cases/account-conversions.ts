@@ -1,6 +1,6 @@
 import React from "react";
 
-import { useAccountSession, useAccountAuthState } from "#src/auth/hooks.js";
+import { useAccountSession, useAccountAuthState, useSignInMethods } from "#src/auth/hooks.js";
 import {
   readPendingAccountConversion,
   storePendingAccountConversion,
@@ -19,6 +19,7 @@ export function useAccountConversionSubmission({
   const session = useAccountSession();
   const authState = useAccountAuthState();
   const signIn = useSignInMutation();
+  const signInMethods = useSignInMethods();
   const start = useStartAccountConversionMutation(onStarted);
   const retryIn = useRateLimitCountdown(start.error);
 
@@ -40,6 +41,7 @@ export function useAccountConversionSubmission({
     error: start.error,
     requiresSignIn: requiresSignIn && !session,
     signIn,
+    signInMethods,
     submit: async ({ sourceUrl: input }: { sourceUrl: string }) => {
       if (start.isPending || retryIn > 0 || authState.status === "loading") {
         return;

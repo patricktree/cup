@@ -19,6 +19,16 @@ test("renders sign-in dialog", async ({ mount, page }) => {
   await expect(page).toHaveScreenshot("sign-in-dialog.png");
 });
 
+test("offers only the sign-in methods the auth configuration advertises", async ({
+  mount,
+  page,
+}) => {
+  await mount("routes/index/SignInWithTestAccount");
+  const dialog = page.getByRole("dialog", { name: "Sign in", exact: true });
+  await expect(dialog.getByRole("button", { name: "Sign in with test account" })).toBeFocused();
+  await expect(dialog.getByRole("button", { name: "Continue with Google" })).toHaveCount(0);
+});
+
 test("anonymous submission asks for sign-in and cancellation preserves the URL", async ({
   mount,
   page,

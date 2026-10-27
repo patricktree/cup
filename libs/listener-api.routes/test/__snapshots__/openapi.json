@@ -1723,13 +1723,30 @@
                       "minLength": 1
                     },
                     "googleWebClientId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "testAccount": {
+                      "type": "object",
+                      "properties": {
+                        "email": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "password": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "email",
+                        "password"
+                      ]
                     }
                   },
                   "required": [
                     "supabaseUrl",
-                    "publishableKey",
-                    "googleWebClientId"
+                    "publishableKey"
                   ]
                 }
               }

@@ -26,10 +26,17 @@ export type AccountAuthClient = {
   >;
 };
 
+/** Google everywhere; the test account only where local development advertises it. */
+export type SignInMethod = "google" | "test-account";
+/** A fresh sign-in authenticates again even when the provider still has a session. */
+export type SignInRequest = { method: SignInMethod; fresh: boolean };
+
 /** What initialization produces: the Supabase client and the platform operations bound to it. */
 export type AccountAuthConnection = {
   client: AccountAuthClient;
-  signInWithGoogle: (fresh: boolean) => Promise<void>;
+  /** The methods the auth configuration offers, in the order the sign-in dialog shows them. */
+  signInMethods: readonly SignInMethod[];
+  signIn: (request: SignInRequest) => Promise<void>;
   clearStoredSession: () => Promise<void>;
 };
 
@@ -125,11 +132,11 @@ export const accountSessionMachine = setup({
     // session scope ends first and this actor is stopped.
     signIn: fromPromise<
       void,
-      { connection: AccountAuthConnection; fresh: boolean; reply: Reply<void> }
+      { connection: AccountAuthConnection; request: SignInRequest; reply: Reply<void> }
     >(async ({ input }) => {
       try {
         await input.connection.client.auth.startAutoRefresh();
-        await input.connection.signInWithGoogle(input.fresh);
+        await input.connection.signIn(input.request);
         input.reply.resolve();
       } catch (error) {
         input.reply.reject(error);
@@ -374,7 +381,7 @@ export const accountSessionMachine = setup({
                   actions: [
                     "stopPlayback",
                     assign({
-                      signIn: ({ event }) => ({ fresh: event.fresh, reply: event.reply }),
+                      signIn: ({ event }) => ({ request: event.request, reply: event.reply }),
                     }),
                   ],
                 },
@@ -680,7 +687,7 @@ type AccountSessionContext = {
   connection: AccountAuthConnection | undefined;
   session: Session | null;
   initializationError: Error | undefined;
-  signIn: { fresh: boolean; reply: Reply<void> } | undefined;
+  signIn: { request: SignInRequest; reply: Reply<void> } | undefined;
   signOutReplies: Reply<void>[];
   isRevocationConfirmed: boolean;
   /** The first request is the one being issued while `mediaAuthorization` is `issuing`. */
@@ -694,7 +701,7 @@ type AccountSessionEvent =
   | { type: "INITIALIZE" }
   | { type: "SESSION_CHANGED"; session: Session | null }
   | ReadSessionEvent
-  | { type: "SIGN_IN"; fresh: boolean; reply: Reply<void> }
+  | { type: "SIGN_IN"; request: SignInRequest; reply: Reply<void> }
   | { type: "SIGN_OUT"; reply: Reply<void> }
   | { type: "AUTHORIZE_MEDIA"; reply: Reply<void> }
   | { type: "APP_RESUMED" }

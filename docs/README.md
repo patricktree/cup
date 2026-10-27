@@ -19,7 +19,7 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 | Guide                                                                                 | Purpose                                                                                |
 | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | [Repository setup and validation](../AGENTS.md)                                       | Prepare a checkout and run checks                                                      |
-| [Local development](local-development.md)                                             | Run the web application against local services                                         |
+| [Local development](local-development.md)                                             | Run the web application against local services, also from a phone over Tailscale       |
 | [Web application](../apps/web-app/README.md)                                          | Develop, build, and manually verify the shared UI; run component tests                 |
 | [Worker development and integration tests](../apps/cloudflare-worker/AGENTS.md)       | Run the Worker locally and test it without external services                           |
 | [Application E2E tests](../qa/e2e/README.md)                                          | Run the complete local conversion path and update screenshots                          |
