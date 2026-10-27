@@ -1,8 +1,10 @@
 ---
-status: accepted
+status: partially superseded by ADR 0013
 ---
 
 # Serve one narration track and play it with one audio element
+
+[ADR 0013](0013-cache-cover-images-in-the-browser-for-a-day.md) supersedes this decision for the token lifetime only: signed media URLs now take the start of the current UTC day as their issue time and expire 48 hours after it, instead of 24 hours after issuance. Everything else below remains accepted, and the original decisions are preserved as historical rationale.
 
 [ADR 0008](0008-synthesize-the-whole-narration-document.md) kept one MP3 per audio segment and made each player stitch them into one timeline: two alternating `<audio>` elements, a silence file and an XState machine in the browser, and native playlists on Android and iOS. On Android and iOS the browser player pauses 10–20 seconds after the device is locked, and on Safari pressing Play sometimes plays two audios at once. [patricktree/cup#58](https://github.com/patricktree/cup/issues/58) traced the locked pause to the element pair: the next segment starts from an `ended` handler, which a locked device does not run in time. Media authorization was a cookie that expires with the bearer token (about an hour) and that the Capacitor WebViews never send. The map [patricktree/cup#56](https://github.com/patricktree/cup/issues/56) and the spec [patricktree/cup#64](https://github.com/patricktree/cup/issues/64) (2026-10-27) chose to fix playback by simplifying delivery.
 
