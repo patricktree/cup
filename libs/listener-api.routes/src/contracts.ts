@@ -8,7 +8,6 @@ import {
 } from "@cup/accounts/contracts";
 import {
   playbackPositionSchema as sharedPlaybackPositionSchema,
-  conversionPhaseSchema,
   durationBalanceSchema,
   sourceUrlSchema,
   insufficientDurationSchema,
@@ -68,18 +67,6 @@ export const grantParamsSchema = z.object({ grantId: uuidV4Schema });
 export type GrantParams = z.infer<typeof grantParamsSchema>;
 export const conversionParamsSchema = z.object({ conversionId: uuidV4Schema });
 export type ConversionParams = z.infer<typeof conversionParamsSchema>;
-
-export const conversionDetailSchema = z.discriminatedUnion("status", [
-  grantConversionSnapshotSchema.options[0].extend({
-    lastStartedPhase: conversionPhaseSchema,
-  }),
-  // A prepared conversion reports the state of its audio; only `ready` can be played.
-  grantConversionSnapshotSchema.options[1].extend({ status: z.literal("insufficient-duration") }),
-  grantConversionSnapshotSchema.options[1].extend({ status: z.literal("synthesizing") }),
-  grantConversionSnapshotSchema.options[1],
-  grantConversionSnapshotSchema.options[2],
-]);
-export type ConversionDetail = z.infer<typeof conversionDetailSchema>;
 
 export const exchangeCredentialRequestSchema = z.object({
   credential: z.string().regex(CREDENTIAL_PATTERN),
@@ -191,7 +178,6 @@ export const ERROR_CODE = {
   ACCOUNT_START_CONFLICT: "account-start-conflict",
   AUDIOBOOK_NOT_FOUND: "audiobook-not-found",
   CONFIRMATION_UNAVAILABLE: "confirmation-unavailable",
-  CONVERSION_NOT_FOUND: "conversion-not-found",
   COVER_IMAGE_NOT_FOUND: "cover-image-not-found",
   CREDITS_UNAVAILABLE: "credits-unavailable",
   DEPENDENCY_UNAVAILABLE: "dependency-unavailable",

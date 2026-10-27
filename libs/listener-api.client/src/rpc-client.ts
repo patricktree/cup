@@ -42,13 +42,6 @@ export class ListenerApiClient {
     );
   }
 
-  async getConversion(params: ConversionParams, signal?: AbortSignal) {
-    return this.#honoClient.api.conversions[":conversionId"].$get(
-      { param: params },
-      signal === undefined ? undefined : { init: { signal } },
-    );
-  }
-
   async startTrialConversion(
     params: GrantParams,
     input: StartConversionRequest,
@@ -134,13 +127,6 @@ export class AuthenticatedRpcClient {
     return this.#honoClient.api.account.deletion.restore.$post(
       { json: input, header: browserHeaders() },
       this.#options(),
-    );
-  }
-
-  async getConversion(params: ConversionParams, signal?: AbortSignal) {
-    return this.#honoClient.api.conversions[":conversionId"].$get(
-      { param: params },
-      this.#options(signal),
     );
   }
 

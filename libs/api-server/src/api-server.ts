@@ -5,10 +5,7 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { Temporal } from "temporal-polyfill";
 
 import { countNarrationTextCharactersBySegment } from "@cup/audiobook-production";
-import {
-  derivePreparedConversionStatus,
-  findNarrationTrackDurations,
-} from "@cup/conversion-contracts";
+import { findNarrationTrackDurations } from "@cup/conversion-contracts";
 import {
   clearGrantSessionCookie,
   createGrantSessionCookie,
@@ -21,7 +18,6 @@ import { assertUnreachable, findRootCauseDescription, findRootCauseMessage } fro
 import {
   createListenerApi,
   type Audiobook,
-  type ConversionDetail,
   type ListenerApiHandlers,
   type RetryConversionResponse,
   type ScheduleDeletionResponse,
@@ -62,7 +58,6 @@ import {
 import { requireSignedMediaUrl, signMediaUrl } from "#src/http/signed-media-url.ts";
 import { applyWebAppCspNonce } from "#src/http/web-app-csp.ts";
 import { createConversionGrant } from "#src/use-cases/create-conversion-grant.ts";
-import { getGrantConversion as loadGrantConversion } from "#src/use-cases/get-grant-conversion.ts";
 import { getSynthesisState } from "#src/use-cases/get-synthesis-state.ts";
 import { startAudiobookConversion } from "#src/use-cases/start-audiobook-conversion.ts";
 
@@ -80,135 +75,6 @@ const productionDependencies: ApiServerDependencies = {
       env,
     )),
 };
-
-async function getGrantConversion(
-  context: Parameters<ListenerApiHandlers<ApiServerEnvironment>["getConversion"]>[0],
-  conversionId: string,
-  grantId: string,
-) {
-  const authenticated = await authenticateGrant(context.env, grantId, context.req.header("Cookie"));
-  if (authenticated.result === "missing") {
-    return jsonError(
-      context.get("requestId"),
-      "grant-session-required",
-      "A grant session is required.",
-      401,
-    );
-  }
-  if (authenticated.result === "invalid") {
-    return jsonError(
-      context.get("requestId"),
-      "grant-session-invalid",
-      "This browser no longer has access. Open the original trial link again.",
-      401,
-      { "Set-Cookie": clearGrantSessionCookie(grantId) },
-    );
-  }
-  if (authenticated.result === "operational-error") {
-    return jsonError(
-      context.get("requestId"),
-      "operational-error",
-      "The conversion could not be loaded.",
-      500,
-    );
-  }
-  try {
-    const conversion = await loadGrantConversion(conversionId, getGrantStub(context.env, grantId));
-    if (conversion === undefined) {
-      return jsonError(
-        context.get("requestId"),
-        "conversion-not-found",
-        "Conversion not found.",
-        404,
-        { "Set-Cookie": createGrantSessionCookie(grantId, authenticated.token) },
-      );
-    }
-    return context.json(conversion, 200, {
-      "Set-Cookie": createGrantSessionCookie(grantId, authenticated.token),
-    });
-  } catch {
-    return jsonError(
-      context.get("requestId"),
-      "operational-error",
-      "The conversion could not be loaded.",
-      500,
-    );
-  }
-}
-
-async function getAccountConversion(
-  context: Parameters<ListenerApiHandlers<ApiServerEnvironment>["getConversion"]>[0],
-  conversionId: string,
-  accountId: string,
-) {
-  const auth = await authenticateAccountRequest(context.req.raw, context.env);
-  if (auth.result !== "authenticated") {
-    return accountAuthError(
-      auth.result,
-      context.get("requestId"),
-      auth.result === "rate-limited" ? auth.retryAfter : undefined,
-    );
-  }
-  if (auth.snapshot.state !== "active") {
-    return accountAuthError("blocked", context.get("requestId"));
-  }
-  if (auth.snapshot.accountId !== accountId) {
-    return jsonError(
-      context.get("requestId"),
-      "conversion-not-found",
-      "Conversion not found.",
-      404,
-    );
-  }
-  const conversion = await auth.account.getConversion(conversionId);
-  if (!conversion) {
-    return jsonError(
-      context.get("requestId"),
-      "conversion-not-found",
-      "Conversion not found.",
-      404,
-    );
-  }
-  const base = {
-    conversionId,
-    sourceUrl: conversion.sourceUrl,
-    acceptedAt: toIsoString(conversion.createdAtMs),
-  };
-  if (conversion.outcome === null) {
-    return context.json(
-      {
-        ...base,
-        status: "pending",
-        lastStartedPhase: "conversion-start",
-      } satisfies ConversionDetail,
-      200,
-    );
-  }
-  if (conversion.outcome.status === "ready") {
-    return context.json(
-      {
-        ...base,
-        status: derivePreparedConversionStatus(await auth.account.listAudioSegments(conversionId)),
-        title: conversion.outcome.title,
-        completedAt: toIsoString(conversion.completedAtMs ?? conversion.createdAtMs),
-        audiobookUrl: `/app/audiobooks/${conversionId}`,
-      } satisfies ConversionDetail,
-      200,
-    );
-  }
-  if (conversion.outcome.status === "failed") {
-    return context.json(
-      {
-        ...base,
-        status: "failed",
-        completedAt: toIsoString(conversion.completedAtMs ?? conversion.createdAtMs),
-        failure: { category: "internal", explanation: conversion.outcome.explanation },
-      } satisfies ConversionDetail,
-      200,
-    );
-  }
-  return assertUnreachable(conversion.outcome);
-}
 
 const validateAccountLifecycleRequest: MiddlewareHandler<{
   Bindings: ApiServerEnvironment;
@@ -486,24 +352,6 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     return context.json(toGrantSnapshotResponse(authenticated.snapshot), 200, {
       "Set-Cookie": createGrantSessionCookie(grantId, authenticated.token),
     });
-  },
-
-  async getConversion(context) {
-    const { conversionId } = context.req.valid("param");
-    const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
-    if (owner?.kind === "account") {
-      return getAccountConversion(context, conversionId, owner.accountId);
-    }
-    const grantId = owner?.kind === "trial" ? owner.grantId : undefined;
-    if (grantId === undefined) {
-      return jsonError(
-        context.get("requestId"),
-        "conversion-not-found",
-        "Conversion not found.",
-        404,
-      );
-    }
-    return getGrantConversion(context, conversionId, grantId);
   },
 
   async startTrialConversion(context) {

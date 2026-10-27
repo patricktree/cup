@@ -19,7 +19,6 @@ export const ERROR_CODE = {
   ACCOUNT_START_CONFLICT: "account-start-conflict",
   AUDIOBOOK_NOT_FOUND: "audiobook-not-found",
   CONFIRMATION_UNAVAILABLE: "confirmation-unavailable",
-  CONVERSION_NOT_FOUND: "conversion-not-found",
   COVER_IMAGE_NOT_FOUND: "cover-image-not-found",
   CREDITS_UNAVAILABLE: "credits-unavailable",
   DEPENDENCY_UNAVAILABLE: "dependency-unavailable",
