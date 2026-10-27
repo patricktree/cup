@@ -2,7 +2,7 @@
 
 ## Documentation
 
-Before working on the project, read the [glossary](docs/GLOSSARY.md) and the [wiki schema](docs/agents/domain.md), then the architecture pages and ADRs relevant to the task from the [documentation index](docs/README.md). Update affected documentation and diagrams in the same change as the implementation. Before changing, renaming, or removing a domain concept or cross-component behavior, run `pnpm docs:search` by the schema's [documentation search procedure](docs/agents/domain.md#find-supporting-documentation), even when the affected page is already known.
+Before working on the project, read the [glossary](docs/GLOSSARY.md) and the [wiki schema](docs/agents/domain.md), then the architecture pages and ADRs relevant to the task from the [documentation index](docs/README.md). Update affected documentation and diagrams in the same change as the implementation. Before changing, renaming, or removing a domain concept or cross-component behavior, find every page that describes it by the [documentation search procedure](docs/agents/documentation-search.md).
 
 ## Package Manager
 

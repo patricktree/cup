@@ -23,7 +23,6 @@
     "dev:services": "node tooling/env-setup/src/dev-services.ts",
     "docs:check": "markdownlint-cli2 && pnpm run docs:check:mermaid",
     "docs:check:mermaid": "mermaid-check",
-    "docs:search": "node tooling/docs-search/src/cli.ts",
     "env:check": "pnpm --filter env-setup env:check",
     "env:setup": "pnpm --filter env-setup env:setup",
     "fix": "pnpm run format && pnpm run lint:fix",

@@ -25,14 +25,6 @@ For Cloudflare runtime, configuration and design decisions, follow the [Cloudfla
 
 When your change contradicts an accepted ADR, say so before going ahead.
 
-## Find supporting documentation
-
-Before changing, renaming or removing a domain concept or a cross-component behaviour, including documentation-only changes, find every page that describes it. Run `pnpm docs:search query "question" --json` through the [checkout-local wrapper](../../tooling/docs-search/README.md), asking about meaning, behaviour and dependencies even when exact searches already found the obvious files. After a rename or removal, rerun the conceptual query and inspect relevant hits; an empty result for the old words alone proves nothing.
-
-Read relevant results in the current files and follow implementation links before editing or answering; search rank does not establish authority. Supplement with `pnpm docs:search search "terms" --json` for keywords and `rg` for exact identifiers, paths and remaining references. Spelling, formatting and exact code-identifier edits without conceptual or behavioural changes can use direct lookup.
-
-The wrapper refreshes the checkout's index and defaults to current documentation. Use `-c cup-guides`, `-c cup-decisions` or `-c cup-research` for procedures, rationale or investigations. If QMD is unavailable, continue with the index and `rg` and report the limitation.
-
 ## Update with the implementation
 
 Update affected pages and diagrams in the same change as the code whenever it moves a component boundary, an authentication or authorization flow, data ownership, a storage lifecycle, an external dependency or a cross-component behaviour. A change confined to one module needs no wiki change. Verify retained claims against the linked code.
