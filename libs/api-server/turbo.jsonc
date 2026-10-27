@@ -1,4 +1,5 @@
 {
   "$schema": "../../node_modules/turbo/schema.json",
   "extends": ["//", "@patricktree-stack/config-turbo-typescript"],
+  "tags": ["layer:api-server"],
 }

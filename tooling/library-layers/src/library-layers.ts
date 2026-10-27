@@ -1,83 +1,48 @@
-export type LibraryManifest = {
-  name: string;
-  dependencies?: Record<string, string> | undefined;
-  devDependencies?: Record<string, string> | undefined;
-};
+/** A `boundaries.tags` rule of the root `turbo.jsonc`. */
+export type TagRule = { dependencies?: { deny?: string[] | undefined } | undefined };
 
-type LibraryLayer = { name: string; libraries: string[] };
+export type LibraryTags = { library: string; tags: string[] };
+
+const LAYER_TAG_PREFIX = "layer:";
 
 /**
- * The libraries in `libs/`, from the bottom layer up. A library may depend only on libraries in a
- * lower layer, so the account and grant owners reach the registry only through RPC, and libraries
- * of one layer stay independent of each other. `docs/architecture/README.md` draws the graph.
+ * `turbo boundaries` enforces the library layers through `layer:*` tags and deny lists in the root
+ * `turbo.jsonc`, but it skips a library without a tag and cannot tell a deny list that forgot a
+ * layer. This reports both: every library needs exactly one layer tag the root declares, and each
+ * layer, in declaration order from the bottom up, must deny its own tag and every tag above it.
  */
-export const LIBRARY_LAYERS: LibraryLayer[] = [
-  { name: "error helpers", libraries: ["@cup/errors"] },
-  {
-    name: "foundations",
-    libraries: [
-      "@cup/api-rpc.client",
-      "@cup/conversion-contracts",
-      "@cup/mp3-encoding",
-      "@cup/narration-document-creation",
-      "@cup/prepare-source-material",
-      "@cup/rolling-limits",
-    ],
-  },
-  {
-    name: "shared storage and production",
-    libraries: [
-      "@cup/audiobook-production",
-      "@cup/duration-ledger",
-      "@cup/narration-content-selection",
-    ],
-  },
-  { name: "owners", libraries: ["@cup/accounts", "@cup/conversion-grants"] },
-  {
-    name: "coordination and API contracts",
-    libraries: ["@cup/listener-api.routes", "@cup/operator-api.routes", "@cup/registry"],
-  },
-  {
-    name: "API clients and conversion workflow",
-    libraries: [
-      "@cup/create-audiobook-from-url-workflow",
-      "@cup/listener-api.client",
-      "@cup/operator-api.client",
-    ],
-  },
-  { name: "API server", libraries: ["@cup/api-server"] },
-];
+export function findLayerConfigProblems(
+  tagRules: Record<string, TagRule>,
+  libraries: LibraryTags[],
+): string[] {
+  const layerTags = Object.keys(tagRules).filter((tag) => tag.startsWith(LAYER_TAG_PREFIX));
+  const problems: string[] = [];
 
-export function findLayerViolations(manifests: LibraryManifest[]): string[] {
-  const layerByLibrary = new Map(
-    LIBRARY_LAYERS.flatMap((layer, rank) =>
-      layer.libraries.map((library) => [library, { name: layer.name, rank }] as const),
-    ),
-  );
-  const libraryNames = new Set(manifests.map((manifest) => manifest.name));
+  for (const [rank, layerTag] of layerTags.entries()) {
+    const deniedTags = tagRules[layerTag]?.dependencies?.deny ?? [];
+    const expectedDeniedTags = layerTags.slice(rank);
+    if (deniedTags.join() !== expectedDeniedTags.join()) {
+      problems.push(
+        `\`${layerTag}\` denies [${deniedTags.join(", ")}] but must deny its own tag and every layer above it, in order: [${expectedDeniedTags.join(", ")}].`,
+      );
+    }
+  }
 
-  const violations: string[] = [];
-  for (const manifest of manifests) {
-    const layer = layerByLibrary.get(manifest.name);
-    if (layer === undefined) {
-      violations.push(
-        `\`${manifest.name}\` has no layer; add it to \`LIBRARY_LAYERS\` in \`tooling/library-layers/src/library-layers.ts\`.`,
+  for (const { library, tags } of libraries) {
+    const libraryLayerTags = tags.filter((tag) => tag.startsWith(LAYER_TAG_PREFIX));
+    if (libraryLayerTags.length !== 1) {
+      problems.push(
+        `\`${library}\` has ${libraryLayerTags.length} layer tags; give its \`turbo.jsonc\` exactly one of: ${layerTags.join(", ")}.`,
       );
       continue;
     }
 
-    const dependencyNames = Object.keys({
-      ...manifest.dependencies,
-      ...manifest.devDependencies,
-    }).filter((dependency) => libraryNames.has(dependency));
-    for (const dependency of dependencyNames) {
-      const dependencyLayer = layerByLibrary.get(dependency);
-      if (dependencyLayer !== undefined && dependencyLayer.rank >= layer.rank) {
-        violations.push(
-          `\`${manifest.name}\` (${layer.name}) depends on \`${dependency}\` (${dependencyLayer.name}); a library may depend only on libraries in lower layers.`,
-        );
-      }
+    const [layerTag] = libraryLayerTags;
+    if (layerTag !== undefined && !layerTags.includes(layerTag)) {
+      problems.push(
+        `\`${library}\` has the tag \`${layerTag}\`, which the root \`turbo.jsonc\` does not declare.`,
+      );
     }
   }
-  return violations;
+  return problems;
 }

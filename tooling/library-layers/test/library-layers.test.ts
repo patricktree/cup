@@ -1,70 +1,83 @@
+import { parse } from "jsonc-parser";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { expect, test } from "vitest";
 import { z } from "zod";
 
-import { findLayerViolations, LIBRARY_LAYERS, type LibraryManifest } from "#src/library-layers.ts";
+import { findLayerConfigProblems, type LibraryTags } from "#src/library-layers.ts";
 
-const LIBS_DIRECTORY = path.join(import.meta.dirname, "../../../libs");
+const REPOSITORY_ROOT = path.join(import.meta.dirname, "../../..");
+const LIBS_DIRECTORY = path.join(REPOSITORY_ROOT, "libs");
 
-const manifestSchema = z.object({
-  name: z.string(),
-  dependencies: z.record(z.string(), z.string()).optional(),
-  devDependencies: z.record(z.string(), z.string()).optional(),
+const rootTurboConfigSchema = z.object({
+  boundaries: z.object({
+    tags: z.record(
+      z.string(),
+      z.object({ dependencies: z.object({ deny: z.array(z.string()).optional() }).optional() }),
+    ),
+  }),
 });
+const libraryTurboConfigSchema = z.object({ tags: z.array(z.string()).optional() });
 
-async function readLibraryManifests(): Promise<LibraryManifest[]> {
-  const directories = await fs.readdir(LIBS_DIRECTORY, { withFileTypes: true });
-  const manifests: LibraryManifest[] = [];
-  for (const directory of directories.filter((entry) => entry.isDirectory())) {
-    const manifestPath = path.join(LIBS_DIRECTORY, directory.name, "package.json");
-    manifests.push(manifestSchema.parse(JSON.parse(await fs.readFile(manifestPath, "utf8"))));
-  }
-  return manifests;
+async function readJsonc(filePath: string): Promise<unknown> {
+  return parse(await fs.readFile(filePath, "utf8"));
 }
 
-test("every library depends only on libraries in lower layers", async () => {
-  expect(findLayerViolations(await readLibraryManifests())).toEqual([]);
+async function readLibraryTags(): Promise<LibraryTags[]> {
+  const directories = await fs.readdir(LIBS_DIRECTORY, { withFileTypes: true });
+  const libraries: LibraryTags[] = [];
+  for (const directory of directories.filter((entry) => entry.isDirectory())) {
+    const config = libraryTurboConfigSchema.parse(
+      await readJsonc(path.join(LIBS_DIRECTORY, directory.name, "turbo.jsonc")),
+    );
+    libraries.push({ library: directory.name, tags: config.tags ?? [] });
+  }
+  return libraries;
+}
+
+const THREE_LAYERS = {
+  "layer:bottom": { dependencies: { deny: ["layer:bottom", "layer:middle", "layer:top"] } },
+  "layer:middle": { dependencies: { deny: ["layer:middle", "layer:top"] } },
+  "layer:top": { dependencies: { deny: ["layer:top"] } },
+};
+
+test("every library has one layer tag and the deny lists form a stack", async () => {
+  const rootConfig = rootTurboConfigSchema.parse(
+    await readJsonc(path.join(REPOSITORY_ROOT, "turbo.jsonc")),
+  );
+
+  expect(findLayerConfigProblems(rootConfig.boundaries.tags, await readLibraryTags())).toEqual([]);
 });
 
-test("an owner depending on the registry is reported", () => {
-  const manifests: LibraryManifest[] = [
-    { name: "@cup/registry", dependencies: { "@cup/accounts": "workspace:*" } },
-    { name: "@cup/accounts", dependencies: { "@cup/registry": "workspace:*" } },
-  ];
-
-  expect(findLayerViolations(manifests)).toEqual([
-    "`@cup/accounts` (owners) depends on `@cup/registry` (coordination and API contracts); a library may depend only on libraries in lower layers.",
+test("a library without a layer tag is reported", () => {
+  expect(findLayerConfigProblems(THREE_LAYERS, [{ library: "new-library", tags: [] }])).toEqual([
+    "`new-library` has 0 layer tags; give its `turbo.jsonc` exactly one of: layer:bottom, layer:middle, layer:top.",
   ]);
 });
 
-test("a dependency between two libraries of the same layer is reported", () => {
-  const manifests: LibraryManifest[] = [
-    { name: "@cup/accounts", devDependencies: { "@cup/conversion-grants": "workspace:*" } },
-    { name: "@cup/conversion-grants" },
-  ];
-
-  expect(findLayerViolations(manifests)).toEqual([
-    "`@cup/accounts` (owners) depends on `@cup/conversion-grants` (owners); a library may depend only on libraries in lower layers.",
+test("a library with an undeclared layer tag is reported", () => {
+  expect(
+    findLayerConfigProblems(THREE_LAYERS, [{ library: "accounts", tags: ["layer:owner"] }]),
+  ).toEqual([
+    "`accounts` has the tag `layer:owner`, which the root `turbo.jsonc` does not declare.",
   ]);
 });
 
-test("a library without a layer is reported", () => {
-  expect(findLayerViolations([{ name: "@cup/new-library" }])).toEqual([
-    "`@cup/new-library` has no layer; add it to `LIBRARY_LAYERS` in `tooling/library-layers/src/library-layers.ts`.",
+test("a deny list that misses a higher layer is reported", () => {
+  const tagRules = {
+    ...THREE_LAYERS,
+    "layer:middle": { dependencies: { deny: ["layer:middle"] } },
+  };
+
+  expect(findLayerConfigProblems(tagRules, [])).toEqual([
+    "`layer:middle` denies [layer:middle] but must deny its own tag and every layer above it, in order: [layer:middle, layer:top].",
   ]);
 });
 
-test("dependencies outside `libs/` are not checked", () => {
-  const manifests: LibraryManifest[] = [
-    { name: "@cup/registry", devDependencies: { "@cup/resend-stub": "workspace:*", zod: "^4" } },
-  ];
+test("tags outside the layers are ignored", () => {
+  const tagRules = { ...THREE_LAYERS, internal: { dependencies: { deny: ["public"] } } };
 
-  expect(findLayerViolations(manifests)).toEqual([]);
-});
-
-test("each library has exactly one layer", () => {
-  const names = LIBRARY_LAYERS.flatMap((layer) => layer.libraries);
-
-  expect(new Set(names).size).toBe(names.length);
+  expect(
+    findLayerConfigProblems(tagRules, [{ library: "registry", tags: ["layer:top", "internal"] }]),
+  ).toEqual([]);
 });

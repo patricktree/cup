@@ -89,7 +89,7 @@ flowchart TD
     Grants -. usage projection RPC .-> Registry
 ```
 
-The [library layering test](../../tooling/library-layers/README.md) enforces these directions: it places every library in a layer and fails when a `package.json` declares a dependency on a library in the same or a higher layer. The owners therefore reach the registry only through the RPC interfaces drawn as dashed lines, never as a package dependency.
+[Library layers](../../tooling/library-layers/README.md) enforce these directions: every library carries a `layer:*` tag, and `turbo boundaries` fails when a library depends, directly or through another library, on one in the same or a higher layer. The owners therefore reach the registry only through the RPC interfaces drawn as dashed lines, never as a package dependency.
 
 ## API definitions
 

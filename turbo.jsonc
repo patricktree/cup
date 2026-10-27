@@ -10,6 +10,81 @@
   "futureFlags": {
     "watchUsingTaskInputs": true,
   },
+  /*
+   * Library layers, from the bottom up: each library in `libs/` carries one `layer:*` tag, and a
+   * library may depend only on libraries in lower layers. Each layer therefore denies its own tag
+   * and every tag above it. `tooling/library-layers` checks that every library has a layer tag and
+   * that these deny lists stay in this order.
+   */
+  "boundaries": {
+    "tags": {
+      "layer:errors": {
+        "dependencies": {
+          "deny": [
+            "layer:errors",
+            "layer:foundations",
+            "layer:shared-storage-and-production",
+            "layer:owners",
+            "layer:coordination-and-api-contracts",
+            "layer:api-clients-and-conversion-workflow",
+            "layer:api-server",
+          ],
+        },
+      },
+      "layer:foundations": {
+        "dependencies": {
+          "deny": [
+            "layer:foundations",
+            "layer:shared-storage-and-production",
+            "layer:owners",
+            "layer:coordination-and-api-contracts",
+            "layer:api-clients-and-conversion-workflow",
+            "layer:api-server",
+          ],
+        },
+      },
+      "layer:shared-storage-and-production": {
+        "dependencies": {
+          "deny": [
+            "layer:shared-storage-and-production",
+            "layer:owners",
+            "layer:coordination-and-api-contracts",
+            "layer:api-clients-and-conversion-workflow",
+            "layer:api-server",
+          ],
+        },
+      },
+      "layer:owners": {
+        "dependencies": {
+          "deny": [
+            "layer:owners",
+            "layer:coordination-and-api-contracts",
+            "layer:api-clients-and-conversion-workflow",
+            "layer:api-server",
+          ],
+        },
+      },
+      "layer:coordination-and-api-contracts": {
+        "dependencies": {
+          "deny": [
+            "layer:coordination-and-api-contracts",
+            "layer:api-clients-and-conversion-workflow",
+            "layer:api-server",
+          ],
+        },
+      },
+      "layer:api-clients-and-conversion-workflow": {
+        "dependencies": {
+          "deny": ["layer:api-clients-and-conversion-workflow", "layer:api-server"],
+        },
+      },
+      "layer:api-server": {
+        "dependencies": {
+          "deny": ["layer:api-server"],
+        },
+      },
+    },
+  },
   "tasks": {
     "turbo:cf-typegen": {
       "cache": true,
