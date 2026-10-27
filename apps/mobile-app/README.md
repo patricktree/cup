@@ -46,7 +46,7 @@ After building, open `apps/mobile-app/ios/App/App.xcodeproj` in Xcode and choose
 
 ## Android App Links and sharing
 
-The Android app accepts shared plain text containing an HTTP or HTTPS URL and fills the conversion form without submitting it. It reopens the last trial whose credential was successfully exchanged in the app. If no trial is remembered, the shared URL waits until a conversion form is opened.
+The Android app accepts shared plain text containing an HTTP or HTTPS URL and fills a conversion form without submitting it. A signed-in account gets the Add dialog over Recents (`/recent/add`). Signed out, the app reopens the last trial whose credential was successfully exchanged in the app; if no trial is remembered, the shared URL waits until a conversion form is opened.
 
 HTTPS links to `/app` and `/app/…` on `cup.audio` open the matching route in the app after Android verifies the domain association. API and download URLs are excluded from App Links. Paths, query parameters, and fragments are preserved, including trial credentials. Both cold starts and links delivered to an already running app are handled. Normal Capacitor launches start at `/app/`.
 
@@ -81,7 +81,7 @@ Capacitor's native HTTP response headers can expose Set-Cookie to JavaScript, so
 
 The iOS app bundles `CupShare.appex`, displayed as **Cup** in Safari and Chrome's Share Sheets. Share a web URL or text containing an HTTP(S) URL, then tap **Open in Cup** to open the main app and prefill the conversion form. Cup trial links open their app route, including the credential exchange.
 
-The handoff uses `audio.cup.app://share?url=<encoded-url>`. Cup links under `https://cup.audio/app` open their corresponding app route, preserving trial credential fragments. Other HTTP(S) URLs prefill the conversion form for the last authorized trial without submitting it. If no trial has been authorized, the URL remains pending in memory until a form opens; closing the app discards it.
+The handoff uses `audio.cup.app://share?url=<encoded-url>`. Cup links under `https://cup.audio/app` open their corresponding app route, preserving trial credential fragments. Other HTTP(S) URLs prefill a conversion form without submitting it: the Add dialog over Recents when an account is signed in, otherwise the form of the last authorized trial. If no trial has been authorized, the URL remains pending in memory until a form opens; closing the app discards it.
 
 The extension uses the same responder-chain URL-opening approach as Chromium, calling `openURL:options:completionHandler:` dynamically. Apple does not support this handoff from Share Extensions; test it after iOS updates. A failed handoff stays in the extension with an error and retry button. The extension does not start conversions or access session cookies.
 

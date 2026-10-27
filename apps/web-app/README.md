@@ -38,6 +38,8 @@ Turbo builds the web package once, then the Worker build copies that bundle as s
 
 The router uses `/app` as its base path. Generated JavaScript, CSS, and fonts live under `app/assets/`, and app favicons live under `app/`. Vite keeps the bundle base at `/` so these physical paths work in both Workers and Capacitor without rewriting asset URLs. Domain association files remain under `.well-known/`. The Worker serves the root `index.html` internally for application routes; missing assets and unrelated paths return 404.
 
+A signed-in listener on `/` is redirected to Recents (`/recent`), and a signed-out one on `/recent` back to `/`. The Add dialog is the child route `/recent/add`, rendered over Recents; a route mask in [`global-providers.tsx`](src/app/global-providers.tsx) keeps the URL bar on `/recent`, and a reload keeps the dialog open. Closing it goes back one history entry when the app opened it, and otherwise replaces the entry with `/recent`, for example after a share opened the app on the dialog.
+
 The shared bundle includes a CSP nonce placeholder. The API server replaces it with a fresh nonce per HTML response; Capacitor serves the same bundle locally without the server's CSP header.
 
 ## Manual verification checklist
@@ -48,7 +50,7 @@ The shared bundle includes a CSP nonce placeholder. The API server replaces it w
 
 ## Component tests and visual coverage
 
-Route stories in `src/routes/*.story.tsx` render the application with deterministic MSW responses. Component tests cover the landing page, open trial, URL validation, pending submission, trial errors, conversion progress and failure, and audiobook results and errors on desktop and mobile. The E2E suite keeps one screenshot assertion for the open-trial URL input screen.
+Route stories in `src/routes/*.story.tsx` render the application with deterministic MSW responses. Component tests cover the landing page, Recents and its Add dialog, open trial, URL validation, pending submission, trial errors, conversion progress and failure, and audiobook results and errors on desktop and mobile. The E2E suite keeps one screenshot assertion for the open-trial URL input screen.
 
 Run the component tests from the repository root:
 

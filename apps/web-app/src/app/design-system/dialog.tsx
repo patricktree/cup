@@ -4,6 +4,8 @@ import React from "react";
 
 import { DSButtonGroup } from "#src/app/design-system/button-group.js";
 import { DSButton } from "#src/app/design-system/button.js";
+import { textStyles } from "#src/app/design-system/text-styles.js";
+import { interTypefaceScope } from "#src/app/global-styles.js";
 
 export type DSDialogProps = {
   open: DialogRootProps["open"];
@@ -11,10 +13,12 @@ export type DSDialogProps = {
   initialFocus: DialogPopupProps["initialFocus"];
   finalFocus: DialogPopupProps["finalFocus"];
   title: React.ReactNode;
-  description: React.ReactNode;
+  description?: React.ReactNode;
+  /** Content between the description and the buttons, such as a form. */
+  children?: React.ReactNode;
   cancelButtonText: React.ReactNode;
   cancelButtonDisabled: boolean;
-  buttonGroupChildren: React.ReactNode;
+  buttonGroupChildren?: React.ReactNode;
   errorMessage?: React.ReactNode;
 };
 
@@ -25,6 +29,7 @@ export const DSDialog: React.FC<DSDialogProps> = ({
   finalFocus,
   title,
   description,
+  children,
   cancelButtonText,
   cancelButtonDisabled,
   buttonGroupChildren,
@@ -45,6 +50,7 @@ export const DSDialog: React.FC<DSDialogProps> = ({
           `}
         />
         <Dialog.Popup
+          {...interTypefaceScope}
           initialFocus={initialFocus}
           finalFocus={finalFocus}
           className={css`
@@ -59,19 +65,14 @@ export const DSDialog: React.FC<DSDialogProps> = ({
             padding-inline: calc(3 * var(--spacing-base));
 
             overflow: auto;
-            background: var(--color-bg);
+            background: var(--color-surface);
             border-radius: var(--border-radius-lg);
             transform: translate(-50%, -50%);
           `}
         >
-          <Dialog.Title
-            className={css`
-              font-size: var(--font-size-lg);
-            `}
-          >
-            {title}
-          </Dialog.Title>
-          <Dialog.Description>{description}</Dialog.Description>
+          <Dialog.Title className={textStyles.h4}>{title}</Dialog.Title>
+          {description && <Dialog.Description>{description}</Dialog.Description>}
+          {children}
 
           <DSButtonGroup>
             {buttonGroupChildren}

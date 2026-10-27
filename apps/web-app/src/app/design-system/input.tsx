@@ -66,14 +66,15 @@ export function DSInput({
             padding-block: calc(1.5 * var(--spacing-base));
             padding-inline: calc(2.5 * var(--spacing-base));
 
-            font-size: 18px;
+            font-size: var(--font-size-lg);
             color: var(--color-fg);
+            background: var(--color-surface);
             border: 2px solid transparent;
-            border-radius: 999px;
+            border-radius: var(--border-radius-full);
             box-shadow: 4px 4px 20px rgb(0 0 0 / 12%);
 
             &:focus-visible {
-              border-radius: 999px;
+              border-radius: var(--border-radius-full);
             }
 
             &::placeholder {

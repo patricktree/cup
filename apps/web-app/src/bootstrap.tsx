@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 
 import { AppStyles } from "#src/app/app-styles.js";
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
-import { sessionSnapshot } from "#src/auth/account-session.js";
+import { ensureAuthInitialized, sessionSnapshot } from "#src/auth/account-session.js";
 import { initializeAndroidAppLinks } from "#src/platform/app-links.android.js";
 import { initializeAndroidBackButton } from "#src/platform/back-button.android.js";
 import { initializeIosIncomingUrls } from "#src/platform/incoming-urls.ios.js";
@@ -36,8 +36,11 @@ await Promise.all([
 ]);
 
 async function navigateToAccountConversionOrTrialConversion(): Promise<void> {
+  // A share can arrive at app start, before the restored session is known; failing auth counts as signed out.
+  await ensureAuthInitialized().catch(() => undefined);
   if (sessionSnapshot()) {
-    await router.navigate({ to: "/" });
+    // The Add dialog takes the shared URL; leaving it replaces this entry with Recents.
+    await router.navigate({ to: "/recent/add" });
     return;
   }
   const lastGrantId = trialBrowserState.getLastGrantId();

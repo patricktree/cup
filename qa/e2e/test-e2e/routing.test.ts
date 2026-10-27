@@ -1,5 +1,7 @@
 import { expect, gotoPage, test } from "#test-e2e/fixtures.ts";
 
+const SOURCE_URL = "https://source.example.test/fixture";
+
 for (const oldOrigin of [
   "https://cup-audio.com",
   "https://create-audiobook-from-url.patricktree.me",
@@ -155,4 +157,61 @@ test("returns real 404s outside the app and for missing assets", async ({
   });
   expect(association.status()).toBe(200);
   expect(association.headers()["content-type"]).toContain("application/json");
+});
+
+test("signed out, Recents and the Add dialog redirect home, and the old History page is gone", async ({
+  page,
+  workerEnvironment,
+}) => {
+  const { origin } = workerEnvironment;
+  for (const pathname of ["/app/recent", "/app/recent/add"]) {
+    await gotoPage(page, `${origin}${pathname}`);
+    await expect(page).toHaveURL(`${origin}/app/`);
+    await expect(page.getByRole("heading", { name: "Just listen." })).toBeVisible();
+  }
+
+  await gotoPage(page, `${origin}/app/history`);
+  await expect(page.getByText("Not Found", { exact: true })).toBeVisible();
+});
+
+test("signed in, home redirects to Recents, where the Add dialog opens on a masked URL", async ({
+  page,
+  workerEnvironment,
+}) => {
+  test.setTimeout(90_000);
+  const { origin } = workerEnvironment;
+  await gotoPage(page, `${origin}/app/`);
+  await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
+  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
+
+  await gotoPage(page, `${origin}/app/`);
+  await expect(page).toHaveURL(`${origin}/app/recent`);
+  const recents = page.locator("main li");
+  await expect(recents).toHaveCount(1);
+
+  const addDialog = page.getByRole("dialog", { name: "Add a track" });
+  await page.getByRole("link", { name: "Add a track" }).click();
+  await expect(addDialog).toBeVisible();
+  await expect(page).toHaveURL(`${origin}/app/recent`);
+  await page.reload();
+  await expect(addDialog).toBeVisible();
+  await expect(page).toHaveURL(`${origin}/app/recent`);
+  await page.goBack();
+  await expect(addDialog).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Recents", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(`${origin}/app/recent`);
+
+  await page.getByRole("link", { name: "Add a track" }).click();
+  await addDialog.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
+  await addDialog.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(addDialog).toHaveCount(0, { timeout: 60_000 });
+  await expect(page).toHaveURL(`${origin}/app/recent`);
+  await expect(recents).toHaveCount(2);
+  // Recents lists the newest conversion first.
+  await recents.first().getByRole("link").click();
+  await expect(page).toHaveURL(/\/app\/audiobooks\//);
+  await page.getByRole("link", { name: "Back to Recents" }).click();
+  await expect(page).toHaveURL(`${origin}/app/recent`);
 });

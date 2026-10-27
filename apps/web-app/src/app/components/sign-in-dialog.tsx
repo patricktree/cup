@@ -14,7 +14,7 @@ type SignInDialogProps = Pick<
   onSignIn: (method: SignInMethod) => void;
 };
 
-const SIGN_IN_LABELS: Record<SignInMethod, string> = {
+export const SIGN_IN_LABELS: Record<SignInMethod, string> = {
   google: "Continue with Google",
   "test-account": "Sign in with test account",
 };
