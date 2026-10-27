@@ -246,9 +246,11 @@ export const historyItemSchema = z.object({
   }).shape,
   outcome: z
     .discriminatedUnion("status", [
-      z.object(
-        readyAccountOutcomeSchema.pick({ status: true, title: true, hasCoverImage: true }).shape,
-      ),
+      z.object({
+        ...readyAccountOutcomeSchema.pick({ status: true, title: true, hasCoverImage: true }).shape,
+        // Present exactly when `hasCoverImage` is.
+        coverImage: coverImageSchema.pick({ url: true }).optional(),
+      }),
       z.object(failedAccountOutcomeSchema.pick({ status: true, explanation: true }).shape),
     ])
     .nullable(),
