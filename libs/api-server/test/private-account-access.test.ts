@@ -67,12 +67,12 @@ async function fixture(owner = accountId, state = "active") {
   return { app: createApiServer(), env, token, bucketRead };
 }
 
-test("anonymous range, HEAD and conditional requests cannot touch private storage", async () => {
+test("anonymous range, HEAD and conditional media requests cannot touch private storage", async () => {
   const { app, env, bucketRead } = await fixture();
   for (const [method, headers, resource] of [
-    ["GET", { Range: "bytes=0-10" }, "segments/0/audio.mp3"],
-    ["HEAD", {}, "segments/0/audio.mp3"],
-    ["GET", { "If-None-Match": "known" }, "segments/0/audio.mp3"],
+    ["GET", { Range: "bytes=0-10" }, "narration-track.mp3"],
+    ["HEAD", {}, "narration-track.mp3"],
+    ["GET", { "If-None-Match": "known" }, "narration-track.mp3"],
     ["GET", {}, "cover-image"],
     ["HEAD", {}, "cover-image"],
   ] as const) {
@@ -87,66 +87,25 @@ test("anonymous range, HEAD and conditional requests cannot touch private storag
   expect(bucketRead).not.toHaveBeenCalled();
 });
 
-test("non-owners and blocked accounts cannot touch private storage", async () => {
+test("non-owners and blocked accounts cannot read the audiobook", async () => {
   for (const [owner, state, expected] of [
     [crypto.randomUUID(), "active", 404],
     [accountId, "deletion_scheduled", 403],
   ] as const) {
     const { app, env, token, bucketRead } = await fixture(owner, state);
-    for (const resource of ["segments/1/audio.mp3", "cover-image"]) {
-      const response = await app.request(
-        `https://cup.audio/api/files/audiobooks/${conversionId}/${resource}`,
-        { headers: { Cookie: `cup_media=${token}` } },
-        env,
-      );
-      expect(response.status).toBe(expected);
-    }
+    const response = await app.request(
+      `https://cup.audio/api/audiobooks/${conversionId}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+      env,
+    );
+    expect(response.status).toBe(expected);
     expect(bucketRead).not.toHaveBeenCalled();
   }
 });
 
-test("media cookie is HttpOnly and never authorizes JSON account APIs", async () => {
-  const { app, env, token } = await fixture();
-  const response = await app.request(
-    "https://cup.audio/api/files/session",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "X-Create-Audiobook-From-URL-Request": "1",
-      },
-      body: "{}",
-    },
-    env,
-  );
-  expect(response.status).toBe(204);
-  expect(response.headers.get("Set-Cookie")).toContain("HttpOnly; SameSite=Strict");
-  expect(response.headers.get("Set-Cookie")).toContain("Secure");
-  expect(response.headers.get("Set-Cookie")).toContain("Path=/api/files;");
-  const denied = await app.request(
-    "https://cup.audio/api/account",
-    { headers: { Cookie: `cup_media=${token}` } },
-    env,
-  );
-  expect(denied.status).toBe(401);
-  const accepted = await app.request(
-    "https://cup.audio/api/account",
-    { headers: { Authorization: `Bearer ${token}` } },
-    env,
-  );
-  expect(accepted.status).toBe(200);
-});
-
-test("percent-encoded owner identifiers cannot bypass media authorization", async () => {
+test("percent-encoded owner identifiers cannot bypass authorization", async () => {
   const { app, env, bucketRead } = await fixture();
-  for (const resource of [
-    "",
-    "/segments/0/audio.mp3",
-    "/segments/2/audio.mp3",
-    "/segments/1/audio.mp3",
-    "/cover-image",
-  ]) {
+  for (const resource of ["", "/narration-track.mp3", "/cover-image"]) {
     const response = await app.request(
       `https://cup.audio/api/${resource ? "files/audiobooks" : "audiobooks"}/%66${conversionId.slice(1)}${resource}`,
       {},
@@ -154,31 +113,6 @@ test("percent-encoded owner identifiers cannot bypass media authorization", asyn
     );
     expect(response.status).toBe(401);
   }
-  expect(bucketRead).not.toHaveBeenCalled();
-});
-
-test("media cookies do not authorize audiobook JSON or media-session creation", async () => {
-  const { app, env, token, bucketRead } = await fixture();
-  const audiobook = await app.request(
-    `https://cup.audio/api/audiobooks/${conversionId}`,
-    { headers: { Cookie: `cup_media=${token}` } },
-    env,
-  );
-  expect(audiobook.status).toBe(401);
-  const session = await app.request(
-    "https://cup.audio/api/files/session",
-    {
-      method: "POST",
-      headers: {
-        Cookie: `cup_media=${token}`,
-        "Content-Type": "application/json",
-        "X-Create-Audiobook-From-URL-Request": "1",
-      },
-      body: "{}",
-    },
-    env,
-  );
-  expect(session.status).toBe(401);
   expect(bucketRead).not.toHaveBeenCalled();
 });
 

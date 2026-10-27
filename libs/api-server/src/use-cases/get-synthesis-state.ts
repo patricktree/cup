@@ -25,15 +25,7 @@ export type GetSynthesisStateDependencies = {
  * reservation means the document did not fit the available duration.
  */
 export async function getSynthesisState(
-  {
-    conversionId,
-    origin,
-    narrationTextCharactersBySegment,
-  }: {
-    conversionId: string;
-    origin: string;
-    narrationTextCharactersBySegment: readonly number[];
-  },
+  { narrationTextCharactersBySegment }: { narrationTextCharactersBySegment: readonly number[] },
   dependencies: GetSynthesisStateDependencies,
 ): Promise<SynthesisState> {
   const usage = new Map(
@@ -50,12 +42,7 @@ export async function getSynthesisState(
         return { sequence, status: "generating" };
       }
       if (segment.state === "settled") {
-        return {
-          sequence,
-          status: "ready",
-          durationMilliseconds: segment.actualMilliseconds,
-          url: `${origin}/api/files/audiobooks/${conversionId}/segments/${sequence}/audio.mp3`,
-        };
+        return { sequence, status: "ready" };
       }
       if (segment.state === "released") {
         return {

@@ -5,8 +5,6 @@ import {
   audiobookSchema,
   retryConversionResponseSchema,
   scheduleDeletionResponseSchema,
-  narrationTrackQuerySchema,
-  segmentParamsSchema,
   signedMediaUrlQuerySchema,
   playbackPositionSchema,
   authConfigResponseSchema,
@@ -169,32 +167,6 @@ const historyRoute = createRoute({
     503: errorResponse("Unavailable."),
   },
 });
-const filesSessionRoute = createRoute({
-  method: "post",
-  path: "/api/files/session",
-  request: {
-    headers: routeBrowserMutationHeadersSchema,
-    body: { required: true, content: { "application/json": { schema: z.object({}).strict() } } },
-  },
-  responses: {
-    204: { description: "Media cookie issued." },
-    400: errorResponse("Invalid request."),
-    401: errorResponse("Sign in required."),
-    403: errorResponse("Account blocked."),
-    503: errorResponse("Unavailable."),
-  },
-});
-const clearFilesSessionRoute = createRoute({
-  method: "delete",
-  path: "/api/files/session",
-  request: { headers: routeBrowserMutationHeadersSchema },
-  responses: {
-    204: { description: "Media cookie removed." },
-    400: errorResponse("Invalid request."),
-    403: errorResponse("Origin blocked."),
-  },
-});
-
 const startAccountConversionRoute = createRoute({
   method: "post",
   path: "/api/account/conversions",
@@ -357,24 +329,10 @@ const savePositionRoute = createRoute({
     500: errorResponse("Unavailable."),
   },
 });
-const audioRoute = createRoute({
-  method: "get",
-  path: "/api/files/audiobooks/{conversionId}/segments/{sequence}/audio.mp3",
-  request: { params: segmentParamsSchema },
-  responses: {
-    200: { content: { "audio/mpeg": { schema: binarySchema } }, description: "Unit audio." },
-    206: { content: { "audio/mpeg": { schema: binarySchema } }, description: "Unit byte range." },
-    304: { description: "Not modified." },
-    400: errorResponse("Invalid request."),
-    404: errorResponse("Unit unavailable."),
-    416: errorResponse("Invalid range."),
-  },
-});
-const audioHeadRoute = createRoute({ ...audioRoute, method: "head" });
 const narrationTrackRoute = createRoute({
   method: "get",
   path: "/api/files/audiobooks/{conversionId}/narration-track.mp3",
-  request: { params: conversionParamsSchema, query: narrationTrackQuerySchema },
+  request: { params: conversionParamsSchema, query: signedMediaUrlQuerySchema },
   responses: {
     200: {
       content: { "audio/mpeg": { schema: binarySchema } },
@@ -437,8 +395,6 @@ export type ListenerApiHandlers<Bindings extends object> = {
   restoreAccount: ListenerApiRouteHandler<typeof restoreAccountRoute, Bindings>;
   authConfig: ListenerApiRouteHandler<typeof authConfigRoute, Bindings>;
   getHistory: ListenerApiRouteHandler<typeof historyRoute, Bindings>;
-  filesSession: ListenerApiRouteHandler<typeof filesSessionRoute, Bindings>;
-  clearFilesSession: ListenerApiRouteHandler<typeof clearFilesSessionRoute, Bindings>;
   getAccount: ListenerApiRouteHandler<typeof getAccountRoute, Bindings>;
   startAccountConversion: ListenerApiRouteHandler<typeof startAccountConversionRoute, Bindings>;
   exchangeSession: ListenerApiRouteHandler<typeof exchangeSessionRoute, Bindings>;
@@ -448,8 +404,6 @@ export type ListenerApiHandlers<Bindings extends object> = {
   getAudiobook: ListenerApiRouteHandler<typeof audiobookRoute, Bindings>;
   retryConversion: ListenerApiRouteHandler<typeof retryConversionRoute, Bindings>;
   savePosition: ListenerApiRouteHandler<typeof savePositionRoute, Bindings>;
-  getAudio: ListenerApiRouteHandler<typeof audioRoute, Bindings>;
-  headAudio: ListenerApiRouteHandler<typeof audioHeadRoute, Bindings>;
   getNarrationTrack: ListenerApiRouteHandler<typeof narrationTrackRoute, Bindings>;
   headNarrationTrack: ListenerApiRouteHandler<typeof narrationTrackHeadRoute, Bindings>;
   getCoverImage: ListenerApiRouteHandler<typeof coverImageRoute, Bindings>;
@@ -466,8 +420,6 @@ export function createListenerApi<Bindings extends object>(
     .openapi(restoreAccountRoute, handlers.restoreAccount)
     .openapi(authConfigRoute, handlers.authConfig)
     .openapi(historyRoute, handlers.getHistory)
-    .openapi(filesSessionRoute, handlers.filesSession)
-    .openapi(clearFilesSessionRoute, handlers.clearFilesSession)
     .openapi(getAccountRoute, handlers.getAccount)
     .openapi(startAccountConversionRoute, handlers.startAccountConversion)
     .openapi(exchangeSessionRoute, handlers.exchangeSession)
@@ -477,8 +429,6 @@ export function createListenerApi<Bindings extends object>(
     .openapi(audiobookRoute, handlers.getAudiobook)
     .openapi(retryConversionRoute, handlers.retryConversion)
     .openapi(savePositionRoute, handlers.savePosition)
-    .openapi(audioRoute, handlers.getAudio)
-    .openapi(audioHeadRoute, handlers.headAudio)
     .openapi(narrationTrackRoute, handlers.getNarrationTrack)
     .openapi(narrationTrackHeadRoute, handlers.headNarrationTrack)
     .openapi(coverImageRoute, handlers.getCoverImage)
@@ -497,8 +447,6 @@ export function createListenerContractApp() {
     restoreAccount: unavailable,
     authConfig: unavailable,
     getHistory: unavailable,
-    filesSession: unavailable,
-    clearFilesSession: unavailable,
     getAccount: unavailable,
     startAccountConversion: unavailable,
     exchangeSession: unavailable,
@@ -506,8 +454,6 @@ export function createListenerContractApp() {
     getConversion: unavailable,
     startTrialConversion: unavailable,
     getAudiobook: unavailable,
-    getAudio: unavailable,
-    headAudio: unavailable,
     getNarrationTrack: unavailable,
     headNarrationTrack: unavailable,
     getCoverImage: unavailable,

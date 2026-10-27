@@ -1,8 +1,4 @@
-import {
-  validateAudioSegment,
-  validateCoverImage,
-  validateNarrationTrack,
-} from "#test-e2e/artifacts.ts";
+import { validateCoverImage, validateNarrationTrack } from "#test-e2e/artifacts.ts";
 import { expect, test } from "#test-e2e/fixtures.ts";
 import {
   getTrialSessionHeaders,
@@ -75,7 +71,6 @@ test("generates audio for the whole document, then plays its narration track", a
         offsetMilliseconds: Math.round(pausedAt * 1_000) - narrationTrack.startMilliseconds[2]!,
       }),
     );
-  await validateAudioSegment({ audioUrl: segments[0]!.url, page });
   await validateNarrationTrack({ conversionId: id, origin: workerEnvironment.origin, page });
 
   // Reloading restores the position saved on pause, paused.
@@ -92,15 +87,21 @@ test("generates audio for the whole document, then plays its narration track", a
   );
 });
 
-test("trial article links require the owning grant session for reading and replay", async ({
+test("trial article links require the owning grant session for reading, and media its signed URL", async ({
   page,
   workerEnvironment,
 }) => {
-  await openNewTrial(page, workerEnvironment);
+  const { grantId } = await openNewTrial(page, workerEnvironment);
   await startConversion(page);
   await waitForAudiobook(page);
   const id = new URL(page.url()).pathname.split("/").at(-1)!;
-  const segment = (await waitForGeneratedAudio(page, id))[0]!;
+  await waitForGeneratedAudio(page, id);
+  const audiobook = await readAudiobook(page, id);
+  if (audiobook.status !== "ready" || !audiobook.narrationTrack) {
+    throw new Error("Expected a narration track once every segment has audio.");
+  }
+  const trackUrl = audiobook.narrationTrack.url;
+  const trackPath = new URL(trackUrl).pathname;
   const coverImageUrl = await validateCoverImage({
     conversionId: id,
     origin: workerEnvironment.origin,
@@ -118,15 +119,8 @@ test("trial article links require the owning grant session for reading and repla
   expect(
     (await anonymous.request.get(workerEnvironment.origin + `/api/audiobooks/${id}`)).status(),
   ).toBe(401);
-  expect((await anonymous.request.get(segment.url)).status()).toBe(401);
   expect((await anonymous.request.get(coverImageUrl)).status()).toBe(401);
-  expect(
-    (
-      await anonymous.request.get(
-        workerEnvironment.origin + `/api/files/audiobooks/${id}/narration-track.mp3`,
-      )
-    ).status(),
-  ).toBe(401);
+  expect((await anonymous.request.get(workerEnvironment.origin + trackPath)).status()).toBe(401);
   const response = await anonymous.request.post(
     workerEnvironment.origin + `/api/audiobooks/${id}/retry`,
     {
@@ -146,18 +140,40 @@ test("trial article links require the owning grant session for reading and repla
       })
     ).status(),
   ).toBe(200);
-  expect((await anonymous.request.get(segment.url, { headers: otherGrantHeaders })).status()).toBe(
-    401,
-  );
+  for (const url of [coverImageUrl, workerEnvironment.origin + trackPath]) {
+    expect((await anonymous.request.get(url, { headers: otherGrantHeaders })).status()).toBe(401);
+  }
+  // Media accepts only the signed media URL, not the owning grant session.
+  const ownerHeaders = await getTrialSessionHeaders(page);
   expect(
-    (await anonymous.request.get(coverImageUrl, { headers: otherGrantHeaders })).status(),
+    (
+      await page.request.get(workerEnvironment.origin + trackPath, { headers: ownerHeaders })
+    ).status(),
   ).toBe(401);
   expect(
-    (await page.request.get(segment.url, { headers: await getTrialSessionHeaders(page) })).status(),
-  ).toBe(200);
+    (
+      await page.request.get(
+        `${workerEnvironment.origin}/api/files/audiobooks/${id}/segments/0/audio.mp3`,
+        { headers: ownerHeaders },
+      )
+    ).status(),
+  ).toBe(404);
+  expect((await anonymous.request.get(trackUrl)).status()).toBe(200);
   expect(await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json()).toEqual(
     beforeAnonymous,
   );
+
+  // Revoking the trial blocks its unexpired track URL, as it blocks the trial's other requests.
+  const revocation = await fetch(
+    `${workerEnvironment.origin}/api/operator/grants/${grantId}/revocation`,
+    {
+      method: "POST",
+      headers: { "Cf-Access-Token": "local-access-token", "Content-Type": "application/json" },
+      body: "{}",
+    },
+  );
+  expect(revocation.status).toBe(200);
+  expect((await anonymous.request.get(trackUrl)).status()).toBe(403);
   await anonymous.close();
 });
 

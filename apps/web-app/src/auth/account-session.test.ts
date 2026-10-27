@@ -93,7 +93,6 @@ test("concurrent session reads share an SDK refresh and cannot restore a signed-
   await page.route("https://auth.example.com/auth/v1/logout**", (route) =>
     route.fulfill({ status: 204 }),
   );
-  await page.route("**/api/files/session", (route) => route.fulfill({ status: 204 }));
   await page.goto("/ui-gallery/index.html");
   await page.evaluate(
     async ({ storageKey, stored }) => {
@@ -173,15 +172,13 @@ function startMachine({
   const effects: string[] = [];
   const authListeners = new Set<(event: AuthChangeEvent, session: Session | null) => void>();
   const pendingSessionReads: Array<(session: Session | null) => void> = [];
-  const pendingMediaCookies: Array<(result: { isAccepted: boolean }) => void> = [];
+  const pendingRevocations: Array<() => void> = [];
   const pendingSignIns: Array<() => void> = [];
-  const resumeListeners: Array<() => void> = [];
   const fakes = {
     session: restored,
     shouldHoldSessionReads: false,
-    shouldHoldMediaCookies: false,
+    shouldHoldRevocations: false,
     shouldHoldSignIns: false,
-    isMediaCookieAccepted: true,
   };
 
   const fakeAuth: AccountAuthClient["auth"] = {
@@ -203,6 +200,11 @@ function startMachine({
     },
     signOut: async () => {
       effects.push("supabase.signOut");
+      if (fakes.shouldHoldRevocations) {
+        await new Promise<void>((resolve) => {
+          pendingRevocations.push(resolve);
+        });
+      }
       fakes.session = null;
       return { error: revocationError };
     },
@@ -237,23 +239,8 @@ function startMachine({
           }
           return connection;
         }),
-        registerResumeListener: fromPromise(async ({ input }) => {
-          resumeListeners.push(input.onResume);
-        }),
-        createMediaCookie: fromPromise(async ({ input }) => {
-          effects.push(`createMediaCookie(${input.session.user.id})`);
-          if (!fakes.shouldHoldMediaCookies) {
-            return { isAccepted: fakes.isMediaCookieAccepted };
-          }
-          return new Promise<{ isAccepted: boolean }>((resolve) => {
-            pendingMediaCookies.push(resolve);
-          });
-        }),
-        installNativeMediaSession: fromPromise(async ({ input }) => {
-          effects.push(`installNativeMediaSession(${input.session.user.id})`);
-        }),
-        clearMediaSessions: fromPromise(async () => {
-          effects.push("clearMediaSessions");
+        clearNativeSignIn: fromPromise(async () => {
+          effects.push("clearNativeSignIn");
         }),
       },
       actions: {
@@ -275,7 +262,7 @@ function startMachine({
     fakes,
     authListeners,
     pendingSessionReads,
-    pendingMediaCookies,
+    pendingRevocations,
     pendingSignIns,
     initialize: async () => {
       actor.send({ type: "INITIALIZE" });
@@ -288,15 +275,9 @@ function startMachine({
         listener(session ? "SIGNED_IN" : "SIGNED_OUT", session);
       }
     },
-    resumeApp: () => {
-      for (const listener of resumeListeners) {
-        listener();
-      }
-    },
     readSession: () => request<Session | null>((reply) => ({ type: "READ_SESSION", reply })),
     signIn: (fresh = false) => request<void>((reply) => ({ type: "SIGN_IN", fresh, reply })),
     signOut: () => request<void>((reply) => ({ type: "SIGN_OUT", reply })),
-    authorizeMedia: () => request<void>((reply) => ({ type: "AUTHORIZE_MEDIA", reply })),
   };
 }
 
@@ -338,12 +319,12 @@ test("failed initialization is retryable", async () => {
 
   expect(selectAuthState(actor.getSnapshot())).toEqual({ status: "loading" });
   actor.send({ type: "INITIALIZE" });
-  const failed = await waitFor(actor, (current) => current.matches({ session: "error" }));
+  const failed = await waitFor(actor, (current) => current.matches("error"));
   expect(selectAuthState(failed)).toMatchObject({ status: "error" });
 
   actor.send({ type: "INITIALIZE" });
   expect(selectAuthState(actor.getSnapshot())).toEqual({ status: "loading" });
-  await waitFor(actor, (current) => current.matches({ session: "error" }));
+  await waitFor(actor, (current) => current.matches("error"));
   expect(attempts).toBe(2);
 });
 
@@ -417,27 +398,22 @@ test("an account session reported during sign-in signs in without clearing queri
     "clearLastGrantId",
     "signInWithGoogle(fresh: false)",
   ]);
-  expect(
-    machine.actor.getSnapshot().matches({ session: { connected: { ready: "signedIn" } } }),
-  ).toBe(true);
+  expect(machine.actor.getSnapshot().matches({ connected: { ready: "signedIn" } })).toBe(true);
 });
 
-test("sign-out runs its steps in order after the in-flight media cookie issuance", async () => {
+test("sign-out shows signed-out at once, then revokes the session and ends the native sign-in", async () => {
   const machine = startMachine({ restored: createSession("reader") });
   await machine.initialize();
-  machine.fakes.shouldHoldMediaCookies = true;
+  machine.fakes.shouldHoldRevocations = true;
 
-  const issuance = machine.authorizeMedia();
-  await settle();
   const signOut = machine.signOut();
   expect(selectAuthState(machine.actor.getSnapshot())).toEqual({ status: "signed-out" });
   await settle();
-  expect(machine.effects).not.toContain("clearMediaSessions");
+  expect(machine.effects).not.toContain("clearNativeSignIn");
 
-  machine.pendingMediaCookies[0]?.({ isAccepted: true });
-  await Promise.all([issuance, signOut]);
+  machine.pendingRevocations[0]?.();
+  await signOut;
   expect(machine.effects).toEqual([
-    "createMediaCookie(reader)",
     "clearQueries",
     "stopPlayback",
     "unloadAudio",
@@ -445,38 +421,35 @@ test("sign-out runs its steps in order after the in-flight media cookie issuance
     "supabase.stopAutoRefresh",
     "clearStoredSession",
     "clearLastGrantId",
-    "clearMediaSessions",
+    "clearNativeSignIn",
   ]);
 });
 
 test("auth changes reported during sign-out are ignored", async () => {
   const machine = startMachine({ restored: createSession("reader") });
   await machine.initialize();
-  machine.fakes.shouldHoldMediaCookies = true;
+  machine.fakes.shouldHoldRevocations = true;
 
-  const issuance = machine.authorizeMedia();
-  await settle();
   const signOut = machine.signOut();
+  await settle();
   machine.emitAuthChange(createSession("reader"));
   expect(selectAuthState(machine.actor.getSnapshot())).toEqual({ status: "signed-out" });
 
-  machine.fakes.session = null;
-  machine.pendingMediaCookies[0]?.({ isAccepted: true });
-  await Promise.all([issuance, signOut]);
+  machine.pendingRevocations[0]?.();
+  await signOut;
+  expect(selectAuthState(machine.actor.getSnapshot())).toEqual({ status: "signed-out" });
 });
 
 test("sign-in is refused while signing out", async () => {
   const machine = startMachine({ restored: createSession("reader") });
   await machine.initialize();
-  machine.fakes.shouldHoldMediaCookies = true;
+  machine.fakes.shouldHoldRevocations = true;
 
-  const issuance = machine.authorizeMedia();
-  await settle();
   const signOut = machine.signOut();
 
   await expect(machine.signIn()).rejects.toThrow("Wait for sign-out to finish before signing in.");
-  machine.pendingMediaCookies[0]?.({ isAccepted: true });
-  await Promise.all([issuance, signOut]);
+  machine.pendingRevocations[0]?.();
+  await signOut;
 });
 
 test("sign-out reports a revocation the server did not confirm", async () => {
@@ -489,59 +462,8 @@ test("sign-out reports a revocation the server did not confirm", async () => {
   await expect(machine.signOut()).rejects.toThrow(
     "Signed out on this device. Server session revocation could not be confirmed.",
   );
-  expect(machine.effects).toContain("clearMediaSessions");
+  expect(machine.effects).toContain("clearNativeSignIn");
   expect(selectAuthState(machine.actor.getSnapshot())).toEqual({ status: "signed-out" });
-});
-
-test("media cookie issuance is serialized and a stale issuance does not install its session", async () => {
-  const machine = startMachine({ restored: createSession("first") });
-  await machine.initialize();
-  machine.fakes.shouldHoldMediaCookies = true;
-
-  const inFlight = machine.authorizeMedia();
-  const queued = machine.authorizeMedia();
-  await settle();
-  expect(machine.pendingMediaCookies).toHaveLength(1);
-
-  machine.emitAuthChange(createSession("second"));
-  await queued;
-  const afterSwitch = machine.authorizeMedia();
-  await settle();
-  // The new account's request waits for the response to the earlier one.
-  expect(machine.pendingMediaCookies).toHaveLength(1);
-
-  machine.pendingMediaCookies[0]?.({ isAccepted: true });
-  await inFlight;
-  await settle();
-  machine.pendingMediaCookies[1]?.({ isAccepted: true });
-  await afterSwitch;
-
-  expect(machine.effects.filter((effect) => effect.includes("Media"))).toEqual([
-    "createMediaCookie(first)",
-    "createMediaCookie(second)",
-    "installNativeMediaSession(second)",
-  ]);
-});
-
-test("a rejected media cookie stops playback", async () => {
-  const machine = startMachine({ restored: createSession("reader") });
-  await machine.initialize();
-  machine.fakes.shouldHoldMediaCookies = true;
-
-  const issuance = machine.authorizeMedia();
-  await settle();
-  machine.pendingMediaCookies[0]?.({ isAccepted: false });
-
-  await expect(issuance).rejects.toThrow("Sign in again to continue playback.");
-  expect(machine.effects).toEqual(["createMediaCookie(reader)", "stopPlayback"]);
-});
-
-test("media authorization without a signed-in account does nothing", async () => {
-  const machine = startMachine();
-  await machine.initialize();
-
-  await machine.authorizeMedia();
-  expect(machine.effects).toEqual([]);
 });
 
 test("sign-out before initialization shows signed-out and stops audio before it initializes", async () => {
@@ -560,7 +482,7 @@ test("sign-out before initialization shows signed-out and stops audio before it 
     "supabase.stopAutoRefresh",
     "clearStoredSession",
     "clearLastGrantId",
-    "clearMediaSessions",
+    "clearNativeSignIn",
   ]);
   expect(selectAuthState(machine.actor.getSnapshot())).toEqual({ status: "signed-out" });
 });
@@ -605,38 +527,4 @@ test("a sign-in interrupted by sign-out settles when the provider call finishes"
 
   machine.pendingSignIns[0]?.();
   await signIn;
-});
-
-test("an app resume refreshes the media cookie of the signed-in account", async () => {
-  const machine = startMachine({ restored: createSession("reader") });
-  await machine.initialize();
-
-  machine.resumeApp();
-  await settle();
-
-  expect(machine.effects).toEqual([
-    "createMediaCookie(reader)",
-    "installNativeMediaSession(reader)",
-  ]);
-});
-
-test("an app resume whose media cookie is rejected stops playback", async () => {
-  const machine = startMachine({ restored: createSession("reader") });
-  await machine.initialize();
-  machine.fakes.isMediaCookieAccepted = false;
-
-  machine.resumeApp();
-  await settle();
-
-  expect(machine.effects).toEqual(["createMediaCookie(reader)", "stopPlayback", "stopPlayback"]);
-});
-
-test("an app resume without a signed-in account does nothing", async () => {
-  const machine = startMachine();
-  await machine.initialize();
-
-  machine.resumeApp();
-  await settle();
-
-  expect(machine.effects).toEqual([]);
 });

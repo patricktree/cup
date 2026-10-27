@@ -123,10 +123,7 @@ export const ListeningAcrossPages = accountStory({
         ...PREPARED_AUDIOBOOK,
         status: "ready",
         title: "A second document about listening",
-        segments: [0, 1, 2].map((sequence) => ({
-          ...createReadySegment(sequence),
-          url: `https://example.com/second/segments/${sequence}/audio.mp3`,
-        })),
+        segments: [0, 1, 2].map(createReadySegment),
         narrationTrack: createStoryNarrationTrack(
           [
             SEGMENT_DURATION_MILLISECONDS,
@@ -157,12 +154,7 @@ function createHistoryItem(conversionId: string, title: string) {
 }
 
 function createReadySegment(sequence: number) {
-  return {
-    sequence,
-    status: "ready" as const,
-    durationMilliseconds: SEGMENT_DURATION_MILLISECONDS,
-    url: `https://example.com/segments/${sequence}/audio.mp3`,
-  };
+  return { sequence, status: "ready" as const };
 }
 
 const PREPARED_AUDIOBOOK = {

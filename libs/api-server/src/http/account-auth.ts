@@ -99,26 +99,3 @@ export async function authenticateAccountRequest(request: Request, env: ApiServe
     return { result: "unavailable" } as const;
   }
 }
-
-export function mediaRequest(request: Request): Request {
-  if (request.headers.has("Authorization")) {
-    return request;
-  }
-  const value = request.headers
-    .get("Cookie")
-    ?.split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith("cup_media="))
-    ?.slice(10);
-  if (!value) {
-    return request;
-  }
-  const headers = new Headers(request.headers);
-  headers.set("Authorization", `Bearer ${value}`);
-  return new Request(request.url, { method: request.method, headers });
-}
-
-export function mediaCookie(request: Request, token: string, maxAge: number) {
-  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
-  return `cup_media=${token}; Path=/api/files; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
-}

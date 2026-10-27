@@ -5,10 +5,7 @@ import {
   type GetSynthesisStateDependencies,
 } from "#src/use-cases/get-synthesis-state.ts";
 
-const CONVERSION_ID = "2f94d6a9-68eb-49eb-b88e-753cf5fba041";
 const INPUT = {
-  conversionId: CONVERSION_ID,
-  origin: "https://cup.example",
   // Estimated at 1,000 and 8,000 milliseconds.
   narrationTextCharactersBySegment: [5, 100],
 };
@@ -48,12 +45,7 @@ test("a reserved segment keeps the conversion synthesizing", async () => {
   ).resolves.toEqual({
     status: "synthesizing",
     segments: [
-      {
-        sequence: 0,
-        status: "ready",
-        durationMilliseconds: 900,
-        url: `https://cup.example/api/files/audiobooks/${CONVERSION_ID}/segments/0/audio.mp3`,
-      },
+      { sequence: 0, status: "ready" },
       { sequence: 1, status: "generating" },
     ],
   });

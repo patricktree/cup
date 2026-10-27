@@ -1,3 +1,4 @@
+import { Temporal } from "temporal-polyfill";
 import { expect, test, vi } from "vitest";
 
 import { SPEECH_CONFIG } from "@cup/audiobook-production";
@@ -5,18 +6,19 @@ import type { GrantState } from "@cup/conversion-grants/contracts";
 
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
 import { createApiServer } from "#src/api-server.ts";
+import { signMediaUrl } from "#src/http/signed-media-url.ts";
 
 vi.mock("@cup/conversion-grants", async () => ({
   ...(await import("@cup/conversion-grants/contracts")),
   ...(await import("@cup/conversion-grants/session")),
 }));
 
+const SIGNING_KEY = "test-media-url-signing-key";
 const conversionId = "f9cc2e59-46a3-4890-b923-bda04d03b4d0";
 const grantId = "d1a52e64-3e4d-4a7f-a711-7fb11501e9af";
 const cookie = `__Secure-grant-session-${grantId}=valid-session`;
 const origin = "https://cup.audio";
 const audiobookPath = `/api/audiobooks/${conversionId}`;
-const audioPath = `/api/files/audiobooks/${conversionId}/segments/0/audio.mp3`;
 const coverImagePath = `/api/files/audiobooks/${conversionId}/cover-image`;
 const coverImage = { contentType: "image/jpeg", byteLength: 3, alternativeText: "A lighthouse" };
 
@@ -37,7 +39,7 @@ function fixture(state: GrantState = "open", hasCoverImage = true) {
     byteLength: manifest.length,
     etag: "manifest-etag",
   };
-  async function readBucket(key: string, options?: { range: { offset: number; length: number } }) {
+  async function readBucket(key: string) {
     if (key === reference.key) {
       return {
         size: reference.byteLength,
@@ -46,14 +48,7 @@ function fixture(state: GrantState = "open", hasCoverImage = true) {
         text: async () => manifest,
       };
     }
-    const bytes = new Uint8Array([1, 2, 3]);
-    return {
-      size: bytes.length,
-      httpEtag: '"audio-etag"',
-      body: options
-        ? bytes.slice(options.range.offset, options.range.offset + options.range.length)
-        : bytes,
-    };
+    return { size: 3, httpEtag: '"cover-etag"', body: new Uint8Array([1, 2, 3]) };
   }
   const bucketRead = vi.fn<typeof readBucket>(readBucket);
   async function validate(token: string) {
@@ -63,6 +58,7 @@ function fixture(state: GrantState = "open", hasCoverImage = true) {
   }
   const validateSession = vi.fn<typeof validate>(validate);
   const grant = {
+    inspect: async () => ({ state }),
     validateSession,
     getConversion: async () => ({ status: "ready", sourceUrl: "https://example.com/source" }),
     getReadyAudiobookReference: async () => reference,
@@ -70,7 +66,7 @@ function fixture(state: GrantState = "open", hasCoverImage = true) {
   };
   const env = {
     SUPABASE_URL: "https://access-test.supabase.co",
-    MEDIA_URL_SIGNING_KEY: "test-media-url-signing-key",
+    MEDIA_URL_SIGNING_KEY: SIGNING_KEY,
     CONVERSION_GRANTS: { idFromName: (name: string) => name, get: () => grant },
     REGISTRY: {
       idFromName: (name: string) => name,
@@ -87,27 +83,31 @@ function fixture(state: GrantState = "open", hasCoverImage = true) {
   return { app: createApiServer(), env, bucketRead, validateSession };
 }
 
-test("missing, invalid and foreign grant sessions cannot read trial text or audio", async () => {
+function signCoverImageUrl() {
+  return signMediaUrl({
+    url: origin + coverImagePath,
+    conversionId,
+    principal: { kind: "trial", grantId },
+    signingKey: SIGNING_KEY,
+    issuedAtMs: Temporal.Now.instant().epochMilliseconds,
+  });
+}
+
+test("missing, invalid and foreign grant sessions cannot read trial text", async () => {
   for (const session of [
     undefined,
     cookie.replace("valid-session", "invalid-session"),
     cookie.replace(grantId, crypto.randomUUID()),
   ]) {
     const { app, env, bucketRead } = fixture();
-    for (const [path, method, headers] of [
-      [audiobookPath, "GET", {}],
-      [`${audiobookPath}/retry`, "POST", {}],
-      [audioPath, "GET", {}],
-      [audioPath, "HEAD", {}],
-      [audioPath, "GET", { Range: "bytes=0-1" }],
-      [audioPath, "GET", { "If-None-Match": '"audio-etag"' }],
-      [coverImagePath, "GET", {}],
-      [coverImagePath, "HEAD", {}],
-      [audiobookPath.replace(conversionId, `%66${conversionId.slice(1)}`), "GET", {}],
+    for (const [path, method] of [
+      [audiobookPath, "GET"],
+      [`${audiobookPath}/retry`, "POST"],
+      [audiobookPath.replace(conversionId, `%66${conversionId.slice(1)}`), "GET"],
     ] as const) {
       const response = await app.request(
         origin + path,
-        { method, headers: { ...headers, ...(session ? { Cookie: session } : {}) } },
+        { method, headers: session ? { Cookie: session } : {} },
         env,
       );
       expect(response.status).toBe(401);
@@ -117,7 +117,7 @@ test("missing, invalid and foreign grant sessions cannot read trial text or audi
   }
 });
 
-test("expiry and revocation block subsequent text and media requests before storage access", async () => {
+test("expiry and revocation block subsequent text requests before storage access", async () => {
   for (const state of ["expired", "revoked"] as const) {
     const { app, env, bucketRead, validateSession } = fixture();
     expect(
@@ -125,18 +125,13 @@ test("expiry and revocation block subsequent text and media requests before stor
     ).toBe(200);
     bucketRead.mockClear();
     validateSession.mockResolvedValue({ result: "valid", snapshot: { state } });
-    for (const [path, method, headers] of [
-      [audiobookPath, "GET", {}],
-      [`${audiobookPath}/retry`, "POST", {}],
-      [audioPath, "HEAD", {}],
-      [audioPath, "GET", { Range: "bytes=0-1" }],
-      [audioPath, "GET", { "If-None-Match": '"audio-etag"' }],
-      [coverImagePath, "GET", {}],
-      [coverImagePath, "HEAD", {}],
+    for (const [path, method] of [
+      [audiobookPath, "GET"],
+      [`${audiobookPath}/retry`, "POST"],
     ] as const) {
       const response = await app.request(
         origin + path,
-        { method, headers: { ...headers, Cookie: cookie } },
+        { method, headers: { Cookie: cookie } },
         env,
       );
       expect(response.status).toBe(403);
@@ -146,58 +141,51 @@ test("expiry and revocation block subsequent text and media requests before stor
   }
 });
 
-test("owning grant sessions can read and replay with exhausted or fully reserved allowance", async () => {
+test("owning grant sessions can read with exhausted or fully reserved allowance", async () => {
   for (const state of ["open", "exhausted", "temporarily-full"] as const) {
     const { app, env } = fixture(state);
-    const headers = { Cookie: cookie, Origin: "https://localhost" };
-    const audiobook = await app.request(origin + audiobookPath, { headers }, env);
+    const audiobook = await app.request(
+      origin + audiobookPath,
+      { headers: { Cookie: cookie, Origin: "https://localhost" } },
+      env,
+    );
     expect(audiobook.status).toBe(200);
     expect(await audiobook.json()).toMatchObject({ status: "ready", title: "A document" });
-    for (const [method, extraHeaders, status] of [
-      ["GET", {}, 200],
-      ["HEAD", {}, 200],
-      ["GET", { Range: "bytes=0-1" }, 206],
-      ["GET", { "If-None-Match": '"audio-etag"' }, 304],
-    ] as const) {
-      const response = await app.request(
-        origin + audioPath,
-        { method, headers: { ...headers, ...extraHeaders } },
-        env,
-      );
-      expect(response.status).toBe(status);
-      expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://localhost");
-      expect(response.headers.get("Access-Control-Allow-Credentials")).toBe("true");
-      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
-      expect(response.headers.get("Cross-Origin-Resource-Policy")).toBe("same-origin");
-    }
+    expect(audiobook.headers.get("Access-Control-Allow-Origin")).toBe("https://localhost");
+    expect(audiobook.headers.get("Access-Control-Allow-Credentials")).toBe("true");
+    expect(audiobook.headers.get("Cache-Control")).toBe("private, no-store");
   }
 });
 
 test("owning grant sessions can read the cover image the audiobook points to", async () => {
   for (const state of ["open", "exhausted", "temporarily-full"] as const) {
     const { app, env } = fixture(state);
-    const headers = { Cookie: cookie, Origin: "https://localhost" };
-    const audiobook = await app.request(origin + audiobookPath, { headers }, env);
-    expect(await audiobook.json()).toMatchObject({
+    const audiobook = await app.request(
+      origin + audiobookPath,
+      { headers: { Cookie: cookie, Origin: "https://localhost" } },
+      env,
+    );
+    const body: unknown = await audiobook.json();
+    expect(body).toMatchObject({
       coverImage: {
         url: expect.stringMatching(new RegExp(`^${origin + coverImagePath}\\?token=`)),
         alternativeText: "A lighthouse",
       },
     });
-    for (const [method, extraHeaders, status, body] of [
+    for (const [method, extraHeaders, status, expectedBody] of [
       ["GET", {}, 200, [1, 2, 3]],
       ["HEAD", {}, 200, []],
-      ["GET", { "If-None-Match": '"audio-etag"' }, 304, []],
+      ["GET", { "If-None-Match": '"cover-etag"' }, 304, []],
     ] as const) {
       const response = await app.request(
-        origin + coverImagePath,
-        { method, headers: { ...headers, ...extraHeaders } },
+        getCoverImageUrl(body),
+        { method, headers: { Origin: "https://localhost", ...extraHeaders } },
         env,
       );
       expect(response.status).toBe(status);
-      expect([...new Uint8Array(await response.arrayBuffer())]).toEqual(body);
+      expect([...new Uint8Array(await response.arrayBuffer())]).toEqual(expectedBody);
       expect(response.headers.get("Content-Type")).toBe("image/jpeg");
-      expect(response.headers.get("ETag")).toBe('"audio-etag"');
+      expect(response.headers.get("ETag")).toBe('"cover-etag"');
       expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://localhost");
       expect(response.headers.get("Cache-Control")).toBe("private, no-store");
       expect(response.headers.get("Cross-Origin-Resource-Policy")).toBe("same-origin");
@@ -207,13 +195,13 @@ test("owning grant sessions can read the cover image the audiobook points to", a
 
 test("an audiobook without a recorded cover image exposes none, whatever storage holds", async () => {
   const { app, env, bucketRead } = fixture("open", false);
-  const headers = { Cookie: cookie };
-  const audiobook = await app.request(origin + audiobookPath, { headers }, env);
+  const audiobook = await app.request(origin + audiobookPath, { headers: { Cookie: cookie } }, env);
   expect(await audiobook.json()).not.toHaveProperty("coverImage");
   bucketRead.mockClear();
 
+  const coverImageUrl = await signCoverImageUrl();
   for (const method of ["GET", "HEAD"]) {
-    const response = await app.request(origin + coverImagePath, { method, headers }, env);
+    const response = await app.request(coverImageUrl, { method }, env);
     expect(response.status).toBe(404);
   }
   expect(bucketRead.mock.calls.map(([key]) => key)).toEqual([
@@ -224,11 +212,7 @@ test("an audiobook without a recorded cover image exposes none, whatever storage
 
 test("the cover image route accepts only reads", async () => {
   const { app, env } = fixture();
-  const response = await app.request(
-    origin + coverImagePath,
-    { method: "POST", headers: { Cookie: cookie } },
-    env,
-  );
+  const response = await app.request(await signCoverImageUrl(), { method: "POST" }, env);
   expect(response.status).toBe(405);
   expect(response.headers.get("Allow")).toBe("GET, HEAD");
 });
@@ -236,22 +220,37 @@ test("the cover image route accepts only reads", async () => {
 test("grant validation failures fail closed without reading storage", async () => {
   const { app, env, bucketRead, validateSession } = fixture();
   validateSession.mockRejectedValue(new Error("Grant unavailable"));
-  const response = await app.request(origin + audioPath, { headers: { Cookie: cookie } }, env);
+  const response = await app.request(origin + audiobookPath, { headers: { Cookie: cookie } }, env);
   expect(response.status).toBe(500);
   expect(bucketRead).not.toHaveBeenCalled();
 });
 
-test("trial delivery does not permit arbitrary cross-origin readers", async () => {
+test("trial media delivery does not permit arbitrary cross-origin readers", async () => {
   const { app, env } = fixture();
   const response = await app.request(
-    origin + audioPath,
-    { headers: { Cookie: cookie, Origin: "https://other.example" } },
+    await signCoverImageUrl(),
+    { headers: { Origin: "https://other.example" } },
     env,
   );
   expect(response.status).toBe(200);
   expect(response.headers.has("Access-Control-Allow-Origin")).toBe(false);
   expect(response.headers.get("Cross-Origin-Resource-Policy")).toBe("same-origin");
 });
+
+function getCoverImageUrl(audiobook: unknown): string {
+  if (
+    typeof audiobook !== "object" ||
+    audiobook === null ||
+    !("coverImage" in audiobook) ||
+    typeof audiobook.coverImage !== "object" ||
+    audiobook.coverImage === null ||
+    !("url" in audiobook.coverImage) ||
+    typeof audiobook.coverImage.url !== "string"
+  ) {
+    throw new Error("The audiobook response has no cover image URL");
+  }
+  return audiobook.coverImage.url;
+}
 
 function isFixtureEnvironment(value: unknown): value is ApiServerEnvironment {
   return (

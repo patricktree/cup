@@ -20,10 +20,8 @@ import {
 import { queryClient } from "#src/data-fetching/query-client.js";
 import {
   initializeAuthStorage,
-  addAuthResumeListener,
   signInWithGoogle,
-  setNativeMediaSession,
-  clearNativeAuthSession,
+  clearNativeSignIn,
 } from "#src/platform/account-auth.js";
 import { STOP_PLAYBACK_EVENT_NAME } from "#src/playback-events.js";
 import { trialBrowserState } from "#src/trial-browser-state.js";
@@ -36,20 +34,7 @@ const accountSessionActor = createActor(
   accountSessionMachine.provide({
     actors: {
       loadConnection: fromPromise(loadConnection),
-      registerResumeListener: fromPromise(({ input }) => addAuthResumeListener(input.onResume)),
-      createMediaCookie: fromPromise(async ({ input }) => {
-        const response = await createListenerApiClient()
-          .createAuthenticatedRpcClient(input.session.access_token)
-          .createFilesSession();
-        return { isAccepted: response.ok };
-      }),
-      installNativeMediaSession: fromPromise(({ input }) => setNativeMediaSession(input.session)),
-      clearMediaSessions: fromPromise(async () => {
-        await createListenerApiClient()
-          .clearFilesSession()
-          .catch(() => undefined);
-        await clearNativeAuthSession();
-      }),
+      clearNativeSignIn: fromPromise(clearNativeSignIn),
     },
     actions: {
       clearQueries: () => queryClient.clear(),
@@ -94,7 +79,7 @@ export async function ensureAuthInitialized(): Promise<AccountAuthClient> {
   accountSessionActor.send({ type: "INITIALIZE" });
   const snapshot = await waitFor(
     accountSessionActor,
-    (current) => current.hasTag("initialized") || current.matches({ session: "error" }),
+    (current) => current.hasTag("initialized") || current.matches("error"),
   );
   const state = selectAuthState(snapshot);
   if (state.status === "error") {

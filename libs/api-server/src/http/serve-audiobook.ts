@@ -36,70 +36,6 @@ export async function loadReadyAudiobookFromEnvironment(
   });
 }
 
-export async function serveAudio(
-  env: ApiServerEnvironment,
-  request: Request,
-  conversionId: string,
-  sequence: number,
-  isHead: boolean,
-  requestId: string,
-): Promise<Response> {
-  const owner = await getRegistryStub(env).findConversionOwner(conversionId);
-  if (!owner) {
-    return audiobookNotFound(requestId);
-  }
-  const reader = resolveConversionReader(env, conversionId, owner);
-  const audiobook = await loadReadyAudiobookFromEnvironment(env, conversionId, reader);
-  if (audiobook === undefined) {
-    return audiobookNotFound(requestId);
-  }
-
-  if (!audiobook.narrationDocument.synchronizationUnits[sequence]) {
-    return audiobookNotFound(requestId);
-  }
-  const usage = await reader.listAudioSegments();
-  if (!usage.some((item) => item.sequence === sequence && item.state === "settled")) {
-    return audiobookNotFound(requestId);
-  }
-  const key = createAudioSegmentKey(conversionId, sequence, reader.artifactPrefix);
-  const object = await env.AUDIO_BUCKET.get(key);
-  if (object === null) {
-    return audiobookNotFound(requestId);
-  }
-
-  const headers = new Headers({
-    "Accept-Ranges": "bytes",
-    "Content-Type": "audio/mpeg",
-    ETag: object.httpEtag,
-  });
-  if (request.headers.get("If-None-Match") === object.httpEtag) {
-    return new Response(null, { status: 304, headers });
-  }
-
-  const range = request.headers.get("Range");
-  if (range === null) {
-    headers.set("Content-Length", object.size.toString());
-    return new Response(isHead ? null : object.body, { status: 200, headers });
-  }
-
-  const parsed = parseRange(range, object.size);
-  if (parsed === undefined) {
-    return rangeNotSatisfiable(requestId, object.size);
-  }
-
-  const ranged = await env.AUDIO_BUCKET.get(key, {
-    range: { offset: parsed.start, length: parsed.end - parsed.start + 1 },
-  });
-  if (ranged === null) {
-    return audiobookNotFound(requestId);
-  }
-
-  headers.set("Content-Length", (parsed.end - parsed.start + 1).toString());
-  headers.set("Content-Range", `bytes ${parsed.start}-${parsed.end}/${object.size}`);
-
-  return new Response(isHead ? null : ranged.body, { status: 206, headers });
-}
-
 /**
  * Serves the narration track: the stored audio segments, unchanged and joined in sequence order.
  * The layout comes from the owner's settled durations alone, so the manifest is never loaded and
@@ -410,12 +346,6 @@ function narrationTrackNotFound(requestId: string): Response {
     createErrorBody(requestId, "narration-track-not-found", "Narration track not found."),
     { status: 404 },
   );
-}
-
-function audiobookNotFound(requestId: string): Response {
-  return Response.json(createErrorBody(requestId, "audiobook-not-found", "Audiobook not found."), {
-    status: 404,
-  });
 }
 
 function coverImageNotFound(requestId: string): Response {

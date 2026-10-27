@@ -55,9 +55,13 @@ test("exchanges persistent cookies and authorizes native requests without a brow
   expect(detail.status).toBe(200);
   expect(detail.headers.get("Set-Cookie")).toContain("HttpOnly");
   const audiobookUrl = `${origin}/api/audiobooks/${conversion.conversionId}`;
-  const audioUrl = `${origin}/api/files/audiobooks/${conversion.conversionId}/segments/0/audio.mp3`;
+  const coverImageUrl = `${origin}/api/files/audiobooks/${conversion.conversionId}/cover-image`;
+  const segmentAudioUrl = `${origin}/api/files/audiobooks/${conversion.conversionId}/segments/0/audio.mp3`;
   expect((await fetch(audiobookUrl)).status).toBe(401);
   expect((await fetch(audiobookUrl, { headers })).status).toBe(200);
+  // Media accepts only a signed media URL, never the grant session cookie.
+  expect((await fetch(coverImageUrl, { headers })).status).toBe(401);
+  expect((await fetch(segmentAudioUrl, { headers })).status).toBe(404);
   const otherGrant = await workerEnvironment.createTrial();
   expect((await fetch(`${origin}/api/grants/${otherGrant.grantId}`, { headers })).status).toBe(401);
 
@@ -68,8 +72,6 @@ test("exchanges persistent cookies and authorizes native requests without a brow
   });
   expect(revocation.status).toBe(200);
   expect((await fetch(audiobookUrl, { headers })).status).toBe(403);
-  expect((await fetch(audioUrl, { headers })).status).toBe(403);
-  expect((await fetch(audioUrl, { method: "HEAD", headers })).status).toBe(403);
   expect((await fetch(`${origin}/api/grants/${grant.grantId}`, { headers })).status).toBe(200);
   const revokedStart = await fetch(`${origin}/api/grants/${grant.grantId}/conversions`, {
     method: "POST",

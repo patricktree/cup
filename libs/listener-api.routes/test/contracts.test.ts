@@ -12,10 +12,9 @@ import {
   grantConversionsSchema,
   grantParamsSchema,
   grantSnapshotSchema,
-  narrationTrackQuerySchema,
+  signedMediaUrlQuerySchema,
   playbackPositionSchema,
   retryConversionResponseSchema,
-  segmentParamsSchema,
   startConversionHeadersSchema,
   startConversionRequestSchema,
   startConversionResponseSchema,
@@ -64,13 +63,8 @@ describe("listener API transport contracts", () => {
       request: { conversionId: UUID },
     },
     {
-      name: "segment parameters",
-      schema: segmentParamsSchema,
-      request: { conversionId: UUID, sequence: 0 },
-    },
-    {
-      name: "narration track query",
-      schema: narrationTrackQuerySchema,
+      name: "signed media URL query",
+      schema: signedMediaUrlQuerySchema,
       request: { token: "v1.payload.signature" },
     },
     {
@@ -101,8 +95,7 @@ describe("listener API transport contracts", () => {
 
   test.each([
     [grantParamsSchema, { extra: true }],
-    [segmentParamsSchema, { conversionId: UUID }],
-    [narrationTrackQuerySchema, {}],
+    [signedMediaUrlQuerySchema, {}],
     [exchangeCredentialRequestSchema, { extra: true }],
     [startConversionRequestSchema, { extra: true }],
     [accountConfirmationSchema, { providerToken: "token" }],
@@ -314,24 +307,18 @@ describe("listener API transport contracts", () => {
   test.each([
     { sequence: 0, status: "absent" },
     { sequence: 0, status: "generating" },
-    {
-      sequence: 0,
-      status: "ready",
-      durationMilliseconds: 1500,
-      url: "https://example.com/audio.mp3",
-    },
+    { sequence: 0, status: "ready" },
     { sequence: 0, status: "failed", explanation: "Speech generation failed." },
   ])("accepts a complete audio segment state: $status", (segment) => {
     expect(audioSegmentSchema.safeParse(segment).success).toBe(true);
   });
 
-  test.each([
-    { sequence: 0, status: "failed" },
-    { sequence: 0, status: "ready", url: "https://example.com/audio.mp3" },
-    { sequence: 0, status: "ready", durationMilliseconds: 1500 },
-  ])("rejects incomplete audio segment states", (segment) => {
-    expect(audioSegmentSchema.safeParse(segment).success).toBe(false);
-  });
+  test.each([{ sequence: 0, status: "failed" }, { status: "ready" }])(
+    "rejects incomplete audio segment states",
+    (segment) => {
+      expect(audioSegmentSchema.safeParse(segment).success).toBe(false);
+    },
+  );
 
   test.each([
     [
@@ -341,6 +328,16 @@ describe("listener API transport contracts", () => {
     [
       { sequence: 0, status: "generating", explanation: "Unexpected failure" },
       { sequence: 0, status: "generating" },
+    ],
+    [
+      // Workers before the narration track reported each ready segment's URL and duration.
+      {
+        sequence: 0,
+        status: "ready",
+        durationMilliseconds: 1500,
+        url: "https://example.com/audio.mp3",
+      },
+      { sequence: 0, status: "ready" },
     ],
     [
       {

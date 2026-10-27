@@ -24,7 +24,6 @@ test("Google PKCE signup resumes conversion, protects history and media, and sup
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
   expect(authProvider.exchanges()).toBe(1);
   const conversionId = new URL(page.url()).pathname.split("/").at(-1);
-  const mediaUrl = `${origin}/api/files/audiobooks/${conversionId}/segments/0/audio.mp3`;
   await waitForAudiobook(page);
   if (!conversionId) {
     throw new Error("Conversion missing");
@@ -43,13 +42,17 @@ test("Google PKCE signup resumes conversion, protects history and media, and sup
   await expect
     .poll(() => page.evaluate(async (url) => (await fetch(url)).status, trackUrl))
     .toBe(200);
-  expect(
-    (
-      await page.request.get(mediaUrl, {
-        headers: { Authorization: `Bearer ${authProvider.otherToken()}` },
-      })
-    ).status(),
-  ).toBe(404);
+  // Media accepts only the signed media URL: neither the owner's nor another account's bearer token.
+  const trackPath = new URL(trackUrl).pathname;
+  for (const token of [await readAccessToken(page), authProvider.otherToken()]) {
+    expect(
+      (
+        await page.request.get(origin + trackPath, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      ).status(),
+    ).toBe(401);
+  }
   await page.goto(`${origin}/app/history`);
   await expect(page.getByRole("link", { name: "Open audiobook" })).toHaveCount(1);
   await expect(page.locator("main")).toHaveScreenshot("private-history.png");
@@ -144,6 +147,15 @@ test("signup keeps trial conversions separate from the new account and its histo
     30 * 60 * 1_000 -
     segments.reduce((total, segment) => total + Math.ceil(segment.durationMilliseconds), 0);
   expect((await readAccount(page, origin)).balance.available).toBe(expectedAllowance);
+  const privateAudiobook = await readAudiobook(
+    page,
+    accountConversionId,
+    await readAccessToken(page),
+  );
+  if (privateAudiobook.status !== "ready" || !privateAudiobook.narrationTrack) {
+    throw new Error("Expected a narration track once every segment has audio.");
+  }
+  const privateTrackUrl = privateAudiobook.narrationTrack.url;
   const privateUrl = page.url();
   const privateId = new URL(privateUrl).pathname.split("/").at(-1);
   expect(privateId).not.toBe(originalId);
@@ -164,16 +176,13 @@ test("signup keeps trial conversions separate from the new account and its histo
   await page.goto(`${origin}/app/account`);
   await page.getByRole("button", { name: "Delete account…", exact: true }).click();
   await page.getByRole("button", { name: "Schedule deletion", exact: true }).click();
-  await expect
-    .poll(async () =>
-      (
-        await page.request.get(`${origin}/api/files/audiobooks/${privateId}/segments/0/audio.mp3`)
-      ).status(),
-    )
-    .toBe(401);
+  // Scheduling deletion signs the browser out. Its unexpired track URL is refused like a bearer
+  // request of the account, and the track without a signed URL is refused outright.
+  await expect.poll(async () => (await page.request.get(privateTrackUrl)).status()).toBe(403);
+  expect((await page.request.get(origin + new URL(privateTrackUrl).pathname)).status()).toBe(401);
   expect(
     (
-      await isolatedRequest.get(`${origin}/api/files/audiobooks/${originalId}/segments/0/audio.mp3`)
+      await isolatedRequest.get(`${origin}/api/files/audiobooks/${originalId}/narration-track.mp3`)
     ).status(),
   ).toBe(401);
 });

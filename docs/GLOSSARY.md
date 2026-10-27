@@ -116,7 +116,7 @@ _Avoid_: trial link, user identity
 
 ## grant session
 
-Browser or native-app authorization derived from a grant credential. It authorizes work for its conversion grant only while the grant remains unexpired and unrevoked; it never authorizes listing the grant’s conversions, and an audiobook link alone never substitutes for it. [Trial access](architecture/authentication.md#trial-access) states the current rules.
+Browser or native-app authorization derived from a grant credential. It authorizes work for its conversion grant only while the grant remains unexpired and unrevoked; it never authorizes listing the grant’s conversions, and the audiobook’s link alone never substitutes for it. [Trial access](architecture/authentication.md#trial-access) states the current rules.
 
 _Avoid_: grant credential, user session
 
@@ -236,6 +236,6 @@ _Avoid_: personal audiobook
 
 ## public audiobook
 
-A planned audiobook intentionally accessible without signing in. No audiobook is public yet, and no audiobook is reachable by its link alone.
+A planned audiobook intentionally accessible without signing in. No audiobook is public yet, and no audiobook is reachable by the audiobook’s link alone.
 
 _Avoid_: unlisted audiobook, shared audiobook

@@ -13,8 +13,6 @@ import {
 const ready = (sequence: number) => ({
   sequence,
   status: "ready" as const,
-  durationMilliseconds: 5_000,
-  url: `https://example.com/segments/${sequence}/audio.mp3`,
 });
 
 // Units of 20, 10, 3 and 2 seconds on the narration track.

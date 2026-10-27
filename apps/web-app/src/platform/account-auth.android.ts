@@ -1,12 +1,4 @@
-import { App } from "@capacitor/app";
-import { registerPlugin } from "@capacitor/core";
-import type { Session, SupabaseClient } from "@supabase/supabase-js";
-import { Temporal } from "temporal-polyfill";
-
-const nativeMedia = registerPlugin<{
-  setSession(input: { token: string; maxAge: number }): Promise<void>;
-  clearSession(): Promise<void>;
-}>("AccountMedia");
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** Prepares storage for the account session, which is kept under `storageKeys`. */
 export async function initializeAuthStorage(storageKeys: readonly string[]) {
@@ -20,13 +12,6 @@ export async function initializeAuthStorage(storageKeys: readonly string[]) {
       }
     },
   };
-}
-export async function addAuthResumeListener(onResume: () => void): Promise<void> {
-  await App.addListener("appStateChange", ({ isActive }) => {
-    if (isActive) {
-      onResume();
-    }
-  });
 }
 export async function signInWithGoogle(
   client: SupabaseClient,
@@ -57,17 +42,8 @@ export async function signInWithGoogle(
     throw exchange.error;
   }
 }
-export async function setNativeMediaSession(latest: Session): Promise<void> {
-  await nativeMedia.setSession({
-    token: latest.access_token,
-    maxAge: Math.max(
-      0,
-      (latest.expires_at ?? 0) - Math.floor(Temporal.Now.instant().epochMilliseconds / 1000),
-    ),
-  });
-}
-export async function clearNativeAuthSession(): Promise<void> {
-  await nativeMedia.clearSession();
+/** Signs out of Google on the device, so the next sign-in can pick another account. */
+export async function clearNativeSignIn(): Promise<void> {
   const { GoogleSignIn } = await import("@capawesome/capacitor-google-sign-in");
   await GoogleSignIn.signOut();
 }

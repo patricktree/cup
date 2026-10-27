@@ -109,28 +109,20 @@ export const startConversionResponseSchema = z.object({
 export type StartConversionResponse = z.infer<typeof startConversionResponseSchema>;
 
 export type { PlaybackPosition } from "@cup/conversion-contracts";
-export const segmentParamsSchema = conversionParamsSchema.extend({
-  sequence: z.coerce.number().int().min(0).max(199),
-});
 const audioSegmentBaseSchema = z.object({ sequence: z.number().int().nonnegative() });
+/** A segment's speech state. Ready segments play through the audiobook's `narrationTrack`. */
 export const audioSegmentSchema = z.discriminatedUnion("status", [
   audioSegmentBaseSchema.extend({ status: z.literal("absent") }),
   audioSegmentBaseSchema.extend({ status: z.literal("generating") }),
-  audioSegmentBaseSchema.extend({
-    status: z.literal("ready"),
-    durationMilliseconds: z.number().positive(),
-    url: z.url(),
-  }),
+  audioSegmentBaseSchema.extend({ status: z.literal("ready") }),
   audioSegmentBaseSchema.extend({ status: z.literal("failed"), explanation: z.string() }),
 ]);
 export type AudioSegment = z.infer<typeof audioSegmentSchema>;
 /**
  * The query of a media route under `/api/files`. `token` is the opaque, expiring authorization a
- * signed media URL carries; requests without it fall back to the media cookie or a bearer token.
+ * signed media URL carries, the only credential media routes accept.
  */
-export const signedMediaUrlQuerySchema = z.object({ token: z.string().optional() });
-/** The query of the narration track route, which accepts only a signed media URL. */
-export const narrationTrackQuerySchema = z.object({ token: z.string() });
+export const signedMediaUrlQuerySchema = z.object({ token: z.string() });
 /**
  * Where to request the audiobook's narration track (a signed media URL), and where each segment
  * starts in it. `startMilliseconds[i]` is the sum of the settled durations of segments `0..i-1`.

@@ -276,6 +276,55 @@ test("a token for a principal that does not own the audiobook is denied as today
   }
 });
 
+test("a bearer token, the media cookie or the grant cookie without a token answers 401 without storage access", async () => {
+  const accessToken = await createAccessToken();
+  for (const [owner, headers] of [
+    [accountOwner, { Authorization: `Bearer ${accessToken}` }],
+    [accountOwner, { Cookie: `cup_media=${accessToken}` }],
+    [trialOwner, { Cookie: grantCookie }],
+  ] as const) {
+    const { app, env, bucketRead } = fixture(owner);
+    for (const method of ["GET", "HEAD"]) {
+      const response = await app.request(origin + coverImagePath, { method, headers }, env);
+      expect(response.status).toBe(401);
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    }
+    expect(bucketRead).not.toHaveBeenCalled();
+  }
+});
+
+test("the retired segment audio route and media session endpoints answer 404 and set no cookie", async () => {
+  const accessToken = await createAccessToken();
+  const { app, env, bucketRead } = fixture(accountOwner);
+  const segmentAudioUrl = `${origin}/api/files/audiobooks/${conversionId}/segments/0/audio.mp3`;
+  const signedSegmentAudioUrl = await signMediaUrl({
+    url: segmentAudioUrl,
+    conversionId,
+    principal: accountOwner,
+    signingKey: SIGNING_KEY,
+    issuedAtMs: Temporal.Now.instant().epochMilliseconds,
+  });
+  const sessionMutationHeaders = {
+    Authorization: `Bearer ${accessToken}`,
+    "Content-Type": "application/json",
+    "X-Create-Audiobook-From-URL-Request": "1",
+  };
+
+  for (const [url, method, headers] of [
+    [segmentAudioUrl, "GET", { Authorization: `Bearer ${accessToken}` }],
+    [segmentAudioUrl, "HEAD", { Cookie: `cup_media=${accessToken}` }],
+    [signedSegmentAudioUrl, "GET", {}],
+    [signedSegmentAudioUrl, "HEAD", {}],
+    [`${origin}/api/files/session`, "POST", sessionMutationHeaders],
+    [`${origin}/api/files/session`, "DELETE", sessionMutationHeaders],
+  ] as const) {
+    const response = await app.request(url, { method, headers }, env);
+    expect(response.status).toBe(404);
+    expect(response.headers.get("Set-Cookie")).toBeNull();
+  }
+  expect(bucketRead).not.toHaveBeenCalled();
+});
+
 function getCoverImageUrl(audiobook: unknown): string {
   if (
     typeof audiobook !== "object" ||

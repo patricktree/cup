@@ -41,7 +41,7 @@ import { resolveConversionDispatch } from "#src/adapters/conversion-dispatch.ts"
 import { resolveConversionReader } from "#src/adapters/conversion-reader.ts";
 import { revokeVerifiedGoogleToken } from "#src/adapters/google-token-revocation.ts";
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
-import { authenticateAccountRequest, mediaCookie, mediaRequest } from "#src/http/account-auth.ts";
+import { authenticateAccountRequest } from "#src/http/account-auth.ts";
 import { APPLICATION_ORIGIN, routeApplicationDomain } from "#src/http/domain-routing.ts";
 import { accountAuthError, jsonError } from "#src/http/http-errors.ts";
 import { ingressIdentity } from "#src/http/ingress-identity.ts";
@@ -58,7 +58,6 @@ import {
 import { isDevelopmentOperatorRequest } from "#src/http/operator-access.ts";
 import {
   loadReadyAudiobookFromEnvironment,
-  serveAudio,
   serveCoverImage,
   serveNarrationTrack,
 } from "#src/http/serve-audiobook.ts";
@@ -356,43 +355,6 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
       split?.[1] ? { createdAtMs: Number(split[0]), conversionId: split[1] } : undefined,
     );
     return context.json(toAccountHistoryResponse(page), 200);
-  },
-  async filesSession(context) {
-    const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
-    if (validation.result === "invalid") {
-      return validation.response;
-    }
-    const auth = await authenticateAccountRequest(context.req.raw, context.env);
-    if (auth.result !== "authenticated") {
-      return accountAuthError(auth.result, context.get("requestId"));
-    }
-    if (auth.snapshot.state !== "active") {
-      return accountAuthError("blocked", context.get("requestId"));
-    }
-    const token = context.req.header("Authorization")?.slice(7);
-    if (!token) {
-      return accountAuthError("unauthorized", context.get("requestId"));
-    }
-    context.header(
-      "Set-Cookie",
-      mediaCookie(
-        context.req.raw,
-        token,
-        Math.max(
-          0,
-          auth.identity.expiresAt - Math.floor(Temporal.Now.instant().epochMilliseconds / 1000),
-        ),
-      ),
-    );
-    return context.body(null, 204);
-  },
-  clearFilesSession(context) {
-    const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
-    if (validation.result === "invalid") {
-      return validation.response;
-    }
-    context.header("Set-Cookie", mediaCookie(context.req.raw, "", 0));
-    return context.body(null, 204);
   },
   async getAccount(context) {
     const auth = await authenticateAccountRequest(context.req.raw, context.env);
@@ -706,8 +668,6 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     const narrationTrackDurations = findNarrationTrackDurations(segmentUsage);
     const synthesis = await getSynthesisState(
       {
-        conversionId,
-        origin,
         narrationTextCharactersBySegment: countNarrationTextCharactersBySegment(
           audiobook.narrationDocument,
         ),
@@ -865,28 +825,6 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     return context.body(null, 204);
   },
 
-  async getAudio(context) {
-    const { conversionId, sequence } = context.req.valid("param");
-    return serveAudio(
-      context.env,
-      context.req.raw,
-      conversionId,
-      sequence,
-      false,
-      context.get("requestId"),
-    );
-  },
-  async headAudio(context) {
-    const { conversionId, sequence } = context.req.valid("param");
-    return serveAudio(
-      context.env,
-      context.req.raw,
-      conversionId,
-      sequence,
-      true,
-      context.get("requestId"),
-    );
-  },
   async getNarrationTrack(context) {
     const { conversionId } = context.req.valid("param");
     return serveNarrationTrack(
@@ -1393,93 +1331,103 @@ export function createApiServer(dependencies: ApiServerDependencies = production
     return next();
   });
 
-  for (const path of ["/api/audiobooks/*", "/api/files/audiobooks/*"]) {
-    app.use(path, async (context, next) => {
-      const origin = context.req.header("Origin");
-      const isApplicationOrigin = origin === "https://localhost" || origin === APPLICATION_ORIGIN;
+  app.use("/api/audiobooks/*", async (context, next) => {
+    const origin = context.req.header("Origin");
+    const isApplicationOrigin = origin === "https://localhost" || origin === APPLICATION_ORIGIN;
+    if (isApplicationOrigin) {
+      context.header("Access-Control-Allow-Origin", origin);
+      context.header("Access-Control-Allow-Credentials", "true");
+      context.header("Vary", "Origin");
+    }
+    const rawConversionId = context.req.path.split("/")[3];
+    if (!rawConversionId) {
+      return next();
+    }
+    let conversionId: string;
+    try {
+      conversionId = decodeURIComponent(rawConversionId);
+    } catch {
+      return jsonError(context.get("requestId"), "invalid-input", "Invalid conversion ID.", 400);
+    }
+    const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
+    if (owner?.kind === "trial") {
+      const denied = await requireActiveTrialAudiobookSession(
+        context.env,
+        owner.grantId,
+        context.req.header("Cookie"),
+        context.get("requestId"),
+      );
+      if (denied) {
+        return denied;
+      }
+      await next();
       if (isApplicationOrigin) {
         context.header("Access-Control-Allow-Origin", origin);
         context.header("Access-Control-Allow-Credentials", "true");
         context.header("Vary", "Origin");
       }
-      const isFile = path === "/api/files/audiobooks/*";
-      const rawConversionId = context.req.path.split("/")[isFile ? 4 : 3];
-      if (!rawConversionId) {
-        return next();
-      }
+      context.header("Cross-Origin-Resource-Policy", "same-origin");
+      return;
+    }
+    if (!owner) {
+      return next();
+    }
+    const auth = await authenticateAccountRequest(context.req.raw, context.env);
+    if (auth.result !== "authenticated") {
+      return accountAuthError(auth.result, context.get("requestId"));
+    }
+    if (auth.snapshot.state !== "active") {
+      return accountAuthError("blocked", context.get("requestId"));
+    }
+    if (auth.snapshot.accountId !== owner.accountId) {
+      return jsonError(
+        context.get("requestId"),
+        "audiobook-not-found",
+        "Audiobook not found.",
+        404,
+      );
+    }
+    await next();
+    if (!isApplicationOrigin) {
+      context.header("Access-Control-Allow-Origin", undefined);
+    }
+    context.header("Cross-Origin-Resource-Policy", "same-origin");
+  });
+
+  // Media routes accept only a signed media URL. Registering the exact media routes, as listed in
+  // `allowedMethodsForApiPath`, lets other paths under `/api/files/` answer 404 instead of 401.
+  for (const path of [
+    "/api/files/audiobooks/:conversionId/narration-track.mp3",
+    "/api/files/audiobooks/:conversionId/cover-image",
+  ]) {
+    app.use(path, async (context, next) => {
+      const origin = context.req.header("Origin");
+      const isApplicationOrigin = origin === "https://localhost" || origin === APPLICATION_ORIGIN;
       let conversionId: string;
       try {
-        conversionId = decodeURIComponent(rawConversionId);
+        conversionId = decodeURIComponent(context.req.path.split("/")[4] ?? "");
       } catch {
         return jsonError(context.get("requestId"), "invalid-input", "Invalid conversion ID.", 400);
       }
-      const registry = getRegistryStub(context.env);
-      const owner = await registry.findConversionOwner(conversionId);
-      const signedMediaUrl = isFile
-        ? await authorizeSignedMediaUrl(
-            context.env,
-            context.req.url,
-            conversionId,
-            owner,
-            context.get("requestId"),
-          )
-        : ({ result: "absent" } as const);
-      if (signedMediaUrl.result === "denied") {
-        return signedMediaUrl.response;
-      }
-      if (signedMediaUrl.result === "authorized") {
-        await next();
-        if (!isApplicationOrigin) {
-          context.header("Access-Control-Allow-Origin", undefined);
-        }
-        context.header("Cross-Origin-Resource-Policy", "same-origin");
-        return;
-      }
-      if (owner?.kind === "trial") {
-        const denied = await requireActiveTrialAudiobookSession(
-          context.env,
-          owner.grantId,
-          context.req.header("Cookie"),
-          context.get("requestId"),
-        );
-        if (denied) {
-          return denied;
-        }
-        await next();
-        if (isApplicationOrigin) {
-          context.header("Access-Control-Allow-Origin", origin);
-          context.header("Access-Control-Allow-Credentials", "true");
-          context.header("Vary", "Origin");
-        }
-        context.header("Cross-Origin-Resource-Policy", "same-origin");
-        return;
-      }
-      if (!owner) {
-        return next();
-      }
-      const auth = await authenticateAccountRequest(
-        isFile ? mediaRequest(context.req.raw) : context.req.raw,
+      const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
+      const denied = await requireSignedMediaUrl(
         context.env,
+        context.req.url,
+        conversionId,
+        owner,
+        context.get("requestId"),
       );
-      if (auth.result !== "authenticated") {
-        return accountAuthError(auth.result, context.get("requestId"));
-      }
-      if (auth.snapshot.state !== "active") {
-        return accountAuthError("blocked", context.get("requestId"));
-      }
-      if (auth.snapshot.accountId !== owner.accountId) {
-        return jsonError(
-          context.get("requestId"),
-          "audiobook-not-found",
-          "Audiobook not found.",
-          404,
-        );
+      if (denied) {
+        return denied;
       }
       await next();
-      if (!isApplicationOrigin) {
-        context.header("Access-Control-Allow-Origin", undefined);
+      if (isApplicationOrigin) {
+        context.header("Access-Control-Allow-Origin", origin);
+        context.header("Access-Control-Allow-Credentials", "true");
+        context.header("Vary", "Origin");
       }
       context.header("Cross-Origin-Resource-Policy", "same-origin");
+      return context.res;
     });
   }
 
@@ -1655,50 +1603,35 @@ function requireAccessibleGrantState(state: GrantState, requestId: string): Resp
   return undefined;
 }
 
-type SignedMediaUrlAuthorization =
-  | { result: "absent" }
-  | { result: "denied"; response: Response }
-  | { result: "authorized" };
-
 /**
- * Authorizes a media request by its signed media URL token, for any route under
- * `/api/files/audiobooks/{conversionId}/`. Without a token, the narration track is denied and other
- * routes fall back to the other media credentials. Without an owner, the route answers its own
- * not-found response.
+ * Authorizes a media request by its signed media URL token, the only credential media routes
+ * accept. Without an owner, the route answers its own not-found response.
  */
-async function authorizeSignedMediaUrl(
+async function requireSignedMediaUrl(
   env: ApiServerEnvironment,
   requestUrl: string,
   conversionId: string,
   owner: ConversionOwner | undefined,
   requestId: string,
-): Promise<SignedMediaUrlAuthorization> {
+): Promise<Response | undefined> {
   const token = await verifyMediaUrlToken({
     requestUrl,
     conversionId,
     signingKey: env.MEDIA_URL_SIGNING_KEY,
     nowMs: Temporal.Now.instant().epochMilliseconds,
   });
-  const isTokenRequired = new URL(requestUrl).pathname.endsWith("/narration-track.mp3");
-  if (token.result === "absent" && !isTokenRequired) {
-    return { result: "absent" };
-  }
   if (token.result !== "valid") {
-    return {
-      result: "denied",
-      response: jsonError(
-        requestId,
-        "media-url-invalid",
-        "The media URL is invalid or expired. Reload the audiobook.",
-        401,
-      ),
-    };
+    return jsonError(
+      requestId,
+      "media-url-invalid",
+      "The media URL is invalid or expired. Reload the audiobook.",
+      401,
+    );
   }
   if (!owner) {
-    return { result: "authorized" };
+    return undefined;
   }
-  const denied = await requireSignedMediaAccess(env, owner, token.principal, requestId);
-  return denied ? { result: "denied", response: denied } : { result: "authorized" };
+  return requireSignedMediaAccess(env, owner, token.principal, requestId);
 }
 
 /**
@@ -1812,7 +1745,6 @@ function allowedMethodsForApiPath(pathname: string): string[] | undefined {
     [/^\/api\/audiobooks\/[^/]+\/segments\/[^/]+$/, ["GET", "POST"]],
     [/^\/api\/audiobooks\/[^/]+\/retry$/, ["POST"]],
     [/^\/api\/audiobooks\/[^/]+\/position$/, ["PUT"]],
-    [/^\/api\/files\/audiobooks\/[^/]+\/segments\/[^/]+\/audio\.mp3$/, ["GET", "HEAD"]],
     [/^\/api\/files\/audiobooks\/[^/]+\/narration-track\.mp3$/, ["GET", "HEAD"]],
     [/^\/api\/files\/audiobooks\/[^/]+\/cover-image$/, ["GET", "HEAD"]],
     [/^\/api\/operator\/grants$/, ["GET", "POST"]],

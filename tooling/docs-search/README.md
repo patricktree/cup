@@ -8,7 +8,7 @@ After `pnpm install`, run these commands from the repository root:
 
 ```sh
 # Keyword search: no embedding or reranking models required.
-pnpm docs:search search "media session" --json
+pnpm docs:search search "signed media URL" --json
 
 # Semantic similarity.
 pnpm docs:search vsearch "How does signing out stop private audio?" --json

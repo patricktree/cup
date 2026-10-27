@@ -185,8 +185,6 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 const ready = (sequence: number) => ({
   sequence,
   status: "ready" as const,
-  durationMilliseconds: 5_000,
-  url: `https://example.com/segments/${sequence}/audio.mp3`,
 });
 
 const UNITS = [
