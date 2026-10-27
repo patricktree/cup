@@ -181,6 +181,15 @@ export class PlayerHost {
     this.snapshot.loaded?.player.pause();
   };
 
+  /** Pauses the loaded audiobook while it plays, and plays it otherwise, from a user gesture. */
+  togglePlayback = () => {
+    if (this.element.paused) {
+      this.play();
+    } else {
+      this.pause();
+    }
+  };
+
   /**
    * Plays the shown audiobook, optionally from the start of a unit, loading it first when another
    * one is loaded. Must be called from a user gesture, like `play`.

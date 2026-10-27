@@ -24,16 +24,15 @@ import {
 import type { LoadedAudiobook } from "#src/app/player/player-host.js";
 import { composeClassnames } from "#src/app/utils.js";
 
-/** Height of the drawn fade, from its transparent top to the bottom of the screen. */
-const FADE_HEIGHT_PIXELS = 305;
-/** The sheet's own row, without a playback error; the rest of the fade reaches over the page. */
-const SHEET_HEIGHT_PIXELS = 200;
-
 /**
- * Bottom padding of the page above the sheet, so its last text ends where the fade begins. A
- * playback error makes the sheet taller, which only moves the page further up.
+ * The player sheet's fade and own row, without a playback error. The page above leaves
+ * `fadeFooterClearance(PLAYER_SHEET_HEIGHTS)` free at its end; a playback error makes the sheet
+ * taller, which only moves the page further up.
  */
-export const PLAYER_SHEET_CLEARANCE = `${FADE_HEIGHT_PIXELS - SHEET_HEIGHT_PIXELS}px`;
+export const PLAYER_SHEET_HEIGHTS = {
+  fadeHeightPixels: 305,
+  footerHeightPixels: 200,
+};
 
 type SheetPlayback =
   | { status: "disabled"; title: string | undefined }
@@ -92,13 +91,13 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
       className={composeClassnames(
         fadeFooter,
         css`
-          --fade-height: ${FADE_HEIGHT_PIXELS}px;
+          --fade-height: ${PLAYER_SHEET_HEIGHTS.fadeHeightPixels}px;
           --fade-background: var(--background-fade-player-sheet);
 
           display: grid;
           grid-area: shell-player;
           align-content: end;
-          min-height: ${SHEET_HEIGHT_PIXELS}px;
+          min-height: ${PLAYER_SHEET_HEIGHTS.footerHeightPixels}px;
           padding-block: 0 24px;
           padding-inline: 24px;
         `,
@@ -140,7 +139,7 @@ function LoadedControls({ loaded }: { loaded: LoadedAudiobook }): React.JSX.Elem
         isPlaying,
         seekTo: player.seekTo,
         skipBy: player.skipBy,
-        togglePlayback: () => (isPlaying ? host.pause() : host.play()),
+        togglePlayback: host.togglePlayback,
       }}
     />
   );
