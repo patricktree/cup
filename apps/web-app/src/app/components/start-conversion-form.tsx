@@ -145,7 +145,7 @@ function ConversionForm({
 
                     font-family: var(--font-family-1);
                     font-size: var(--font-size-md);
-                    background: var(--color-input-bg) padding-box;
+                    background: var(--color-surface) padding-box;
                     backdrop-filter: saturate(6);
 
                     &::placeholder {

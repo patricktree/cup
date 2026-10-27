@@ -2,13 +2,14 @@ import { css } from "@linaria/core";
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
 import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, type ErrorComponentProps } from "@tanstack/react-router";
-import { ArrowLeft, Play } from "lucide-react";
 import React from "react";
 
 import { ErrorMessage } from "#src/app/components/error-message.js";
 import { ShellContent } from "#src/app/components/main.tsx";
 import { QueryBoundary, QueryErrorScreen } from "#src/app/components/query-boundary.js";
 import { DSButton } from "#src/app/design-system/button.js";
+import { DSIconButton, iconButtonStyles } from "#src/app/design-system/icon-button.js";
+import { BackChevronIcon, PlayIcon } from "#src/app/design-system/icons.js";
 import { formatDuration } from "#src/app/player/playback-format.js";
 import type { PreparedAudiobook } from "#src/app/player/playback-session.js";
 import {
@@ -112,9 +113,12 @@ function PreparedReader({
             margin-block-end: var(--spacing-base);
           `}
         >
-          <DSButton variant="text" aria-label="Play" disabled={!canPlay} onClick={playback.play}>
-            <Play size={48} />
-          </DSButton>
+          <DSIconButton
+            label="Play"
+            icon={<PlayIcon />}
+            disabled={!canPlay}
+            onClick={playback.play}
+          />
         </div>
       )}
 
@@ -378,8 +382,9 @@ function BackLink() {
       <Link
         to={session ? "/history" : "/"}
         aria-label={session ? "Back to history" : "Back to home"}
+        className={iconButtonStyles}
       >
-        <ArrowLeft size="1em" />
+        <BackChevronIcon />
       </Link>
     </div>
   );
@@ -423,7 +428,7 @@ function ReaderSkeleton() {
           max-width: 70ch;
           div,
           p {
-            background: hsl(var(--color-black-hsl) / 12%);
+            background: rgb(var(--color-ink-rgb) / 12%);
             border-radius: 6px;
           }
           div {

@@ -1,10 +1,10 @@
 import { css } from "@linaria/core";
 import { Link } from "@tanstack/react-router";
-import { Pause, Play } from "lucide-react";
 import React from "react";
 
 import { ShellFooter } from "#src/app/components/main.tsx";
-import { DSButton } from "#src/app/design-system/button.js";
+import { DSIconButton } from "#src/app/design-system/icon-button.js";
+import { PauseIcon, PlayIcon } from "#src/app/design-system/icons.js";
 import type { Player } from "#src/app/player/narration-track-player.js";
 import { formatDuration, formatTimelinePosition } from "#src/app/player/playback-format.js";
 import {
@@ -129,13 +129,17 @@ function PlayPauseButton({ loaded, iconSize }: { loaded: LoadedAudiobook; iconSi
   const isPlaying = usePlayerState(loaded.player, (state) => state.isPlaying);
 
   return (
-    <DSButton
-      variant="text"
-      aria-label={isPlaying ? "Pause" : "Play"}
+    <DSIconButton
+      label={isPlaying ? "Pause" : "Play"}
+      icon={
+        isPlaying ? (
+          <PauseIcon width={iconSize} height={iconSize} />
+        ) : (
+          <PlayIcon width={iconSize} height={iconSize} />
+        )
+      }
       onClick={() => (isPlaying ? host.pause() : host.play())}
-    >
-      {isPlaying ? <Pause size={iconSize} /> : <Play size={iconSize} />}
-    </DSButton>
+    />
   );
 }
 
