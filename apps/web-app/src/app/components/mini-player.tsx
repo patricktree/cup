@@ -42,7 +42,7 @@ export function MiniPlayer(): React.ReactNode {
         /* above shell <main> and the tab bar's fade (see account-tab-bar.tsx), which it overlaps */
         z-index: 2;
         display: grid;
-        grid-area: shell-floating-player;
+        grid-area: shell-player;
         gap: 8px;
         width: 100%;
         max-width: var(--app-max-width);

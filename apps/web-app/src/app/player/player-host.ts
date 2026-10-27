@@ -186,18 +186,32 @@ export class PlayerHost {
    * one is loaded. Must be called from a user gesture, like `play`.
    */
   playShown = (unitIndex?: number) => {
+    const player = this.loadShown();
+    if (!player) {
+      return;
+    }
+
+    if (unitIndex !== undefined) {
+      player.seekToUnit(unitIndex);
+    }
+    this.play();
+  };
+
+  /**
+   * Loads the shown audiobook, paused, when another one is loaded, and returns its player, so the
+   * player sheet can seek it before it plays. Returns `null` while the shown audiobook has no
+   * narration track.
+   */
+  loadShown = (): Player | null => {
     const { shown } = this.snapshot;
     if (!shown?.canPlay) {
-      return;
+      return null;
     }
 
     if (!this.isShownLoaded()) {
       this.load(shown);
     }
-    if (unitIndex !== undefined) {
-      this.snapshot.loaded?.player.seekToUnit(unitIndex);
-    }
-    this.play();
+    return this.snapshot.loaded?.player ?? null;
   };
 
   /** Saves the position and empties the element: pause, remove its source, and load nothing. */

@@ -2,7 +2,6 @@ import { css } from "@linaria/core";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import React from "react";
 
-import { FloatingPlayer } from "#src/app/components/floating-player.tsx";
 import { PlayerHostProvider } from "#src/app/player/player-host-provider.tsx";
 
 export const Route = createFileRoute("/_shell")({
@@ -14,12 +13,12 @@ function ShellLayout() {
     <PlayerHostProvider>
       <div
         className={css`
-          /* the page scrolls within its row, so the player below it never covers content */
+          /* the page scrolls within its row; the player and tab bar below it fade over its end */
           display: grid;
           grid-template-areas:
             "shell-header"
             "shell-main"
-            "shell-floating-player"
+            "shell-player"
             "shell-tab-bar";
           grid-template-rows: max-content minmax(0, 1fr) auto auto;
           height: 100dvh;
@@ -29,7 +28,6 @@ function ShellLayout() {
         `}
       >
         <Outlet />
-        <FloatingPlayer />
       </div>
     </PlayerHostProvider>
   );

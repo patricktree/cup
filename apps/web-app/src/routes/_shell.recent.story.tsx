@@ -140,12 +140,24 @@ function createMiniPlayerStory({ hasCover }: { hasCover: boolean }): Story {
   });
 }
 
-/** The detail view shows the full controls once the audiobook is loaded into the player. */
+/**
+ * The player sheet's scrubber is enabled once the audiobook can play; with nothing loaded, the
+ * player host loads it at the same moment.
+ */
 async function goBackToRecentsOnceLoaded({
   canvasElement,
 }: Parameters<NonNullable<Story["play"]>>[0]) {
   const canvas = within(canvasElement);
-  await canvas.findByRole("slider", { name: /^Position in / }, { timeout: 10_000 });
+  // The loading view's disabled sheet is replaced once the audiobook arrives, so query each time.
+  await waitFor(
+    () => {
+      const position = canvas.getByRole("slider", { name: /^Position in / });
+      if (!(position instanceof HTMLInputElement) || position.disabled) {
+        throw new Error("The player sheet is still disabled.");
+      }
+    },
+    { timeout: 10_000 },
+  );
   await userEvent.setup().click(canvas.getByRole("link", { name: "Back" }));
   await canvas.findByRole("region", { name: "Player" }, { timeout: 10_000 });
 }
