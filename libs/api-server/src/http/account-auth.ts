@@ -7,10 +7,28 @@ import { authenticateAccount as authenticateVerifiedAccount } from "#src/use-cas
 
 const keySets = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 
-/** Validate access locally; Cup lifecycle checks remain authoritative for account access. */
+/** The email and password account that local development offers instead of Google sign-in. */
+export type LocalTestAccount = { email: string; password: string };
+
+/** Never offered or accepted unless the Worker runs with `LOCAL_DEVELOPMENT=true`; see ADR 0012. */
+export function localTestAccount(env: ApiServerEnvironment): LocalTestAccount | undefined {
+  if (
+    env.LOCAL_DEVELOPMENT !== "true" ||
+    !env.LOCAL_TEST_ACCOUNT_EMAIL ||
+    !env.LOCAL_TEST_ACCOUNT_PASSWORD
+  ) {
+    return undefined;
+  }
+  return { email: env.LOCAL_TEST_ACCOUNT_EMAIL, password: env.LOCAL_TEST_ACCOUNT_PASSWORD };
+}
+
+/**
+ * Validate access locally; Cup lifecycle checks remain authoritative for account access. Only
+ * Google identities are accepted, plus the local test account when `testAccountEmail` is given.
+ */
 export async function verifyAccountToken(
   token: string,
-  supabaseUrl: string,
+  { supabaseUrl, testAccountEmail }: { supabaseUrl: string; testAccountEmail?: string | undefined },
   getKey?: JWTVerifyGetKey,
 ) {
   const issuer = `${supabaseUrl.replace(/\/$/, "")}/auth/v1`;
@@ -35,6 +53,18 @@ export async function verifyAccountToken(
   ) {
     throw new errors.JWTClaimValidationFailed("Invalid account identity", payload);
   }
+  const metadata = payload["app_metadata"];
+  const provider =
+    !!metadata && typeof metadata === "object" && "provider" in metadata
+      ? metadata.provider
+      : undefined;
+  const isTestAccount =
+    testAccountEmail !== undefined && provider === "email" && payload["email"] === testAccountEmail;
+  if (provider !== "google" && !isTestAccount) {
+    throw new errors.JWTClaimValidationFailed("Unsupported sign-in provider", payload);
+  }
+  // Fresh authentication counts only the method of the identity's own provider.
+  const freshMethods = isTestAccount ? ["password"] : ["oauth", "id_token"];
   const amr = payload["amr"];
   const authenticatedAtSeconds = Array.isArray(amr)
     ? Math.max(
@@ -48,21 +78,14 @@ export async function verifyAccountToken(
           ) {
             return [];
           }
-          return ["oauth", "id_token"].includes(String(entry.method)) &&
-            typeof entry.timestamp === "number"
+          return freshMethods.includes(String(entry.method)) && typeof entry.timestamp === "number"
             ? [entry.timestamp]
             : [];
         }),
       )
     : 0;
-  const metadata = payload["app_metadata"];
-  const googleAuthenticated =
-    !!metadata &&
-    typeof metadata === "object" &&
-    "provider" in metadata &&
-    metadata.provider === "google";
   return {
-    googleAuthenticated,
+    provider: isTestAccount ? ("test-account" as const) : ("google" as const),
     subject: payload.sub,
     issuedAt: payload.iat,
     expiresAt: payload.exp,
@@ -78,7 +101,10 @@ export async function authenticateAccountRequest(request: Request, env: ApiServe
   }
   let identity: Awaited<ReturnType<typeof verifyAccountToken>>;
   try {
-    identity = await verifyAccountToken(authorization.slice(7), env.SUPABASE_URL);
+    identity = await verifyAccountToken(authorization.slice(7), {
+      supabaseUrl: env.SUPABASE_URL,
+      testAccountEmail: localTestAccount(env)?.email,
+    });
   } catch (error) {
     return {
       result:

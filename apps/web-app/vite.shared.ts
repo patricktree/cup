@@ -35,8 +35,8 @@ export function createWebAppViteConfig() {
     ],
     server: {
       allowedHosts: [
-        /* patricktree tailscale domain */
-        ".oberhasli-universe.ts.net",
+        /* Tailscale MagicDNS names, for `pnpm dev:services --tailnet` */
+        ".ts.net",
       ],
       host: "127.0.0.1",
     },

@@ -39,7 +39,7 @@ import { resolveConversionDispatch } from "#src/adapters/conversion-dispatch.ts"
 import { resolveConversionReader } from "#src/adapters/conversion-reader.ts";
 import { revokeVerifiedGoogleToken } from "#src/adapters/google-token-revocation.ts";
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
-import { authenticateAccountRequest } from "#src/http/account-auth.ts";
+import { authenticateAccountRequest, localTestAccount } from "#src/http/account-auth.ts";
 import { APPLICATION_ORIGIN, routeApplicationDomain } from "#src/http/domain-routing.ts";
 import { accountAuthError, jsonError, requireAccessibleGrantState } from "#src/http/http-errors.ts";
 import { ingressIdentity } from "#src/http/ingress-identity.ts";
@@ -247,11 +247,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
       return accountAuthError(auth.result, context.get("requestId"));
     }
     const input = context.req.valid("json");
-    if (
-      !auth.identity.email ||
-      !auth.identity.googleAuthenticated ||
-      !auth.identity.authenticatedAtSeconds
-    ) {
+    if (!auth.identity.email || !auth.identity.authenticatedAtSeconds) {
       return jsonError(
         context.get("requestId"),
         "fresh-auth-required",
@@ -273,7 +269,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
       );
     }
     const { attempt } = result;
-    if (input.providerToken) {
+    if (input.providerToken && auth.identity.provider === "google") {
       const revoked = await revokeVerifiedGoogleToken(
         context.env,
         auth.identity.subject,
@@ -303,7 +299,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
       return accountAuthError(auth.result, context.get("requestId"));
     }
     const input = context.req.valid("json");
-    if (!auth.identity.googleAuthenticated || !auth.identity.authenticatedAtSeconds) {
+    if (!auth.identity.authenticatedAtSeconds) {
       return jsonError(
         context.get("requestId"),
         "fresh-auth-required",
@@ -326,11 +322,15 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     return context.json(toAccountSnapshotResponse(result.account), 200);
   },
   authConfig(context) {
+    const testAccount = localTestAccount(context.env);
     return context.json(
       {
         supabaseUrl: context.env.SUPABASE_URL,
         publishableKey: context.env.SUPABASE_PUBLISHABLE_KEY,
-        googleWebClientId: context.env.GOOGLE_WEB_CLIENT_ID,
+        ...(context.env.GOOGLE_WEB_CLIENT_ID
+          ? { googleWebClientId: context.env.GOOGLE_WEB_CLIENT_ID }
+          : {}),
+        ...(testAccount ? { testAccount } : {}),
       },
       200,
     );

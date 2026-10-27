@@ -58,7 +58,10 @@ export const uuidV4Schema = z
 export const authConfigResponseSchema = z.object({
   supabaseUrl: z.string(),
   publishableKey: z.string().min(1),
-  googleWebClientId: z.string(),
+  /** Absent when Google sign-in is unavailable, which happens only in local development. */
+  googleWebClientId: z.string().min(1).optional(),
+  /** Advertised only in local development; see ADR 0012. */
+  testAccount: z.object({ email: z.string().min(1), password: z.string().min(1) }).optional(),
 });
 
 export const grantParamsSchema = z.object({ grantId: uuidV4Schema });

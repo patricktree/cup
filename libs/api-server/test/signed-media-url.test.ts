@@ -124,7 +124,11 @@ async function createAccessToken() {
     "fetch",
     vi.fn(async () => Response.json({ keys: [jwk] })),
   );
-  return new SignJWT({ role: "authenticated", is_anonymous: false })
+  return new SignJWT({
+    role: "authenticated",
+    is_anonymous: false,
+    app_metadata: { provider: "google" },
+  })
     .setProtectedHeader({ alg: "ES256", kid: "signed-media-url" })
     .setSubject(subject)
     .setIssuer(`${supabaseUrl}/auth/v1`)

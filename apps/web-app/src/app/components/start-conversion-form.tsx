@@ -56,8 +56,9 @@ function AccountConversionForm(): React.ReactNode {
           }
         }}
         finalFocus={() => submitButtonRef.current ?? null}
-        isPending={submission.signIn.isPending}
-        onSignIn={() => submission.signIn.mutate()}
+        signInMethods={submission.signInMethods}
+        pendingMethod={submission.signIn.isPending ? submission.signIn.variables : undefined}
+        onSignIn={(method) => submission.signIn.mutate(method)}
         errorMessage={submission.signIn.error?.message}
       />
     </>

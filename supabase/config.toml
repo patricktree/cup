@@ -17,10 +17,17 @@ enabled = true
 port = 55323
 api_url = "http://127.0.0.1"
 
+# `pnpm dev:services` sets the CUP_LOCAL_* variables: localhost URLs by default, or this
+# machine's tailnet URLs with `--tailnet` (see docs/local-development.md).
 [auth]
 enabled = true
-site_url = "http://localhost:5173/app/"
-additional_redirect_urls = ["http://localhost:5173/app/**", "http://127.0.0.1:5173/app/**"]
+site_url = "env(CUP_LOCAL_SITE_URL)"
+additional_redirect_urls = [
+  "http://localhost:5173/app/**",
+  "http://127.0.0.1:5173/app/**",
+  "env(CUP_LOCAL_REDIRECT_URL)",
+]
+jwt_issuer = "env(CUP_LOCAL_JWT_ISSUER)"
 jwt_expiry = 300
 signing_keys_path = "./signing_keys.json"
 enable_refresh_token_rotation = true
@@ -28,14 +35,16 @@ refresh_token_reuse_interval = 10
 enable_signup = true
 enable_anonymous_sign_ins = false
 
+# The local test account signs in with a password (ADR 0012). The CLI turns the whole email
+# provider on or off with this setting, so `false` would also refuse password sign-ins.
 [auth.email]
-enable_signup = false
+enable_signup = true
 
 [auth.external.google]
-enabled = true
+enabled = "env(CUP_LOCAL_GOOGLE_ENABLED)"
 client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
-redirect_uri = "http://127.0.0.1:55321/auth/v1/callback"
+redirect_uri = "env(CUP_LOCAL_GOOGLE_REDIRECT_URI)"
 skip_nonce_check = false
 
 [storage]

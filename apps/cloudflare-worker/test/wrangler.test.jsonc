@@ -61,6 +61,8 @@
   // The secrets of `secrets.required` in wrangler.jsonc come from `useWorker()` as dummy values.
   "vars": {
     "LOCAL_DEVELOPMENT": "false",
+    "LOCAL_TEST_ACCOUNT_EMAIL": "",
+    "LOCAL_TEST_ACCOUNT_PASSWORD": "",
     "SIGNUP_IP_LIMIT": "10",
     "CONVERSION_IP_LIMIT": "60",
     "CONVERSION_OWNER_LIMIT": "10",

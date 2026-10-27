@@ -6,7 +6,7 @@ import { deletionChallengeSchema } from "@cup/listener-api.routes";
 import {
   getFreshAccountSession,
   isSignedInAs,
-  signInGoogle,
+  signInAgain,
   signOut,
 } from "#src/auth/account-session.js";
 import {
@@ -43,7 +43,7 @@ export function useAccountConfirmation(subject: string) {
         if (!isSignedInAs(subject)) {
           throw new UserFacingError({ title: "Use the same Google account." });
         }
-        await signInGoogle(true);
+        await signInAgain();
         return null;
       }
 

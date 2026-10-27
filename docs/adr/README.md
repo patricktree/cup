@@ -15,5 +15,6 @@ ADRs preserve decisions, alternatives, rationale, and consequences. Read them al
 | [0009](0009-use-xstate-for-client-lifecycle-state-machines.md)               | XState for client lifecycle state machines (partially superseded by 0011)                        |
 | [0010](0010-tolerate-unknown-keys-at-the-listener-api.md)                    | Tolerant listener API, strict operator and internal inputs                                       |
 | [0011](0011-serve-one-narration-track-and-play-it-with-one-audio-element.md) | One narration track played with one audio element                                                |
+| [0012](0012-offer-a-local-test-account-instead-of-google-in-development.md)  | Local test account instead of Google sign-in in development                                      |
 
 Each decision's frontmatter records its status. For a substantive reversal, add a superseding ADR and link it from the previous decision while retaining the old rationale. The [wiki schema](../agents/domain.md#record-decisions-and-evidence) describes how decisions, implementation gaps, and research relate.

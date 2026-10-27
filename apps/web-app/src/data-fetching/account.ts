@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 
 import { accountStartResponseSchema } from "@cup/listener-api.routes";
 
-import { isSignedInAs, signInGoogle } from "#src/auth/account-session.js";
+import { isSignedInAs, signIn, type SignInMethod } from "#src/auth/account-session.js";
 import {
   readPendingAccountConversion,
   storePendingAccountConversion,
@@ -38,7 +38,7 @@ export function useSignInMutation() {
   return useMutation({
     // The sign-in dialog keeps its failure next to the button that tries again.
     meta: { errorDisplay: "inline" },
-    mutationFn: () => signInGoogle(),
+    mutationFn: (method: SignInMethod) => signIn(method),
   });
 }
 

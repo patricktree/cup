@@ -2,13 +2,21 @@ import React from "react";
 
 import { DSButton } from "#src/app/design-system/button.js";
 import { DSDialog, type DSDialogProps } from "#src/app/design-system/dialog.js";
+import type { SignInMethod } from "#src/auth/account-session.js";
 
 type SignInDialogProps = Pick<
   DSDialogProps,
   "open" | "onOpenChange" | "finalFocus" | "errorMessage"
 > & {
-  isPending: boolean;
-  onSignIn: () => void;
+  signInMethods: readonly SignInMethod[];
+  /** The method of the sign-in in progress, if any. */
+  pendingMethod: SignInMethod | undefined;
+  onSignIn: (method: SignInMethod) => void;
+};
+
+const SIGN_IN_LABELS: Record<SignInMethod, string> = {
+  google: "Continue with Google",
+  "test-account": "Sign in with test account",
 };
 
 export function SignInDialog({
@@ -16,7 +24,8 @@ export function SignInDialog({
   onOpenChange,
   finalFocus,
   errorMessage,
-  isPending,
+  signInMethods,
+  pendingMethod,
   onSignIn,
 }: SignInDialogProps): React.ReactNode {
   const signInButton = React.useRef<HTMLButtonElement>(null);
@@ -34,12 +43,18 @@ export function SignInDialog({
         </>
       }
       cancelButtonText={<>Cancel</>}
-      cancelButtonDisabled={isPending}
-      buttonGroupChildren={
-        <DSButton ref={signInButton} variant="contained" disabled={isPending} onClick={onSignIn}>
-          {isPending ? "Signing in…" : "Continue with Google"}
+      cancelButtonDisabled={pendingMethod !== undefined}
+      buttonGroupChildren={signInMethods.map((method, index) => (
+        <DSButton
+          key={method}
+          ref={index === 0 ? signInButton : undefined}
+          variant="contained"
+          disabled={pendingMethod !== undefined}
+          onClick={() => onSignIn(method)}
+        >
+          {pendingMethod === method ? "Signing in…" : SIGN_IN_LABELS[method]}
         </DSButton>
-      }
+      ))}
       errorMessage={errorMessage}
     />
   );

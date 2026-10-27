@@ -26,7 +26,11 @@ async function fixture(owner = accountId, state = "active") {
     "fetch",
     vi.fn(async () => Response.json({ keys: [jwk] })),
   );
-  const token = await new SignJWT({ role: "authenticated", is_anonymous: false })
+  const token = await new SignJWT({
+    role: "authenticated",
+    is_anonymous: false,
+    app_metadata: { provider: "google" },
+  })
     .setProtectedHeader({ alg: "ES256", kid: "private-access" })
     .setSubject(subject)
     .setIssuer(`${url}/auth/v1`)
