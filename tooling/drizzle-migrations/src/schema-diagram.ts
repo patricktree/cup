@@ -5,6 +5,8 @@
  * referencing columns; columns stay in the schemas.
  */
 
+import zlib from "node:zlib";
+
 /** The `tables` of a Drizzle Kit snapshot, as `generateSQLiteDrizzleJson` returns it. */
 type DrizzleJson = {
   tables: Record<
@@ -20,7 +22,7 @@ type DrizzleJson = {
   >;
 };
 
-/** Renders the Mermaid `erDiagram` block, including its code fence. */
+/** Renders the Mermaid `erDiagram` block, including its code fence, and a Mermaid Live link to it. */
 export function renderSchemaDiagram(drizzleJson: DrizzleJson): string {
   const tables = Object.values(drizzleJson.tables);
   const foreignKeys = tables.flatMap((table) =>
@@ -43,7 +45,14 @@ export function renderSchemaDiagram(drizzleJson: DrizzleJson): string {
     .sort();
 
   const lines = [...unrelatedTables, ...relationshipLines];
-  return ["```mermaid", "erDiagram", ...lines.map((line) => `    ${line}`), "```"].join("\n");
+  const code = ["erDiagram", ...lines.map((line) => `    ${line}`)].join("\n");
+  return [
+    "```mermaid",
+    code,
+    "```",
+    "",
+    `[Open this diagram in Mermaid Live](${createMermaidLiveUrl(code)})`,
+  ].join("\n");
 }
 
 /**
@@ -72,6 +81,22 @@ function findDiagram(markdown: string, store: string) {
     );
   }
   return { start: startMarkerIndex + startMarker.length, end };
+}
+
+/**
+ * Mermaid Live reads its editor state from the URL fragment as zlib-deflated, base64url-encoded
+ * JSON. The state matches the links next to the hand-written diagrams in `docs/architecture`.
+ */
+function createMermaidLiveUrl(code: string) {
+  const state = {
+    code,
+    mermaid: JSON.stringify({ theme: "redux-color" }, null, 2),
+    updateDiagram: true,
+    grid: true,
+    panZoom: true,
+    rough: false,
+  };
+  return `https://mermaid.live/view#pako:${zlib.deflateSync(JSON.stringify(state)).toString("base64url")}`;
 }
 
 function isUniqueKey(table: DrizzleJson["tables"][string], columns: string[]) {

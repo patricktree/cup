@@ -10,5 +10,9 @@ export default {
   customRules: [relativeLinksRule],
   globs: ["**/*.md"],
   gitignore: true,
-  ignores: [".patricktree-stack/**"],
+  ignores: [
+    ".patricktree-stack/**",
+    // Claude Code subagent worktrees are excluded in .git/info/exclude, which `gitignore` does not read.
+    ".claude/worktrees/**",
+  ],
 };

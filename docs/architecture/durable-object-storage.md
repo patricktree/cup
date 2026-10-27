@@ -46,6 +46,8 @@ erDiagram
     credit_operations ||--o| audio_segments : "operation_id"
 ```
 
+[Open this diagram in Mermaid Live](https://mermaid.live/view#pako:eJyFkVFuwyAQRK-C9tu5gL97isoSWsOG0AKL1us0lZ27V7RuWkdV8wc7b4ZZsYBjT9ADyVPEIJiHYowx6BzPRXcXWxO-j-hebeUpauQy7XXlPE7KhbaxaDyiU_smUUk22An5qHbEhMXRNvSUqAVaVKVc9X7sTpgSlfDNCypZOlPRuwqOy5lkat3Muh4OvBicfWQ7UcgNN70Z4Iey0Q_wIGI1lYqPJdgXHv8J2DbjSoL6u8EmJPKB5NN_Yx7b178W2Puhg0ySMXroYWlpA-iJMg3QYCE_Xw6OE0t76wodzNWj0vbj0KvM1EGQFvB1rliemW-S8BxO0B8xTXT9ANPKyc0)
+
 <!-- /schema-diagram:account -->
 
 ## Conversion grant object
@@ -67,6 +69,8 @@ erDiagram
     credit_operations ||--o{ credit_ledger : "operation_id"
     credit_operations ||--o| audio_segments : "operation_id"
 ```
+
+[Open this diagram in Mermaid Live](https://mermaid.live/view#pako:eJyFkFFqwzAQRK8i9tu-gL57iiIwW2mqCGytWUmhYOfuQbVJEwj0b9h5MwO7kZcAsgT9SByVF5eNMcYrQqrTF8-cPcpxjMq5HlK5YsIVuZ6el3yFliS5mH0fR9kMt5BkKohLx4w1jv6oKQVHL1uyQrk-F5zGjBChv_kH8398f7f_mqeBFujCKZClrbc5qhcscNRhRWg_o5dZtG_daKC2Bq44P0W2asNAUXvBoVfOnyIPS6XFC9lvngtudw_Of-w)
 
 <!-- /schema-diagram:grant -->
 
@@ -92,6 +96,8 @@ erDiagram
     rate_events
     registry_grants
 ```
+
+[Open this diagram in Mermaid Live](https://mermaid.live/view#pako:eJxdkFFqw0AMRK9i9O1ewN89RVkw6u5ko2JLRpbdhpC7h6WuKfmT5g0zMHfKVkADwd-Fq_OctOu6LrNmTChjwYQQ05EjMC-xHtx0h68N2LfCD_l0f9nnq6QWcpHM7Xlljgw5w6VAQ-I2cs626Z-8uO3SKkXrvwLnwIgdp89RZQ2_jdVZY6WeZvjMUmige7MkiitmJBq6RI6y_bxlm8wTJX1QT9tSOHDsQUP4hp6qt4Dfe2H9MDuR21avNFx4WvF4AoRdeMI)
 
 <!-- /schema-diagram:registry -->
 

@@ -14,6 +14,8 @@ flowchart TD
     Complete --> Notice[Queue completion notice]
 ```
 
+[Open this diagram in Mermaid Live](https://mermaid.live/view#pako:eJx1kcuO2zAMRX-F0Dr5AS8KBHULdFOgSFe1Z8FQ17ZQWTRoKQ9M5t8L28kA7aArSby8hw-9OlEPV7ku6kUGtkw_6zYRER1lgC8RvqkRkYMmmp-hitR8SGw3YhHMM52iym_4l3-8tN9_un-5TjFIyGQQPcNudEKnBvJgH0PC_SA5nNFsR0VDmLMu7OSJY9QLJwFNhhl2_k-R-sEiAy_C_SuSwDcHES0pE66Qsk6xUINHyiHfaORpCqmnbs1-kDfrgqVvj8RtCSBcWTJp9HQsE594xjvro_mY1bhHUxuHRBcLGTav9WGLk7fe9npJ8OQ584PxrLpSPus4LbWbQ5dhdNI80FxEsPyDYdQzPszzXNHWwF-YTXm-Vum75iBofhQUkGzKsqm0xl_czo2wkYN3lXtd_K3LA0a0rqLWGXy57kWjWuva9OZ2rkyeM-rAvfHoqmwFO9fbAtjuE6dfqu-SaekHV3UcZ7z9AYHi6Qc)
+
 Identity deletion and Cup storage cleanup retry independently; an identity-provider outage does not prevent Cup cleanup. The diagram shows dependencies, not a distributed transaction.
 
 ## Confirmation and recovery

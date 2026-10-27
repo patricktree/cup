@@ -39,6 +39,8 @@ sequenceDiagram
     Account-->>Client: Account response through API
 ```
 
+[Open this diagram in Mermaid Live](https://mermaid.live/view#pako:eJyFVNtu2zAM_RVCTxvQ_IAfAgS9DNmGNUi3FRjywsiMTVQRPYlKb9i_D7JiJ20yzE-6HB0eHpJ-NVZqMpWJ9DuRt3TF2ATcrjwAAFqVAD8ihbLvMChb7tArXDomr4AR7mkNEmDm6yBcg-0vTh98EmkcnZ7PkraZ5i51uMZI_cEZ2GLeB5PwQCHvTiFLajhqeM64cX11e4bLWklF_LAcYDnZyXRasqvgshWJtNcOkRs_YV-QBTKZTmeLeQVfBWvo0tqxBcwZWfEbblJAZdm_QKfZrLJ5S5G0reBOMSjc9oY8sraw-HJ5fUDn88l0WrRU_Za8skUlSGON8lcgk5G4UAaKyek7vqNcl1RzIKsldk5CAr_0-iF3yT91Xz_ZFn1DPQpSZN_AjgJveBBFLte1NMgZmiGlb6i8G20uOlqMLdXgxVs6l-Ggfl-i-RWoPJD_v9gBCehrkMANe3THccjvtb43auzUSDGO1X3bD0NfhTxXce_pmjBQALSWYjzWOVvMh4c_s3HP8Pn-e-8DagrUS7QOeRuP8UOPV3DDvgauczvoM2yx69g3BSqdwg2HqLlH8pwmv2HPvaldkB3nDEZ0_gba0bK9pJGfnjhqhA-bA613zx_PMxQfKph7VkbHL5TzL-Pna3gkZ2VLgM7JI76p8YmOJdmW7MNByJo2kt2xyrujOTsUrtg6SFgS1mPwqHlusoSh0wmko-N53T88Lv2hrLETHwm0DZKaNocyF2ZLYYtcm8q8ZoqV0Za2tDIVrEygOj1NrDgJK7Pyf8yFSV2NOvxyTaUh0YVpQiYo6w79L5Hxqg9lqg26SH_-AgwM67o)
+
 On the web, the Supabase SDK persists the session and PKCE verifier in browser local storage and handles the OAuth return. Android uses native Google sign-in bound to a nonce, exchanges its ID token with Supabase, and persists the Supabase session in secure storage. Dedicated iOS account support is deferred; its adapter reuses web behavior and is not evidence of a validated native login flow.
 
 The API verifies Supabase JWTs locally against the issuer's signing keys and their claims, and admits only identities whose provider is Google, whatever providers the Supabase project enables ([`account-auth.test.ts`](../../libs/api-server/test/account-auth.test.ts)); the [account authentication use case](../../libs/api-server/src/use-cases/authenticate-account.ts) then resolves the Cup account. First use provisions a separate Cup account ID through the registry. Provisioning is persisted and retried, and checks the provider identity before activation; ingress limits constrain new account creation. The account initializes its welcome duration allowance once; [`authenticate-account.test.ts`](../../libs/api-server/test/authenticate-account.test.ts) and the registry's [`accounts.test.ts`](../../libs/registry/test/accounts.test.ts) cover provisioning. Subsequent operations consult Cup lifecycle state in addition to token validity.
@@ -80,6 +82,8 @@ stateDiagram-v2
     }
 ```
 
+[Open this diagram in Mermaid Live](https://mermaid.live/view#pako:eJylU8tu2zAQ_JUFj4V16ZGHAEFjpAQC-eD0kioIWHEtb2Hvuny4j8D_HoiMJTlx2gK5UTszO_vSo2rFodIqRBvximzn7bbaf2wYAODrh3uoqgtITEyR7Ib-oCvQSSiThm_iToOpza25vDF3cxAPS3NdPyy-3BbtlJml6L14Da3wirqe7zFE8QgrS5tQRJnzXqNWmLGN6DQEDIGEj1bPbeUxjDR4LOHpMDxa9_t1OFDHxN0iRT1UAT8SJnTgku8rGMqxkYTHFMU0550avsyObpHi32DDp-ggmhZo-Lk-U59jG_5vcsZP7DXsvOzJoT-O99-qPDBkhw5-UlxLimDfVp-2UzyX8-XSLOqHT58v6-v51Sg6jM8y3GF9r0QQBSxLXPelp2_fsY39ObEwnktybtmTfQ7o1JFtpD1msCIuLc96Ewsh4i7f-vEMD2qmtui3lpzSKt9Eo-Iat9goDY3y6NKvqpWN-EY13NPTzo1_sNLRJ5ypzvcJyntn-U5kgLykbq30ym4CHp4AyPdA6Q)
+
 Initialization loads the public auth configuration, creates the Supabase client, and restores the stored session. Every change of the signed-in subject stops playback, and signing into an account forgets the remembered trial. Replacing or removing a signed-in account also clears the query cache; the initial restoration does not, because route loaders may be awaiting it.
 
 The machine's comments hold the transition rules. It guarantees the following; [`account-session.test.ts`](../../apps/web-app/src/auth/account-session.test.ts) checks the session-scope and sign-out rules:
@@ -115,6 +119,8 @@ sequenceDiagram
     API->>R2: Read authorized media
     R2-->>Client: Media through Worker
 ```
+
+[Open this diagram in Mermaid Live](https://mermaid.live/view#pako:eJxtkk1rIzEMhv-K8GUvCYEc5xAY2kugS8PA7kKZi2orYzEz9qys6ceG_PfF47QNpDdbevXoleyTsdGRqUyivzMFS_eMneDYBgCACUXZ8oRB4W5gCnobrw97wAR_ovQk-XYreXwNJFlUWxvnoBAFOsmZ-8dbdbMtsdJwvdvVh30F9ew4PsfYg2SnSeGV1cMzoZCAxp7CF9bG2DMVTH3Yr9e7XaFdc5b6xF0gBypoe8DgwMYXEuARO4JfzUP6zktzcbDBiTdHHiht8AObNid2ZxjJMZYWrKn4-_Jz4fwm4eM7qKci-JEWP6iz0ArobWJ5X0x90q8Ry1YruPNke1CPuoAm4ZAXOUBSHgbwmACtpZSua5ttngIzWX0U_keuWC6iZnu9sp_LLOolzp2_PLRZmZFkRHamMqdc1Rr1NFJrKmiNkJvf1jYOUVrThrNZmXlyqB_fy1QqM61MJxlQzhOGpxg_U0s3Ux1xSHT-DyTo5u8)
 
 The [listener contracts](../../libs/listener-api.routes/src/hono-app.ts) define the routes. Audiobook JSON requires bearer identity for private audiobooks and the owning grant session for trial audiobooks. Media routes accept only a signed media URL: a bearer token, the grant cookie or any other cookie alone answers `401`. Account API operations require bearer identity. Private delivery checks the conversion's owner and current account state on every request ([`private-account-access.test.ts`](../../libs/api-server/test/private-account-access.test.ts)), so scheduling deletion blocks subsequent private requests even while a previously issued JWT remains unexpired. This is not a promise to retract bytes already downloaded by another client.
 

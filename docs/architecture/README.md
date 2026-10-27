@@ -5,43 +5,62 @@ Cup turns source content behind a URL into an audiobook. A shared web applicatio
 ## Runtime map
 
 ```mermaid
-flowchart TD
-    Operator[Operator CLI] --> Access[Cloudflare Access]
-    Access --> Worker
-    Web[Web browser] --> Worker[Cloudflare Worker: Listener API, Operator API, assets]
-    Native[Capacitor mobile app] --> Worker
-    Registry --> Auth
-    Worker --> Auth
-    Web --> Auth[Supabase Auth]
-    Native --> Auth
-    Auth --> Google[Google identity]
-    Worker --> Preparation[Preparation Workflow]
-    Worker --> Accounts[Account DOs]
-    Worker --> Trials[Grant DOs]
-    Worker --> Registry[Registry DO]
-    Registry --> Accounts
-    Accounts --> Preparation
-    Trials --> Preparation
-    Accounts --> Synthesis[Audio Segment Synthesis Workflow]
-    Trials --> Synthesis
-    Preparation --> Browser[Cloudflare Browser Run]
-    Browser --> Source[External source pages]
-    Preparation --> Gateway[Cloudflare AI Gateway]
-    Synthesis --> Gateway
-    Gateway --> AI[Google AI Studio]
-    Preparation --> Accounts
-    Preparation --> Trials
-    Preparation --> R2[R2 audiobook artifacts]
-    Synthesis --> Accounts
-    Synthesis --> Trials
-    Synthesis --> R2
-    Worker --> R2
-    Accounts --> R2
-    Trials --> R2
-    Registry --> Email[Resend deletion notifications]
+flowchart LR
+  subgraph clients[Clients]
+    %% Edges leave this subgraph, not its nodes, so Mermaid keeps its direction: Web app stays above Capacitor mobile app.
+    subgraph listenerApps[Listener apps]
+      direction LR
+      web[Web app]
+      native[Capacitor mobile app]
+    end
+    operator[Operator CLI]
+  end
+  listenerApps -->|/api and web assets, Supabase JWT or grant cookie| fetch
+  listenerApps -->|Google sign-in| auth
+  operator -->|/api/operator| access
+  subgraph cloudflare[Cloudflare]
+    access[Cloudflare Access]
+    subgraph worker[Worker]
+      fetch[fetch: Hono app with Listener API, Operator API and assets]
+      subgraph workflows[Workflows]
+        preparation[Preparation Workflow]
+        synthesis[Audio Segment Synthesis Workflow]
+      end
+    end
+    subgraph objects[Durable Objects]
+      subgraph owners[Conversion owners]
+        accounts[Account DOs]
+        grants[Conversion grant DOs]
+      end
+      registry[Registry DO]
+    end
+    r2[(R2: audiobook artifacts)]
+    browserRun[Browser Run]
+    gateway[AI Gateway]
+    access -->|Access JWT| fetch
+    fetch -->|authorize, admit, read state| owners
+    fetch -->|identity mapping, operator queries| registry
+    fetch -->|start trial preparation| preparation
+    fetch -->|documents and media| r2
+    registry <-->|provisioning, ownership, usage, deletion| owners
+    owners <-->|dispatch; outcomes and durations| workflows
+    owners -->|cleanup| r2
+    workflows -->|documents, covers, segments| r2
+    preparation -->|render pages, fetch covers| browserRun
+    preparation -->|narration selection| gateway
+    synthesis -->|speech| gateway
+  end
+  browserRun --> source[External source pages]
+  gateway --> aiStudio[Google AI Studio]
+  fetch -->|JWT keys, token revocation| auth[Supabase Auth]
+  registry -->|verify and delete identity| auth
+  auth --> google[Google identity]
+  registry -->|deletion emails| resend[Resend API]
 ```
 
-The Worker is the HTTP boundary. Separate preparation and audio segment synthesis workflows perform durable conversion work inside the same Worker; account and conversion grant objects control ownership, allowance, and lifecycle. The shared registry also coordinates cleanup across R2 and Supabase and sends lifecycle notifications. The diagram groups resources by responsibility; a Durable Object class creates multiple isolated objects where required.
+[Open this diagram in Mermaid Live](https://mermaid.live/view#pako:eNptVdtu4zYQ_ZWBgAVaQMm6duKLWhRwk8U2ixRZJAUCVM4DJY1lNjLJkpQdb5x_75CUZNmJH8whdeZ-OHyNcllglETLSm7zFdMWbu8XAsDUWamZWkFecRTWpFdhfXIfAT59gi9FiQYqZBsEu-KmU4lBSAvcGloLNDEYCX-hXjNewDOiMv5bwTXmlkuRwCNmwJQCY9nOAMskWbxiiuXcSg1rmfEKHeA8-O5Cq7ixKFDPlTLpbbNxwDZKOHhp0nK_LWZp47LDCWb5BtOPvDYYFEUQpELNCJLeNQJc3d54UAPphwVnZ7_vPzPFgYnCeQZmDFoqykOtWMYMwrfHv4GMUErCQi7lM8c9LNHmqw-NfZWypMAML8UZF3tgtfXANqzO4-f2hDB5jsactFXWxbJimpLuxCbVAO-dw9yfPJ3Ufyv1M-r00S9dKX3oqf9P4E8ppO_tltsVdD2af7-Joasf7Xx5Qmk6Q0d-HD-Nd-WlDgSgNCpGhqjJ6feDDC22BzU7YVdouEnndcElPGC5JlLDQ3v-Xqlreyd0YcnsX-KWSa9rzTJqyV3Yv49fbilnqqcUG1pdbOGkFxmVXNbums2DANd3_c-eHEcWAl36qC5AAI0lVVrv0vtGIOApjfUw_el-mBB_qBIZ0Q7o8vMlowx-brCZpkqjvq9F-kcQgeTmY8ksbtkund_A1yAescfTMNDGMbzH6IYhHuDIKzX_gTGwYs1tTKGzwg0CS5cgVOlUhxfUMm53sCZecVHGB-r_V6PmaPZdAU51yTBNOKs5q_q82fc3pzqFzGvHEuM5usaCM3IwbKrYFvg3B1VabrhrTwjLh7_iKobasJJyLLDC4K-fWpCDhYIbxcjzryBrm8s1Bq9FHWKj1LrLcKTsdHOaxaJWh-A66HEeMU0ZRyMazIH_5qDSq4NX0sQXarui8AkfihK09z16fKwrmG52hvLOQ-INbZqr1N073xyFmK-OIA1bD54ckN6TWueYfnmxqAV1MuxDkJ6EjQUPZvzBOoqnzeAkvoYDjzy02Y3hZ9xRllY-o6DObmTesMPRNO0G9px2XrlrvtOnmvDlLnTLtRmhJephRrvVB1X6WNqQWuB7oy1hAOn1rDyxDdWE7rVb3OB8iuKo1LyIEqtrjKN1eGjpRX911hYRFXiNiyghUWNRv5zlspJ6ES3EG6kqJv6Rct1qa1mXqyhZssrQrlYFFfKaMxo2B4hnxJUbUlFy6S1EyWv0EiWj2flsejEYDCbj0WQynPwSR7soGV-czyYX08FwNpiNp6Ph-C2OfniXg_PZ5WgyG02no9FwNB7PLt_-B6Hm9XA)
+
+The Worker is the HTTP boundary; its `fetch` handler is its only entry point, and the Worker has no queue or scheduled handler. Separate preparation and audio segment synthesis workflows perform durable conversion work inside the same Worker; account and conversion grant objects, the conversion owners, control ownership, allowance, and lifecycle, and dispatch the workflows. The shared registry also coordinates cleanup across R2 and Supabase and sends lifecycle notifications. Durable Object alarms take the place of a cron: they retry segment dispatch, usage projections, and deletion cleanup. The diagram groups resources by responsibility; a Durable Object class creates multiple isolated objects where required.
 
 ## Responsibilities and code boundaries
 
@@ -88,6 +107,8 @@ flowchart TD
     Accounts -. ownership, usage, and deletion RPC .-> Registry
     Grants -. usage projection RPC .-> Registry
 ```
+
+[Open this diagram in Mermaid Live](https://mermaid.live/view#pako:eJx1Us1qwzAMfhWhc9IHyGFQWhiFHcrYaUkPxlYdb44VFGfdKH33kZ92Schusr5fbF9RsyHM8Oz5okslEd72RQAA2B4P-fZ4ABUMaA5fJI3jABeWz458gjR9gq3W3IbY5GocTg9xjz-L6tA_fWr7zYL2StY1UX5yGYcFvuMQRem5k74vR_LdZFZsBRo6jQEjrQdeyFiS3LSiYhfg-_PoPqgmvGE9zPOSa9aucrHJhb13waa-P6449_uVzlNgZrwInXgtkJndv1U3wJdA0pSuTqBtlKWk_wCGPHV3Aq_HHWwmLzaP3QwaqIU_SK8KMMGKpFLOYIbXTl5gLKmiAjMoUMi036lmz1JgEW6YYFsbFWnvlBVVYRalpQStdAbDXKvwzvyAhFtbYnZWvqHbLxez9RM)
 
 The owners reach the registry only through the RPC interfaces drawn as dashed lines, never as a package dependency: the registry depends on both owner libraries, so such a dependency would form a cycle, which every `turbo run` refuses. `pnpm boundaries` (`turbo boundaries`, part of `pnpm validate:fast`) also fails when a package imports a package its `package.json` does not declare, or a file outside its own directory.
 
