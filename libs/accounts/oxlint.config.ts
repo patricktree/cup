@@ -1,26 +1,14 @@
 import { defineConfig } from "oxlint";
 
-import { config as repoConfig } from "@cup/config-oxlint/oxlint-base.js";
-
-type RestrictedImportsPattern = { group: string[]; message: string; allowTypeImports?: boolean };
-type RestrictedImportsOptions = { paths?: unknown[]; patterns?: unknown[] };
+import {
+  config as repoConfig,
+  restrictImports,
+  type RestrictedImportsPattern,
+} from "@cup/config-oxlint/oxlint-base.js";
 
 /*
- * Enforces the import directions between the source folders that AGENTS.md describes. Each entry
- * replaces the repository's `no-restricted-imports` options, so it keeps their paths and patterns
- * and adds its own.
+ * Enforces the import directions between the source folders that AGENTS.md describes.
  */
-const [severity, ...repoOptions] = (repoConfig.rules?.["no-restricted-imports"] ?? ["error"]) as [
-  string,
-  ...RestrictedImportsOptions[],
-];
-const repoPaths = repoOptions.flatMap((options) => options.paths ?? []);
-const repoPatterns = repoOptions.flatMap((options) => options.patterns ?? []);
-
-function restrictImports(...patterns: RestrictedImportsPattern[]) {
-  return [severity, { paths: repoPaths, patterns: [...repoPatterns, ...patterns] }];
-}
-
 const ARTIFACTS_RESTRICTION: RestrictedImportsPattern = {
   group: ["#src/artifacts/**"],
   message:
