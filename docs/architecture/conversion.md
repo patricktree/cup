@@ -99,7 +99,7 @@ The web player plays the [narration track](../GLOSSARY.md#narration-track) with 
 - **Play:** `play()` is called synchronously within the user gesture, because Mobile Safari refuses audio started after an await. After a media error, or once the track URL is older than 12 hours, Play first [renews the signed URL](authentication.md#signed-media-url) and resumes at the same position.
 - **System media controls:** the player sets only the media session's metadata, the title and the cover image as artwork, and clears it on unload. It registers no action handlers and no position state, so the browser's defaults drive the lock screen and notification from the element.
 
-[`player-host.test.ts`](../../apps/web-app/src/app/player/player-host.test.ts) covers these rules against a fake audio element, and the [app E2E suite](../../qa/e2e/test-e2e/conversion.test.ts) plays a served track in Chromium. The Android and iOS shells play through the web player in their WebView, best effort and untested on devices ([patricktree/cup#55](https://github.com/patricktree/cup/issues/55)); their native players are no longer used. Lock-screen continuity on physical devices still needs verification.
+[`player-host.test.ts`](../../apps/web-app/src/app/player/player-host.test.ts) covers these rules against a fake audio element, and the [app E2E suite](../../qa/e2e/test-e2e/conversion.test.ts) plays a served track in Chromium. The Android and iOS shells play through the web player in their WebView, best effort and untested on devices ([patricktree/cup#55](https://github.com/patricktree/cup/issues/55)); the shells have no native players. Lock-screen continuity on physical devices still needs verification.
 
 ## Delivery, positions, and lifecycle
 
