@@ -43,10 +43,10 @@ export type Mp3Analysis = {
   durationMilliseconds: number;
 };
 
-const MPEG_2_LAYER_3_BIT_RATES = [
+const MPEG_2_LAYER_3_BITRATES = [
   0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0,
 ] as const;
-const MPEG_1_LAYER_3_BIT_RATES = [
+const MPEG_1_LAYER_3_BITRATES = [
   0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0,
 ] as const;
 const MPEG_1_SAMPLE_RATES = [44_100, 48_000, 32_000] as const;
@@ -79,7 +79,7 @@ export function analyzeMp3(audio: Uint8Array): Mp3Analysis {
 
     const versionBits = (header >>> 19) & 0b11;
     const layerBits = (header >>> 17) & 0b11;
-    const bitRateIndex = (header >>> 12) & 0b1111;
+    const bitrateIndex = (header >>> 12) & 0b1111;
     const sampleRateIndex = (header >>> 10) & 0b11;
     const padding = (header >>> 9) & 1;
     const channelMode = (header >>> 6) & 0b11;
@@ -94,18 +94,24 @@ export function analyzeMp3(audio: Uint8Array): Mp3Analysis {
 
     const versionDivisor = versionBits === 0b11 ? 1 : versionBits === 0b10 ? 2 : 4;
     const sampleRate = MPEG_1_SAMPLE_RATES[sampleRateIndex]! / versionDivisor;
-    const bitRateTable = versionBits === 0b11 ? MPEG_1_LAYER_3_BIT_RATES : MPEG_2_LAYER_3_BIT_RATES;
-    const bitRateKilobits = bitRateTable[bitRateIndex]!;
+    const bitrateTable = versionBits === 0b11 ? MPEG_1_LAYER_3_BITRATES : MPEG_2_LAYER_3_BITRATES;
+    const bitrateKilobitsPerSecond = bitrateTable[bitrateIndex]!;
 
-    if (bitRateKilobits === 0) {
+    if (bitrateKilobitsPerSecond === 0) {
       throw new Error(`MP3 audio contains a free or invalid bit-rate frame at byte ${offset}`);
     }
 
-    assertFrameMatchesAudioFormat({ offset, sampleRate, channelMode, bitRateKilobits, padding });
+    assertFrameMatchesAudioFormat({
+      offset,
+      sampleRate,
+      channelMode,
+      bitrateKilobitsPerSecond,
+      padding,
+    });
 
     const samplesPerFrame = versionBits === 0b11 ? 1_152 : 576;
     const frameLength = Math.floor(
-      ((versionBits === 0b11 ? 144 : 72) * bitRateKilobits * 1_000) / sampleRate,
+      ((versionBits === 0b11 ? 144 : 72) * bitrateKilobitsPerSecond * 1_000) / sampleRate,
     );
 
     if (offset + frameLength > audioEnd) {
@@ -128,13 +134,13 @@ function assertFrameMatchesAudioFormat({
   offset,
   sampleRate,
   channelMode,
-  bitRateKilobits,
+  bitrateKilobitsPerSecond,
   padding,
 }: {
   offset: number;
   sampleRate: number;
   channelMode: number;
-  bitRateKilobits: number;
+  bitrateKilobitsPerSecond: number;
   padding: number;
 }): void {
   // Only MPEG-2 encodes 24 kHz, so this check also rejects every other MPEG version
@@ -146,8 +152,10 @@ function assertFrameMatchesAudioFormat({
     throw new Error(`MP3 audio has unexpected channel mode at byte ${offset}`);
   }
 
-  if (bitRateKilobits !== AUDIO_FORMAT.bitrateKilobitsPerSecond) {
-    throw new Error(`MP3 audio has unexpected bitrate at byte ${offset}: ${bitRateKilobits} kbps`);
+  if (bitrateKilobitsPerSecond !== AUDIO_FORMAT.bitrateKilobitsPerSecond) {
+    throw new Error(
+      `MP3 audio has unexpected bitrate at byte ${offset}: ${bitrateKilobitsPerSecond} kbps`,
+    );
   }
 
   // `getSegmentByteLength` relies on every frame having the same length

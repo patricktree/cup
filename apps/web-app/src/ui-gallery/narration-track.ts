@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 
+import { layOutConsecutively } from "@cup/conversion-contracts";
 import type { NarrationTrack } from "@cup/listener-api.routes";
 
 const NARRATION_TRACK_PATH = "/__story/narration-track.mp3";
@@ -18,12 +19,8 @@ export function createStoryNarrationTrack(
   unitDurationsMilliseconds: number[],
   audiobook = "story",
 ): NarrationTrack {
-  const startMilliseconds: number[] = [];
-  let durationMilliseconds = 0;
-  for (const unitDurationMilliseconds of unitDurationsMilliseconds) {
-    startMilliseconds.push(durationMilliseconds);
-    durationMilliseconds += unitDurationMilliseconds;
-  }
+  const { startOffsets: startMilliseconds, totalLength: durationMilliseconds } =
+    layOutConsecutively(unitDurationsMilliseconds);
 
   const url = new URL(NARRATION_TRACK_PATH, window.location.origin);
   url.searchParams.set("audiobook", audiobook);

@@ -5,8 +5,7 @@ import {
   loadAudiobook,
   type Audiobook,
 } from "@cup/audiobook-production";
-import { findNarrationTrackDurations } from "@cup/conversion-contracts";
-import type { ErrorCode, ErrorResponse } from "@cup/listener-api.routes";
+import { findNarrationTrackDurations, layOutConsecutively } from "@cup/conversion-contracts";
 import type { RegistryDurableObject } from "@cup/registry";
 
 import { resolveConversionReader, type ConversionReader } from "#src/adapters/conversion-reader.ts";
@@ -60,8 +59,7 @@ export async function serveNarrationTrack(
     return narrationTrackNotFound(requestId);
   }
 
-  const segments = layOutNarrationTrack(durations);
-  const totalByteLength = segments.reduce((total, segment) => total + segment.byteLength, 0);
+  const { segments, totalByteLength } = layOutNarrationTrack(durations);
   const etag = await createNarrationTrackEtag(conversionId, durations);
   const headers = new Headers({
     "Accept-Ranges": "bytes",
@@ -93,8 +91,15 @@ export async function serveNarrationTrack(
   const parts = selectTrackParts(segments, served);
   const readPart = (part: TrackPart) =>
     readTrackPart(env, conversionId, reader.artifactPrefix, part);
+  const firstPart = parts[0];
+  // A valid range lies within the track, and a narration track has at least one segment.
+  if (firstPart === undefined) {
+    throw new Error(
+      `Narration track byte range ${served.start}-${served.end} of ${totalByteLength} bytes selects no segment`,
+    );
+  }
   // The first part is read before headers are sent, so a missing object yields an error status.
-  const firstBody = await readPart(parts[0]!);
+  const firstBody = await readPart(firstPart);
   if (firstBody === undefined) {
     return jsonError(requestId, "operational-error", "The narration track could not be read.", 500);
   }
@@ -178,17 +183,20 @@ type TrackSegment = { sequence: number; trackOffset: number; byteLength: number 
 /** The bytes of one segment object that a request serves. */
 type TrackPart = { sequence: number; segmentByteLength: number; offset: number; length: number };
 
-function layOutNarrationTrack(durations: readonly number[]): TrackSegment[] {
-  let trackOffset = 0;
-  return durations.map((durationMilliseconds, sequence) => {
-    const segment = {
-      sequence,
-      trackOffset,
-      byteLength: getSegmentByteLength(durationMilliseconds),
-    };
-    trackOffset += segment.byteLength;
-    return segment;
-  });
+function layOutNarrationTrack(durations: readonly number[]): {
+  segments: TrackSegment[];
+  totalByteLength: number;
+} {
+  const byteLengths = durations.map((durationMilliseconds) =>
+    getSegmentByteLength(durationMilliseconds),
+  );
+  const { startOffsets, totalLength } = layOutConsecutively(byteLengths);
+  const segments = byteLengths.map((byteLength, sequence) => ({
+    sequence,
+    trackOffset: startOffsets[sequence]!,
+    byteLength,
+  }));
+  return { segments, totalByteLength: totalLength };
 }
 
 function selectTrackParts(
@@ -331,30 +339,19 @@ function matchesIfNoneMatch(header: string | null, etag: string): boolean {
 }
 
 function rangeNotSatisfiable(requestId: string, size: number): Response {
-  return Response.json(
-    createErrorBody(
-      requestId,
-      "range-not-satisfiable",
-      "The requested byte range is not satisfiable.",
-    ),
-    { status: 416, headers: { "Content-Range": `bytes */${size}` } },
+  return jsonError(
+    requestId,
+    "range-not-satisfiable",
+    "The requested byte range is not satisfiable.",
+    416,
+    { "Content-Range": `bytes */${size}` },
   );
 }
 
 function narrationTrackNotFound(requestId: string): Response {
-  return Response.json(
-    createErrorBody(requestId, "narration-track-not-found", "Narration track not found."),
-    { status: 404 },
-  );
+  return jsonError(requestId, "narration-track-not-found", "Narration track not found.", 404);
 }
 
 function coverImageNotFound(requestId: string): Response {
-  return Response.json(
-    createErrorBody(requestId, "cover-image-not-found", "Cover image not found."),
-    { status: 404 },
-  );
-}
-
-function createErrorBody(requestId: string, code: ErrorCode, message: string): ErrorResponse {
-  return { error: { code, message, requestId } };
+  return jsonError(requestId, "cover-image-not-found", "Cover image not found.", 404);
 }

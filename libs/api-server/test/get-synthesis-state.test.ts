@@ -5,24 +5,22 @@ import {
   type GetSynthesisStateDependencies,
 } from "#src/use-cases/get-synthesis-state.ts";
 
-const INPUT = {
-  // Estimated at 1,000 and 8,000 milliseconds.
-  narrationTextCharactersBySegment: [5, 100],
+// Estimated at 1,000 and 8,000 milliseconds.
+const NARRATION_TEXT_CHARACTERS_BY_SEGMENT = [5, 100];
+
+const DEPENDENCIES: GetSynthesisStateDependencies = {
+  getAvailableMilliseconds: async () => 4_000,
+  getFailureExplanation: async (sequence) =>
+    sequence === 1 ? "The provider rejected this text." : undefined,
 };
 
-function createDependencies(
-  usage: Awaited<ReturnType<GetSynthesisStateDependencies["listAudioSegments"]>>,
-): GetSynthesisStateDependencies {
-  return {
-    listAudioSegments: async () => usage,
-    getAvailableMilliseconds: async () => 4_000,
-    getFailureExplanation: async (sequence) =>
-      sequence === 1 ? "The provider rejected this text." : undefined,
-  };
-}
-
 test("a document without reservations reports the duration it needs", async () => {
-  await expect(getSynthesisState(INPUT, createDependencies([]))).resolves.toEqual({
+  await expect(
+    getSynthesisState(
+      { narrationTextCharactersBySegment: NARRATION_TEXT_CHARACTERS_BY_SEGMENT, segmentUsage: [] },
+      DEPENDENCIES,
+    ),
+  ).resolves.toEqual({
     status: "insufficient-duration",
     segments: [
       { sequence: 0, status: "absent" },
@@ -36,11 +34,14 @@ test("a document without reservations reports the duration it needs", async () =
 test("a reserved segment keeps the conversion synthesizing", async () => {
   await expect(
     getSynthesisState(
-      INPUT,
-      createDependencies([
-        { sequence: 0, state: "settled", actualMilliseconds: 900 },
-        { sequence: 1, state: "reserved", actualMilliseconds: 0 },
-      ]),
+      {
+        narrationTextCharactersBySegment: NARRATION_TEXT_CHARACTERS_BY_SEGMENT,
+        segmentUsage: [
+          { sequence: 0, state: "settled" },
+          { sequence: 1, state: "reserved" },
+        ],
+      },
+      DEPENDENCIES,
     ),
   ).resolves.toEqual({
     status: "synthesizing",
@@ -53,11 +54,14 @@ test("a reserved segment keeps the conversion synthesizing", async () => {
 
 test("a conversion is ready once every segment has audio or a final failure", async () => {
   const state = await getSynthesisState(
-    INPUT,
-    createDependencies([
-      { sequence: 0, state: "settled", actualMilliseconds: 900 },
-      { sequence: 1, state: "released", actualMilliseconds: 0 },
-    ]),
+    {
+      narrationTextCharactersBySegment: NARRATION_TEXT_CHARACTERS_BY_SEGMENT,
+      segmentUsage: [
+        { sequence: 0, state: "settled" },
+        { sequence: 1, state: "released" },
+      ],
+    },
+    DEPENDENCIES,
   );
 
   expect(state.status).toBe("ready");

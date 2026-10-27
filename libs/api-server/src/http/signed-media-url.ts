@@ -1,15 +1,16 @@
+import { Temporal } from "temporal-polyfill";
+
 import { conversionOwnerSchema, type ConversionOwner } from "@cup/conversion-contracts";
+import type { GrantState } from "@cup/conversion-grants";
+
+import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
+import { accountAuthError, jsonError, requireAccessibleGrantState } from "#src/http/http-errors.ts";
 
 /**
  * Who a signed media URL was issued to: the account or the grant that owned the audiobook when the
  * URL was issued. Delivery checks this principal's current access on every request.
  */
 export type MediaUrlPrincipal = ConversionOwner;
-
-export type MediaUrlTokenVerification =
-  | { result: "absent" }
-  | { result: "invalid" }
-  | { result: "valid"; principal: MediaUrlPrincipal };
 
 /** How long a signed media URL authorizes requests after it was issued. */
 const SIGNED_MEDIA_URL_LIFETIME_MS = 24 * 60 * 60 * 1_000;
@@ -60,10 +61,87 @@ export async function signMediaUrl({
 }
 
 /**
+ * Authorizes a media request by its signed media URL token, the only credential media routes
+ * accept. Without an owner, the route answers its own not-found response.
+ */
+export async function requireSignedMediaUrl(
+  env: ApiServerEnvironment,
+  requestUrl: string,
+  conversionId: string,
+  owner: ConversionOwner | undefined,
+  requestId: string,
+): Promise<Response | undefined> {
+  const token = await verifyMediaUrlToken({
+    requestUrl,
+    conversionId,
+    signingKey: env.MEDIA_URL_SIGNING_KEY,
+    nowMs: Temporal.Now.instant().epochMilliseconds,
+  });
+  if (token.result !== "valid") {
+    return jsonError(
+      requestId,
+      "media-url-invalid",
+      "The media URL is invalid or expired. Reload the audiobook.",
+      401,
+    );
+  }
+  if (!owner) {
+    return undefined;
+  }
+  return requireSignedMediaAccess(env, owner, token.principal, requestId);
+}
+
+/**
+ * Runs the authoritative checks behind a signed media URL whose signature and expiry are valid: the
+ * principal must still own the audiobook, as an active account or an unexpired, unrevoked grant.
+ * Denials answer as the same request with the account's or grant's own credentials would.
+ */
+async function requireSignedMediaAccess(
+  env: ApiServerEnvironment,
+  owner: ConversionOwner,
+  principal: MediaUrlPrincipal,
+  requestId: string,
+): Promise<Response | undefined> {
+  if (owner.kind === "account") {
+    if (principal.kind !== "account" || principal.accountId !== owner.accountId) {
+      return jsonError(requestId, "audiobook-not-found", "Audiobook not found.", 404);
+    }
+    const account = env.ACCOUNTS.get(env.ACCOUNTS.idFromName(owner.accountId));
+    if ((await account.inspect()).state !== "active") {
+      return accountAuthError("blocked", requestId);
+    }
+    return undefined;
+  }
+
+  if (principal.kind !== "trial" || principal.grantId !== owner.grantId) {
+    return jsonError(
+      requestId,
+      "grant-session-required",
+      "Open the original trial link to access this audiobook.",
+      401,
+    );
+  }
+  let grantState: GrantState;
+  try {
+    grantState = (
+      await env.CONVERSION_GRANTS.get(env.CONVERSION_GRANTS.idFromName(owner.grantId)).inspect()
+    ).state;
+  } catch {
+    return jsonError(requestId, "operational-error", "The grant could not be loaded.", 500);
+  }
+  return requireAccessibleGrantState(grantState, requestId);
+}
+
+type MediaUrlTokenVerification =
+  | { result: "absent" }
+  | { result: "invalid" }
+  | { result: "valid"; principal: MediaUrlPrincipal };
+
+/**
  * Checks the `token` query parameter of a request for `conversionId`: its signature, its expiry,
  * and that it was issued for this audiobook. The principal's current access is not checked here.
  */
-export async function verifyMediaUrlToken({
+async function verifyMediaUrlToken({
   requestUrl,
   conversionId,
   signingKey,

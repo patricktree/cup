@@ -60,6 +60,23 @@ export function findNarrationTrackDurations(
   return segments.map((segment) => segment.actualMilliseconds);
 }
 
+/**
+ * Lays the given lengths end to end, such as a narration track's segment durations or byte lengths:
+ * each one starts at the sum of the lengths before it.
+ */
+export function layOutConsecutively(lengths: readonly number[]): {
+  startOffsets: number[];
+  totalLength: number;
+} {
+  const startOffsets: number[] = [];
+  let totalLength = 0;
+  for (const length of lengths) {
+    startOffsets.push(totalLength);
+    totalLength += length;
+  }
+  return { startOffsets, totalLength };
+}
+
 export function estimateAudioDuration(narrationTextCharacters: number): number {
   if (!Number.isSafeInteger(narrationTextCharacters) || narrationTextCharacters < 1) {
     throw new Error("Narration character count must be a positive safe integer");

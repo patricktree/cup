@@ -11,9 +11,6 @@ export type SynthesisState =
   | ({ status: "insufficient-duration"; segments: AudioSegment[] } & InsufficientDuration);
 
 export type GetSynthesisStateDependencies = {
-  listAudioSegments(): Promise<
-    readonly Pick<SegmentUsage, "sequence" | "state" | "actualMilliseconds">[]
-  >;
   getAvailableMilliseconds(): Promise<number>;
   getFailureExplanation(sequence: number): Promise<string | undefined>;
 };
@@ -25,12 +22,16 @@ export type GetSynthesisStateDependencies = {
  * reservation means the document did not fit the available duration.
  */
 export async function getSynthesisState(
-  { narrationTextCharactersBySegment }: { narrationTextCharactersBySegment: readonly number[] },
+  {
+    narrationTextCharactersBySegment,
+    segmentUsage,
+  }: {
+    narrationTextCharactersBySegment: readonly number[];
+    segmentUsage: readonly Pick<SegmentUsage, "sequence" | "state">[];
+  },
   dependencies: GetSynthesisStateDependencies,
 ): Promise<SynthesisState> {
-  const usage = new Map(
-    (await dependencies.listAudioSegments()).map((segment) => [segment.sequence, segment]),
-  );
+  const usage = new Map(segmentUsage.map((segment) => [segment.sequence, segment]));
 
   const segments = await Promise.all(
     narrationTextCharactersBySegment.map(async (_characters, sequence): Promise<AudioSegment> => {

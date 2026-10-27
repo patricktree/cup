@@ -193,6 +193,7 @@ export {
   estimateAudioDuration,
   findNarrationTrackDurations,
   insufficientDurationSchema,
+  layOutConsecutively,
   type InsufficientDuration,
   type PreparedConversionStatus,
   type SegmentUsage,

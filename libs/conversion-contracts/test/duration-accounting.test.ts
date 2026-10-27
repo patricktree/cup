@@ -1,6 +1,10 @@
 import { expect, test } from "vitest";
 
-import { estimateAudioDuration, findNarrationTrackDurations } from "#src/duration-accounting.ts";
+import {
+  estimateAudioDuration,
+  findNarrationTrackDurations,
+  layOutConsecutively,
+} from "#src/duration-accounting.ts";
 
 test("reserves 80 seconds per 1,000 characters with a one-second minimum", () => {
   expect(estimateAudioDuration(1_000)).toBe(80_000);
@@ -55,4 +59,15 @@ test("rejects settled segments whose sequences leave a gap", () => {
       { sequence: 2, state: "settled", actualMilliseconds: 48 },
     ]),
   ).toThrow("Narration track segments must have consecutive sequences from 0");
+});
+
+test("lays lengths end to end, each starting at the sum of the lengths before it", () => {
+  expect(layOutConsecutively([48, 72, 24])).toEqual({
+    startOffsets: [0, 48, 120],
+    totalLength: 144,
+  });
+});
+
+test("laying out no lengths has no start offsets and a total length of 0", () => {
+  expect(layOutConsecutively([])).toEqual({ startOffsets: [], totalLength: 0 });
 });

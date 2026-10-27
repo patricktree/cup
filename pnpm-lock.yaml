@@ -685,6 +685,9 @@ importers:
       '@capawesome/capacitor-google-sign-in':
         specifier: 0.1.4
         version: 0.1.4(@capacitor/core@8.5.3)
+      '@cup/conversion-contracts':
+        specifier: workspace:*
+        version: link:../../libs/conversion-contracts
       '@cup/listener-api.client':
         specifier: workspace:*
         version: link:../../libs/listener-api.client
