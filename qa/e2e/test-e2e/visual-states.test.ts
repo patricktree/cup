@@ -187,14 +187,14 @@ test("disables duplicate submission while a conversion start is pending", async 
 
   finishStart?.();
   await expect(page).toHaveURL(`${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
-  await expect(page.getByLabel("Preparing article")).toHaveAttribute("aria-busy", "true");
+  await expect(page.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
 });
 
 test("shows a deterministic pending conversion", async ({ page, workerEnvironment }) => {
   await mockConversion(page, workerEnvironment.origin, createPendingConversion());
   await gotoPage(page, `${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
 
-  await expect(page.getByLabel("Preparing article")).toHaveAttribute("aria-busy", "true");
+  await expect(page.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
 });
 
 test("shows a deterministic failed conversion", async ({ page, workerEnvironment }) => {
@@ -202,7 +202,7 @@ test("shows a deterministic failed conversion", async ({ page, workerEnvironment
   await gotoPage(page, `${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
 
   await expect(
-    page.getByRole("heading", { name: "The article could not be prepared.", exact: true }),
+    page.getByRole("heading", { name: "This track could not be prepared.", exact: true }),
   ).toBeVisible();
 });
 
@@ -229,11 +229,9 @@ test("retries a conversion loading failure", async ({
   expectConsoleError(/^RpcError: The conversion could not be loaded\./);
 
   await gotoPage(page, `${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
-  await expect(
-    page.getByRole("heading", { name: "The article could not be loaded." }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The track could not be loaded." })).toBeVisible();
   await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByLabel("Preparing article")).toHaveAttribute("aria-busy", "true");
+  await expect(page.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
   expect(attempts).toBeGreaterThanOrEqual(2);
 });
 
@@ -261,9 +259,7 @@ test("shows an article not-found state", async ({
   expectConsoleError(/^RpcError: The audiobook was not found\./);
 
   await gotoPage(page, `${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
-  await expect(
-    page.getByRole("heading", { name: "The article could not be loaded." }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The track could not be loaded." })).toBeVisible();
   await expect(page.getByText("The audiobook was not found.")).toBeVisible();
   // Trying again cannot find an audiobook that does not exist.
   await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
@@ -282,24 +278,25 @@ test("retries an audiobook loading failure", async ({
         route,
         500,
         ERROR_CODE.OPERATIONAL_ERROR,
-        "The article could not be loaded.",
+        "The track could not be loaded.",
       );
       return;
     }
     await fulfillJson(route, 200, createAudiobook());
   });
   expectConsoleError(CONSOLE_ERRORS.serverError);
-  expectConsoleError(/^RpcError: The article could not be loaded\./);
+  expectConsoleError(/^RpcError: The track could not be loaded\./);
 
   await gotoPage(page, `${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
-  await expect(
-    page.getByRole("heading", { name: "The article could not be loaded." }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The track could not be loaded." })).toBeVisible();
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(
     page.getByRole("heading", { name: "A deterministic document about careful testing" }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Back to home" })).toHaveAttribute("href", "/app/");
+  await expect(page.getByRole("link", { name: "Back", exact: true })).toHaveAttribute(
+    "href",
+    "/app/",
+  );
 });
 
 function createGrant(): Record<string, unknown> {

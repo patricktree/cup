@@ -217,6 +217,6 @@ test("signed in, home redirects to Recents, where the Add dialog opens on a mask
   // Recents lists the newest conversion first.
   await recents.first().getByRole("link").click();
   await expect(page).toHaveURL(/\/app\/audiobooks\//);
-  await page.getByRole("link", { name: "Back to Recents" }).click();
+  await page.getByRole("link", { name: "Back", exact: true }).click();
   await expect(page).toHaveURL(`${origin}/app/recent`);
 });

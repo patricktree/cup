@@ -4,7 +4,7 @@ import React from "react";
 import { DSButton } from "#src/app/design-system/button.js";
 import { describeError, type DescribeApiRefusal } from "#src/errors.js";
 
-export function ErrorMessage({
+function ErrorMessage({
   title,
   children,
 }: {
