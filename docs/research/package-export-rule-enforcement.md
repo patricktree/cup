@@ -52,6 +52,8 @@ Sketch, about 60 to 80 lines of source and test, in a `tooling/package-exports` 
 
 The test runs in `turbo:test` and therefore in `pnpm validate:fast`, and the architecture page then names it.
 
+Note (2026-10-27): [pnpm workspace project listing](pnpm-workspace-project-listing.md) recommends enumerating the projects with `pnpm ls -r --json --depth -1` instead of parsing the `packages` globs, since pnpm 12 Rust crates are unpublished.
+
 ## Recommendation
 
 Use a Vitest test that reads every workspace `package.json` (Option 5). It is the only option that checks the declaration the rule governs, catches entries without consumers, and needs no new linter. oxlint cannot parse JSON, its JS plugins cannot add a parser, and no published ESLint rule restricts `exports` keys. TypeScript's `exports` resolution already rejects unlisted subpaths at the import site, so a `no-restricted-imports` allowlist adds little and repeats the allowlist. Fix the `@cup/config-oxlint` gap in the same change.
