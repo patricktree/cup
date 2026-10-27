@@ -170,7 +170,8 @@ test("pressing the mini player outside its buttons opens the loaded audiobook's 
   await expect(
     component.getByRole("heading", { name: "Sure, let’s smoosh SpaceX and xAI together" }),
   ).toBeVisible();
-  // the detail view shows the full controls, not the mini player
+  // the detail view shows the player sheet, not the mini player
+  await expect(component.getByRole("contentinfo", { name: "Player" })).toBeVisible();
   await expect(component.getByRole("region", { name: "Player" })).toHaveCount(0);
 });
 

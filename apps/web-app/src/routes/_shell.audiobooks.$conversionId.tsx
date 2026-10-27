@@ -4,15 +4,12 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, type ErrorComponentProps } from "@tanstack/react-router";
 import React from "react";
 
-import type { PreparationPhase } from "@cup/listener-api.routes";
-
 import { DetailTopBar } from "#src/app/components/detail-top-bar.js";
 import { ShellContent } from "#src/app/components/main.tsx";
+import { PLAYER_SHEET_CLEARANCE, PlayerSheet } from "#src/app/components/player-sheet.js";
 import { QueryBoundary, QueryErrorScreen } from "#src/app/components/query-boundary.js";
 import { DSButton } from "#src/app/design-system/button.js";
 import { DSCoverImage } from "#src/app/design-system/cover-image.js";
-import { DSIconButton } from "#src/app/design-system/icon-button.js";
-import { PlayIcon } from "#src/app/design-system/icons.js";
 import { textStyles } from "#src/app/design-system/text-styles.js";
 import { interTypefaceScope } from "#src/app/global-styles.js";
 import { formatDuration } from "#src/app/player/playback-format.js";
@@ -43,8 +40,8 @@ function AudiobookRoute() {
   return (
     <QueryBoundary
       pending={
-        <DetailLayout topBar={<PlainTopBar />}>
-          <PreparationView preparationPhase={undefined} />
+        <DetailLayout topBar={<PlainTopBar />} status={toPreparationPhaseLabel(undefined)}>
+          <PreparationView />
         </DetailLayout>
       }
       errorComponent={ReaderQueryError}
@@ -55,18 +52,26 @@ function AudiobookRoute() {
   );
 }
 
+/** Every detail view has the player sheet, disabled until the shown audiobook can play. */
 function DetailLayout({
   topBar,
+  status = "",
   children,
 }: {
   topBar: React.ReactNode;
+  /** The status line above the scrubber: the preparation phase or the synthesis progress. */
+  status?: string;
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
-    <ShellContent
-      headerContent={topBar}
-      mainContent={<div {...interTypefaceScope}>{children}</div>}
-    />
+    <>
+      <ShellContent
+        headerContent={topBar}
+        mainContent={<div {...interTypefaceScope}>{children}</div>}
+        mainPaddingBlockEnd={PLAYER_SHEET_CLEARANCE}
+      />
+      <PlayerSheet status={status} />
+    </>
   );
 }
 
@@ -116,8 +121,8 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
 
   if (audiobook.status === "pending") {
     return (
-      <DetailLayout topBar={topBar}>
-        <PreparationView preparationPhase={audiobook.preparationPhase} />
+      <DetailLayout topBar={topBar} status={toPreparationPhaseLabel(audiobook.preparationPhase)}>
+        <PreparationView />
       </DetailLayout>
     );
   }
@@ -156,7 +161,14 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
   }
 
   return (
-    <DetailLayout topBar={topBar}>
+    <DetailLayout
+      topBar={topBar}
+      status={
+        audiobook.status === "synthesizing"
+          ? `Generating audio, ${audiobook.segments.filter((segment) => segment.status === "ready").length} of ${formatSegmentCount(audiobook.segments.length)} ready`
+          : ""
+      }
+    >
       <PreparedReader
         key={session?.user.id ?? "anonymous"}
         conversionId={conversionId}
@@ -169,8 +181,8 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
 }
 
 /**
- * Shows the narration document. Its audio plays in the shell's player, whose host loads the
- * audiobook once it has a narration track; only then can Play or a segment tap start it.
+ * Shows the narration document. Its audio plays in the shell's player, which the player sheet
+ * controls; once the audiobook has a narration track, a segment tap plays from that segment.
  */
 function PreparedReader({
   conversionId,
@@ -228,23 +240,6 @@ function PreparedReader({
           narrationDocumentRef={narrationDocumentRef}
         />
       ) : null}
-
-      <BottomSlot>
-        <StatusLine>
-          {audiobook.status === "synthesizing"
-            ? `Generating audio, ${audiobook.segments.filter((segment) => segment.status === "ready").length} of ${formatSegmentCount(audiobook.segments.length)} ready`
-            : ""}
-        </StatusLine>
-        {/* The player below the page has the controls of the loaded audiobook. */}
-        {loaded ? null : (
-          <DSIconButton
-            label="Play"
-            icon={<PlayIcon />}
-            disabled={!canPlay}
-            onClick={playback.play}
-          />
-        )}
-      </BottomSlot>
     </>
   );
 }
@@ -388,14 +383,19 @@ function NarrationDocument({
       check.assert(narrationDocumentElement);
 
       const title = findTitle(narrationDocumentElement, units);
-      // The title opens the page, so once it no longer intersects the shell's <main> it is above it.
+      // Only a title above the shell's <main> is scrolled away. A large cover on a short screen can
+      // start it below the visible part, so the root reaches far below <main> and the title counts
+      // as intersecting there.
       const observer = new IntersectionObserver(
         ([entry]) => {
           if (entry) {
             reportTitleScrolledAway(!entry.isIntersecting);
           }
         },
-        { root: narrationDocumentElement.closest("main") },
+        {
+          root: narrationDocumentElement.closest("main"),
+          rootMargin: `0px 0px ${TITLE_OBSERVER_BOTTOM_MARGIN_PIXELS}px 0px`,
+        },
       );
       observer.observe(title);
 
@@ -548,6 +548,9 @@ function NarrationDocument({
   );
 }
 
+/** Far more than any screen, so a title below the visible part of the page never counts as gone. */
+const TITLE_OBSERVER_BOTTOM_MARGIN_PIXELS = 100_000;
+
 /** Every narration document opens with its title as its first unit, which is narrated too. */
 function findTitle(
   narrationDocumentElement: HTMLElement,
@@ -586,77 +589,40 @@ function ReaderNotice({ children }: { children: React.ReactNode }) {
   );
 }
 
-/**
- * The slot at the bottom of the page where the player sheet goes: it keeps the status line, and the
- * Play button until the audiobook is loaded, in view.
- */
-function BottomSlot({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      className={css`
-        position: sticky;
-        bottom: 0;
-        display: flex;
-        gap: var(--spacing-gutter);
-        align-items: center;
-        justify-content: space-between;
-        padding-block: var(--spacing-gutter);
-        background-image: linear-gradient(to bottom, transparent, var(--color-page) 35%);
-      `}
-    >
-      {children}
-    </div>
-  );
-}
-
-/** The preparation phase or the synthesis progress; empty once neither applies. */
-function StatusLine({ children }: { children: string }) {
-  return <output className={textStyles.h5}>{children}</output>;
-}
-
 function formatSegmentCount(count: number) {
   return `${count} ${count === 1 ? "segment" : "segments"}`;
 }
 
 /** Shown while the audiobook loads or its conversion is still preparing. */
-function PreparationView({
-  preparationPhase,
-}: {
-  preparationPhase: PreparationPhase | undefined;
-}): React.JSX.Element {
+function PreparationView(): React.JSX.Element {
   return (
-    <>
-      <section aria-busy="true" aria-label="Preparing track">
-        <div
-          aria-hidden="true"
-          className={css`
-            display: grid;
-            gap: var(--spacing-gutter);
+    <section aria-busy="true" aria-label="Preparing track">
+      <div
+        aria-hidden="true"
+        className={css`
+          display: grid;
+          gap: var(--spacing-gutter);
 
-            & > div {
-              height: 24px;
-              background-color: var(--color-placeholder);
-              border-radius: var(--border-radius-full);
-            }
+          & > div {
+            height: 24px;
+            background-color: var(--color-placeholder);
+            border-radius: var(--border-radius-full);
+          }
 
-            & > div:first-child {
-              height: auto;
-              aspect-ratio: 5 / 3;
-              margin-block-end: calc(2 * var(--spacing-gutter));
-              border-radius: var(--border-radius-lg);
-            }
-          `}
-        >
-          <div />
-          <div />
-          <div />
-          <div />
-          <div />
-        </div>
-      </section>
-      <BottomSlot>
-        <StatusLine>{toPreparationPhaseLabel(preparationPhase)}</StatusLine>
-      </BottomSlot>
-    </>
+          & > div:first-child {
+            height: auto;
+            aspect-ratio: 5 / 3;
+            margin-block-end: calc(2 * var(--spacing-gutter));
+            border-radius: var(--border-radius-lg);
+          }
+        `}
+      >
+        <div />
+        <div />
+        <div />
+        <div />
+        <div />
+      </div>
+    </section>
   );
 }

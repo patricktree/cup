@@ -108,23 +108,24 @@ test("the position bar seeks the narration track", async ({ mount, page }) => {
   expect((await readNarrationAudio(page)).paused).toBe(true);
 });
 
-test("playback continues across pages until another audiobook is played", async ({
+test("playback continues across pages until the player sheet plays another audiobook", async ({
   mount,
   page,
 }) => {
   await captureNarrationAudio(page);
 
   const component = await mount("routes/_shell.audiobooks.$conversionId/ListeningAcrossPages");
-  const fullControls = component.getByRole("contentinfo", { name: "Player" });
+  const playerSheet = component.getByRole("contentinfo", { name: "Player" });
   const miniPlayer = component.getByRole("region", { name: "Player" });
 
   await component.getByRole("button", { name: "Play segment 2", exact: true }).click();
-  await expect(fullControls.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await expect(playerSheet.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   await expectPlayingFrom(page, 5);
   expect((await readNarrationAudio(page)).src).toContain("audiobook=story");
 
   await component.getByRole("link", { name: "Back", exact: true }).click();
   await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+  await expect(playerSheet).toHaveCount(0);
   await expect(
     miniPlayer.getByRole("link", { name: /^A deterministic document about careful testing/ }),
   ).toBeVisible();
@@ -136,25 +137,72 @@ test("playback continues across pages until another audiobook is played", async 
     .filter({ hasText: "A second document about listening" })
     .getByRole("link")
     .click();
+  // Opening another audiobook does not interrupt the one playing; its sheet shows its own start.
   await expect(
-    component.getByRole("main").getByRole("button", { name: "Play", exact: true }),
-  ).toBeEnabled();
-  // Opening another audiobook does not interrupt the one playing, and its view shows no player for it.
-  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toHaveCount(0);
+    playerSheet.getByRole("slider", { name: "Position in A second document about listening" }),
+  ).toHaveValue("0");
+  await expect(playerSheet.getByText("0:00", { exact: true })).toBeVisible();
+  await expect(playerSheet.getByText("-0:15", { exact: true })).toBeVisible();
   await expect(miniPlayer).toHaveCount(0);
-  await expect(fullControls).toHaveCount(0);
   expect((await readNarrationAudio(page)).paused).toBe(false);
   expect((await readNarrationAudio(page)).src).toContain("audiobook=story");
 
-  await component.getByRole("main").getByRole("button", { name: "Play", exact: true }).click();
-  await expect(
-    fullControls.getByRole("slider", { name: "Position in A second document about listening" }),
-  ).toBeVisible();
+  await playerSheet.getByRole("button", { name: "Play", exact: true }).click();
+  await expect(playerSheet.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   expect((await readNarrationAudio(page)).src).toContain("audiobook=second");
   await expectPlayingFrom(page, 0);
-  await expect(
-    component.getByRole("main").getByRole("button", { name: "Play", exact: true }),
-  ).toHaveCount(0);
+});
+
+test("the player sheet skips 15 seconds back and forward, within the track", async ({
+  mount,
+  page,
+}) => {
+  await captureNarrationAudio(page);
+
+  const component = await mount("routes/_shell.audiobooks.$conversionId/ReadyAudiobook");
+  const playerSheet = component.getByRole("contentinfo", { name: "Player" });
+  const position = playerSheet.getByRole("slider", {
+    name: "Position in A deterministic document about careful testing",
+  });
+  await expect(position).toBeEnabled();
+
+  await position.fill("4000");
+  await expect.poll(async () => (await readNarrationAudio(page)).currentTime).toBe(4);
+  await playerSheet.getByRole("button", { name: "Back 15 seconds", exact: true }).click();
+  await expect.poll(async () => (await readNarrationAudio(page)).currentTime).toBe(0);
+
+  await playerSheet.getByRole("button", { name: "Forward 15 seconds", exact: true }).click();
+  await expect(playerSheet.getByText("-0:00", { exact: true })).toBeVisible();
+  // The timeline ends a millisecond short of the track, so the element never reaches its end.
+  await expect.poll(async () => (await readNarrationAudio(page)).currentTime).toBe(14.999);
+  expect((await readNarrationAudio(page)).paused).toBe(true);
+});
+
+test("the player sheet shows the start of an audiobook with a narration track", async ({
+  mount,
+}) => {
+  const enabled = await mount("routes/_shell.audiobooks.$conversionId/ReadyAudiobook");
+  const enabledSheet = enabled.getByRole("contentinfo", { name: "Player" });
+  await expect(enabledSheet.getByRole("button", { name: "Play", exact: true })).toBeEnabled();
+  await expect(enabledSheet.getByText("0:00", { exact: true })).toBeVisible();
+  await expect(enabledSheet.getByText("-0:15", { exact: true })).toBeVisible();
+  await expect(enabledSheet).toHaveScreenshot("player-sheet-enabled.png");
+});
+
+test("the player sheet is disabled until the audiobook has a narration track", async ({
+  mount,
+}) => {
+  const disabled = await mount("routes/_shell.audiobooks.$conversionId/SynthesizingAudiobook");
+  const disabledSheet = disabled.getByRole("contentinfo", { name: "Player" });
+  await expect(disabledSheet.getByRole("status")).toHaveText(
+    "Generating audio, 1 of 3 segments ready",
+  );
+  for (const name of ["Back 15 seconds", "Play", "Forward 15 seconds"]) {
+    await expect(disabledSheet.getByRole("button", { name, exact: true })).toBeDisabled();
+  }
+  await expect(disabledSheet.getByRole("slider")).toBeDisabled();
+  await expect(disabledSheet.getByText("-:--", { exact: true })).toHaveCount(2);
+  await expect(disabledSheet).toHaveScreenshot("player-sheet-disabled.png");
 });
 
 test("a trial audiobook renders without preparation skeletons and leads back home", async ({
@@ -190,7 +238,9 @@ test("a trial audiobook renders without preparation skeletons and leads back hom
     "href",
     "/app/",
   );
-  await expect(component.getByRole("main").getByRole("status")).toHaveText("");
+  await expect(
+    component.getByRole("contentinfo", { name: "Player" }).getByRole("status"),
+  ).toHaveText("");
   expect(
     await page.evaluate(() => document.documentElement.dataset["sawReaderSkeleton"]),
   ).toBeUndefined();
@@ -290,9 +340,9 @@ test("shows generation progress and keeps Play disabled while audio is generated
   mount,
 }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/SynthesizingAudiobook");
-  await expect(component.getByRole("main").getByRole("status")).toHaveText(
-    "Generating audio, 1 of 3 segments ready",
-  );
+  await expect(
+    component.getByRole("contentinfo", { name: "Player" }).getByRole("status"),
+  ).toHaveText("Generating audio, 1 of 3 segments ready");
   await expect(
     component.getByText("Keep the important boundaries real.", { exact: true }),
   ).toBeVisible();
@@ -380,15 +430,19 @@ test("renders audiobook-load-error", async ({ mount, page }) => {
 test("shows loading skeletons with an unknown preparation phase", async ({ mount }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/LoadingAudiobook");
   await expect(component.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
-  await expect(component.getByRole("main").getByRole("status")).toHaveText("Preparing");
+  await expect(
+    component.getByRole("contentinfo", { name: "Player" }).getByRole("status"),
+  ).toHaveText("Preparing");
   await expect(component).toHaveScreenshot("loading-audiobook.png");
 });
 
-test("shows preparation skeletons without playback controls", async ({ mount }) => {
+test("shows preparation skeletons with a disabled player sheet", async ({ mount }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/PendingConversion");
   await expect(component.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
-  await expect(component.getByRole("main").getByRole("status")).toHaveText("Preparing");
-  await expect(component.getByRole("button", { name: "Play", exact: true })).toHaveCount(0);
+  await expect(
+    component.getByRole("contentinfo", { name: "Player" }).getByRole("status"),
+  ).toHaveText("Preparing");
+  await expect(component.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
   await expect(component).toHaveScreenshot("pending-conversion.png");
 });
 
@@ -400,7 +454,9 @@ for (const [story, label] of [
 ] as const) {
   test(`the status line of a pending conversion reads "${label}"`, async ({ mount }) => {
     const component = await mount(`routes/_shell.audiobooks.$conversionId/${story}`);
-    await expect(component.getByRole("main").getByRole("status")).toHaveText(label);
+    await expect(
+      component.getByRole("contentinfo", { name: "Player" }).getByRole("status"),
+    ).toHaveText(label);
   });
 }
 
