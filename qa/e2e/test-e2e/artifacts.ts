@@ -103,3 +103,92 @@ export async function validateAudioSegment({
   });
   expect(unchangedAudio.status()).toBe(304);
 }
+
+/**
+ * Follows the audiobook's narration track pointer, a signed media URL, and checks that the Worker
+ * serves the joined segments as one MP3 whose layout matches the response's start offsets.
+ */
+export async function validateNarrationTrack({
+  conversionId,
+  origin,
+  page,
+}: {
+  conversionId: string;
+  origin: string;
+  page: Page;
+}): Promise<void> {
+  const request = page.request;
+  const headers = await getTrialSessionHeaders(page);
+  const audiobook: unknown = await (
+    await request.get(`${origin}/api/audiobooks/${conversionId}`, { headers })
+  ).json();
+  const narrationTrack = getNarrationTrack(audiobook);
+  expect(narrationTrack.url).toMatch(
+    new RegExp(`^${origin}/api/files/audiobooks/${conversionId}/narration-track\\.mp3\\?token=`),
+  );
+
+  // No session headers: the signed media URL authorizes the request by itself.
+  const trackResponse = await request.get(narrationTrack.url);
+  expect(trackResponse.status()).toBe(200);
+  expect(trackResponse.headers()["content-type"]).toBe("audio/mpeg");
+  expect(trackResponse.headers()["accept-ranges"]).toBe("bytes");
+  const track = new Uint8Array(await trackResponse.body());
+  expect(Number(trackResponse.headers()["content-length"])).toBe(track.byteLength);
+  // Every frame is 24 ms and 384 bytes, so the joined segments form one valid MP3.
+  expect(analyzeMp3(track).durationMilliseconds).toBe(narrationTrack.durationMilliseconds);
+  expect(track.byteLength).toBe(narrationTrack.durationMilliseconds * 16);
+
+  const trackHead = await request.head(narrationTrack.url);
+  expect(trackHead.status()).toBe(200);
+  expect(Number(trackHead.headers()["content-length"])).toBe(track.byteLength);
+
+  // A range across the join between the first and the second segment.
+  const joinOffset = narrationTrack.startMilliseconds[1]! * 16;
+  const trackRange = await request.get(narrationTrack.url, {
+    headers: { Range: `bytes=${joinOffset - 10}-${joinOffset + 9}` },
+  });
+  expect(trackRange.status()).toBe(206);
+  expect(trackRange.headers()["content-range"]).toBe(
+    `bytes ${joinOffset - 10}-${joinOffset + 9}/${track.byteLength}`,
+  );
+  expect([...(await trackRange.body())]).toEqual([
+    ...track.subarray(joinOffset - 10, joinOffset + 10),
+  ]);
+
+  const trackEtag = trackResponse.headers()["etag"];
+  if (trackEtag === undefined) {
+    throw new Error("Narration track response did not include an ETag");
+  }
+  const unchangedTrack = await request.get(narrationTrack.url, {
+    headers: { "If-None-Match": trackEtag },
+  });
+  expect(unchangedTrack.status()).toBe(304);
+}
+
+function getNarrationTrack(audiobook: unknown): {
+  url: string;
+  durationMilliseconds: number;
+  startMilliseconds: number[];
+} {
+  if (
+    typeof audiobook !== "object" ||
+    audiobook === null ||
+    !("narrationTrack" in audiobook) ||
+    typeof audiobook.narrationTrack !== "object" ||
+    audiobook.narrationTrack === null ||
+    !("url" in audiobook.narrationTrack) ||
+    typeof audiobook.narrationTrack.url !== "string" ||
+    !("durationMilliseconds" in audiobook.narrationTrack) ||
+    typeof audiobook.narrationTrack.durationMilliseconds !== "number" ||
+    !("startMilliseconds" in audiobook.narrationTrack) ||
+    !Array.isArray(audiobook.narrationTrack.startMilliseconds) ||
+    !audiobook.narrationTrack.startMilliseconds.every((start) => typeof start === "number")
+  ) {
+    throw new Error("The audiobook response has no narration track");
+  }
+  return {
+    url: audiobook.narrationTrack.url,
+    durationMilliseconds: audiobook.narrationTrack.durationMilliseconds,
+    startMilliseconds: audiobook.narrationTrack.startMilliseconds,
+  };
+}

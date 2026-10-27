@@ -129,6 +129,18 @@ export type AudioSegment = z.infer<typeof audioSegmentSchema>;
  * signed media URL carries; requests without it fall back to the media cookie or a bearer token.
  */
 export const signedMediaUrlQuerySchema = z.object({ token: z.string().optional() });
+/** The query of the narration track route, which accepts only a signed media URL. */
+export const narrationTrackQuerySchema = z.object({ token: z.string() });
+/**
+ * Where to request the audiobook's narration track (a signed media URL), and where each segment
+ * starts in it. `startMilliseconds[i]` is the sum of the settled durations of segments `0..i-1`.
+ */
+export const narrationTrackSchema = z.object({
+  url: z.url(),
+  durationMilliseconds: z.number().int().positive(),
+  startMilliseconds: z.array(z.number().int().nonnegative()).min(1),
+});
+export type NarrationTrack = z.infer<typeof narrationTrackSchema>;
 /** Where to request the audiobook's cover image: a signed media URL. */
 export const coverImageSchema = z.object({
   url: z.url(),
@@ -147,6 +159,8 @@ const preparedBase = {
   }),
   // One entry per synchronization unit, in document order.
   segments: z.array(audioSegmentSchema),
+  // Present only when every segment has settled audio.
+  narrationTrack: narrationTrackSchema.optional(),
   playbackPosition: playbackPositionSchema.nullable(),
 };
 export const audiobookSchema = z.discriminatedUnion("status", [
@@ -199,6 +213,7 @@ export const ERROR_CODE = {
   INVALID_INPUT: "invalid-input",
   MEDIA_URL_INVALID: "media-url-invalid",
   METHOD_NOT_ALLOWED: "method-not-allowed",
+  NARRATION_TRACK_NOT_FOUND: "narration-track-not-found",
   NOT_FOUND: "not-found",
   OPERATIONAL_ERROR: "operational-error",
   ORIGIN_BLOCKED: "origin-blocked",

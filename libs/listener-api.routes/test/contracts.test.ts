@@ -12,6 +12,7 @@ import {
   grantConversionsSchema,
   grantParamsSchema,
   grantSnapshotSchema,
+  narrationTrackQuerySchema,
   playbackPositionSchema,
   retryConversionResponseSchema,
   segmentParamsSchema,
@@ -46,6 +47,11 @@ const PREPARED_AUDIOBOOK = {
     synchronizationUnits: [{ id: "one", narrationText: "Document" }],
   },
   segments: [{ sequence: 0, status: "absent" }],
+  narrationTrack: {
+    url: "https://example.com/narration-track.mp3?token=v1.payload.signature",
+    durationMilliseconds: 1_200,
+    startMilliseconds: [0],
+  },
   playbackPosition: { synchronizationUnitId: "one", offsetMilliseconds: 1500 },
 };
 
@@ -61,6 +67,11 @@ describe("listener API transport contracts", () => {
       name: "segment parameters",
       schema: segmentParamsSchema,
       request: { conversionId: UUID, sequence: 0 },
+    },
+    {
+      name: "narration track query",
+      schema: narrationTrackQuerySchema,
+      request: { token: "v1.payload.signature" },
     },
     {
       name: "credential exchange",
@@ -91,6 +102,7 @@ describe("listener API transport contracts", () => {
   test.each([
     [grantParamsSchema, { extra: true }],
     [segmentParamsSchema, { conversionId: UUID }],
+    [narrationTrackQuerySchema, {}],
     [exchangeCredentialRequestSchema, { extra: true }],
     [startConversionRequestSchema, { extra: true }],
     [accountConfirmationSchema, { providerToken: "token" }],
@@ -114,6 +126,7 @@ describe("listener API transport contracts", () => {
           synchronizationUnits: [{ id: "one", narrationText: "Document", newField: true }],
         },
         segments: [{ sequence: 0, status: "absent", newField: true }],
+        narrationTrack: { ...PREPARED_AUDIOBOOK.narrationTrack, newField: true },
         playbackPosition: { ...PREPARED_AUDIOBOOK.playbackPosition, newField: true },
       },
       expected: PREPARED_AUDIOBOOK,

@@ -176,9 +176,15 @@ _Avoid_: text chunk, audio chunk
 
 ## audio segment
 
-The immutable, conversion-scoped audio produced from one narration chunk and identified by its sequence within the conversion. It remains part of the conversion whether or not audiobook production completes.
+The immutable, conversion-scoped audio produced from one narration chunk and identified by its sequence within the conversion. It is the unit of synthesis, storage, and settlement; listeners receive audio segments joined into the narration track. It remains part of the conversion whether or not audiobook production completes.
 
 _Avoid_: audio chunk
+
+## narration track
+
+An audiobook's single audio file: its audio segments, unchanged and joined in document order. It exists only once every segment has audio, is assembled per request rather than stored, and is the audio delivered to listeners.
+
+_Avoid_: audio file, full track, playback track
 
 ## generated audio duration
 
@@ -206,7 +212,7 @@ _Avoid_: passage, paragraph, section
 
 ## audiobook
 
-The adaptation produced from source content, comprising a prepared narration document and one narration audio segment per synchronization unit. Its text can be read while speech is generated. It becomes playable once every segment has audio, so its total duration is known before playback starts; when some segments finally failed, it plays only after the listener chooses to skip them.
+The adaptation produced from source content, comprising a prepared narration document and one narration audio segment per synchronization unit, delivered as one narration track once every segment has audio. Its text can be read while speech is generated. It becomes playable once every segment has audio, so its total duration is known before playback starts; when some segments finally failed, it plays only after the listener chooses to skip them.
 
 _Avoid_: audio file, audio output, workflow output, article
 

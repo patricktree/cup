@@ -115,3 +115,19 @@ export function toNarrationDocumentResponse(document: StoredAudiobook["narration
     })),
   } satisfies ReadyAudiobook["narrationDocument"];
 }
+
+/**
+ * `durations` are the settled segment durations in sequence order. Each segment starts at the sum
+ * of the durations before it; the constant decoder delay at each join is not corrected for.
+ */
+export function toNarrationTrackResponse(url: string, durations: readonly number[]) {
+  const startMilliseconds: number[] = [];
+  let durationMilliseconds = 0;
+  for (const duration of durations) {
+    startMilliseconds.push(durationMilliseconds);
+    durationMilliseconds += duration;
+  }
+  return { url, durationMilliseconds, startMilliseconds } satisfies NonNullable<
+    ReadyAudiobook["narrationTrack"]
+  >;
+}

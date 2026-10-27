@@ -39,6 +39,27 @@ export function derivePreparedConversionStatus(
   return usage.some((segment) => segment.state === "reserved") ? "synthesizing" : "ready";
 }
 
+/**
+ * Returns the settled durations of a conversion's segments in sequence order when its narration
+ * track exists, which is when the ledger has segments and every one of them is settled. A ready
+ * conversion with a failed segment has no narration track.
+ */
+export function findNarrationTrackDurations(
+  usage: readonly Pick<SegmentUsage, "sequence" | "state" | "actualMilliseconds">[],
+): number[] | undefined {
+  if (usage.length === 0 || usage.some((segment) => segment.state !== "settled")) {
+    return undefined;
+  }
+
+  const segments = [...usage].sort((left, right) => left.sequence - right.sequence);
+  // Reservations cover the whole narration document, so settled rows are never partial.
+  if (segments.some((segment, index) => segment.sequence !== index)) {
+    throw new Error("Narration track segments must have consecutive sequences from 0");
+  }
+
+  return segments.map((segment) => segment.actualMilliseconds);
+}
+
 export function estimateAudioDuration(narrationTextCharacters: number): number {
   if (!Number.isSafeInteger(narrationTextCharacters) || narrationTextCharacters < 1) {
     throw new Error("Narration character count must be a positive safe integer");

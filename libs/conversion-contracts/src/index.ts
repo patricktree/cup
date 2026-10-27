@@ -191,6 +191,7 @@ export {
 export {
   derivePreparedConversionStatus,
   estimateAudioDuration,
+  findNarrationTrackDurations,
   insufficientDurationSchema,
   type InsufficientDuration,
   type PreparedConversionStatus,

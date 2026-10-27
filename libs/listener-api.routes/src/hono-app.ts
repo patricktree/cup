@@ -5,6 +5,7 @@ import {
   audiobookSchema,
   retryConversionResponseSchema,
   scheduleDeletionResponseSchema,
+  narrationTrackQuerySchema,
   segmentParamsSchema,
   signedMediaUrlQuerySchema,
   playbackPositionSchema,
@@ -370,6 +371,29 @@ const audioRoute = createRoute({
   },
 });
 const audioHeadRoute = createRoute({ ...audioRoute, method: "head" });
+const narrationTrackRoute = createRoute({
+  method: "get",
+  path: "/api/files/audiobooks/{conversionId}/narration-track.mp3",
+  request: { params: conversionParamsSchema, query: narrationTrackQuerySchema },
+  responses: {
+    200: {
+      content: { "audio/mpeg": { schema: binarySchema } },
+      description: "The narration track: every audio segment, joined in sequence order.",
+    },
+    206: {
+      content: { "audio/mpeg": { schema: binarySchema } },
+      description: "Narration track byte range.",
+    },
+    304: { description: "Not modified." },
+    400: errorResponse("Invalid request."),
+    401: errorResponse("Missing, invalid or expired authorization."),
+    403: errorResponse("Access blocked, or the grant expired or was revoked."),
+    404: errorResponse("Narration track unavailable."),
+    416: errorResponse("Invalid range."),
+    500: errorResponse("A stored segment is missing or does not match its settled duration."),
+  },
+});
+const narrationTrackHeadRoute = createRoute({ ...narrationTrackRoute, method: "head" });
 const coverImageRoute = createRoute({
   method: "get",
   path: "/api/files/audiobooks/{conversionId}/cover-image",
@@ -426,6 +450,8 @@ export type ListenerApiHandlers<Bindings extends object> = {
   savePosition: ListenerApiRouteHandler<typeof savePositionRoute, Bindings>;
   getAudio: ListenerApiRouteHandler<typeof audioRoute, Bindings>;
   headAudio: ListenerApiRouteHandler<typeof audioHeadRoute, Bindings>;
+  getNarrationTrack: ListenerApiRouteHandler<typeof narrationTrackRoute, Bindings>;
+  headNarrationTrack: ListenerApiRouteHandler<typeof narrationTrackHeadRoute, Bindings>;
   getCoverImage: ListenerApiRouteHandler<typeof coverImageRoute, Bindings>;
   headCoverImage: ListenerApiRouteHandler<typeof coverImageHeadRoute, Bindings>;
 };
@@ -453,6 +479,8 @@ export function createListenerApi<Bindings extends object>(
     .openapi(savePositionRoute, handlers.savePosition)
     .openapi(audioRoute, handlers.getAudio)
     .openapi(audioHeadRoute, handlers.headAudio)
+    .openapi(narrationTrackRoute, handlers.getNarrationTrack)
+    .openapi(narrationTrackHeadRoute, handlers.headNarrationTrack)
     .openapi(coverImageRoute, handlers.getCoverImage)
     .openapi(coverImageHeadRoute, handlers.headCoverImage);
 }
@@ -480,6 +508,8 @@ export function createListenerContractApp() {
     getAudiobook: unavailable,
     getAudio: unavailable,
     headAudio: unavailable,
+    getNarrationTrack: unavailable,
+    headNarrationTrack: unavailable,
     getCoverImage: unavailable,
     headCoverImage: unavailable,
     retryConversion: unavailable,

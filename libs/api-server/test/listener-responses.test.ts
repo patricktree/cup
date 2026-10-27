@@ -450,6 +450,7 @@ test("the audiobook carries only declared fields", async () => {
   expect(audiobook).toMatchObject({
     status: "ready",
     playbackPosition: { synchronizationUnitId: "synchronization-unit-1", offsetMilliseconds: 500 },
+    narrationTrack: { durationMilliseconds: 1_000, startMilliseconds: [0] },
   });
 });
 

@@ -36,6 +36,7 @@ export const ERROR_CODE = {
   INVALID_INPUT: "invalid-input",
   MEDIA_URL_INVALID: "media-url-invalid",
   METHOD_NOT_ALLOWED: "method-not-allowed",
+  NARRATION_TRACK_NOT_FOUND: "narration-track-not-found",
   NOT_FOUND: "not-found",
   OPERATIONAL_ERROR: "operational-error",
   ORIGIN_BLOCKED: "origin-blocked",

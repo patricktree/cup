@@ -5,7 +5,11 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { Temporal } from "temporal-polyfill";
 
 import { countNarrationTextCharactersBySegment } from "@cup/audiobook-production";
-import { derivePreparedConversionStatus, type ConversionOwner } from "@cup/conversion-contracts";
+import {
+  derivePreparedConversionStatus,
+  findNarrationTrackDurations,
+  type ConversionOwner,
+} from "@cup/conversion-contracts";
 import {
   clearGrantSessionCookie,
   createGrantSessionCookie,
@@ -48,6 +52,7 @@ import {
   toDurationBalanceResponse,
   toGrantSnapshotResponse,
   toNarrationDocumentResponse,
+  toNarrationTrackResponse,
   toPlaybackPositionResponse,
 } from "#src/http/listener-responses.ts";
 import { isDevelopmentOperatorRequest } from "#src/http/operator-access.ts";
@@ -55,6 +60,7 @@ import {
   loadReadyAudiobookFromEnvironment,
   serveAudio,
   serveCoverImage,
+  serveNarrationTrack,
 } from "#src/http/serve-audiobook.ts";
 import {
   signMediaUrl,
@@ -694,16 +700,20 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     if (!audiobook) {
       return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
     }
+    const origin = new URL(context.req.url).origin;
+    const issuedAtMs = Temporal.Now.instant().epochMilliseconds;
+    const segmentUsage = await reader.listAudioSegments();
+    const narrationTrackDurations = findNarrationTrackDurations(segmentUsage);
     const synthesis = await getSynthesisState(
       {
         conversionId,
-        origin: new URL(context.req.url).origin,
+        origin,
         narrationTextCharactersBySegment: countNarrationTextCharactersBySegment(
           audiobook.narrationDocument,
         ),
       },
       {
-        listAudioSegments: () => reader.listAudioSegments(),
+        listAudioSegments: async () => segmentUsage,
         getAvailableMilliseconds: () => reader.getAvailableMilliseconds(),
         getFailureExplanation: async (sequence) => {
           const failure = await context.env.AUDIO_BUCKET.get(
@@ -737,17 +747,31 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
           : {
               coverImage: {
                 url: await signMediaUrl({
-                  url: `${new URL(context.req.url).origin}/api/files/audiobooks/${conversionId}/cover-image`,
+                  url: `${origin}/api/files/audiobooks/${conversionId}/cover-image`,
                   conversionId,
                   // The ownership middleware admitted this request for the owner alone.
                   principal: owner,
                   signingKey: context.env.MEDIA_URL_SIGNING_KEY,
-                  issuedAtMs: Temporal.Now.instant().epochMilliseconds,
+                  issuedAtMs,
                 }),
                 ...(audiobook.coverImage.alternativeText === undefined
                   ? {}
                   : { alternativeText: audiobook.coverImage.alternativeText }),
               },
+            }),
+        ...(narrationTrackDurations === undefined
+          ? {}
+          : {
+              narrationTrack: toNarrationTrackResponse(
+                await signMediaUrl({
+                  url: `${origin}/api/files/audiobooks/${conversionId}/narration-track.mp3`,
+                  conversionId,
+                  principal: owner,
+                  signingKey: context.env.MEDIA_URL_SIGNING_KEY,
+                  issuedAtMs,
+                }),
+                narrationTrackDurations,
+              ),
             }),
         narrationDocument: toNarrationDocumentResponse(audiobook.narrationDocument),
         playbackPosition: toPlaybackPositionResponse(playbackPosition),
@@ -860,6 +884,24 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
       conversionId,
       sequence,
       true,
+      context.get("requestId"),
+    );
+  },
+  async getNarrationTrack(context) {
+    const { conversionId } = context.req.valid("param");
+    return serveNarrationTrack(
+      context.env,
+      context.req.raw,
+      conversionId,
+      context.get("requestId"),
+    );
+  },
+  async headNarrationTrack(context) {
+    const { conversionId } = context.req.valid("param");
+    return serveNarrationTrack(
+      context.env,
+      context.req.raw,
+      conversionId,
       context.get("requestId"),
     );
   },
@@ -1618,8 +1660,9 @@ type SignedMediaUrlAuthorization =
 
 /**
  * Authorizes a media request by its signed media URL token, for any route under
- * `/api/files/audiobooks/{conversionId}/`. Without a token, the request falls back to the other
- * media credentials. Without an owner, the route answers its own not-found response.
+ * `/api/files/audiobooks/{conversionId}/`. Without a token, the narration track is denied and other
+ * routes fall back to the other media credentials. Without an owner, the route answers its own
+ * not-found response.
  */
 async function authorizeSignedMediaUrl(
   env: ApiServerEnvironment,
@@ -1634,10 +1677,11 @@ async function authorizeSignedMediaUrl(
     signingKey: env.MEDIA_URL_SIGNING_KEY,
     nowMs: Temporal.Now.instant().epochMilliseconds,
   });
-  if (token.result === "absent") {
+  const isTokenRequired = new URL(requestUrl).pathname.endsWith("/narration-track.mp3");
+  if (token.result === "absent" && !isTokenRequired) {
     return { result: "absent" };
   }
-  if (token.result === "invalid") {
+  if (token.result !== "valid") {
     return {
       result: "denied",
       response: jsonError(
@@ -1767,6 +1811,7 @@ function allowedMethodsForApiPath(pathname: string): string[] | undefined {
     [/^\/api\/audiobooks\/[^/]+\/retry$/, ["POST"]],
     [/^\/api\/audiobooks\/[^/]+\/position$/, ["PUT"]],
     [/^\/api\/files\/audiobooks\/[^/]+\/segments\/[^/]+\/audio\.mp3$/, ["GET", "HEAD"]],
+    [/^\/api\/files\/audiobooks\/[^/]+\/narration-track\.mp3$/, ["GET", "HEAD"]],
     [/^\/api\/files\/audiobooks\/[^/]+\/cover-image$/, ["GET", "HEAD"]],
     [/^\/api\/operator\/grants$/, ["GET", "POST"]],
     [/^\/api\/operator\/grants\/[^/]+$/, ["GET"]],

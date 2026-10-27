@@ -1,4 +1,8 @@
-import { validateAudioSegment, validateCoverImage } from "#test-e2e/artifacts.ts";
+import {
+  validateAudioSegment,
+  validateCoverImage,
+  validateNarrationTrack,
+} from "#test-e2e/artifacts.ts";
 import { expect, test } from "#test-e2e/fixtures.ts";
 import {
   getTrialSessionHeaders,
@@ -37,6 +41,7 @@ test("generates audio for the whole document, then plays it on one timeline", as
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await expect(page.getByRole("alert")).toHaveCount(0);
   await validateAudioSegment({ audioUrl: segments[0]!.url, page });
+  await validateNarrationTrack({ conversionId: id, origin: workerEnvironment.origin, page });
 
   await page.reload();
   await waitForAudiobook(page);
@@ -74,6 +79,13 @@ test("trial article links require the owning grant session for reading and repla
   ).toBe(401);
   expect((await anonymous.request.get(segment.url)).status()).toBe(401);
   expect((await anonymous.request.get(coverImageUrl)).status()).toBe(401);
+  expect(
+    (
+      await anonymous.request.get(
+        workerEnvironment.origin + `/api/files/audiobooks/${id}/narration-track.mp3`,
+      )
+    ).status(),
+  ).toBe(401);
   const response = await anonymous.request.post(
     workerEnvironment.origin + `/api/audiobooks/${id}/retry`,
     {
