@@ -1,8 +1,11 @@
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
-import { QueryObserver, useQueryClient } from "@tanstack/react-query";
 import React from "react";
 
-import { createPlaybackSession, createPlayer } from "#src/app/player/create-playback.js";
+import {
+  createNarrationAudioElement,
+  createPlaybackSession,
+} from "#src/app/player/create-playback.js";
+import type { Player, PlayerSnapshot } from "#src/app/player/narration-track-player.js";
 import type { PreparedAudiobook } from "#src/app/player/playback-session.js";
 import {
   PlayerHost,
@@ -11,36 +14,27 @@ import {
   type PlayerHostSnapshot,
 } from "#src/app/player/player-host.js";
 import { authStateSnapshot, subscribeAuthState } from "#src/auth/account-session.js";
-import { createAudiobookQuery, getLocalPlaybackPosition } from "#src/data-fetching/reader.js";
-import {
-  registerPlayerMediaSession,
-  type Player,
-  type PlayerSnapshot,
-} from "#src/platform/player.js";
+import { getLocalPlaybackPosition } from "#src/data-fetching/reader.js";
+import { publishMediaMetadata } from "#src/platform/media-session.js";
 import { STOP_PLAYBACK_EVENT_NAME } from "#src/playback-events.js";
 
 const PlayerHostContext = React.createContext<PlayerHost | null>(null);
 
 /**
- * Provides the app's single player to every page below it and feeds it the account and the loaded
- * audiobook's latest version; unmounting it stops playback.
+ * Provides the app's single player to every page below it and feeds it the account; unmounting it
+ * stops playback.
  */
 export function PlayerHostProvider({ children }: { children: React.ReactNode }) {
   const [host] = React.useState(
     () =>
       new PlayerHost({
+        createAudioElement: createNarrationAudioElement,
         createSession: createPlaybackSession,
-        createPlayer,
-        registerMediaSession: registerPlayerMediaSession,
+        publishMediaMetadata,
         getAccount: readPlayerHostAccount,
         getLocalPosition: getLocalPlaybackPosition,
       }),
   );
-  const loadedConversionId = React.useSyncExternalStore(
-    host.subscribe,
-    () => host.getSnapshot().loaded?.conversionId,
-  );
-  const queryClient = useQueryClient();
 
   React.useEffect(
     function unloadWhenLeavingTheShell() {
@@ -66,26 +60,6 @@ export function PlayerHostProvider({ children }: { children: React.ReactNode }) 
     [host],
   );
 
-  React.useEffect(
-    function reportLatestVersionOfLoadedAudiobook() {
-      if (loadedConversionId === undefined) {
-        return undefined;
-      }
-
-      // Observing the query keeps it polling while a retry synthesizes and the listener is elsewhere.
-      const observer = new QueryObserver(queryClient, createAudiobookQuery(loadedConversionId));
-      const reportLatestVersion = () => {
-        const latest = observer.getCurrentResult().data;
-        if (latest) {
-          host.updateLoadedAudiobook(loadedConversionId, latest);
-        }
-      };
-      reportLatestVersion();
-      return observer.subscribe(reportLatestVersion);
-    },
-    [host, loadedConversionId, queryClient],
-  );
-
   return <PlayerHostContext value={host}>{children}</PlayerHostContext>;
 }
 
@@ -95,7 +69,7 @@ export function usePlayerHost(): PlayerHost {
   return host;
 }
 
-/** Re-renders when another audiobook is loaded or shown, consent changes, or authorization fails. */
+/** Re-renders when another audiobook is loaded or shown, or the shown one changes. */
 export function usePlayerHostSnapshot(): PlayerHostSnapshot {
   const host = usePlayerHost();
   return React.useSyncExternalStore(host.subscribe, host.getSnapshot);
@@ -123,7 +97,6 @@ type ShownAudiobookPlayback = {
   play: () => void;
   /** Must be called from a user gesture. */
   playFromUnit: (unitIndex: number) => void;
-  playWithoutFailedSegments: () => void;
 };
 
 /**
@@ -150,7 +123,6 @@ export function useShownAudiobook(
     // Wrapped so that a click event is not taken for a unit index.
     play: () => host.playShown(),
     playFromUnit: host.playShown,
-    playWithoutFailedSegments: host.consentToSkippingSegmentsWithoutAudio,
   };
 }
 

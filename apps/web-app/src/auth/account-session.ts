@@ -25,7 +25,6 @@ import {
   setNativeMediaSession,
   clearNativeAuthSession,
 } from "#src/platform/account-auth.js";
-import { stopNativePlayback } from "#src/platform/native-player.js";
 import { STOP_PLAYBACK_EVENT_NAME } from "#src/playback-events.js";
 import { trialBrowserState } from "#src/trial-browser-state.js";
 
@@ -133,11 +132,6 @@ export async function signInGoogle(fresh = false) {
   return request<void>((reply) => accountSessionActor.send({ type: "SIGN_IN", fresh, reply }));
 }
 
-/** Issues the media cookie for the signed-in account, after any issuance already in flight. */
-export function refreshPlaybackAuthorization() {
-  return request<void>((reply) => accountSessionActor.send({ type: "AUTHORIZE_MEDIA", reply }));
-}
-
 /**
  * Shows signed-out and stops audio immediately, then initializes account auth if needed to clear
  * the stored session. Concurrent calls share one sign-out.
@@ -189,7 +183,6 @@ function isSameAuthState(previous: AccountAuthState, next: AccountAuthState) {
 }
 
 function stopPlayback() {
-  stopNativePlayback();
   window.dispatchEvent(new Event(STOP_PLAYBACK_EVENT_NAME));
   for (const audio of document.querySelectorAll("audio")) {
     audio.pause();

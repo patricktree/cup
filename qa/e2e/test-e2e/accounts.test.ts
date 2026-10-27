@@ -30,12 +30,18 @@ test("Google PKCE signup resumes conversion, protects history and media, and sup
     throw new Error("Conversion missing");
   }
   await waitForGeneratedAudio(page, conversionId, await readAccessToken(page));
+  const audiobook = await readAudiobook(page, conversionId, await readAccessToken(page));
+  if (audiobook.status !== "ready" || !audiobook.narrationTrack) {
+    throw new Error("Expected a narration track once every segment has audio.");
+  }
+  // The signed media URL the player plays, issued to the signed-in account.
+  const trackUrl = audiobook.narrationTrack.url;
   const remainingAllowance = (await readAccount(page, origin)).balance.available;
   expect(remainingAllowance).toBeLessThan(30 * 60 * 1_000);
   await page.reload();
   await waitForAudiobook(page);
   await expect
-    .poll(() => page.evaluate(async (url) => (await fetch(url)).status, mediaUrl))
+    .poll(() => page.evaluate(async (url) => (await fetch(url)).status, trackUrl))
     .toBe(200);
   expect(
     (
@@ -55,7 +61,8 @@ test("Google PKCE signup resumes conversion, protects history and media, and sup
   await expect(
     page.getByText("Sign in with Google to manage or restore your account."),
   ).toBeVisible();
-  await expect.poll(async () => (await page.request.get(mediaUrl)).status()).toBe(401);
+  // The unexpired signed URL is refused like a bearer request of an account scheduled for deletion.
+  await expect.poll(async () => (await page.request.get(trackUrl)).status()).toBe(403);
   expectConsoleError(/^Failed to load resource: the server responded with a status of 403/);
   await page.goto(`${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);

@@ -10,12 +10,14 @@ import {
   startConversion,
   waitForAudiobook,
 } from "#test-e2e/journey.ts";
-import { waitForGeneratedAudio } from "#test-e2e/synthesis.ts";
+import { captureNarrationAudio, readNarrationAudio } from "#test-e2e/narration-audio.ts";
+import { readAudiobook, waitForGeneratedAudio } from "#test-e2e/synthesis.ts";
 
-test("generates audio for the whole document, then plays it on one timeline", async ({
+test("generates audio for the whole document, then plays its narration track", async ({
   page,
   workerEnvironment,
 }) => {
+  await captureNarrationAudio(page);
   await openNewTrial(page, workerEnvironment);
   await startConversion(page);
   await waitForAudiobook(page);
@@ -25,27 +27,66 @@ test("generates audio for the whole document, then plays it on one timeline", as
   const calls = await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json();
   expect(calls).toHaveLength(segments.length);
 
+  const audiobook = await readAudiobook(page, id);
+  if (audiobook.status !== "ready" || !audiobook.narrationTrack) {
+    throw new Error("Expected a narration track once every segment has audio.");
+  }
+  const { narrationTrack } = audiobook;
+  const units = audiobook.narrationDocument.synchronizationUnits;
+
   const play = page.getByRole("button", { name: "Play", exact: true });
   await expect(play).toBeEnabled({ timeout: 30_000 });
   await expect(page.getByRole("link", { name: /Download/ })).toHaveCount(0);
   const position = page.getByRole("slider");
-  // The progress bar spans every segment, not only the one playing.
-  await expect(position).toHaveAttribute(
-    "max",
-    String(segments.reduce((total, segment) => total + segment.durationMilliseconds, 0)),
-  );
+  // The progress bar spans the whole narration track, as the element reads it from the file.
+  await expect(position).toHaveAttribute("max", String(narrationTrack.durationMilliseconds));
+  // Each audiobook response signs a fresh URL, so only the track itself is compared.
+  const trackPath = new URL(narrationTrack.url).pathname;
+  expect(new URL((await readNarrationAudio(page)).src).pathname).toBe(trackPath);
+
+  // Playing crosses from the first unit into the second.
   await play.click();
-  await expect
-    .poll(async () => Number(await position.inputValue()), { timeout: 60_000 })
-    .toBeGreaterThan(0);
+  await expect(page.locator(`[id="${units[0]!.id}"]`)).toHaveAttribute("aria-current", "true");
+  await expect(page.locator(`[id="${units[1]!.id}"]`)).toHaveAttribute("aria-current", "true", {
+    timeout: 30_000,
+  });
+  expect((await readNarrationAudio(page)).currentTime * 1_000).toBeGreaterThanOrEqual(
+    narrationTrack.startMilliseconds[1]!,
+  );
+
+  // A unit tap seeks the same track to the unit's start offset.
+  await page.getByRole("button", { name: "Play segment 3", exact: true }).click();
+  await expect(page.locator(`[id="${units[2]!.id}"]`)).toHaveAttribute("aria-current", "true");
+  const afterTap = await readNarrationAudio(page);
+  expect(new URL(afterTap.src).pathname).toBe(trackPath);
+  expect(afterTap.currentTime * 1_000).toBeGreaterThanOrEqual(narrationTrack.startMilliseconds[2]!);
+  expect(afterTap.currentTime * 1_000).toBeLessThan(
+    narrationTrack.startMilliseconds[3] ?? narrationTrack.durationMilliseconds,
+  );
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await expect(page.getByRole("alert")).toHaveCount(0);
+  const pausedAt = (await readNarrationAudio(page)).currentTime;
+  // A trial listener's position is kept on the device.
+  await expect
+    .poll(() => page.evaluate((key) => localStorage.getItem(key), `cup:position:v1:${id}`))
+    .toBe(
+      JSON.stringify({
+        synchronizationUnitId: units[2]!.id,
+        offsetMilliseconds: Math.round(pausedAt * 1_000) - narrationTrack.startMilliseconds[2]!,
+      }),
+    );
   await validateAudioSegment({ audioUrl: segments[0]!.url, page });
   await validateNarrationTrack({ conversionId: id, origin: workerEnvironment.origin, page });
 
+  // Reloading restores the position saved on pause, paused.
   await page.reload();
   await waitForAudiobook(page);
   await expect(play).toBeEnabled({ timeout: 30_000 });
+  await expect(page.locator(`[id="${units[2]!.id}"]`)).toHaveAttribute("aria-current", "true");
+  await expect
+    .poll(async () => (await readNarrationAudio(page)).currentTime)
+    .toBeCloseTo(pausedAt, 2);
+  expect((await readNarrationAudio(page)).paused).toBe(true);
   expect(await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json()).toEqual(
     calls,
   );

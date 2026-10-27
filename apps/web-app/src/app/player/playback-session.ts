@@ -1,19 +1,16 @@
-import type { Audiobook, PlaybackPosition } from "@cup/listener-api.routes";
+import type { Audiobook, NarrationTrack, PlaybackPosition } from "@cup/listener-api.routes";
 
-import {
-  createAudiobookTimeline,
-  findTimelineEntryIndex,
-  type AudiobookTimeline,
-} from "#src/app/player/audiobook-timeline.ts";
-import type { ReportedPosition, TimelineLocation } from "#src/platform/player.ts";
+import { findUnitIndexAt, type AudiobookTimeline } from "#src/app/player/audiobook-timeline.ts";
 
 /** A conversion whose narration document is prepared, whatever the state of its audio. */
 export type PreparedAudiobook = Extract<
   Audiobook,
   { status: "insufficient-duration" | "synthesizing" | "ready" }
 >;
-/** An audiobook whose every segment has audio or a final failure. */
-export type PlayableAudiobook = Extract<Audiobook, { status: "ready" }>;
+/** An audiobook with a narration track: every segment has audio. */
+export type PlayableAudiobook = Extract<Audiobook, { status: "ready" }> & {
+  narrationTrack: NarrationTrack;
+};
 
 export type PlaybackSessionRequest = {
   conversionId: string;
@@ -25,10 +22,6 @@ export type PlaybackSessionRequest = {
 };
 
 export type PlaybackSessionServices = {
-  /** The signed-in account's current identity and bearer token, or `null` when nobody is signed in. */
-  getAccount(): Promise<{ subject: string; accessToken: string } | null>;
-  /** Issues the media cookie scoped to `/api/files` for the signed-in account. */
-  issueMediaCookie(): Promise<void>;
   /**
    * Persists a position for the signed-in `subject`, or on this device when `null`. It must refuse
    * to write when another account is signed in by the time the request is sent.
@@ -39,173 +32,94 @@ export type PlaybackSessionServices = {
 
 export const SAVE_INTERVAL_MILLISECONDS = 5_000;
 
+export function isPlayableAudiobook(audiobook: PreparedAudiobook): audiobook is PlayableAudiobook {
+  return audiobook.status === "ready" && audiobook.narrationTrack !== undefined;
+}
+
 /**
- * Establishes that one subject may fetch one loaded audiobook's media from a listening position.
+ * One subject's listening session on one loaded audiobook.
  *
- * It owns the subject check, media authorization, the conversion between listening positions and
- * the whole-audiobook timeline, and the save cadence. Engines only play segments on its timeline.
+ * It converts between listening positions, a synchronization unit and an offset in its audio, and
+ * positions on the narration track, and it owns the save cadence and order.
  */
 export class PlaybackSession {
   readonly conversionId: string;
   readonly audiobook: PlayableAudiobook;
   readonly subject: string | null;
   readonly timeline: AudiobookTimeline;
-  /** Where playback starts: the restored listening position, or the start of the audiobook. */
-  readonly initialLocation: TimelineLocation;
+  /** Where playback starts on the narration track: the restored listening position, or its start. */
+  readonly initialPositionMilliseconds: number;
 
   private readonly services: PlaybackSessionServices;
-  private pendingMediaAuthorization: Promise<void> | undefined;
   private lastSavedAt = Number.NEGATIVE_INFINITY;
   private saves: Promise<void> = Promise.resolve();
 
   constructor(request: PlaybackSessionRequest, services: PlaybackSessionServices) {
+    const { narrationTrack, narrationDocument } = request.audiobook;
+    const unitCount = narrationDocument.synchronizationUnits.length;
+    if (narrationTrack.startMilliseconds.length !== unitCount) {
+      throw new Error(
+        `Audiobook ${request.conversionId} has ${narrationTrack.startMilliseconds.length} start offsets for ${unitCount} synchronization units.`,
+      );
+    }
+
     this.conversionId = request.conversionId;
     this.audiobook = request.audiobook;
     this.subject = request.subject;
     this.services = services;
-    this.timeline = createAudiobookTimeline(request.audiobook.segments);
-    this.initialLocation = this.restore(request.position);
+    this.timeline = narrationTrack;
+    this.initialPositionMilliseconds = this.restore(request.position);
   }
 
-  /** The position players report for a location: its unit and the whole-audiobook position. */
-  reportedPositionAt = (location: TimelineLocation): ReportedPosition => {
-    const entry = this.timeline.entries[location.entryIndex];
-    return {
-      currentUnitIndex: entry?.unitIndex ?? 0,
-      positionMilliseconds: (entry?.startMilliseconds ?? 0) + location.offsetMilliseconds,
-    };
-  };
-
-  /** The listening position a player reports, or `null` when the audiobook has no audio. */
-  listeningPositionOf = (reported: ReportedPosition): PlaybackPosition | null => {
-    // Players report only units with audio; a skipped unit would resolve to the next one with audio.
-    const entry =
-      this.timeline.entries[findTimelineEntryIndex(this.timeline, reported.currentUnitIndex)];
-    const unit = entry && this.audiobook.narrationDocument.synchronizationUnits[entry.unitIndex];
-    if (!entry || !unit) {
-      return null;
-    }
+  /** The listening position at a position on the narration track. */
+  listeningPositionAt = (positionMilliseconds: number): PlaybackPosition => {
+    const unitIndex = findUnitIndexAt(this.timeline, positionMilliseconds);
+    const unit = this.audiobook.narrationDocument.synchronizationUnits[unitIndex]!;
 
     return {
       synchronizationUnitId: unit.id,
-      offsetMilliseconds: Math.max(0, reported.positionMilliseconds - entry.startMilliseconds),
+      offsetMilliseconds: Math.max(
+        0,
+        positionMilliseconds - this.timeline.startMilliseconds[unitIndex]!,
+      ),
     };
   };
 
-  /**
-   * The unit with audio `direction` segments away from a unit, so skipping never lands on a skipped
-   * segment.
-   */
-  adjacentUnitIndex = (unitIndex: number, direction: 1 | -1): number | undefined => {
-    const entryIndex = this.timeline.entries.findIndex((entry) => entry.unitIndex === unitIndex);
-    if (entryIndex < 0) {
-      return undefined;
-    }
-
-    return this.timeline.entries[entryIndex + direction]?.unitIndex;
-  };
-
-  /**
-   * Issues the media cookie for the subject before media requests. Anonymous and trial listeners
-   * need none: the grant cookie or public access covers their media.
-   *
-   * Calls while one is in flight share it, so loading, opening the engine and Play in one gesture
-   * issue one cookie. A settled cookie is never reused: its lifetime is computed on the server's
-   * clock, which the client cannot compare against its own, so every later need issues a new one.
-   */
-  authorizeMedia = (): Promise<void> => {
-    if (this.subject === null) {
-      return Promise.resolve();
-    }
-    if (this.pendingMediaAuthorization) {
-      return this.pendingMediaAuthorization;
-    }
-
-    const authorization = this.requireSubjectAccount().then(() => this.services.issueMediaCookie());
-    this.pendingMediaAuthorization = authorization;
-    const clearPending = () => {
-      if (this.pendingMediaAuthorization === authorization) {
-        this.pendingMediaAuthorization = undefined;
-      }
-    };
-    authorization.then(clearPending, clearPending);
-    return authorization;
-  };
-
-  /**
-   * The subject's current bearer token, for engines that send it themselves, or `null` for
-   * anonymous and trial listeners. It issues no media cookie.
-   */
-  getAccessToken = async (): Promise<string | null> => {
-    if (this.subject === null) {
-      return null;
-    }
-
-    const account = await this.requireSubjectAccount();
-    return account.accessToken;
-  };
-
-  /** Saves a reported position now. Saves are written in order. */
-  save = (reported: ReportedPosition): Promise<void> => {
-    const position = this.listeningPositionOf(reported);
-    if (!position) {
-      return Promise.resolve();
-    }
+  /** Saves a position on the narration track now. Saves are written in order. */
+  save = (positionMilliseconds: number): Promise<void> => {
+    const position = this.listeningPositionAt(positionMilliseconds);
 
     this.lastSavedAt = this.services.now();
-    const save = this.saves.catch(() => undefined).then(() => this.persist(position));
+    // The request layer checks the subject when it resolves the token, right before dispatch.
+    const save = this.saves
+      .catch(() => undefined)
+      .then(() => this.services.savePosition(position, this.subject));
     this.saves = save;
     return save;
   };
 
   /** Saves during playback, at most every `SAVE_INTERVAL_MILLISECONDS`. */
-  saveIfDue = (reported: ReportedPosition): Promise<void> => {
+  saveIfDue = (positionMilliseconds: number): Promise<void> => {
     if (this.services.now() - this.lastSavedAt < SAVE_INTERVAL_MILLISECONDS) {
       return Promise.resolve();
     }
 
-    return this.save(reported);
+    return this.save(positionMilliseconds);
   };
 
-  /**
-   * A skipped unit resumes at the start of the next unit with audio; an unknown unit, or one after
-   * the last audio, at the start of the audiobook.
-   */
-  private restore(position: PlaybackPosition | null): TimelineLocation {
-    const start = { entryIndex: 0, offsetMilliseconds: 0 };
+  /** An unknown unit, such as one removed from the narration document, restores the start. */
+  private restore(position: PlaybackPosition | null): number {
     if (!position) {
-      return start;
+      return 0;
     }
 
     const unitIndex = this.audiobook.narrationDocument.synchronizationUnits.findIndex(
       (unit) => unit.id === position.synchronizationUnitId,
     );
     if (unitIndex < 0) {
-      return start;
-    }
-    const entryIndex = findTimelineEntryIndex(this.timeline, unitIndex);
-    if (entryIndex < 0) {
-      return start;
+      return 0;
     }
 
-    const isRestoredUnitPlayable = this.timeline.entries[entryIndex]?.unitIndex === unitIndex;
-    return {
-      entryIndex,
-      offsetMilliseconds: isRestoredUnitPlayable ? position.offsetMilliseconds : 0,
-    };
-  }
-
-  private persist(position: PlaybackPosition) {
-    // The request layer checks the subject when it resolves the token, right before dispatch.
-    return this.services.savePosition(position, this.subject);
-  }
-
-  /** The signed-in account, which must be the subject the audiobook was loaded for. */
-  private async requireSubjectAccount() {
-    const account = await this.services.getAccount();
-    if (account === null || account.subject !== this.subject) {
-      throw new Error("Sign in again to continue playback.");
-    }
-    return account;
+    return this.timeline.startMilliseconds[unitIndex]! + position.offsetMilliseconds;
   }
 }

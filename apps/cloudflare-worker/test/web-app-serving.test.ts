@@ -73,3 +73,17 @@ test("a web app file is served unchanged with its own content type and the secur
   expect(response.headers.get("Content-Security-Policy")).toContain("frame-ancestors 'none'");
   expect(await response.text()).toBe(FIXTURE_CSS);
 });
+
+test("the CSP lets the web app play media only from the API's file routes", async ({
+  expect,
+  onTestFinished,
+}) => {
+  const worker = await useWorker({ onTestFinished });
+
+  const response = await worker.fetch("/app/audiobooks/c4be3f43-4a43-4d6b-9a3f-6f0d2f6e2d51");
+
+  // The API shares the web app's origin, which the narration track's signed URL points at.
+  expect(response.headers.get("Content-Security-Policy")).toMatch(
+    /(?:^|; )media-src https?:\/\/[^/;\s]+\/api\/files\/(?:;|$)/,
+  );
+});

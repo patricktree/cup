@@ -200,19 +200,19 @@ _Avoid_: transcript, transcription
 
 ## synchronization unit
 
-The smallest independently navigable portion of a narration document associated with one continuous interval of narration audio. Each unit has its own audio segment; a position on the whole audiobook is derived from the durations of the preceding segments plus the offset within the unit's segment.
+The smallest independently navigable portion of a narration document associated with one continuous interval of narration audio. Each unit has its own audio segment and starts in the narration track at the sum of the durations of the preceding segments; a position in the track is that start plus the offset within the unit's audio.
 
 _Avoid_: sentence, paragraph, narration chunk, synchronization cue
 
 ## segment
 
-The user-facing name for a synchronization unit: an independently selectable part of an audiobook's narration document and its corresponding audio. It can include headings or multiple paragraphs, and its text can be read before the corresponding audio segment is generated. A segment whose synthesis finally failed has no audio and is skipped during playback.
+The user-facing name for a synchronization unit: an independently selectable part of an audiobook's narration document and its corresponding audio. It can include headings or multiple paragraphs, and its text can be read before the corresponding audio segment is generated. A segment whose synthesis finally failed has no audio and is marked in the text; the audiobook cannot be played until a retry gives it audio.
 
 _Avoid_: passage, paragraph, section
 
 ## audiobook
 
-The adaptation produced from source content, comprising a prepared narration document and one narration audio segment per synchronization unit, delivered as one narration track once every segment has audio. Its text can be read while speech is generated. It becomes playable once every segment has audio, so its total duration is known before playback starts; when some segments finally failed, it plays only after the listener chooses to skip them.
+The adaptation produced from source content, comprising a prepared narration document and one narration audio segment per synchronization unit, delivered as one narration track once every segment has audio. Its text can be read while speech is generated. It becomes playable once every segment has audio and its narration track therefore exists, so its total duration is known before playback starts; when some segments finally failed, it stays unplayable until a retry succeeds.
 
 _Avoid_: audio file, audio output, workflow output, article
 

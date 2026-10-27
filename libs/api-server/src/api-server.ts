@@ -1325,6 +1325,8 @@ export function createApiServer(dependencies: ApiServerDependencies = production
         defaultSrc: ["'self'"],
         connectSrc: ["'self'", new URL(context.env.SUPABASE_URL).origin],
         imgSrc: ["'self'"],
+        // The web player's narration track: a signed media URL on this origin's file routes.
+        mediaSrc: [`${new URL(context.req.url).origin}/api/files/`],
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'", NONCE],
         frameAncestors: ["'none'"],

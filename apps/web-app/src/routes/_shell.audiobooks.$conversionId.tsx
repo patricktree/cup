@@ -79,8 +79,8 @@ function AudiobookPage(): React.JSX.Element {
 }
 
 /**
- * Shows the narration document. Its audio plays in the shell's player, whose host decides when the
- * audiobook is loaded and whether Play or a segment tap can start it.
+ * Shows the narration document. Its audio plays in the shell's player, whose host loads the
+ * audiobook once it has a narration track; only then can Play or a segment tap start it.
  */
 function PreparedReader({
   conversionId,
@@ -123,8 +123,6 @@ function PreparedReader({
         audiobook={audiobook}
         failedUnitIndexes={failedUnitIndexes}
         hasAudio={hasAudio}
-        canPlay={canPlay}
-        onPlayWithoutFailedSegments={playback.playWithoutFailedSegments}
       />
 
       <NarrationDocument
@@ -144,21 +142,17 @@ function PreparedReader({
   );
 }
 
-/** Explains why audio is missing or skipped, and offers to retry its synthesis. */
+/** Explains why audio is missing, and offers to retry its synthesis. */
 function ReaderNotices({
   conversionId,
   audiobook,
   failedUnitIndexes,
   hasAudio,
-  canPlay,
-  onPlayWithoutFailedSegments,
 }: {
   conversionId: string;
   audiobook: PreparedAudiobook;
   failedUnitIndexes: readonly number[];
   hasAudio: boolean;
-  canPlay: boolean;
-  onPlayWithoutFailedSegments: () => void;
 }) {
   const retry = useRetryConversion(conversionId, useQueryClient());
   const hasFailedSegments = audiobook.status === "ready" && failedUnitIndexes.length > 0;
@@ -211,17 +205,8 @@ function ReaderNotices({
         </ReaderNotice>
       ) : null}
 
-      {hasFailedSegments && canPlay ? (
-        <ReaderNotice>
-          <p>
-            {formatSegmentCount(failedUnitIndexes.length)} without audio{" "}
-            {failedUnitIndexes.length === 1 ? "is" : "are"} skipped during playback.
-          </p>
-          {retryButton}
-        </ReaderNotice>
-      ) : null}
-
-      {hasFailedSegments && !canPlay ? (
+      {/* No narration track exists until every segment has audio, so playback waits for Retry. */}
+      {hasFailedSegments ? (
         <ReaderNotice>
           <p>
             {hasAudio
@@ -229,11 +214,6 @@ function ReaderNotices({
               : "Audio could not be generated for this article."}
           </p>
           {retryButton}
-          {hasAudio ? (
-            <DSButton onClick={onPlayWithoutFailedSegments}>
-              Play without {failedUnitIndexes.length === 1 ? "it" : "them"}
-            </DSButton>
-          ) : null}
         </ReaderNotice>
       ) : null}
     </>
@@ -320,12 +300,8 @@ function NarrationDocument({
       const narrationDocumentElement = narrationDocumentElementRef.current;
       check.assert(narrationDocumentElement);
 
-      const buttons = units.flatMap((unit, unitIndex) => {
-        // A segment without audio has nothing to start; playback skips it.
-        if (failedUnitIndexes.includes(unitIndex)) {
-          return [];
-        }
-
+      // Units are selectable only with a narration track, which has audio for every unit.
+      const buttons = units.map((unit, unitIndex) => {
         const segment = narrationDocumentElement.querySelector(`[id="${unit.id}"]`);
         check.assert(segment);
 
@@ -335,7 +311,7 @@ function NarrationDocument({
         button.setAttribute("aria-label", `Play segment ${unitIndex + 1}`);
         button.addEventListener("click", () => selectUnit(unitIndex));
         segment.append(button);
-        return [button];
+        return button;
       });
 
       return () => {
@@ -344,7 +320,7 @@ function NarrationDocument({
         }
       };
     },
-    [units, failedUnitIndexes, isSelectable, narrationDocumentElementRef],
+    [units, isSelectable, narrationDocumentElementRef],
   );
 
   return (
