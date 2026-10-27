@@ -61,8 +61,9 @@ export type PlayerHostServices = {
 };
 
 /**
- * How old a track URL may be before Play renews it. The signed URL expires 24 hours after the
- * server issued it, by the server clock; half of that tolerates a skewed client clock.
+ * How old a track URL may be before Play renews it. The signed URL stays valid for at least 24
+ * hours after the server handed it out, by the server clock; half of that tolerates a skewed client
+ * clock.
  */
 const TRACK_URL_RENEWAL_AGE_MILLISECONDS = 12 * 60 * 60 * 1_000;
 const RENEWAL_ERROR_MESSAGE = "The audio could not be loaded again. Press Play to try again.";

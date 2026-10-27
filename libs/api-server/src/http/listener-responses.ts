@@ -54,21 +54,30 @@ export function toDeletionChallengeResponse(challenge: ReturnType<AccountLifecyc
   } satisfies DeletionChallenge;
 }
 
-export function toAccountHistoryResponse(page: AccountHistoryPage) {
+/** `signCoverImageUrl` issues the signed media URL of a conversion's cover image. */
+export async function toAccountHistoryResponse(
+  page: AccountHistoryPage,
+  signCoverImageUrl: (conversionId: string) => Promise<string>,
+) {
   return {
-    items: page.items.map((item): HistoryItem => ({
-      conversionId: item.conversionId,
-      idempotencyKey: item.idempotencyKey,
-      sourceUrl: item.sourceUrl,
-      createdAtMs: item.createdAtMs,
-      status: item.status,
-      outcome: toHistoryOutcome(item.outcome),
-    })),
+    items: await Promise.all(
+      page.items.map(async (item): Promise<HistoryItem> => ({
+        conversionId: item.conversionId,
+        idempotencyKey: item.idempotencyKey,
+        sourceUrl: item.sourceUrl,
+        createdAtMs: item.createdAtMs,
+        status: item.status,
+        outcome: await toHistoryOutcome(item.outcome, () => signCoverImageUrl(item.conversionId)),
+      })),
+    ),
     nextCursor: page.nextCursor,
   } satisfies AccountHistory;
 }
 
-function toHistoryOutcome(outcome: AccountConversionOutcome | null): HistoryItem["outcome"] {
+async function toHistoryOutcome(
+  outcome: AccountConversionOutcome | null,
+  signCoverImageUrl: () => Promise<string>,
+): Promise<HistoryItem["outcome"]> {
   if (outcome === null) {
     return null;
   }
@@ -76,7 +85,12 @@ function toHistoryOutcome(outcome: AccountConversionOutcome | null): HistoryItem
     return {
       status: "ready",
       title: outcome.title,
-      ...(outcome.hasCoverImage === undefined ? {} : { hasCoverImage: outcome.hasCoverImage }),
+      ...(outcome.hasCoverImage === undefined
+        ? {}
+        : {
+            hasCoverImage: outcome.hasCoverImage,
+            coverImage: { url: await signCoverImageUrl() },
+          }),
     };
   }
   return { status: "failed", explanation: outcome.explanation };

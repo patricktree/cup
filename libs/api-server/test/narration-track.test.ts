@@ -143,7 +143,7 @@ function signTrackUrl(principal: ConversionOwner = trialOwner) {
     conversionId,
     principal,
     signingKey: SIGNING_KEY,
-    issuedAtMs: Temporal.Now.instant().epochMilliseconds,
+    nowMs: Temporal.Now.instant().epochMilliseconds,
   });
 }
 
@@ -392,7 +392,7 @@ test("answers 401 for tampered, expired and other-audiobook tokens", async () =>
       conversionId: crypto.randomUUID(),
       principal: trialOwner,
       signingKey: SIGNING_KEY,
-      issuedAtMs: Temporal.Now.instant().epochMilliseconds,
+      nowMs: Temporal.Now.instant().epochMilliseconds,
     }),
   ).searchParams.get("token");
   const expiredToken = new URL(
@@ -401,7 +401,7 @@ test("answers 401 for tampered, expired and other-audiobook tokens", async () =>
       conversionId,
       principal: trialOwner,
       signingKey: SIGNING_KEY,
-      issuedAtMs: Temporal.Now.instant().epochMilliseconds - 25 * 60 * 60 * 1_000,
+      nowMs: Temporal.Now.instant().epochMilliseconds - 48 * 60 * 60 * 1_000,
     }),
   ).searchParams.get("token");
 
@@ -441,19 +441,6 @@ test("the audiobook response's narration track gives the start of every segment 
   const response = await app.request(getNarrationTrackUrl(audiobook), {}, env);
   expect(response.status).toBe(200);
   expect(new Uint8Array(await response.arrayBuffer())).toEqual(trackBytes);
-});
-
-test("every audiobook response carries a fresh track URL", async () => {
-  const { app, env } = fixture();
-  vi.useFakeTimers({ toFake: ["Date"] });
-  try {
-    const first = getNarrationTrackUrl(await requestAudiobook(app, env));
-    vi.advanceTimersByTime(1_000);
-    const second = getNarrationTrackUrl(await requestAudiobook(app, env));
-    expect(second).not.toBe(first);
-  } finally {
-    vi.useRealTimers();
-  }
 });
 
 test.each([
