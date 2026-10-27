@@ -1,11 +1,17 @@
 import { sql } from "drizzle-orm";
 import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+import { conversionPhaseOrder } from "@cup/conversion-contracts";
 import type { AudiobookReference, ConversionPhase } from "@cup/conversion-contracts";
 import { defineAudioSegments } from "@cup/duration-ledger";
 
 // Re-exported so that the account migrations create the shared duration ledger tables.
 export { creditBalances, creditLedger, creditOperations } from "@cup/duration-ledger";
+
+/** Every conversion phase as an SQL list, so the CHECK below follows the enum. */
+const CONVERSION_PHASE_SQL_LIST = sql.raw(
+  conversionPhaseOrder.map((phase) => `'${phase}'`).join(", "),
+);
 
 export const accounts = sqliteTable(
   "account",
@@ -52,7 +58,7 @@ export const accountConversions = sqliteTable(
     check("account_conversion_status", sql`${table.status} IN ('pending', 'ready', 'failed')`),
     check(
       "account_conversion_phase",
-      sql`${table.lastStartedPhase} IN ('conversion-start', 'source-material-preparation', 'narration-content-selection', 'narration-document-creation', 'audio-segment-production', 'audiobook-assembly', 'audiobook-storage', 'finalization')`,
+      sql`${table.lastStartedPhase} IN (${CONVERSION_PHASE_SQL_LIST})`,
     ),
     check(
       "account_conversion_reference_json",

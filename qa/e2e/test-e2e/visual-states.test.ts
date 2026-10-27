@@ -247,20 +247,16 @@ test("shows a ready article with its player", async ({ page, workerEnvironment }
   await expect(page).toHaveURL(`${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
 });
 
-test("shows an article not-found state", async ({
-  expectConsoleError,
-  page,
-  workerEnvironment,
-}) => {
+test("shows a track not-found state", async ({ expectConsoleError, page, workerEnvironment }) => {
   await page.route(`${workerEnvironment.origin}/api/audiobooks/${CONVERSION_ID}`, async (route) => {
-    await fulfillError(route, 404, ERROR_CODE.AUDIOBOOK_NOT_FOUND, "The audiobook was not found.");
+    await fulfillError(route, 404, ERROR_CODE.AUDIOBOOK_NOT_FOUND, "Track not found.");
   });
   expectConsoleError(CONSOLE_ERRORS.notFound);
-  expectConsoleError(/^RpcError: The audiobook was not found\./);
+  expectConsoleError(/^RpcError: Track not found\./);
 
   await gotoPage(page, `${workerEnvironment.origin}/app/audiobooks/${CONVERSION_ID}`);
   await expect(page.getByRole("heading", { name: "The track could not be loaded." })).toBeVisible();
-  await expect(page.getByText("The audiobook was not found.")).toBeVisible();
+  await expect(page.getByText("Track not found.")).toBeVisible();
   // Trying again cannot find an audiobook that does not exist.
   await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
 });

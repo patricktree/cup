@@ -225,7 +225,7 @@ export async function runPrepareAudiobookWorkflow({
             explanation:
               error instanceof ContentLimitError
                 ? "The source content exceeds the narration limit of 40,000 characters or 200 chunks."
-                : "Preparation failed. Try again to prepare this article.",
+                : "Preparation failed. Retry to load this track.",
             diagnosticReference: crypto.randomUUID(),
             cleanupState: "pending" as const,
             completedAtMs: Temporal.Now.instant().epochMilliseconds,
