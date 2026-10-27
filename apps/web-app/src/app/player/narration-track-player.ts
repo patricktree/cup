@@ -37,12 +37,17 @@ export type Player = {
   pause: () => void;
   seekToUnit: (unitIndex: number) => void;
   seekTo: (positionMilliseconds: number) => void;
+  /** Seeks by an amount from the current position, back when negative, such as −15 s and +15 s. */
+  skipBy: (deltaMilliseconds: number) => void;
   /** Loads the same track from a newly signed URL, keeping the position; plays nothing. */
   replaceTrackUrl: (url: string) => void;
   /** Shows a failure that happened outside the player, until the next Play. */
   showError: (message: string) => void;
   close: () => void;
 };
+
+/** How far the −15 s and +15 s controls skip. */
+export const SKIP_MILLISECONDS = 15_000;
 
 const HAVE_METADATA = 1;
 const HAVE_FUTURE_DATA = 3;
@@ -138,6 +143,10 @@ export class NarrationTrackPlayer implements Player {
 
     this.save("now", position);
     this.publish();
+  };
+
+  skipBy = (deltaMilliseconds: number) => {
+    this.seekTo(this.readPosition() + deltaMilliseconds);
   };
 
   replaceTrackUrl = (url: string) => {

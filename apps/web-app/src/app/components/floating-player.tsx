@@ -1,8 +1,8 @@
 import { css } from "@linaria/core";
-import { Link } from "@tanstack/react-router";
 import React from "react";
 
 import { ShellFooter } from "#src/app/components/main.tsx";
+import { PlaybackError } from "#src/app/components/playback-error.js";
 import { DSIconButton } from "#src/app/design-system/icon-button.js";
 import { PauseIcon, PlayIcon } from "#src/app/design-system/icons.js";
 import type { Player } from "#src/app/player/narration-track-player.js";
@@ -15,18 +15,16 @@ import {
 import type { LoadedAudiobook } from "#src/app/player/player-host.js";
 
 /**
- * Controls for the loaded audiobook, shown below every shell page. On the loaded audiobook's own
- * page they expand to its full controls; elsewhere they stay compact.
+ * Full controls for the loaded audiobook, below its own detail view. Account pages show the mini
+ * player instead (see mini-player.tsx), and other detail views neither.
  */
 export function FloatingPlayer(): React.ReactNode {
   const { loaded, shown } = usePlayerHostSnapshot();
 
-  if (!loaded) {
+  // The reader page reports the audiobook it shows to the host.
+  if (!loaded || shown?.conversionId !== loaded.conversionId) {
     return null;
   }
-
-  // The reader page reports the audiobook it shows to the host.
-  const isOnLoadedAudiobookPage = shown?.conversionId === loaded.conversionId;
 
   return (
     <ShellFooter
@@ -48,11 +46,7 @@ export function FloatingPlayer(): React.ReactNode {
         border-top: 1.5px solid var(--color-fg-emphasized-xs);
       `}
     >
-      {isOnLoadedAudiobookPage ? (
-        <FullControls loaded={loaded} />
-      ) : (
-        <CompactControls loaded={loaded} />
-      )}
+      <FullControls loaded={loaded} />
       <PlaybackError player={loaded.player} />
     </ShellFooter>
   );
@@ -71,73 +65,19 @@ function FullControls({ loaded }: { loaded: LoadedAudiobook }) {
       `}
     >
       <PlaybackProgress player={loaded.player} title={loaded.audiobook.title} />
-      <PlayPauseButton loaded={loaded} iconSize={48} />
+      <PlayPauseButton loaded={loaded} />
     </div>
   );
 }
 
-function CompactControls({ loaded }: { loaded: LoadedAudiobook }) {
-  return (
-    <div
-      className={css`
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: var(--spacing-base);
-        align-items: center;
-
-        a {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          font-size: var(--font-size-sm);
-          font-weight: var(--font-weight-inter-figma-medium);
-          color: inherit;
-          white-space: nowrap;
-        }
-
-        progress {
-          grid-column: 1 / -1;
-          width: 100%;
-          height: 3px;
-          accent-color: var(--color-primary);
-        }
-      `}
-    >
-      <Link to="/audiobooks/$conversionId" params={{ conversionId: loaded.conversionId }}>
-        {loaded.audiobook.title}
-      </Link>
-      <PlayPauseButton loaded={loaded} iconSize={32} />
-      <CompactProgress player={loaded.player} title={loaded.audiobook.title} />
-    </div>
-  );
-}
-
-/** Kept apart so that position updates re-render only the bar, not the title and buttons. */
-function CompactProgress({ player, title }: { player: Player; title: string }) {
-  const { positionMilliseconds, durationMilliseconds } = usePlaybackProgress(player);
-
-  return (
-    <progress
-      aria-label={`Position in ${title}`}
-      max={durationMilliseconds}
-      value={positionMilliseconds}
-    />
-  );
-}
-
-function PlayPauseButton({ loaded, iconSize }: { loaded: LoadedAudiobook; iconSize: number }) {
+function PlayPauseButton({ loaded }: { loaded: LoadedAudiobook }) {
   const host = usePlayerHost();
   const isPlaying = usePlayerState(loaded.player, (state) => state.isPlaying);
 
   return (
     <DSIconButton
       label={isPlaying ? "Pause" : "Play"}
-      icon={
-        isPlaying ? (
-          <PauseIcon width={iconSize} height={iconSize} />
-        ) : (
-          <PlayIcon width={iconSize} height={iconSize} />
-        )
-      }
+      icon={isPlaying ? <PauseIcon /> : <PlayIcon />}
       onClick={() => (isPlaying ? host.pause() : host.play())}
     />
   );
@@ -207,24 +147,4 @@ function usePlaybackProgress(player: Player) {
     positionMilliseconds: Math.min(positionMilliseconds, durationMilliseconds),
     durationMilliseconds,
   };
-}
-
-function PlaybackError({ player }: { player: Player }) {
-  const message = usePlayerState(player, (state) => state.error);
-  if (!message) {
-    return null;
-  }
-
-  return (
-    /* TODO: implement some general error handling like toasts/snackbars and put it there */
-    <p
-      role="alert"
-      className={css`
-        font-size: var(--font-size-sm);
-        color: var(--color-error);
-      `}
-    >
-      {message}
-    </p>
-  );
 }

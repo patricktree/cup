@@ -6,6 +6,7 @@ import { Temporal } from "temporal-polyfill";
 import { AccountQueryBoundary } from "#src/app/components/account-query-boundary.js";
 import { AccountTabBar } from "#src/app/components/account-tab-bar.js";
 import { ShellContent } from "#src/app/components/main.tsx";
+import { MiniPlayer } from "#src/app/components/mini-player.js";
 import { DSButton } from "#src/app/design-system/button.js";
 import { useAccountSession, useAccountAuthState } from "#src/auth/hooks.js";
 import { useAccountConfirmation } from "#src/data-fetching/account-confirmation.js";
@@ -38,7 +39,12 @@ function AccountPage(): React.ReactNode {
         }
       ></ShellContent>
       {/* Signed out, the account page only offers sign-in, and Recents would send the listener home. */}
-      {authState.status !== "signed-out" && <AccountTabBar />}
+      {authState.status !== "signed-out" && (
+        <>
+          <MiniPlayer />
+          <AccountTabBar />
+        </>
+      )}
     </>
   );
 }
