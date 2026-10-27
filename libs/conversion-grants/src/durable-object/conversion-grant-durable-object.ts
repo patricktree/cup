@@ -382,53 +382,6 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
     });
   }
 
-  async reserveAudioSegment(
-    conversionId: string,
-    sequence: number,
-    narrationTextCharacters: number,
-  ) {
-    if (!Number.isSafeInteger(sequence) || sequence < 0) {
-      throw new Error("Invalid segment sequence");
-    }
-    return this.ctx.storage.transaction(async () => {
-      const record = await this.sqlite.requireRecord();
-      if (!record.conversions.some((conversion) => conversion.conversionId === conversionId)) {
-        throw new Error("Conversion does not exist");
-      }
-      const existing = record.segmentUsage.find(
-        (segment) => segment.conversionId === conversionId && segment.sequence === sequence,
-      );
-      if (existing && existing.narrationTextCharacters !== narrationTextCharacters) {
-        throw new Error("Segment reservation conflicts with synthesis identity");
-      }
-      if (existing?.state === "settled") {
-        return { result: "settled" as const };
-      }
-      if (existing?.state === "reserved") {
-        return { result: "reserved" as const };
-      }
-      const state = deriveGrantState(record, Temporal.Now.instant().epochMilliseconds);
-      if (state !== "open") {
-        return { result: state };
-      }
-      const reservation = this.sqlite.duration.reserve(
-        conversionId,
-        sequence,
-        narrationTextCharacters,
-        Temporal.Now.instant().epochMilliseconds,
-      );
-      if (reservation.result !== "reserved") {
-        return reservation;
-      }
-      record.registrySnapshotRevision += 1;
-      await this.sqlite.save(record);
-      await this.ctx.storage.setAlarm(
-        Temporal.Now.instant().epochMilliseconds + RECONCILIATION_RETRY_MS,
-      );
-      return { result: "reserved" as const };
-    });
-  }
-
   async completeAudioSegment(conversionId: string, sequence: number, durationMilliseconds: number) {
     if (!Number.isFinite(durationMilliseconds) || durationMilliseconds <= 0) {
       throw new Error("Generated duration must be positive and finite");

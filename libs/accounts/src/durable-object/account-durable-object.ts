@@ -113,23 +113,6 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     await this.scheduleUsagePublication();
   }
 
-  async reserveAudioSegment(
-    conversionId: string,
-    sequence: number,
-    characters: number,
-    executionEpoch: number,
-  ) {
-    this.assertExecution(conversionId, executionEpoch);
-    const result = this.sqlite.reserveAudioSegment(
-      conversionId,
-      sequence,
-      characters,
-      Temporal.Now.instant().epochMilliseconds,
-    );
-    await this.scheduleUsagePublication();
-    return result;
-  }
-
   async completeAudioSegment(
     conversionId: string,
     sequence: number,

@@ -89,27 +89,6 @@ export class DurationLedger {
     return requireRow(this.database.select({ events: count() }).from(creditLedger).get()).events;
   }
 
-  reserve(conversionId: string, sequence: number, characters: number, nowMs: number) {
-    z.number().int().nonnegative().safe().parse(sequence);
-    const estimate = estimateAudioDuration(characters);
-    return this.database.transaction(() => {
-      const existing = this.segments(conversionId).find((item) => item.sequence === sequence);
-      if (existing && existing.state !== "released") {
-        if (existing.narrationTextCharacters !== characters) {
-          throw new Error("Segment reservation conflicts with synthesis identity");
-        }
-        return {
-          result: existing.state === "settled" ? ("settled" as const) : ("reserved" as const),
-        };
-      }
-      if (estimate > this.balance().available) {
-        return { result: "insufficient-duration" as const };
-      }
-      this.insertReservation(conversionId, sequence, characters, estimate, nowMs);
-      return { result: "reserved" as const };
-    });
-  }
-
   /**
    * Reserves every segment lacking audio, or none when their whole estimate exceeds the available
    * duration. `refuseNewReservations` lets the owner refuse when anything would be reserved, while

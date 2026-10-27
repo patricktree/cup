@@ -86,6 +86,20 @@ async function createAccount() {
   return { account, accountId, subject };
 }
 
+/** Settling this outcome with the segment lengths reserves the whole document, as preparation does. */
+function readyOutcome(accountId: string, conversionId: string) {
+  return {
+    status: "ready",
+    title: "Book",
+    audiobookReference: {
+      key: `accounts/${accountId}/conversions/${conversionId}/executions/1/audiobook.json`,
+      contentType: "application/json",
+      byteLength: 123,
+      etag: "fixture",
+    },
+  } as const;
+}
+
 test("concurrent verified logins allocate one account and one welcome grant", async () => {
   const registry = bindings.REGISTRY.get(bindings.REGISTRY.idFromName("concurrent"));
   const subject = crypto.randomUUID();
@@ -269,7 +283,13 @@ test("the registry alarm backfills usage for active accounts without a projectio
   if (conversion.conversion === undefined) {
     throw new Error("Expected conversion");
   }
-  await account.reserveAudioSegment(conversion.conversion.conversionId, 0, 100, 1);
+  await account.settleConversion(
+    conversion.conversion.conversionId,
+    readyOutcome(accountId, conversion.conversion.conversionId),
+    nowMs,
+    1,
+    [100],
+  );
   await registry.forgetAccountUsageForTest(accountId);
   expect((await registry.listAccounts({ limit: 100 })).accounts[0]?.usage).toBeUndefined();
 
@@ -287,8 +307,8 @@ test("the registry alarm backfills usage for active accounts without a projectio
   });
 });
 
-test("concurrent segment reservations cannot exceed the available duration", async () => {
-  const { account } = await createAccount();
+test("concurrent duration reservations cannot exceed the available duration", async () => {
+  const { account, accountId } = await createAccount();
   const starts = await Promise.all(
     Array.from({ length: 10 }, () =>
       account.startConversion(
@@ -297,24 +317,31 @@ test("concurrent segment reservations cannot exceed the available duration", asy
       ),
     ),
   );
-  const reservations = await Promise.all(
-    starts.map((start) => {
-      if (!start.conversion) {
-        throw new Error("Expected conversion");
-      }
-      return account.reserveAudioSegment(start.conversion.conversionId, 0, 11_250, 1);
-    }),
+  const conversionIds = starts.map((start) => {
+    if (!start.conversion) {
+      throw new Error("Expected conversion");
+    }
+    return start.conversion.conversionId;
+  });
+  await Promise.all(
+    conversionIds.map((conversionId) =>
+      account.settleConversion(
+        conversionId,
+        readyOutcome(accountId, conversionId),
+        nowMs,
+        1,
+        [11_250],
+      ),
+    ),
   );
-  expect(reservations.filter((result) => result.result === "reserved")).toHaveLength(2);
-  expect(reservations.filter((result) => result.result === "insufficient-duration")).toHaveLength(
-    8,
-  );
+  const statuses = (await account.history()).items.map((item) => item.status);
+  expect(statuses.filter((status) => status === "synthesizing")).toHaveLength(2);
+  expect(statuses.filter((status) => status === "insufficient-duration")).toHaveLength(8);
   expect((await account.inspect()).balance).toEqual({
     unit: "audio-millisecond",
     available: 0,
     reserved: 1_800_000,
   });
-  expect(await account.pendingConversions()).toHaveLength(10);
   expect(await account.inspectAccounting()).toEqual({
     balance: { unit: "audio-millisecond", available: 0, reserved: 1_800_000 },
     reconstructed: { available: 0, reserved: 1_800_000 },
@@ -337,7 +364,7 @@ test("lost-response retries recover one conversion and reject conflicting conten
   expect((await account.inspectAccounting()).entries).toBe(1);
 });
 
-test("failure releases once and a contradictory success cannot charge later", async () => {
+test("failure settles once and a contradictory success cannot reserve later", async () => {
   const { account, accountId } = await createAccount();
   const started = await account.startConversion(
     {
@@ -350,7 +377,6 @@ test("failure releases once and a contradictory success cannot charge later", as
   if (conversionId === undefined) {
     throw new Error("Expected conversion");
   }
-  await account.reserveAudioSegment(conversionId, 0, 100, 1);
   const failure = {
     status: "failed",
     failureCategory: "source-preparation",
@@ -366,22 +392,10 @@ test("failure releases once and a contradictory success cannot charge later", as
     reserved: 0,
   });
   await expectWorkerRpcRejection(
-    account.settleConversion(
-      conversionId,
-      {
-        status: "ready",
-        title: "Book",
-        audiobookReference: {
-          key: `accounts/${accountId}/conversions/${conversionId}/executions/1/audiobook.json`,
-          contentType: "application/json",
-          byteLength: 123,
-          etag: "fixture",
-        },
-      },
-      nowMs,
-    ),
+    account.settleConversion(conversionId, readyOutcome(accountId, conversionId), nowMs, 1, [100]),
   );
-  expect((await account.inspectAccounting()).entries).toBe(3);
+  expect((await account.inspect()).balance.reserved).toBe(0);
+  expect((await account.inspectAccounting()).entries).toBe(1);
 });
 
 test("successful settlement consumes once and rejects a foreign artifact prefix", async () => {
@@ -397,18 +411,7 @@ test("successful settlement consumes once and rejects a foreign artifact prefix"
   if (conversionId === undefined) {
     throw new Error("Expected conversion");
   }
-  await account.reserveAudioSegment(conversionId, 0, 100, 1);
-  await account.completeAudioSegment(conversionId, 0, 15_000, 1);
-  const outcome = {
-    status: "ready",
-    title: "Book",
-    audiobookReference: {
-      key: `accounts/${accountId}/conversions/${conversionId}/executions/1/audiobook.json`,
-      contentType: "application/json",
-      byteLength: 123,
-      etag: "fixture",
-    },
-  } as const;
+  const outcome = readyOutcome(accountId, conversionId);
   await expectWorkerRpcRejection(
     account.settleConversion(
       conversionId,
@@ -420,12 +423,17 @@ test("successful settlement consumes once and rejects a foreign artifact prefix"
         },
       },
       nowMs,
+      1,
+      [100],
     ),
   );
   await Promise.all([
-    account.settleConversion(conversionId, outcome, nowMs),
-    account.settleConversion(conversionId, outcome, nowMs),
+    account.settleConversion(conversionId, outcome, nowMs, 1, [100]),
+    account.settleConversion(conversionId, outcome, nowMs, 1, [100]),
   ]);
+  expect((await account.inspect()).balance.reserved).toBe(8_000);
+  await account.completeAudioSegment(conversionId, 0, 15_000, 1);
+  expect((await account.completeAudioSegment(conversionId, 0, 15_000, 1)).result).toBe("replayed");
   expect((await account.inspect()).balance).toEqual({
     unit: "audio-millisecond",
     available: 1_785_000,
@@ -446,27 +454,25 @@ test("account inspection results match the account contracts the operator API co
     }
     return started.conversion.conversionId;
   }
-  function readyOutcome(conversionId: string) {
-    return {
-      status: "ready",
-      title: "Book",
-      audiobookReference: {
-        key: `accounts/${accountId}/conversions/${conversionId}/executions/1/audiobook.json`,
-        contentType: "application/json",
-        byteLength: 123,
-        etag: "fixture",
-      },
-    } as const;
-  }
-
   const ready = await startConversion("https://example.com/ready");
-  await account.reserveAudioSegment(ready, 0, 100, 1);
+  await account.settleConversion(
+    ready,
+    { ...readyOutcome(accountId, ready), hasCoverImage: true },
+    nowMs,
+    1,
+    [100],
+  );
   await account.completeAudioSegment(ready, 0, 8_000, 1);
-  await account.settleConversion(ready, { ...readyOutcome(ready), hasCoverImage: true }, nowMs);
   const synthesizing = await startConversion("https://example.com/synthesizing");
-  await account.settleConversion(synthesizing, readyOutcome(synthesizing), nowMs, 1, [100]);
+  await account.settleConversion(
+    synthesizing,
+    readyOutcome(accountId, synthesizing),
+    nowMs,
+    1,
+    [100],
+  );
   const insufficient = await startConversion("https://example.com/insufficient");
-  await account.settleConversion(insufficient, readyOutcome(insufficient), nowMs);
+  await account.settleConversion(insufficient, readyOutcome(accountId, insufficient), nowMs);
   const pending = await startConversion("https://example.com/pending");
 
   expect(accountSnapshotSchema.parse(await account.inspect()).balance.unit).toBe(
@@ -617,7 +623,6 @@ test("obsolete execution cannot settle after an account execution epoch change",
   if (!started.conversion) {
     throw new Error("Expected accepted conversion");
   }
-  await account.reserveAudioSegment(started.conversion.conversionId, 0, 100, 1);
   const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
   await storage.exec("UPDATE account SET execution_epoch = 2, state = 'active'");
   await expectWorkerRpcRejection(
@@ -628,11 +633,11 @@ test("obsolete execution cannot settle after an account execution epoch change",
       1,
     ),
   );
-  expect((await account.inspect()).balance.reserved).toBe(8_000);
-  expect((await account.inspectAccounting()).entries).toBe(2);
+  expect((await account.getConversion(started.conversion.conversionId))?.status).toBe("pending");
+  expect((await account.inspectAccounting()).entries).toBe(1);
 });
 
-test("lost dispatch acknowledgement and exhausted terminal retries release the reserved duration", async () => {
+test("lost dispatch acknowledgement and exhausted terminal retries fail the conversion", async () => {
   const accountId = crypto.randomUUID();
   const account = bindings.ACCOUNT_DISPATCH_TEST.get(
     bindings.ACCOUNT_DISPATCH_TEST.idFromName(accountId),
@@ -645,8 +650,6 @@ test("lost dispatch acknowledgement and exhausted terminal retries release the r
   if (!started.conversion) {
     throw new Error("Expected conversion");
   }
-  await account.reserveAudioSegment(started.conversion.conversionId, 0, 100, 1);
-  expect((await account.inspect()).balance.reserved).toBe(8_000);
   await account.reconcileForTest();
   await account.reconcileForTest();
   expect((await account.getConversion(started.conversion.conversionId))?.status).toBe("failed");
@@ -655,7 +658,7 @@ test("lost dispatch acknowledgement and exhausted terminal retries release the r
     available: 1_800_000,
     reserved: 0,
   });
-  expect((await account.inspectAccounting()).entries).toBe(3);
+  expect((await account.inspectAccounting()).entries).toBe(1);
 });
 
 test("account history pages ties deterministically without crossing owners", async () => {
@@ -1095,7 +1098,7 @@ test("account and IP rolling limits reject without charging or extending the coo
 });
 
 test("segment overruns cap charges at the allowance without invalidating other reservations", async () => {
-  const { account } = await createAccount();
+  const { account, accountId } = await createAccount();
   const started = await account.startConversion(
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/overrun" },
     nowMs,
@@ -1104,8 +1107,7 @@ test("segment overruns cap charges at the allowance without invalidating other r
     throw new Error("Expected conversion");
   }
   const id = started.conversion.conversionId;
-  await account.reserveAudioSegment(id, 0, 11_250, 1);
-  await account.reserveAudioSegment(id, 1, 11_250, 1);
+  await account.settleConversion(id, readyOutcome(accountId, id), nowMs, 1, [11_250, 11_250]);
   await account.completeAudioSegment(id, 0, 2_000_000, 1);
   expect((await account.inspect()).balance).toEqual({
     unit: "audio-millisecond",
@@ -1134,7 +1136,7 @@ test("segment overruns cap charges at the allowance without invalidating other r
 });
 
 test("failed generation retains completed duration charges and releases only unfinished segments", async () => {
-  const { account } = await createAccount();
+  const { account, accountId } = await createAccount();
   const started = await account.startConversion(
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/partial" },
     nowMs,
@@ -1143,16 +1145,11 @@ test("failed generation retains completed duration charges and releases only unf
     throw new Error("Expected conversion");
   }
   const id = started.conversion.conversionId;
-  await account.reserveAudioSegment(id, 0, 100, 1);
-  await account.reserveAudioSegment(id, 1, 100, 1);
+  await account.settleConversion(id, readyOutcome(accountId, id), nowMs, 1, [100, 100]);
   await account.completeAudioSegment(id, 0, 5_000.1, 1);
-  const failure = {
-    status: "failed",
-    failureCategory: "narration-synthesis",
-    explanation: "Provider failure",
-  } as const;
-  await account.settleConversion(id, failure, nowMs);
-  await account.settleConversion(id, failure, nowMs);
+  // The second segment fails after retries and releases only its own reservation.
+  await account.releaseAudioSegment(id, 1, 1);
+  await account.releaseAudioSegment(id, 1, 1);
   expect((await account.inspect()).balance).toEqual({
     unit: "audio-millisecond",
     available: 1_794_999,
@@ -1167,7 +1164,7 @@ test("failed generation retains completed duration charges and releases only unf
 });
 
 test("reservation retries preserve the segment identity and reject conflicting narration", async () => {
-  const { account } = await createAccount();
+  const { account, accountId } = await createAccount();
   const started = await account.startConversion(
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/replay" },
     nowMs,
@@ -1176,10 +1173,11 @@ test("reservation retries preserve the segment identity and reject conflicting n
     throw new Error("Expected conversion");
   }
   const id = started.conversion.conversionId;
-  expect(await account.reserveAudioSegment(id, 0, 100, 1)).toEqual({ result: "reserved" });
-  expect(await account.reserveAudioSegment(id, 0, 100, 1)).toEqual({ result: "reserved" });
-  await expectWorkerRpcRejection(account.reserveAudioSegment(id, 0, 101, 1));
-  await expectWorkerRpcRejection(account.reserveAudioSegment(id, 1, 100, 2));
+  await account.settleConversion(id, readyOutcome(accountId, id), nowMs, 1, [100]);
+  expect(await account.startSynthesis(id, [100], 1)).toEqual({ result: "started" });
+  expect(await account.startSynthesis(id, [100], 1)).toEqual({ result: "started" });
+  await expectWorkerRpcRejection(account.startSynthesis(id, [101], 1));
+  await expectWorkerRpcRejection(account.startSynthesis(id, [100, 100], 2));
   expect((await account.inspect()).balance.reserved).toBe(8_000);
   expect((await account.inspectAccounting()).entries).toBe(2);
 });
