@@ -2,10 +2,7 @@ import { and, asc, count, eq, sql } from "drizzle-orm";
 import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { z } from "zod";
 
-import {
-  estimateAudioDuration,
-  type SegmentUsage,
-} from "@cup/conversion-contracts/duration-accounting";
+import { estimateAudioDuration, type SegmentUsage } from "@cup/conversion-contracts";
 
 import {
   creditBalances,

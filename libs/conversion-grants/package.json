@@ -62,5 +62,11 @@
     "vite": "catalog:",
     "vitest": "catalog:",
     "wrangler": "catalog:"
+  },
+  "cup": {
+    "subpathExportExceptions": {
+      "./contracts": "Grant schemas for the API contract packages and the browser, without loading the grant Durable Object (ADR 0010).",
+      "./session": "Root credential and session signing for tests that run in Node, where the grant Durable Object cannot load."
+    }
   }
 }

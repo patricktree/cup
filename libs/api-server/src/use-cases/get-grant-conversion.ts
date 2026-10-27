@@ -1,7 +1,4 @@
-import {
-  derivePreparedConversionStatus,
-  type SegmentUsage,
-} from "@cup/conversion-contracts/duration-accounting";
+import { derivePreparedConversionStatus, type SegmentUsage } from "@cup/conversion-contracts";
 import { toGrantConversionSnapshot, type GrantConversion } from "@cup/conversion-grants";
 import { assertUnreachable } from "@cup/errors";
 import type { ConversionDetail } from "@cup/listener-api.routes";

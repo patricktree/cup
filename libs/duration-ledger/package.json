@@ -12,12 +12,8 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "types": "./dist/types/duration-ledger.d.ts",
-      "default": "./src/duration-ledger.ts"
-    },
-    "./schema": {
-      "types": "./dist/types/duration-ledger-schema.d.ts",
-      "default": "./src/duration-ledger-schema.ts"
+      "types": "./dist/types/index.d.ts",
+      "default": "./src/index.ts"
     }
   },
   "scripts": {

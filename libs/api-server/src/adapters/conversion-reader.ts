@@ -2,8 +2,8 @@ import {
   createConversionArtifactPrefix,
   type AudiobookReference,
   type ConversionOwner,
+  type SegmentUsage,
 } from "@cup/conversion-contracts";
-import type { SegmentUsage } from "@cup/conversion-contracts/duration-accounting";
 import type { GrantConversion } from "@cup/conversion-grants";
 
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";

@@ -7,8 +7,8 @@ import {
   playbackPositionSchema,
   type PlaybackPosition,
   createConversionArtifactPrefix,
+  derivePreparedConversionStatus,
 } from "@cup/conversion-contracts";
-import { derivePreparedConversionStatus } from "@cup/conversion-contracts/duration-accounting";
 import { DurationLedger } from "@cup/duration-ledger";
 import { RollingLimits } from "@cup/rolling-limits";
 

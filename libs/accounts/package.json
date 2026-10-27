@@ -65,5 +65,12 @@
     "vite": "catalog:",
     "vitest": "catalog:",
     "wrangler": "catalog:"
+  },
+  "cup": {
+    "subpathExportExceptions": {
+      "./contracts": "Account schemas for the API contract packages and the browser, without loading the account Durable Object (ADR 0010).",
+      "./lifecycle": "Deletion attempt schema and AccountLifecycle type for the registry and the API server, without loading the account Durable Object.",
+      "./artifact-writer": "R2 proxy that the workflows wrap their account artifact writes with; it imports the Durable Object only as a type, so their Workers do not bundle it."
+    }
   }
 }

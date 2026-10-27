@@ -2,7 +2,7 @@ import {
   estimateAudioDuration,
   type InsufficientDuration,
   type SegmentUsage,
-} from "@cup/conversion-contracts/duration-accounting";
+} from "@cup/conversion-contracts";
 import { assertUnreachable } from "@cup/errors";
 import type { AudioSegment } from "@cup/listener-api.routes";
 

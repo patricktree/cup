@@ -1,5 +1,4 @@
-import type { ConversionOwner } from "@cup/conversion-contracts";
-import type { InsufficientDuration } from "@cup/conversion-contracts/duration-accounting";
+import type { ConversionOwner, InsufficientDuration } from "@cup/conversion-contracts";
 
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
 

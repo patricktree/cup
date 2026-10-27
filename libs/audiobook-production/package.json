@@ -11,8 +11,8 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "types": "./dist/types/audiobook-production.d.ts",
-      "default": "./src/audiobook-production.ts"
+      "types": "./dist/types/index.d.ts",
+      "default": "./src/index.ts"
     },
     "./fake": {
       "types": "./dist/types/speech-synthesis-ai.fake.d.ts",

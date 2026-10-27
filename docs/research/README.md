@@ -11,6 +11,8 @@ These investigations preserve evidence and recommendations in their original con
 | [Speechify comparison](speechify-tts-comparison.md)                                       | Cross-provider narration comparison; [experiment archive](speechify-tts-comparison.tar.xz)                                                      |
 | [Gemini 3.8 comparison](gemini-3.8-tts-comparison.md)                                     | Flash and Flash-Lite comparison; [experiment archive](gemini-3.8-tts-comparison.tar.xz)                                                         |
 | [Pi and Cloudflare transport](pi-cloudflare-non-streaming-chat-completions.md)            | Historical streaming transport investigation; superseded for selection by [ADR 0002](../adr/0002-use-gemini-for-narration-content-selection.md) |
+| [Package export rule enforcement](package-export-rule-enforcement.md)                     | Checks that could enforce the `.`-only `exports` rule; recommends a Vitest test over workspace manifests                                        |
+| [pnpm workspace project listing](pnpm-workspace-project-listing.md)                       | Whether pnpm 12 Rust crates can list workspace projects; recommends `pnpm ls -r --json --depth -1`                                              |
 
 Keep reproduction commands and archives together. When conclusions are superseded, add a dated note or a link to the replacement evidence rather than rewriting the experiment's findings. Operational instructions belong in the guides linked from the [documentation home](../README.md).
 

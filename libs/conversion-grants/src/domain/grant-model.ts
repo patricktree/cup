@@ -4,8 +4,8 @@ import type {
   ConversionFailureCategory,
   ConversionPhase,
   DurationBalance,
+  SegmentUsage,
 } from "@cup/conversion-contracts";
-import type { SegmentUsage } from "@cup/conversion-contracts/duration-accounting";
 import type { DurationTotals } from "@cup/duration-ledger";
 import { assertUnreachable } from "@cup/errors";
 

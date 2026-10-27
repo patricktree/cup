@@ -2,14 +2,11 @@ import { launch, type BrowserWorker } from "@cloudflare/playwright";
 import { WorkflowEntrypoint } from "cloudflare:workers";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
+import type { ConversionParams } from "@cup/conversion-contracts";
 import { selectNarrationContent } from "@cup/narration-content-selection";
-import { prepareSourceMaterial } from "@cup/prepare-source-material";
-import { loadCoverImage } from "@cup/prepare-source-material/cover-image";
+import { prepareSourceMaterial, loadCoverImage } from "@cup/prepare-source-material";
 
-import {
-  runPrepareAudiobookWorkflow,
-  type ConversionParams,
-} from "#src/run-prepare-audiobook-workflow.ts";
+import { runPrepareAudiobookWorkflow } from "#src/run-prepare-audiobook-workflow.ts";
 import { parseSourcePageCookies } from "#src/source-page-cookies.ts";
 import type { AudiobookWorkflowEnvironment } from "#src/workflow-environment.ts";
 

@@ -1,2 +1,2 @@
 // Re-exported so the migration generator includes the shared rate-limit table in the registry store.
-export { rateEvents } from "@cup/rolling-limits/schema";
+export { rateEvents } from "@cup/rolling-limits";

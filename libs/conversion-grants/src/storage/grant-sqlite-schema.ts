@@ -11,7 +11,7 @@ import {
   creditLedger,
   creditOperations,
   defineAudioSegments,
-} from "@cup/duration-ledger/schema";
+} from "@cup/duration-ledger";
 
 // Re-exported so that the grant migrations create the shared duration ledger tables.
 export { creditBalances, creditLedger, creditOperations };

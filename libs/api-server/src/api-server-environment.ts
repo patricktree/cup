@@ -1,7 +1,7 @@
 import type { AccountDurableObject } from "@cup/accounts";
 import type { SegmentWorkflowParams } from "@cup/conversion-contracts";
+import type { ConversionParams } from "@cup/conversion-contracts";
 import type { ConversionGrantDurableObject } from "@cup/conversion-grants";
-import type { ConversionParams } from "@cup/create-audiobook-from-url-workflow/runner";
 import type { RegistryDurableObject } from "@cup/registry";
 
 export type ApiServerEnvironment = {

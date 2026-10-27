@@ -10,10 +10,6 @@
   },
   "exports": {
     "./package.json": "./package.json",
-    "./web-app-csp": {
-      "types": "./dist/types/web-app-csp.d.ts",
-      "default": "./src/web-app-csp.ts"
-    },
     ".": {
       "types": "./dist/types/index.d.ts",
       "default": "./src/index.ts"

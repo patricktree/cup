@@ -3,8 +3,7 @@ import nodeUrl from "node:url";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { createTestHarness } from "wrangler";
 
-import { ConversionPhase } from "@cup/conversion-contracts";
-import type { SegmentUsage } from "@cup/conversion-contracts/duration-accounting";
+import { ConversionPhase, type SegmentUsage } from "@cup/conversion-contracts";
 import type { ConversionGrantDurableObject } from "@cup/conversion-grants";
 import { createRootCredential } from "@cup/conversion-grants/session";
 

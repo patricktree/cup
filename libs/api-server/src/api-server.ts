@@ -5,7 +5,7 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { Temporal } from "temporal-polyfill";
 
 import { countNarrationTextCharactersBySegment } from "@cup/audiobook-production";
-import { derivePreparedConversionStatus } from "@cup/conversion-contracts/duration-accounting";
+import { derivePreparedConversionStatus } from "@cup/conversion-contracts";
 import {
   clearGrantSessionCookie,
   createGrantSessionCookie,
@@ -1237,8 +1237,6 @@ export type ApiServerHonoEnvironment = {
   Bindings: ApiServerEnvironment;
   Variables: { requestId: string };
 };
-
-export type { ApiServerEnvironment } from "#src/api-server-environment.ts";
 
 /** Creates the HTTP server for the web application and operator interfaces. */
 export function createApiServer(dependencies: ApiServerDependencies = productionDependencies) {

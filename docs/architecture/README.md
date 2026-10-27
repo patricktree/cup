@@ -91,6 +91,8 @@ flowchart TD
 
 The owners reach the registry only through the RPC interfaces drawn as dashed lines, never as a package dependency: the registry depends on both owner libraries, so such a dependency would form a cycle, which every `turbo run` refuses. `pnpm boundaries` (`turbo boundaries`, part of `pnpm validate:fast`) also fails when a package imports a package its `package.json` does not declare, or a file outside its own directory.
 
+Each package exposes its production code through its `.` export, so a caller sees one public interface per package; subpath exports carry only what production does not run, such as test fakes and build configuration. Accounts and conversion grants keep a few production subpaths, because their `.` export loads the Durable Object, which the browser, Node, and other Worker callers must not load ([ADR 0010](../adr/0010-tolerate-unknown-keys-at-the-listener-api.md) requires this for contracts). Each such subpath is listed with its reason under `cup.subpathExportExceptions` in its `package.json`. The [package export check](../../qa/workspace-checks/README.md) enforces the rule in `pnpm validate:fast`.
+
 ## API definitions
 
 Cup has two HTTP APIs. Each has a contract package that defines its routes, request and response schemas, and error codes, and checks its generated OpenAPI document against a committed snapshot, so contract changes show in diffs. Each has a typed client package, and the [server composition](../../libs/api-server/src/api-server.ts) mounts the handlers of both; the [API server guide](../../libs/api-server/AGENTS.md) describes its layout.
