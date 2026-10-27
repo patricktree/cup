@@ -13,6 +13,9 @@ These investigations preserve evidence and recommendations in their original con
 | [Pi and Cloudflare transport](pi-cloudflare-non-streaming-chat-completions.md)            | Historical streaming transport investigation; superseded for selection by [ADR 0002](../adr/0002-use-gemini-for-narration-content-selection.md) |
 | [Package export rule enforcement](package-export-rule-enforcement.md)                     | Checks that could enforce the `.`-only `exports` rule; recommends a Vitest test over workspace manifests                                        |
 | [pnpm workspace project listing](pnpm-workspace-project-listing.md)                       | Whether pnpm 12 Rust crates can list workspace projects; recommends `pnpm ls -r --json --depth -1`                                              |
+| [Capacitor WebView playback](webview-audio-playback.md)                                   | Whether the shells can play a narration track while locked; native work deferred to the native-apps increment                                   |
+| [Locked-screen MP3 playback](locked-mp3-playback.md)                                      | How iOS Safari and Android Chrome fetch, buffer and control one long MP3 while locked                                                           |
+| [Joining segment MP3s](join-segment-mp3s.md)                                              | Whether stored segment MP3s concatenate into one seekable narration track; [experiment archive](join-segment-mp3s.tar.xz)                       |
 
 Keep reproduction commands and archives together. When conclusions are superseded, add a dated note or a link to the replacement evidence rather than rewriting the experiment's findings. Operational instructions belong in the guides linked from the [documentation home](../README.md).
 
