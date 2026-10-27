@@ -5,7 +5,11 @@ import type {
 } from "@cup/accounts/contracts";
 import type { AccountLifecycle } from "@cup/accounts/lifecycle";
 import type { Audiobook as StoredAudiobook } from "@cup/audiobook-production";
-import type { DurationBalance, PlaybackPosition } from "@cup/conversion-contracts";
+import {
+  layOutConsecutively,
+  type DurationBalance,
+  type PlaybackPosition,
+} from "@cup/conversion-contracts";
 import type { GrantSnapshot as StoredGrantSnapshot } from "@cup/conversion-grants/contracts";
 import type {
   AccountHistory,
@@ -114,4 +118,17 @@ export function toNarrationDocumentResponse(document: StoredAudiobook["narration
       narrationText: unit.narrationText,
     })),
   } satisfies ReadyAudiobook["narrationDocument"];
+}
+
+/**
+ * `durations` are the settled segment durations in sequence order. Each segment starts at the sum
+ * of the durations before it; the constant decoder delay at each join is not corrected for.
+ */
+export function toNarrationTrackResponse(url: string, durations: readonly number[]) {
+  const { startOffsets, totalLength } = layOutConsecutively(durations);
+  return {
+    url,
+    durationMilliseconds: totalLength,
+    startMilliseconds: startOffsets,
+  } satisfies NonNullable<ReadyAudiobook["narrationTrack"]>;
 }

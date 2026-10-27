@@ -28,6 +28,7 @@ export const TEST_SECRETS = {
   SUPABASE_PUBLISHABLE_KEY: "test-supabase-publishable-key",
   GOOGLE_WEB_CLIENT_ID: "test-google-web-client-id",
   RESEND_API_KEY: "test-resend-api-key",
+  MEDIA_URL_SIGNING_KEY: "test-media-url-signing-key",
 } as const;
 
 /**

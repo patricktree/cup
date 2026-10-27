@@ -1,3 +1,4 @@
+import type { GrantState } from "@cup/conversion-grants";
 import { assertUnreachable } from "@cup/errors";
 import type { ErrorCode as ListenerErrorCode } from "@cup/listener-api.routes";
 import type { ErrorCode as OperatorErrorCode } from "@cup/operator-api.routes";
@@ -36,6 +37,23 @@ export function accountAuthError(
   return assertUnreachable(result);
 }
 
+export function requireAccessibleGrantState(
+  state: GrantState,
+  requestId: string,
+): Response | undefined {
+  if (state === "expired" || state === "revoked") {
+    return jsonError(
+      requestId,
+      `grant-${state}`,
+      state === "expired"
+        ? "This trial has expired. Its audiobooks are no longer accessible."
+        : "This trial has been revoked. Its audiobooks are no longer accessible.",
+      403,
+    );
+  }
+  return undefined;
+}
+
 /** The error envelope both API contracts declare, with a code from either contract. */
 function createErrorBody(requestId: string, code: ErrorCode, message: string) {
   return { error: { code, message, requestId } };
@@ -45,7 +63,7 @@ export function jsonError(
   requestId: string,
   code: ErrorCode,
   message: string,
-  status: 400 | 401 | 403 | 404 | 405 | 409 | 413 | 415 | 429 | 500 | 503,
+  status: 400 | 401 | 403 | 404 | 405 | 409 | 413 | 415 | 416 | 429 | 500 | 503,
   headers?: HeadersInit,
 ): Response {
   return Response.json(createErrorBody(requestId, code, message), {

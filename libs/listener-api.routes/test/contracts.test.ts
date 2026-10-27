@@ -12,9 +12,9 @@ import {
   grantConversionsSchema,
   grantParamsSchema,
   grantSnapshotSchema,
+  signedMediaUrlQuerySchema,
   playbackPositionSchema,
   retryConversionResponseSchema,
-  segmentParamsSchema,
   startConversionHeadersSchema,
   startConversionRequestSchema,
   startConversionResponseSchema,
@@ -37,12 +37,20 @@ const PREPARED_AUDIOBOOK = {
   canGenerate: true,
   title: "Document",
   originalUrl: "https://example.com/source",
-  coverImage: { url: "https://example.com/cover-image", alternativeText: "Cover" },
+  coverImage: {
+    url: "https://example.com/cover-image?token=v1.payload.signature",
+    alternativeText: "Cover",
+  },
   narrationDocument: {
     html: "<article>Document</article>",
     synchronizationUnits: [{ id: "one", narrationText: "Document" }],
   },
   segments: [{ sequence: 0, status: "absent" }],
+  narrationTrack: {
+    url: "https://example.com/narration-track.mp3?token=v1.payload.signature",
+    durationMilliseconds: 1_200,
+    startMilliseconds: [0],
+  },
   playbackPosition: { synchronizationUnitId: "one", offsetMilliseconds: 1500 },
 };
 
@@ -55,9 +63,9 @@ describe("listener API transport contracts", () => {
       request: { conversionId: UUID },
     },
     {
-      name: "segment parameters",
-      schema: segmentParamsSchema,
-      request: { conversionId: UUID, sequence: 0 },
+      name: "signed media URL query",
+      schema: signedMediaUrlQuerySchema,
+      request: { token: "v1.payload.signature" },
     },
     {
       name: "credential exchange",
@@ -87,7 +95,7 @@ describe("listener API transport contracts", () => {
 
   test.each([
     [grantParamsSchema, { extra: true }],
-    [segmentParamsSchema, { conversionId: UUID }],
+    [signedMediaUrlQuerySchema, {}],
     [exchangeCredentialRequestSchema, { extra: true }],
     [startConversionRequestSchema, { extra: true }],
     [accountConfirmationSchema, { providerToken: "token" }],
@@ -111,6 +119,7 @@ describe("listener API transport contracts", () => {
           synchronizationUnits: [{ id: "one", narrationText: "Document", newField: true }],
         },
         segments: [{ sequence: 0, status: "absent", newField: true }],
+        narrationTrack: { ...PREPARED_AUDIOBOOK.narrationTrack, newField: true },
         playbackPosition: { ...PREPARED_AUDIOBOOK.playbackPosition, newField: true },
       },
       expected: PREPARED_AUDIOBOOK,
@@ -298,24 +307,18 @@ describe("listener API transport contracts", () => {
   test.each([
     { sequence: 0, status: "absent" },
     { sequence: 0, status: "generating" },
-    {
-      sequence: 0,
-      status: "ready",
-      durationMilliseconds: 1500,
-      url: "https://example.com/audio.mp3",
-    },
+    { sequence: 0, status: "ready" },
     { sequence: 0, status: "failed", explanation: "Speech generation failed." },
   ])("accepts a complete audio segment state: $status", (segment) => {
     expect(audioSegmentSchema.safeParse(segment).success).toBe(true);
   });
 
-  test.each([
-    { sequence: 0, status: "failed" },
-    { sequence: 0, status: "ready", url: "https://example.com/audio.mp3" },
-    { sequence: 0, status: "ready", durationMilliseconds: 1500 },
-  ])("rejects incomplete audio segment states", (segment) => {
-    expect(audioSegmentSchema.safeParse(segment).success).toBe(false);
-  });
+  test.each([{ sequence: 0, status: "failed" }, { status: "ready" }])(
+    "rejects incomplete audio segment states",
+    (segment) => {
+      expect(audioSegmentSchema.safeParse(segment).success).toBe(false);
+    },
+  );
 
   test.each([
     [
@@ -325,6 +328,16 @@ describe("listener API transport contracts", () => {
     [
       { sequence: 0, status: "generating", explanation: "Unexpected failure" },
       { sequence: 0, status: "generating" },
+    ],
+    [
+      // Workers before the narration track reported each ready segment's URL and duration.
+      {
+        sequence: 0,
+        status: "ready",
+        durationMilliseconds: 1500,
+        url: "https://example.com/audio.mp3",
+      },
+      { sequence: 0, status: "ready" },
     ],
     [
       {

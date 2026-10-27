@@ -2,7 +2,7 @@
   {
     "id": "authentication-keywords",
     "mode": "search",
-    "query": "\"media session\"",
+    "query": "\"signed media URL\"",
     "expectedFile": "qmd://cup-docs/architecture/authentication.md"
   },
   {

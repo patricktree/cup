@@ -116,7 +116,7 @@ _Avoid_: trial link, user identity
 
 ## grant session
 
-Browser or native-app authorization derived from a grant credential. It authorizes work for its conversion grant only while the grant remains unexpired and unrevoked; it never authorizes listing the grant’s conversions, and an audiobook link alone never substitutes for it. [Trial access](architecture/authentication.md#trial-access) states the current rules.
+Browser or native-app authorization derived from a grant credential. It authorizes work for its conversion grant only while the grant remains unexpired and unrevoked; it never authorizes listing the grant’s conversions, and the audiobook’s link alone never substitutes for it. [Trial access](architecture/authentication.md#trial-access) states the current rules.
 
 _Avoid_: grant credential, user session
 
@@ -176,9 +176,15 @@ _Avoid_: text chunk, audio chunk
 
 ## audio segment
 
-The immutable, conversion-scoped audio produced from one narration chunk and identified by its sequence within the conversion. It remains part of the conversion whether or not audiobook production completes.
+The immutable, conversion-scoped audio produced from one narration chunk and identified by its sequence within the conversion. It is the unit of synthesis, storage, and settlement; listeners receive audio segments joined into the narration track. It remains part of the conversion whether or not audiobook production completes.
 
 _Avoid_: audio chunk
+
+## narration track
+
+An audiobook's single audio file: its audio segments, unchanged and joined in document order. It exists only once every segment has audio, is assembled per request rather than stored, and is the audio delivered to listeners.
+
+_Avoid_: audio file, full track, playback track
 
 ## generated audio duration
 
@@ -194,19 +200,19 @@ _Avoid_: transcript, transcription
 
 ## synchronization unit
 
-The smallest independently navigable portion of a narration document associated with one continuous interval of narration audio. Each unit has its own audio segment; a position on the whole audiobook is derived from the durations of the preceding segments plus the offset within the unit's segment.
+The smallest independently navigable portion of a narration document associated with one continuous interval of narration audio. Each unit has its own audio segment and starts in the narration track at the sum of the durations of the preceding segments; a position in the track is that start plus the offset within the unit's audio.
 
 _Avoid_: sentence, paragraph, narration chunk, synchronization cue
 
 ## segment
 
-The user-facing name for a synchronization unit: an independently selectable part of an audiobook's narration document and its corresponding audio. It can include headings or multiple paragraphs, and its text can be read before the corresponding audio segment is generated. A segment whose synthesis finally failed has no audio and is skipped during playback.
+The user-facing name for a synchronization unit: an independently selectable part of an audiobook's narration document and its corresponding audio. It can include headings or multiple paragraphs, and its text can be read before the corresponding audio segment is generated. A segment whose synthesis finally failed has no audio and is marked in the text; the audiobook cannot be played until a retry gives it audio.
 
 _Avoid_: passage, paragraph, section
 
 ## audiobook
 
-The adaptation produced from source content, comprising a prepared narration document and one narration audio segment per synchronization unit. Its text can be read while speech is generated. It becomes playable once every segment has audio, so its total duration is known before playback starts; when some segments finally failed, it plays only after the listener chooses to skip them.
+The adaptation produced from source content, comprising a prepared narration document and one narration audio segment per synchronization unit, delivered as one narration track once every segment has audio. Its text can be read while speech is generated. It becomes playable once every segment has audio and its narration track therefore exists, so its total duration is known before playback starts; when some segments finally failed, it stays unplayable until a retry succeeds.
 
 _Avoid_: audio file, audio output, workflow output, article
 
@@ -230,6 +236,6 @@ _Avoid_: personal audiobook
 
 ## public audiobook
 
-A planned audiobook intentionally accessible without signing in. No audiobook is public yet, and no audiobook is reachable by its link alone.
+A planned audiobook intentionally accessible without signing in. No audiobook is public yet, and no audiobook is reachable by the audiobook’s link alone.
 
 _Avoid_: unlisted audiobook, shared audiobook

@@ -1,11 +1,14 @@
-import { Hono, type MiddlewareHandler } from "hono";
+import { Hono, type Context, type MiddlewareHandler } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { NONCE, secureHeaders } from "hono/secure-headers";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { Temporal } from "temporal-polyfill";
 
 import { countNarrationTextCharactersBySegment } from "@cup/audiobook-production";
-import { derivePreparedConversionStatus } from "@cup/conversion-contracts";
+import {
+  derivePreparedConversionStatus,
+  findNarrationTrackDurations,
+} from "@cup/conversion-contracts";
 import {
   clearGrantSessionCookie,
   createGrantSessionCookie,
@@ -36,9 +39,9 @@ import { resolveConversionDispatch } from "#src/adapters/conversion-dispatch.ts"
 import { resolveConversionReader } from "#src/adapters/conversion-reader.ts";
 import { revokeVerifiedGoogleToken } from "#src/adapters/google-token-revocation.ts";
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
-import { authenticateAccountRequest, mediaCookie, mediaRequest } from "#src/http/account-auth.ts";
+import { authenticateAccountRequest } from "#src/http/account-auth.ts";
 import { APPLICATION_ORIGIN, routeApplicationDomain } from "#src/http/domain-routing.ts";
-import { accountAuthError, jsonError } from "#src/http/http-errors.ts";
+import { accountAuthError, jsonError, requireAccessibleGrantState } from "#src/http/http-errors.ts";
 import { ingressIdentity } from "#src/http/ingress-identity.ts";
 import {
   toAccountHistoryResponse,
@@ -47,14 +50,16 @@ import {
   toDurationBalanceResponse,
   toGrantSnapshotResponse,
   toNarrationDocumentResponse,
+  toNarrationTrackResponse,
   toPlaybackPositionResponse,
 } from "#src/http/listener-responses.ts";
 import { isDevelopmentOperatorRequest } from "#src/http/operator-access.ts";
 import {
   loadReadyAudiobookFromEnvironment,
-  serveAudio,
   serveCoverImage,
+  serveNarrationTrack,
 } from "#src/http/serve-audiobook.ts";
+import { requireSignedMediaUrl, signMediaUrl } from "#src/http/signed-media-url.ts";
 import { applyWebAppCspNonce } from "#src/http/web-app-csp.ts";
 import { createConversionGrant } from "#src/use-cases/create-conversion-grant.ts";
 import { getGrantConversion as loadGrantConversion } from "#src/use-cases/get-grant-conversion.ts";
@@ -344,43 +349,6 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
       split?.[1] ? { createdAtMs: Number(split[0]), conversionId: split[1] } : undefined,
     );
     return context.json(toAccountHistoryResponse(page), 200);
-  },
-  async filesSession(context) {
-    const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
-    if (validation.result === "invalid") {
-      return validation.response;
-    }
-    const auth = await authenticateAccountRequest(context.req.raw, context.env);
-    if (auth.result !== "authenticated") {
-      return accountAuthError(auth.result, context.get("requestId"));
-    }
-    if (auth.snapshot.state !== "active") {
-      return accountAuthError("blocked", context.get("requestId"));
-    }
-    const token = context.req.header("Authorization")?.slice(7);
-    if (!token) {
-      return accountAuthError("unauthorized", context.get("requestId"));
-    }
-    context.header(
-      "Set-Cookie",
-      mediaCookie(
-        context.req.raw,
-        token,
-        Math.max(
-          0,
-          auth.identity.expiresAt - Math.floor(Temporal.Now.instant().epochMilliseconds / 1000),
-        ),
-      ),
-    );
-    return context.body(null, 204);
-  },
-  clearFilesSession(context) {
-    const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
-    if (validation.result === "invalid") {
-      return validation.response;
-    }
-    context.header("Set-Cookie", mediaCookie(context.req.raw, "", 0));
-    return context.body(null, 204);
   },
   async getAccount(context) {
     const auth = await authenticateAccountRequest(context.req.raw, context.env);
@@ -688,16 +656,27 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     if (!audiobook) {
       return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
     }
+    const origin = new URL(context.req.url).origin;
+    const issuedAtMs = Temporal.Now.instant().epochMilliseconds;
+    const signAudiobookMediaUrl = (resource: "cover-image" | "narration-track.mp3") =>
+      signMediaUrl({
+        url: `${origin}/api/files/audiobooks/${conversionId}/${resource}`,
+        conversionId,
+        // The ownership middleware admitted this request for the owner alone.
+        principal: owner,
+        signingKey: context.env.MEDIA_URL_SIGNING_KEY,
+        issuedAtMs,
+      });
+    const segmentUsage = await reader.listAudioSegments();
+    const narrationTrackDurations = findNarrationTrackDurations(segmentUsage);
     const synthesis = await getSynthesisState(
       {
-        conversionId,
-        origin: new URL(context.req.url).origin,
         narrationTextCharactersBySegment: countNarrationTextCharactersBySegment(
           audiobook.narrationDocument,
         ),
+        segmentUsage,
       },
       {
-        listAudioSegments: () => reader.listAudioSegments(),
         getAvailableMilliseconds: () => reader.getAvailableMilliseconds(),
         getFailureExplanation: async (sequence) => {
           const failure = await context.env.AUDIO_BUCKET.get(
@@ -730,11 +709,19 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
           ? {}
           : {
               coverImage: {
-                url: `${new URL(context.req.url).origin}/api/files/audiobooks/${conversionId}/cover-image`,
+                url: await signAudiobookMediaUrl("cover-image"),
                 ...(audiobook.coverImage.alternativeText === undefined
                   ? {}
                   : { alternativeText: audiobook.coverImage.alternativeText }),
               },
+            }),
+        ...(narrationTrackDurations === undefined
+          ? {}
+          : {
+              narrationTrack: toNarrationTrackResponse(
+                await signAudiobookMediaUrl("narration-track.mp3"),
+                narrationTrackDurations,
+              ),
             }),
         narrationDocument: toNarrationDocumentResponse(audiobook.narrationDocument),
         playbackPosition: toPlaybackPositionResponse(playbackPosition),
@@ -828,25 +815,21 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     return context.body(null, 204);
   },
 
-  async getAudio(context) {
-    const { conversionId, sequence } = context.req.valid("param");
-    return serveAudio(
+  async getNarrationTrack(context) {
+    const { conversionId } = context.req.valid("param");
+    return serveNarrationTrack(
       context.env,
       context.req.raw,
       conversionId,
-      sequence,
-      false,
       context.get("requestId"),
     );
   },
-  async headAudio(context) {
-    const { conversionId, sequence } = context.req.valid("param");
-    return serveAudio(
+  async headNarrationTrack(context) {
+    const { conversionId } = context.req.valid("param");
+    return serveNarrationTrack(
       context.env,
       context.req.raw,
       conversionId,
-      sequence,
-      true,
       context.get("requestId"),
     );
   },
@@ -1270,6 +1253,8 @@ export function createApiServer(dependencies: ApiServerDependencies = production
         defaultSrc: ["'self'"],
         connectSrc: ["'self'", new URL(context.env.SUPABASE_URL).origin],
         imgSrc: ["'self'"],
+        // The web player's narration track: a signed media URL on this origin's file routes.
+        mediaSrc: [`${new URL(context.req.url).origin}/api/files/`],
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'", NONCE],
         frameAncestors: ["'none'"],
@@ -1336,72 +1321,88 @@ export function createApiServer(dependencies: ApiServerDependencies = production
     return next();
   });
 
-  for (const path of ["/api/audiobooks/*", "/api/files/audiobooks/*"]) {
+  app.use("/api/audiobooks/*", async (context, next) => {
+    const origin = context.req.header("Origin");
+    allowApplicationOrigin(context, origin);
+    const rawConversionId = context.req.path.split("/")[3];
+    if (!rawConversionId) {
+      return next();
+    }
+    let conversionId: string;
+    try {
+      conversionId = decodeURIComponent(rawConversionId);
+    } catch {
+      return jsonError(context.get("requestId"), "invalid-input", "Invalid conversion ID.", 400);
+    }
+    const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
+    if (owner?.kind === "trial") {
+      const denied = await requireActiveTrialAudiobookSession(
+        context.env,
+        owner.grantId,
+        context.req.header("Cookie"),
+        context.get("requestId"),
+      );
+      if (denied) {
+        return denied;
+      }
+      await next();
+      allowApplicationOrigin(context, origin);
+      context.header("Cross-Origin-Resource-Policy", "same-origin");
+      return;
+    }
+    if (!owner) {
+      return next();
+    }
+    const auth = await authenticateAccountRequest(context.req.raw, context.env);
+    if (auth.result !== "authenticated") {
+      return accountAuthError(auth.result, context.get("requestId"));
+    }
+    if (auth.snapshot.state !== "active") {
+      return accountAuthError("blocked", context.get("requestId"));
+    }
+    if (auth.snapshot.accountId !== owner.accountId) {
+      return jsonError(
+        context.get("requestId"),
+        "audiobook-not-found",
+        "Audiobook not found.",
+        404,
+      );
+    }
+    await next();
+    if (!isApplicationOrigin(origin)) {
+      context.header("Access-Control-Allow-Origin", undefined);
+    }
+    context.header("Cross-Origin-Resource-Policy", "same-origin");
+  });
+
+  // Media routes accept only a signed media URL. Registering the exact media routes, as listed in
+  // `allowedMethodsForApiPath`, lets other paths under `/api/files/` answer 404 instead of 401.
+  for (const path of [
+    "/api/files/audiobooks/:conversionId/narration-track.mp3",
+    "/api/files/audiobooks/:conversionId/cover-image",
+  ]) {
     app.use(path, async (context, next) => {
-      const origin = context.req.header("Origin");
-      if (origin === "https://localhost" || origin === APPLICATION_ORIGIN) {
-        context.header("Access-Control-Allow-Origin", origin);
-        context.header("Access-Control-Allow-Credentials", "true");
-        context.header("Vary", "Origin");
-      }
-      const isFile = path === "/api/files/audiobooks/*";
-      const rawConversionId = context.req.path.split("/")[isFile ? 4 : 3];
-      if (!rawConversionId) {
-        return next();
-      }
       let conversionId: string;
       try {
-        conversionId = decodeURIComponent(rawConversionId);
+        conversionId = decodeURIComponent(context.req.path.split("/")[4] ?? "");
       } catch {
         return jsonError(context.get("requestId"), "invalid-input", "Invalid conversion ID.", 400);
       }
-      const registry = getRegistryStub(context.env);
-      const owner = await registry.findConversionOwner(conversionId);
-      if (owner?.kind === "trial") {
-        const denied = await requireActiveTrialAudiobookSession(
-          context.env,
-          owner.grantId,
-          context.req.header("Cookie"),
-          context.get("requestId"),
-        );
-        if (denied) {
-          return denied;
-        }
-        await next();
-        if (origin === "https://localhost" || origin === APPLICATION_ORIGIN) {
-          context.header("Access-Control-Allow-Origin", origin);
-          context.header("Access-Control-Allow-Credentials", "true");
-          context.header("Vary", "Origin");
-        }
-        context.header("Cross-Origin-Resource-Policy", "same-origin");
-        return;
-      }
-      if (!owner) {
-        return next();
-      }
-      const auth = await authenticateAccountRequest(
-        isFile ? mediaRequest(context.req.raw) : context.req.raw,
+      const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
+      const denied = await requireSignedMediaUrl(
         context.env,
+        context.req.url,
+        conversionId,
+        owner,
+        context.get("requestId"),
       );
-      if (auth.result !== "authenticated") {
-        return accountAuthError(auth.result, context.get("requestId"));
-      }
-      if (auth.snapshot.state !== "active") {
-        return accountAuthError("blocked", context.get("requestId"));
-      }
-      if (auth.snapshot.accountId !== owner.accountId) {
-        return jsonError(
-          context.get("requestId"),
-          "audiobook-not-found",
-          "Audiobook not found.",
-          404,
-        );
+      if (denied) {
+        return denied;
       }
       await next();
-      if (origin !== "https://localhost" && origin !== APPLICATION_ORIGIN) {
-        context.header("Access-Control-Allow-Origin", undefined);
-      }
+      allowApplicationOrigin(context, context.req.header("Origin"));
       context.header("Cross-Origin-Resource-Policy", "same-origin");
+      return context.res;
     });
   }
 
@@ -1515,6 +1516,24 @@ export function createApiServer(dependencies: ApiServerDependencies = production
     .route("/", createOperatorApi(operatorApiHandlers));
 }
 
+/** The web app's origins: the production origin and the one its Capacitor shells load it from. */
+function isApplicationOrigin(origin: string | undefined): origin is string {
+  return origin === "https://localhost" || origin === APPLICATION_ORIGIN;
+}
+
+/**
+ * Lets the web app read the response with credentials when the request comes from one of its
+ * origins.
+ */
+function allowApplicationOrigin(context: Context, origin: string | undefined): void {
+  if (!isApplicationOrigin(origin)) {
+    return;
+  }
+  context.header("Access-Control-Allow-Origin", origin);
+  context.header("Access-Control-Allow-Credentials", "true");
+  context.header("Vary", "Origin");
+}
+
 function getGrantStub(env: ApiServerEnvironment, grantId: string): GrantStub {
   return env.CONVERSION_GRANTS.get(env.CONVERSION_GRANTS.idFromName(grantId));
 }
@@ -1560,17 +1579,7 @@ async function requireActiveTrialAudiobookSession(
       401,
     );
   }
-  if (auth.snapshot.state === "expired" || auth.snapshot.state === "revoked") {
-    return jsonError(
-      requestId,
-      `grant-${auth.snapshot.state}`,
-      auth.snapshot.state === "expired"
-        ? "This trial has expired. Its audiobooks are no longer accessible."
-        : "This trial has been revoked. Its audiobooks are no longer accessible.",
-      403,
-    );
-  }
-  return undefined;
+  return requireAccessibleGrantState(auth.snapshot.state, requestId);
 }
 
 function requireBrowserMutation(request: Request, requestId: string): Response | undefined {
@@ -1645,7 +1654,7 @@ function allowedMethodsForApiPath(pathname: string): string[] | undefined {
     [/^\/api\/audiobooks\/[^/]+\/segments\/[^/]+$/, ["GET", "POST"]],
     [/^\/api\/audiobooks\/[^/]+\/retry$/, ["POST"]],
     [/^\/api\/audiobooks\/[^/]+\/position$/, ["PUT"]],
-    [/^\/api\/files\/audiobooks\/[^/]+\/segments\/[^/]+\/audio\.mp3$/, ["GET", "HEAD"]],
+    [/^\/api\/files\/audiobooks\/[^/]+\/narration-track\.mp3$/, ["GET", "HEAD"]],
     [/^\/api\/files\/audiobooks\/[^/]+\/cover-image$/, ["GET", "HEAD"]],
     [/^\/api\/operator\/grants$/, ["GET", "POST"]],
     [/^\/api\/operator\/grants\/[^/]+$/, ["GET"]],

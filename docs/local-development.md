@@ -13,7 +13,7 @@ pnpm dev:services
 pnpm --filter @cup/cloudflare-worker dev
 ```
 
-The [helper](../tooling/env-setup/src/dev-services.ts) generates an ignored signing key, starts the local Supabase stack, and writes its URL, API keys, Google client ID, and `LOCAL_DEVELOPMENT=true` into the ignored Worker environment file, keeping a copy of the previous environment to restore. The [local Supabase configuration](../supabase/config.toml) sets the ports and the short local JWT lifetime. Cup does not store application history or duration data in Supabase Postgres.
+The [helper](../tooling/env-setup/src/dev-services.ts) generates an ignored signing key, starts the local Supabase stack, and writes its URL, API keys, Google client ID, a generated media URL signing key (kept when one is already set), and `LOCAL_DEVELOPMENT=true` into the ignored Worker environment file, keeping a copy of the previous environment to restore. The [local Supabase configuration](../supabase/config.toml) sets the ports and the short local JWT lifetime. Cup does not store application history or duration data in Supabase Postgres.
 
 Stop the stack and restore the previous Worker environment:
 

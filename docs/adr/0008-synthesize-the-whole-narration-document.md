@@ -1,8 +1,10 @@
 ---
-status: accepted
+status: partially superseded by ADR 0011
 ---
 
 # Synthesize the whole narration document
+
+[ADR 0011](0011-serve-one-narration-track-and-play-it-with-one-audio-element.md) supersedes the rejection of a full track, the browser's two alternating audio elements, the native playlists, the browser, Android and iOS players switching together, and playing without failed segments: every audiobook is now delivered as one narration track, played with one audio element, and playable only once every segment has audio. Whole-document synthesis, the all-or-nothing reservation and per-segment settlement remain accepted. The original decisions below are preserved as historical rationale.
 
 Progressive, player-controlled synthesis left the audiobook's total duration unknown until every segment had been listened to. A consistent playback progress, in the app and in the Android and iOS media notification controls, was therefore very difficult to show. On 2026-10-11 the user chose to generate audio for the whole narration document as part of the conversion, favoring simplicity and exact progress over paying only for audio that is listened to. [Conversion architecture](../architecture/conversion.md) describes the implementation.
 

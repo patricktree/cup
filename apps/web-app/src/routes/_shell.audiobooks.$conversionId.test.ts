@@ -1,40 +1,56 @@
 import { expect, test, type Page } from "@playwright/test";
 
-/** Records the source of the segment last started on the document element, without loading media. */
-async function stubAudioPlayback(page: Page) {
+/**
+ * Keeps the player host's audio element reachable, which is never attached to the document. The
+ * first one created is the host's: development mode runs state initializers twice and keeps the
+ * first result.
+ */
+async function captureNarrationAudio(page: Page) {
   await page.addInitScript(() => {
-    // Exercise the player without depending on the story's placeholder media URLs.
-    Object.defineProperty(HTMLMediaElement.prototype, "src", {
-      get() {
-        return this.dataset["source"] ?? "";
-      },
-      set(source: string) {
-        this.dataset["source"] = source;
-      },
-    });
-    HTMLMediaElement.prototype.play = function () {
-      // The standby element is started muted only to unlock it for later segment boundaries.
-      if (!this.muted) {
-        document.documentElement.dataset["playedSource"] = this.src;
+    const NativeAudio = window.Audio;
+    window.Audio = class extends NativeAudio {
+      constructor(source?: string) {
+        super(source);
+        if (!("narrationAudio" in window)) {
+          Object.assign(window, { narrationAudio: this });
+        }
       }
-      return Promise.resolve();
     };
   });
 }
 
-test("tapping narration starts playback from that unit, including nested text", async ({
+async function readNarrationAudio(page: Page) {
+  return page.evaluate(() => {
+    const audio = "narrationAudio" in window ? window.narrationAudio : undefined;
+    if (!(audio instanceof HTMLAudioElement)) {
+      throw new Error("The player host created no audio element.");
+    }
+    return { src: audio.src, currentTime: audio.currentTime, paused: audio.paused };
+  });
+}
+
+/** Waits until the element plays within a unit of five seconds that starts at `startSeconds`. */
+async function expectPlayingFrom(page: Page, startSeconds: number) {
+  await expect
+    .poll(async () => {
+      const { currentTime, paused } = await readNarrationAudio(page);
+      return !paused && currentTime >= startSeconds && currentTime < startSeconds + 5;
+    })
+    .toBe(true);
+}
+
+test("tapping narration seeks the narration track to that unit, including nested text", async ({
   mount,
   page,
 }) => {
-  await stubAudioPlayback(page);
+  await captureNarrationAudio(page);
 
   const component = await mount("routes/_shell.audiobooks.$conversionId/GatesNotesArticle");
-  const playback = page.locator("html");
 
   await component.locator("#narration-unit-0003").click();
   await expect(component.locator("#narration-unit-0003")).toHaveAttribute("aria-current", "true");
-  await expect(playback).toHaveAttribute("data-played-source", /\/segments\/2\/audio\.mp3$/);
   await expect(component.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await expectPlayingFrom(page, 10);
 
   const nestedText = component.locator("#narration-unit-0010 em");
   await nestedText.scrollIntoViewIfNeeded();
@@ -45,13 +61,14 @@ test("tapping narration starts playback from that unit, including nested text", 
     nestedTextBounds!.y + nestedTextBounds!.height / 2,
   );
   await expect(component.locator("#narration-unit-0010")).toHaveAttribute("aria-current", "true");
-  await expect(playback).toHaveAttribute("data-played-source", /\/segments\/9\/audio\.mp3$/);
+  await expectPlayingFrom(page, 45);
 
   await component.getByRole("button", { name: "Pause", exact: true }).click();
   await expect(component.getByRole("button", { name: "Play", exact: true })).toBeVisible();
-  await component.getByRole("button", { name: "Play segment 10", exact: true }).click();
+  expect((await readNarrationAudio(page)).paused).toBe(true);
+  await component.getByRole("button", { name: "Play segment 2", exact: true }).click();
   await expect(component.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
-  await expect(playback).toHaveAttribute("data-played-source", /\/segments\/9\/audio\.mp3$/);
+  await expectPlayingFrom(page, 5);
 
   await component.getByRole("button", { name: "Pause", exact: true }).click();
   const segmentButton = component.getByRole("button", { name: "Play segment 3", exact: true });
@@ -63,8 +80,8 @@ test("tapping narration starts playback from that unit, including nested text", 
   );
   await segmentButton.press("Enter");
   await expect(component.locator("#narration-unit-0003")).toHaveAttribute("aria-current", "true");
-  await expect(playback).toHaveAttribute("data-played-source", /\/segments\/2\/audio\.mp3$/);
   await expect(component.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await expectPlayingFrom(page, 10);
 
   await component.getByRole("button", { name: "Pause", exact: true }).click();
   await segmentButton.focus();
@@ -77,22 +94,33 @@ test("tapping narration starts playback from that unit, including nested text", 
   ).toBeVisible();
 });
 
+test("the position bar seeks the narration track", async ({ mount, page }) => {
+  await captureNarrationAudio(page);
+
+  const component = await mount("routes/_shell.audiobooks.$conversionId/ReadyAudiobook");
+  const position = component.getByRole("slider", {
+    name: "Position in A deterministic document about careful testing",
+  });
+  await position.fill("11000");
+
+  await expect(component.locator("#unit-3")).toHaveAttribute("aria-current", "true");
+  await expect.poll(async () => (await readNarrationAudio(page)).currentTime).toBe(11);
+  expect((await readNarrationAudio(page)).paused).toBe(true);
+});
+
 test("playback continues across pages until another audiobook is played", async ({
   mount,
   page,
 }) => {
-  await stubAudioPlayback(page);
+  await captureNarrationAudio(page);
 
   const component = await mount("routes/_shell.audiobooks.$conversionId/ListeningAcrossPages");
-  const playback = page.locator("html");
   const player = component.getByRole("contentinfo", { name: "Player" });
 
   await component.getByRole("button", { name: "Play segment 2", exact: true }).click();
-  await expect(playback).toHaveAttribute(
-    "data-played-source",
-    /example\.com\/segments\/1\/audio\.mp3$/,
-  );
   await expect(player.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await expectPlayingFrom(page, 5);
+  expect((await readNarrationAudio(page)).src).toContain("audiobook=story");
 
   await component.getByRole("link", { name: "Back to history" }).click();
   await expect(component.getByRole("heading", { name: "Conversion history" })).toBeVisible();
@@ -100,7 +128,16 @@ test("playback continues across pages until another audiobook is played", async 
     player.getByRole("link", { name: "A deterministic document about careful testing" }),
   ).toBeVisible();
   await expect(player.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  // Paused, so the position bar holds still for the screenshot.
+  await player.getByRole("button", { name: "Pause", exact: true }).click();
+  await page.evaluate(() => {
+    if ("narrationAudio" in window && window.narrationAudio instanceof HTMLAudioElement) {
+      window.narrationAudio.currentTime = 5;
+    }
+  });
+  await expect.poll(async () => (await readNarrationAudio(page)).currentTime).toBe(5);
   await expect(player).toHaveScreenshot("compact-player.png");
+  await player.getByRole("button", { name: "Play", exact: true }).click();
 
   await component
     .getByRole("listitem")
@@ -115,15 +152,14 @@ test("playback continues across pages until another audiobook is played", async 
   await expect(
     player.getByRole("link", { name: "A deterministic document about careful testing" }),
   ).toBeVisible();
+  expect((await readNarrationAudio(page)).src).toContain("audiobook=story");
 
   await component.getByRole("main").getByRole("button", { name: "Play", exact: true }).click();
-  await expect(playback).toHaveAttribute(
-    "data-played-source",
-    /\/second\/segments\/0\/audio\.mp3$/,
-  );
   await expect(
     player.getByRole("slider", { name: "Position in A second document about listening" }),
   ).toBeVisible();
+  expect((await readNarrationAudio(page)).src).toContain("audiobook=second");
+  await expectPlayingFrom(page, 0);
   await expect(
     component.getByRole("main").getByRole("button", { name: "Play", exact: true }),
   ).toHaveCount(0);
@@ -169,6 +205,7 @@ test("shows generation progress and keeps Play disabled while audio is generated
     component.getByText("Keep the important boundaries real.", { exact: true }),
   ).toBeVisible();
   await expect(component.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
+  await expect(component.getByRole("button", { name: /^Play segment/ })).toHaveCount(0);
   await expect(component).toHaveScreenshot("synthesizing-audiobook.png");
 });
 
@@ -186,9 +223,7 @@ test("explains the needed and available duration when the document does not fit"
   await expect(component).toHaveScreenshot("insufficient-duration.png");
 });
 
-test("a failed segment is marked and playback needs an explicit choice to skip it", async ({
-  mount,
-}) => {
+test("a failed segment is marked and playback waits for a successful Retry", async ({ mount }) => {
   const component = await mount(
     "routes/_shell.audiobooks.$conversionId/AudiobookWithFailedSegment",
   );
@@ -197,16 +232,11 @@ test("a failed segment is marked and playback needs an explicit choice to skip i
   ).toBeVisible();
   await expect(component.locator("#unit-2")).toHaveAttribute("data-synthesis-failed", "");
   await expect(component.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
-  await expect(component).toHaveScreenshot("audiobook-with-failed-segment.png");
-
-  await component.getByRole("button", { name: "Play without it", exact: true }).click();
-  await expect(component.getByRole("button", { name: "Play", exact: true })).toBeEnabled();
-  // Two five-second segments remain on the timeline; the failed one takes no time.
-  await expect(component.getByText("0:10", { exact: true })).toBeVisible();
+  await expect(component.getByRole("button", { name: /^Play segment/ })).toHaveCount(0);
+  await expect(component.getByRole("button", { name: /Play without/ })).toHaveCount(0);
+  await expect(component.getByText(/skipped during playback/)).toHaveCount(0);
   await expect(component.getByRole("button", { name: "Retry", exact: true })).toBeEnabled();
-  await expect(component.getByRole("button", { name: "Play segment 2", exact: true })).toHaveCount(
-    0,
-  );
+  await expect(component).toHaveScreenshot("audiobook-with-failed-segment.png");
 
   // A refused retry leaves the audiobook unchanged, so the reader has to say why.
   await component.getByRole("button", { name: "Retry", exact: true }).click();
@@ -225,6 +255,7 @@ test("an audiobook whose every segment failed offers only Retry", async ({ mount
   await expect(component.getByRole("button", { name: "Retry", exact: true })).toBeEnabled();
   await expect(component.getByRole("button", { name: /Play without/ })).toHaveCount(0);
   await expect(component.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
+  await expect(component.getByRole("button", { name: /^Play segment/ })).toHaveCount(0);
 });
 
 test("renders audiobook-not-found", async ({ mount }) => {
