@@ -1,8 +1,13 @@
 import { createMemoryHistory } from "@tanstack/react-router";
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import React from "react";
 
-import type { Audiobook, ErrorResponse, RetryConversionResponse } from "@cup/listener-api.routes";
+import type {
+  Audiobook,
+  ErrorResponse,
+  PreparationPhase,
+  RetryConversionResponse,
+} from "@cup/listener-api.routes";
 
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
 import { queryClient } from "#src/data-fetching/query-client.js";
@@ -65,6 +70,56 @@ export const GatesNotesArticle = {
       } satisfies Audiobook),
     ),
     storyNarrationTrackHandler,
+  ],
+} satisfies Story;
+
+const COVER_URL = `${window.location.origin}/__story/covers/detail.svg`;
+
+/** A signed-in listener opens a long audiobook with a cover. */
+export const AccountAudiobook = accountStory({
+  path: `/audiobooks/${GATES_NOTES_CONVERSION_ID}`,
+  handlers: [
+    http.get(`/api/audiobooks/${GATES_NOTES_CONVERSION_ID}`, () =>
+      HttpResponse.json({
+        ...gatesNotesAudiobook,
+        status: "ready",
+        coverImage: { url: COVER_URL, alternativeText: "A person reading by a window" },
+        segments: gatesNotesAudiobook.narrationDocument.synchronizationUnits.map(
+          (_unit, sequence) => createReadySegment(sequence),
+        ),
+        narrationTrack: createStoryNarrationTrack(
+          gatesNotesAudiobook.narrationDocument.synchronizationUnits.map(
+            () => SEGMENT_DURATION_MILLISECONDS,
+          ),
+        ),
+      } satisfies Audiobook),
+    ),
+    http.get(
+      COVER_URL,
+      () =>
+        new HttpResponse(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect width="400" height="200" fill="#5b7f95"/><circle cx="200" cy="100" r="60" fill="#fff"/></svg>',
+          { headers: { "Content-Type": "image/svg+xml" } },
+        ),
+    ),
+    storyNarrationTrackHandler,
+    http.put(
+      `/api/audiobooks/${GATES_NOTES_CONVERSION_ID}/position`,
+      () => new HttpResponse(null, { status: 204 }),
+    ),
+    http.post(`/api/audiobooks/${GATES_NOTES_CONVERSION_ID}/retry`, () =>
+      HttpResponse.json({ result: "started" } satisfies RetryConversionResponse),
+    ),
+  ],
+});
+
+/** The first response never arrives. */
+export const LoadingAudiobook = {
+  component: () => <GlobalProviders router={router} />,
+  handlers: [
+    http.get(`/api/audiobooks/${CONVERSION_ID}`, async () => {
+      await delay("infinite");
+    }),
   ],
 } satisfies Story;
 
@@ -202,6 +257,12 @@ function createPreparedStory(audiobook: Audiobook) {
   } satisfies Story;
 }
 
+/** The audiobook offers no retry, such as once a trial no longer permits speech generation. */
+export const AudiobookWithoutRetry = createPreparedStory({
+  ...createAudiobook(),
+  canGenerate: false,
+});
+
 export const SynthesizingAudiobook = createPreparedStory({
   ...PREPARED_AUDIOBOOK,
   status: "synthesizing",
@@ -244,27 +305,38 @@ export const AudiobookWithFailedSegment = createPreparedStory({
   ],
 });
 
-export const PendingConversion = {
-  component: () => <GlobalProviders router={router} />,
-  handlers: [
-    http.get("/api/audiobooks/" + CONVERSION_ID, () =>
-      HttpResponse.json({
-        status: "pending",
-        originalUrl: "https://example.com/article",
-        canGenerate: true,
-      }),
-    ),
-  ],
-} satisfies Story;
+function createPendingStory(preparationPhase?: PreparationPhase) {
+  return {
+    component: () => <GlobalProviders router={router} />,
+    handlers: [
+      http.get(`/api/audiobooks/${CONVERSION_ID}`, () =>
+        HttpResponse.json({
+          status: "pending",
+          originalUrl: "https://example.com/article",
+          canGenerate: true,
+          ...(preparationPhase && { preparationPhase }),
+        } satisfies Audiobook),
+      ),
+    ],
+  } satisfies Story;
+}
+
+/** A conversion whose phase is not reported, or not known to this client. */
+export const PendingConversion = createPendingStory();
+export const PendingStarting = createPendingStory("starting");
+export const PendingReadingPage = createPendingStory("reading-page");
+export const PendingSelectingContent = createPendingStory("selecting-content");
+export const PendingPreparingText = createPendingStory("preparing-text");
+
 export const FailedConversion = {
   component: () => <GlobalProviders router={router} />,
   handlers: [
     http.get("/api/audiobooks/" + CONVERSION_ID, () =>
       HttpResponse.json({
         status: "failed",
-        originalUrl: "https://example.com/article",
+        originalUrl: "https://www.example.com/article",
         canGenerate: true,
-        explanation: "Preparation failed.",
+        explanation: "Preparation failed. Retry to load this track.",
       }),
     ),
   ],

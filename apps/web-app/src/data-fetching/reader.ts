@@ -16,7 +16,7 @@ export function createAudiobookQuery(conversionId: string) {
   return queryOptions({
     queryKey: ["audiobook", conversionId],
     queryFn: ({ signal }) => getAudiobook(conversionId, signal),
-    meta: { errorTitle: "The article could not be updated." },
+    meta: { errorTitle: "The track could not be updated." },
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       return status === "pending" || status === "synthesizing" ? POLL_INTERVAL_MS : false;

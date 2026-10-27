@@ -54,7 +54,7 @@ test("a document exceeding the allowance stays readable, reserves nothing, and c
   await setAllowance(workerEnvironment, grantId, 1_000);
   await startConversion(page);
   await waitForAudiobook(page);
-  await expect(page.getByText(/Not enough audio duration for this article\./)).toBeVisible({
+  await expect(page.getByText(/Not enough audio duration for this track\./)).toBeVisible({
     timeout: 30_000,
   });
   await expect(page.getByText(/and 1 s is available\./)).toBeVisible();
@@ -93,7 +93,7 @@ test.describe("in-flight reservations", () => {
       .poll(async () => (await readSpeechCalls(workerEnvironment)).length)
       .toBe(unitCount);
     await expect(
-      page.getByText(`Generating audio… 0 of ${unitCount} segments ready`),
+      page.getByText(`Generating audio, 0 of ${unitCount} segments ready`),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
     const reserved = (await readGrant(page, grantId)).duration.reservedMilliseconds;
