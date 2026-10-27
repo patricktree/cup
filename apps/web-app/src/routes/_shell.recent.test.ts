@@ -193,6 +193,37 @@ test("a signed-in home redirects to Recents", async ({ mount }) => {
   await expect(component.getByRole("textbox", { name: "URL" })).toHaveCount(0);
 });
 
+test("a URL shared while signed in opens the Add dialog with it filled in and submits nothing", async ({
+  mount,
+  page,
+}) => {
+  const starts: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST") {
+      starts.push(new URL(request.url()).pathname);
+    }
+  });
+  await mount("routes/_shell.recent/EmptyRecents");
+  // The native share plugins hand the URL to share intake, and a cold start then opens the app's
+  // home. The gallery's own mount keeps this page, and with it the pending URL; the mount fixture
+  // would load a new one.
+  await page.evaluate(async (url) => {
+    const modulePath = "/src/platform/share-intake.ts";
+    const { receiveSharedUrl } = await import(modulePath);
+    receiveSharedUrl(url, () => {});
+    const mountInPage: unknown = Reflect.get(window, "mount");
+    if (typeof mountInPage !== "function") {
+      throw new TypeError("The component gallery exposes no mount function");
+    }
+    await Reflect.apply(mountInPage, window, [{ story: "routes/_shell.recent/SignedInHome" }]);
+  }, ADDED_SOURCE_URL);
+
+  const dialog = page.getByRole("dialog", { name: "Add a track" });
+  await expect(dialog.getByRole("textbox", { name: "URL" })).toHaveValue(ADDED_SOURCE_URL);
+  await expect(dialog.getByRole("button", { name: "Add" })).toBeEnabled();
+  expect(starts).not.toContain("/api/account/conversions");
+});
+
 test("the empty state's link opens the Add dialog", async ({ mount, page }) => {
   const component = await mount("routes/_shell.recent/EmptyRecents");
   await component.getByRole("link", { name: "Add your first track" }).click();
