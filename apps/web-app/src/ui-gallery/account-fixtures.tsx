@@ -21,6 +21,7 @@ export function accountStory({
   recents = { items: [], nextCursor: null },
   confirmation,
   setupFailure = false,
+  userMetadata = { name: "Verena Handler-Kunze" },
   handlers = [],
   play,
 }: {
@@ -29,6 +30,8 @@ export function accountStory({
   recents?: { items: Record<string, unknown>[]; nextCursor: string | null };
   confirmation?: "delete" | "restore";
   setupFailure?: boolean | "once";
+  /** The session user's metadata, which carries the name the avatar shows. */
+  userMetadata?: Record<string, unknown>;
   handlers?: RequestHandler[];
   play?: Story["play"];
 }): Story {
@@ -38,7 +41,7 @@ export function accountStory({
     const [error, setError] = React.useState<string>();
     React.useEffect(() => {
       const initialize = async () => {
-        await initializeAccountStorySession(confirmation);
+        await initializeAccountStorySession(userMetadata, confirmation);
         await router.navigate({ href: `/app${path}` });
         setReady(true);
       };
@@ -105,7 +108,10 @@ export function accountStory({
   };
 }
 
-async function initializeAccountStorySession(confirmation?: "delete" | "restore") {
+async function initializeAccountStorySession(
+  userMetadata: Record<string, unknown>,
+  confirmation?: "delete" | "restore",
+) {
   const payload = btoa(JSON.stringify({ sub: SUBJECT, exp: 4102444800 })).replaceAll("=", "");
   localStorage.setItem(
     ACCOUNT_SESSION_STORAGE_KEY,
@@ -115,7 +121,7 @@ async function initializeAccountStorySession(confirmation?: "delete" | "restore"
       token_type: "bearer",
       expires_at: 4102444800,
       expires_in: 300,
-      user: { id: SUBJECT, email: "reader@example.test" },
+      user: { id: SUBJECT, email: "reader@example.test", user_metadata: userMetadata },
     }),
   );
   if (confirmation) {

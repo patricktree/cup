@@ -190,9 +190,14 @@ test("signed in, home redirects to Recents, where the Add dialog opens on a mask
   await expect(page).toHaveURL(`${origin}/app/recent`);
   const recents = page.locator("main li");
   await expect(recents).toHaveCount(1);
+  // The fake auth provider names the account holder "Reader Doe".
+  await expect(page.getByRole("link", { name: "Account" })).toHaveText("rd", {
+    useInnerText: true,
+  });
 
   const addDialog = page.getByRole("dialog", { name: "Add a track" });
-  await page.getByRole("link", { name: "Add a track" }).click();
+  const addTab = page.getByRole("navigation", { name: "Tabs" }).getByRole("link", { name: "Add" });
+  await addTab.click();
   await expect(addDialog).toBeVisible();
   await expect(page).toHaveURL(`${origin}/app/recent`);
   await page.reload();
@@ -203,7 +208,7 @@ test("signed in, home redirects to Recents, where the Add dialog opens on a mask
   await expect(page.getByRole("heading", { name: "Recents", exact: true })).toBeVisible();
   await expect(page).toHaveURL(`${origin}/app/recent`);
 
-  await page.getByRole("link", { name: "Add a track" }).click();
+  await addTab.click();
   await addDialog.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
   await addDialog.getByRole("button", { name: "Add", exact: true }).click();
   await expect(addDialog).toHaveCount(0, { timeout: 60_000 });
