@@ -4,8 +4,8 @@ import {
   type AudiobookReference,
   type ConversionOwner,
   type ConversionPhase,
+  type SegmentUsage,
 } from "@cup/conversion-contracts";
-import type { SegmentUsage } from "@cup/conversion-contracts/duration-accounting";
 import type { ConversionGrantDurableObject } from "@cup/conversion-grants";
 
 import type { AudiobookWorkflowEnvironment } from "#src/workflow-environment.ts";

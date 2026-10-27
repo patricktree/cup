@@ -12,16 +12,12 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "types": "./dist/types/prepare-source-material.d.ts",
-      "default": "./src/prepare-source-material.ts"
+      "types": "./dist/types/index.d.ts",
+      "default": "./src/index.ts"
     },
     "./fake": {
       "types": "./dist/types/source-material-preparer.fake.d.ts",
       "default": "./src/source-material-preparer.fake.ts"
-    },
-    "./cover-image": {
-      "types": "./dist/types/load-cover-image.d.ts",
-      "default": "./src/load-cover-image.ts"
     }
   },
   "scripts": {

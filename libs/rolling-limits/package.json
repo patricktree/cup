@@ -11,12 +11,8 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "types": "./dist/types/rolling-limits.d.ts",
-      "default": "./src/rolling-limits.ts"
-    },
-    "./schema": {
-      "types": "./dist/types/rate-limit-schema.d.ts",
-      "default": "./src/rate-limit-schema.ts"
+      "types": "./dist/types/index.d.ts",
+      "default": "./src/index.ts"
     }
   },
   "scripts": {

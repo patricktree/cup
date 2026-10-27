@@ -1,11 +1,6 @@
 import { expect, test } from "vitest";
 
-import {
-  loadAudiobook,
-  storeAudiobook,
-  SPEECH_CONFIG,
-  type StoreOptions,
-} from "#src/audiobook-production.ts";
+import { loadAudiobook, storeAudiobook, SPEECH_CONFIG, type StoreOptions } from "#src/index.ts";
 
 const document = {
   html: '<h1 id="unit-1">Title</h1><p id="unit-2">Body</p>',

@@ -4,13 +4,12 @@ import { NonRetryableError } from "cloudflare:workflows";
 
 import { AccountDurableObject } from "@cup/accounts";
 import { createApiServer } from "@cup/api-server";
-import { type SegmentWorkflowParams } from "@cup/conversion-contracts";
+import { type ConversionParams, type SegmentWorkflowParams } from "@cup/conversion-contracts";
 import { ConversionGrantDurableObject } from "@cup/conversion-grants";
 import {
   runPrepareAudiobookWorkflow,
-  type ConversionParams,
-} from "@cup/create-audiobook-from-url-workflow/runner";
-import { runAudioSegmentWorkflow } from "@cup/create-audiobook-from-url-workflow/segment-runner";
+  runAudioSegmentWorkflow,
+} from "@cup/create-audiobook-from-url-workflow";
 import { createFakeNarrationContentSelector } from "@cup/narration-content-selection/fake";
 import { createControlledSourceMaterialPreparer } from "@cup/prepare-source-material/fake";
 import { RegistryDurableObject } from "@cup/registry";

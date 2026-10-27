@@ -14,10 +14,6 @@
     ".": {
       "types": "./dist/types/index.d.ts",
       "default": "./src/index.ts"
-    },
-    "./duration-accounting": {
-      "types": "./dist/types/duration-accounting.d.ts",
-      "default": "./src/duration-accounting.ts"
     }
   },
   "scripts": {

@@ -10,16 +10,23 @@ import {
   type CoverImage,
   type CoverImageStorage,
 } from "@cup/audiobook-production";
-import { ConversionPhase, type ConversionFailureCategory } from "@cup/conversion-contracts";
-import { conversionParamsSchema, type ConversionParams } from "@cup/conversion-contracts";
+import {
+  ConversionPhase,
+  type ConversionFailureCategory,
+  conversionParamsSchema,
+  type ConversionParams,
+} from "@cup/conversion-contracts";
 import { findRootCauseDescription } from "@cup/errors";
 import type {
   NarrationContentSelectionResult,
   SelectionChunkRunner,
 } from "@cup/narration-content-selection";
 import { createNarrationDocument } from "@cup/narration-document-creation";
-import type { CoverImageDeclaration, SourceMaterialPreparer } from "@cup/prepare-source-material";
-import type { CoverImageLoader } from "@cup/prepare-source-material/cover-image";
+import type {
+  CoverImageDeclaration,
+  SourceMaterialPreparer,
+  CoverImageLoader,
+} from "@cup/prepare-source-material";
 
 import { resolveConversionExecution } from "#src/conversion-execution.ts";
 import type { AudiobookWorkflowEnvironment } from "#src/workflow-environment.ts";
@@ -79,8 +86,6 @@ export type PrepareAudiobookWorkflowServices = {
     options: { conversionId: string; runChunk: SelectionChunkRunner },
   ): Promise<NarrationContentSelectionResult>;
 };
-
-export type { ConversionParams };
 
 /** Runs a conversion through durable steps using explicitly supplied provider services. */
 export async function runPrepareAudiobookWorkflow({

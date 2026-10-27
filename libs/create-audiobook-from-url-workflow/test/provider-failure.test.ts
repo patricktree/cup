@@ -25,7 +25,7 @@ import { loadAudiobook, type SpeechSynthesisAi } from "@cup/audiobook-production
 import { createFakeSpeechSynthesisAi } from "@cup/audiobook-production/fake";
 import type { ConversionGrantDurableObject } from "@cup/conversion-grants";
 import { createFakeNarrationContentSelector } from "@cup/narration-content-selection/fake";
-import type { CoverImageLoader } from "@cup/prepare-source-material/cover-image";
+import type { CoverImageLoader } from "@cup/prepare-source-material";
 import { createControlledSourceMaterialPreparer } from "@cup/prepare-source-material/fake";
 
 import { runPrepareAudiobookWorkflow } from "#src/run-prepare-audiobook-workflow.ts";

@@ -5,7 +5,7 @@ import path from "node:path";
 import url from "node:url";
 import { defineConfig } from "vite";
 
-import { WEB_APP_CSP_NONCE_PLACEHOLDER } from "@cup/listener-api.routes/web-app-csp";
+import { WEB_APP_CSP_NONCE_PLACEHOLDER } from "@cup/listener-api.routes";
 
 export const WEB_APP_DIRECTORY = url.fileURLToPath(new URL("./", import.meta.url));
 const WYW_CONFIG_FILE = url.fileURLToPath(

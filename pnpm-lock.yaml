@@ -913,9 +913,6 @@ importers:
       '@cup/conversion-grants':
         specifier: workspace:*
         version: link:../conversion-grants
-      '@cup/create-audiobook-from-url-workflow':
-        specifier: workspace:*
-        version: link:../create-audiobook-from-url-workflow
       '@cup/errors':
         specifier: workspace:*
         version: link:../errors

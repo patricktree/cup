@@ -187,3 +187,12 @@ export {
   type ConversionParams,
   type TrialWorkflowParams,
 } from "#src/preparation-workflow-params.ts";
+
+export {
+  derivePreparedConversionStatus,
+  estimateAudioDuration,
+  insufficientDurationSchema,
+  type InsufficientDuration,
+  type PreparedConversionStatus,
+  type SegmentUsage,
+} from "#src/duration-accounting.ts";

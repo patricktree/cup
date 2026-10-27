@@ -11,13 +11,9 @@
   },
   "exports": {
     "./package.json": "./package.json",
-    "./web-app-csp": {
-      "types": "./dist/types/http/web-app-csp.d.ts",
-      "default": "./src/http/web-app-csp.ts"
-    },
     ".": {
-      "types": "./dist/types/api-server.d.ts",
-      "default": "./src/api-server.ts"
+      "types": "./dist/types/index.d.ts",
+      "default": "./src/index.ts"
     }
   },
   "scripts": {
@@ -38,7 +34,6 @@
     "@cup/audiobook-production": "workspace:*",
     "@cup/conversion-contracts": "workspace:*",
     "@cup/conversion-grants": "workspace:*",
-    "@cup/create-audiobook-from-url-workflow": "workspace:*",
     "@cup/errors": "workspace:*",
     "@cup/listener-api.routes": "workspace:*",
     "@cup/operator-api.routes": "workspace:*",

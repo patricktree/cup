@@ -2,7 +2,7 @@
 
 ## Layout
 
-`src/index.ts` is the package's interface; the `./contracts` and `./session` exports in `package.json` point into `domain/`. `src/encoding.ts` and `src/time.ts` are shared pure helpers that import nothing else from the package. The folders:
+`src/index.ts` is the package's interface; the `./contracts` and `./session` exports in `package.json` point into `domain/`. These subpaths are the documented exception to the [single `.` export rule](../../docs/architecture/README.md#responsibilities-and-code-boundaries): they let callers reach that code without loading the Durable Object. `src/encoding.ts` and `src/time.ts` are shared pure helpers that import nothing else from the package. The folders:
 
 - `domain/`: the grant snapshot and conversion schemas (`grant-contracts.ts`), the grant record, its conversions and the rules that derive state, duration balance and snapshots from them (`grant-model.ts`), and the root credential and session signing with Web Crypto (`grant-session.ts`), with no storage or bindings. It imports only `domain/` and the shared helpers.
 - `storage/`: the Durable Object SQLite adapter: the Drizzle schema (`grant-sqlite-schema.ts`, `rate-limit-schema.ts`), the legacy transition and migration entry point (`legacy-grant-migrations.ts`), and `ConversionGrantSqlite` (`grant-sqlite.ts`), which maps rows to `domain/` types. It imports `domain/`, never `durable-object/` or `src/index.ts`.

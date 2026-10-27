@@ -11,20 +11,8 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "types": "./dist/types/workflow.d.ts",
-      "default": "./src/workflow.ts"
-    },
-    "./runner": {
-      "types": "./dist/types/run-prepare-audiobook-workflow.d.ts",
-      "default": "./src/run-prepare-audiobook-workflow.ts"
-    },
-    "./segment-runner": {
-      "types": "./dist/types/run-audio-segment-workflow.d.ts",
-      "default": "./src/run-audio-segment-workflow.ts"
-    },
-    "./conversion-params": {
-      "types": "./dist/types/conversion-params.d.ts",
-      "default": "./src/conversion-params.ts"
+      "types": "./dist/types/index.d.ts",
+      "default": "./src/index.ts"
     }
   },
   "scripts": {

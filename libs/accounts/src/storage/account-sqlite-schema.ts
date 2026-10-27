@@ -2,10 +2,10 @@ import { sql } from "drizzle-orm";
 import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import type { AudiobookReference } from "@cup/conversion-contracts";
-import { defineAudioSegments } from "@cup/duration-ledger/schema";
+import { defineAudioSegments } from "@cup/duration-ledger";
 
 // Re-exported so that the account migrations create the shared duration ledger tables.
-export { creditBalances, creditLedger, creditOperations } from "@cup/duration-ledger/schema";
+export { creditBalances, creditLedger, creditOperations } from "@cup/duration-ledger";
 
 export const accounts = sqliteTable(
   "account",

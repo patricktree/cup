@@ -10,9 +10,9 @@ import {
   playbackPositionSchema as sharedPlaybackPositionSchema,
   conversionPhaseSchema,
   durationBalanceSchema,
+  sourceUrlSchema,
+  insufficientDurationSchema,
 } from "@cup/conversion-contracts";
-import { sourceUrlSchema } from "@cup/conversion-contracts";
-import { insufficientDurationSchema } from "@cup/conversion-contracts/duration-accounting";
 import {
   grantConversionSnapshotSchema,
   grantConversionsSchema,

@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { createCoverImageKey, storeCoverImage } from "#src/audiobook-production.ts";
+import { createCoverImageKey, storeCoverImage } from "#src/index.ts";
 
 const BYTES = Uint8Array.of(0xff, 0xd8, 0xff, 0xe0);
 
