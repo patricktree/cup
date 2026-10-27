@@ -5,6 +5,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { SPEECH_CONFIG } from "@cup/audiobook-production";
 import { createConversionArtifactPrefix, type ConversionOwner } from "@cup/conversion-contracts";
 import type { GrantState } from "@cup/conversion-grants/contracts";
+import { accountHistorySchema, audiobookSchema } from "@cup/listener-api.routes";
 
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
 import { createApiServer } from "#src/api-server.ts";
@@ -24,6 +25,8 @@ const subject = "f355f913-ba12-45d6-a7d2-4df95f7cf11f";
 const supabaseUrl = "https://access-test.supabase.co";
 const origin = "https://cup.audio";
 const audiobookPath = `/api/audiobooks/${conversionId}`;
+const historyPath = "/api/account/conversions";
+const COVER_CACHE_CONTROL = "private, max-age=86400, immutable";
 const coverImagePath = `/api/files/audiobooks/${conversionId}/cover-image`;
 const grantCookie = `__Secure-grant-session-${grantId}=valid-session`;
 const accountOwner: ConversionOwner = { kind: "account", accountId };
@@ -82,8 +85,27 @@ function fixture(owner: ConversionOwner) {
       sourceUrl: "https://example.com/source",
       outcome: { status: "ready", audiobookReference: reference },
     }),
-    listAudioSegments: async () => [{ sequence: 0, state: "settled", actualMilliseconds: 1_000 }],
+    listAudioSegments: async () => [{ sequence: 0, state: "settled", actualMilliseconds: 960 }],
     getPlaybackPosition: async () => null,
+    history: async () => ({
+      items: [
+        {
+          conversionId,
+          idempotencyKey: conversionId,
+          sourceUrl: "https://example.com/source",
+          createdAtMs: 1,
+          status: "ready",
+          completedAtMs: 2,
+          outcome: {
+            status: "ready",
+            title: "A document",
+            audiobookReference: reference,
+            hasCoverImage: true,
+          },
+        },
+      ],
+      nextCursor: null,
+    }),
   };
 
   const grantState: { current: GrantState } = { current: "open" };
@@ -96,7 +118,7 @@ function fixture(owner: ConversionOwner) {
         : { result: "invalid" as const },
     getConversion: async () => ({ status: "ready", sourceUrl: "https://example.com/source" }),
     getReadyAudiobookReference: async () => reference,
-    listAudioSegments: async () => [{ sequence: 0, state: "settled", actualMilliseconds: 1_000 }],
+    listAudioSegments: async () => [{ sequence: 0, state: "settled", actualMilliseconds: 960 }],
   };
 
   const env = {
@@ -116,7 +138,7 @@ function fixture(owner: ConversionOwner) {
   if (!isFixtureEnvironment(env)) {
     throw new Error("Missing signed media URL fixture bindings");
   }
-  return { app: createApiServer(), env, bucketRead, accountState, grantState };
+  return { app: createApiServer(), env, bucketRead, readBucket, accountState, grantState };
 }
 
 async function createAccessToken() {
@@ -140,14 +162,14 @@ async function createAccessToken() {
 
 function signCoverImageUrl(
   principal: ConversionOwner,
-  overrides: { conversionId?: string; issuedAtMs?: number; signingKey?: string } = {},
+  overrides: { conversionId?: string; nowMs?: number; signingKey?: string } = {},
 ) {
   return signMediaUrl({
     url: origin + coverImagePath,
     conversionId: overrides.conversionId ?? conversionId,
     principal,
     signingKey: overrides.signingKey ?? SIGNING_KEY,
-    issuedAtMs: overrides.issuedAtMs ?? Temporal.Now.instant().epochMilliseconds,
+    nowMs: overrides.nowMs ?? Temporal.Now.instant().epochMilliseconds,
   });
 }
 
@@ -172,7 +194,7 @@ test("the audiobook response's cover image URL serves every request kind without
       const response = await app.request(coverImageUrl, { method, headers: requestHeaders }, env);
       expect(response.status).toBe(status);
       expect([...new Uint8Array(await response.arrayBuffer())]).toEqual(body);
-      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+      expect(response.headers.get("Cache-Control")).toBe(COVER_CACHE_CONTROL);
     }
   }
 });
@@ -194,7 +216,7 @@ test("missing, malformed, tampered, expired and other-audiobook tokens answer 40
       tamperedToken,
       new URL(
         await signCoverImageUrl(owner, {
-          issuedAtMs: Temporal.Now.instant().epochMilliseconds - 25 * HOUR_MS,
+          nowMs: Temporal.Now.instant().epochMilliseconds - 48 * HOUR_MS,
         }),
       ).searchParams.get("token"),
       new URL(await signCoverImageUrl(owner, { signingKey: "rotated-key" })).searchParams.get(
@@ -216,12 +238,89 @@ test("missing, malformed, tampered, expired and other-audiobook tokens answer 40
   }
 });
 
-test("a token issued within the last 24 hours is still accepted", async () => {
+test("a token handed out within the last 24 hours is still accepted", async () => {
   const { app, env } = fixture(trialOwner);
   const url = await signCoverImageUrl(trialOwner, {
-    issuedAtMs: Temporal.Now.instant().epochMilliseconds - 23 * HOUR_MS,
+    nowMs: Temporal.Now.instant().epochMilliseconds - 24 * HOUR_MS + 60_000,
   });
   expect((await app.request(url, {}, env)).status).toBe(200);
+});
+
+test("a ready history item's cover URL serves the cover, cached for a day", async () => {
+  const { app, env } = fixture(accountOwner);
+  const history = await requestJson(app, env, historyPath, {
+    Authorization: `Bearer ${await createAccessToken()}`,
+  });
+  const coverImageUrl = getHistoryCoverImageUrl(history);
+  expect(coverImageUrl.startsWith(`${origin + coverImagePath}?token=`)).toBe(true);
+
+  for (const method of ["GET", "HEAD"]) {
+    const response = await app.request(coverImageUrl, { method }, env);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe(COVER_CACHE_CONTROL);
+  }
+});
+
+test("a cover error keeps private, no-store", async () => {
+  const { app, env, bucketRead, readBucket } = fixture(accountOwner);
+  bucketRead.mockImplementation(async (key) =>
+    key.endsWith("cover-image") ? null : readBucket(key),
+  );
+  const response = await app.request(await signCoverImageUrl(accountOwner), {}, env);
+  expect(response.status).toBe(404);
+  expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+});
+
+test("audiobook and history responses within one UTC day carry identical media URLs", async () => {
+  const { app, env } = fixture(accountOwner);
+  vi.useFakeTimers({ toFake: ["Date"] });
+  try {
+    const mediaUrlsAt = async (instant: string) => {
+      vi.setSystemTime(Temporal.Instant.from(instant).epochMilliseconds);
+      const headers = { Authorization: `Bearer ${await createAccessToken()}` };
+      const audiobook = await requestJson(app, env, audiobookPath, headers);
+      const history = await requestJson(app, env, historyPath, headers);
+      return {
+        coverImage: getCoverImageUrl(audiobook),
+        narrationTrack: getNarrationTrackUrl(audiobook),
+        historyCoverImage: getHistoryCoverImageUrl(history),
+      };
+    };
+
+    const startOfDay = await mediaUrlsAt("2026-10-27T00:00:00.000Z");
+    expect(startOfDay.historyCoverImage).toBe(startOfDay.coverImage);
+    expect(await mediaUrlsAt("2026-10-27T23:59:59.999Z")).toEqual(startOfDay);
+    const nextDay = await mediaUrlsAt("2026-10-28T00:00:00.000Z");
+    expect(nextDay.coverImage).not.toBe(startOfDay.coverImage);
+    expect(nextDay.narrationTrack).not.toBe(startOfDay.narrationTrack);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("a URL handed out at 23:59 UTC is accepted until 48 hours after the start of its UTC day", async () => {
+  const { app, env } = fixture(accountOwner);
+  vi.useFakeTimers({ toFake: ["Date"] });
+  try {
+    vi.setSystemTime(Temporal.Instant.from("2026-10-27T23:59:00.000Z").epochMilliseconds);
+    const audiobook = await requestJson(app, env, audiobookPath, {
+      Authorization: `Bearer ${await createAccessToken()}`,
+    });
+
+    for (const [instant, status] of [
+      // 47 hours after the start of the UTC day it was handed out on.
+      ["2026-10-28T23:00:00.000Z", 200],
+      ["2026-10-28T23:59:59.999Z", 200],
+      ["2026-10-29T00:00:00.000Z", 401],
+    ] as const) {
+      vi.setSystemTime(Temporal.Instant.from(instant).epochMilliseconds);
+      for (const url of [getCoverImageUrl(audiobook), getNarrationTrackUrl(audiobook)]) {
+        expect((await app.request(url, { method: "HEAD" }, env)).status).toBe(status);
+      }
+    }
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 test("an unexpired token stops authorizing once the account's deletion is scheduled", async () => {
@@ -238,6 +337,18 @@ test("an unexpired token stops authorizing once the account's deletion is schedu
     ["GET", { "If-None-Match": '"cover-etag"' }],
   ] as const) {
     const response = await app.request(url, { method, headers }, env);
+    expect(response.status).toBe(403);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  }
+  const trackUrl = await signMediaUrl({
+    url: `${origin}/api/files/audiobooks/${conversionId}/narration-track.mp3`,
+    conversionId,
+    principal: accountOwner,
+    signingKey: SIGNING_KEY,
+    nowMs: Temporal.Now.instant().epochMilliseconds,
+  });
+  for (const method of ["GET", "HEAD"]) {
+    const response = await app.request(trackUrl, { method }, env);
     expect(response.status).toBe(403);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
   }
@@ -306,7 +417,7 @@ test("the retired segment audio route and media session endpoints answer 404 and
     conversionId,
     principal: accountOwner,
     signingKey: SIGNING_KEY,
-    issuedAtMs: Temporal.Now.instant().epochMilliseconds,
+    nowMs: Temporal.Now.instant().epochMilliseconds,
   });
   const sessionMutationHeaders = {
     Authorization: `Bearer ${accessToken}`,
@@ -328,6 +439,34 @@ test("the retired segment audio route and media session endpoints answer 404 and
   }
   expect(bucketRead).not.toHaveBeenCalled();
 });
+
+async function requestJson(
+  app: ReturnType<typeof createApiServer>,
+  env: ApiServerEnvironment,
+  path: string,
+  headers: Record<string, string>,
+): Promise<unknown> {
+  const response = await app.request(origin + path, { headers }, env);
+  expect(response.status).toBe(200);
+  expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  return response.json();
+}
+
+function getHistoryCoverImageUrl(history: unknown): string {
+  const outcome = accountHistorySchema.parse(history).items[0]?.outcome;
+  if (outcome?.status !== "ready" || outcome.coverImage === undefined) {
+    throw new Error("The history item has no cover image URL");
+  }
+  return outcome.coverImage.url;
+}
+
+function getNarrationTrackUrl(audiobook: unknown): string {
+  const parsed = audiobookSchema.parse(audiobook);
+  if (!("narrationTrack" in parsed) || parsed.narrationTrack === undefined) {
+    throw new Error("The audiobook response has no narration track URL");
+  }
+  return parsed.narrationTrack.url;
+}
 
 function getCoverImageUrl(audiobook: unknown): string {
   if (

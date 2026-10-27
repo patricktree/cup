@@ -57,8 +57,11 @@ export class AccountDispatchTestDurableObject extends BaseAccountDurableObject {
 /**
  * Ledger and lifecycle tests settle conversions directly without running preparation. Synthesis
  * dispatch is accepted but never runs, so tests complete or release segments themselves.
+ * Preparation dispatch fails until a test accepts it; accepted preparation never runs either.
  */
 export class AccountDurableObject extends BaseAccountDurableObject {
+  private readonly preparation: { accepted: boolean };
+
   constructor(
     context: DurableObjectState,
     env: {
@@ -67,6 +70,7 @@ export class AccountDurableObject extends BaseAccountDurableObject {
       AUDIO_BUCKET: R2Bucket;
     },
   ) {
+    const preparation = { accepted: false };
     super(context, {
       ...env,
       SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW: {
@@ -77,13 +81,19 @@ export class AccountDurableObject extends BaseAccountDurableObject {
       },
       PREPARE_AUDIOBOOK_WORKFLOW: {
         create: async () => {
-          throw new Error("Preparation is controlled by the test");
+          if (!preparation.accepted) {
+            throw new Error("Preparation is controlled by the test");
+          }
         },
         get: async () => {
           throw new Error("Preparation is controlled by the test");
         },
       },
     });
+    this.preparation = preparation;
+  }
+  acceptPreparationForTest() {
+    this.preparation.accepted = true;
   }
 }
 /** Simulates accounts that predate usage projections, so the alarm's backfill can be observed. */

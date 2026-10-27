@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const LEAF_TYPES = new Set([
+  "unknown",
   "string",
   "number",
   "boolean",
@@ -34,6 +35,10 @@ export function toStrictSchema<Schema extends z.core.$ZodType>(schema: Schema): 
   }
   if (schema instanceof z.ZodNullable) {
     return schema.clone({ ...schema.def, innerType: toStrictSchema(schema.def.innerType) });
+  }
+  // Clients preprocess away values they do not know; a response must still send only declared ones.
+  if (schema instanceof z.ZodPipe && schema.def.in instanceof z.ZodTransform) {
+    return schema.clone({ ...schema.def, in: z.unknown(), out: toStrictSchema(schema.def.out) });
   }
   // A schema from another zod instance would fail every check above and stay tolerant.
   if (!(schema instanceof z.ZodType)) {

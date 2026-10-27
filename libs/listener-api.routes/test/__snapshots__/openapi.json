@@ -1896,6 +1896,15 @@
                               "failed"
                             ]
                           },
+                          "preparationPhase": {
+                            "type": "string",
+                            "enum": [
+                              "starting",
+                              "reading-page",
+                              "selecting-content",
+                              "preparing-text"
+                            ]
+                          },
                           "outcome": {
                             "oneOf": [
                               {
@@ -1915,6 +1924,18 @@
                                     "type": "boolean",
                                     "enum": [
                                       true
+                                    ]
+                                  },
+                                  "coverImage": {
+                                    "type": "object",
+                                    "properties": {
+                                      "url": {
+                                        "type": "string",
+                                        "format": "uri"
+                                      }
+                                    },
+                                    "required": [
+                                      "url"
                                     ]
                                   }
                                 },
@@ -4705,6 +4726,15 @@
                           "type": "string",
                           "enum": [
                             "pending"
+                          ]
+                        },
+                        "preparationPhase": {
+                          "type": "string",
+                          "enum": [
+                            "starting",
+                            "reading-page",
+                            "selecting-content",
+                            "preparing-text"
                           ]
                         }
                       },

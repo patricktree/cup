@@ -18,6 +18,7 @@ import {
 
 import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
 import { createApiServer } from "#src/api-server.ts";
+import { toPreparationPhase } from "#src/http/listener-responses.ts";
 
 import { toStrictSchema } from "#test/strict-schema.ts";
 
@@ -97,6 +98,7 @@ const readyAccountConversion = {
   sourceUrl: "https://example.com/source",
   createdAtMs: 2_000,
   status: "ready",
+  lastStartedPhase: "finalization",
   completedAtMs: 3_000,
   outcome: { status: "ready", title: "A document", audiobookReference, hasCoverImage: true },
 };
@@ -106,6 +108,7 @@ const failedAccountConversion = {
   sourceUrl: "https://example.com/broken",
   createdAtMs: 1_500,
   status: "failed",
+  lastStartedPhase: "source-material-preparation",
   completedAtMs: 1_600,
   outcome: {
     status: "failed",
@@ -113,12 +116,18 @@ const failedAccountConversion = {
     explanation: "The page could not be loaded.",
   },
 };
+const uncoveredAccountConversion = {
+  ...readyAccountConversion,
+  conversionId: "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
+  outcome: { status: "ready", title: "No cover", audiobookReference },
+};
 const pendingAccountConversion = {
   conversionId: pendingConversionId,
   idempotencyKey,
   sourceUrl: "https://example.com/pending",
   createdAtMs: 1_000,
   status: "pending",
+  lastStartedPhase: "narration-content-selection",
   completedAtMs: null,
   outcome: null,
 };
@@ -149,7 +158,12 @@ const account = {
     account: { ...accountSnapshot, internalRevision: 7 },
   }),
   history: async () => ({
-    items: [readyAccountConversion, failedAccountConversion, pendingAccountConversion],
+    items: [
+      readyAccountConversion,
+      uncoveredAccountConversion,
+      failedAccountConversion,
+      pendingAccountConversion,
+    ],
     nextCursor: null,
   }),
   startConversion: async () => ({
@@ -380,17 +394,84 @@ test("deletion challenge, scheduling, and restore responses carry only declared 
   ).toEqual(accountSnapshot);
 });
 
-test("history leaves out internal outcome fields of ready and failed conversions", async () => {
+test("history leaves out internal outcome fields and signs cover URLs only for covered ready conversions", async () => {
   const history = await parseStrictly(
     await request("/api/account/conversions"),
     200,
     accountHistorySchema,
   );
   expect(history.items.map((item) => item.outcome)).toEqual([
-    { status: "ready", title: "A document", hasCoverImage: true },
+    {
+      status: "ready",
+      title: "A document",
+      hasCoverImage: true,
+      coverImage: {
+        url: expect.stringMatching(
+          new RegExp(
+            `^${origin}/api/files/audiobooks/${accountConversionId}/cover-image\\?token=v1\\.`,
+          ),
+        ),
+      },
+    },
+    { status: "ready", title: "No cover" },
     { status: "failed", explanation: "The page could not be loaded." },
     null,
   ]);
+});
+
+test("only a pending history item reports its preparation phase", async () => {
+  const history = await parseStrictly(
+    await request("/api/account/conversions"),
+    200,
+    accountHistorySchema,
+  );
+  expect(history.items.map((item) => item.preparationPhase)).toEqual([
+    undefined,
+    undefined,
+    undefined,
+    "selecting-content",
+  ]);
+});
+
+test("a pending audiobook reports the preparation phase its owner last started", async () => {
+  for (const [conversionId, preparationPhase] of [
+    [pendingConversionId, "selecting-content"],
+    [trialConversionId, "starting"],
+  ] as const) {
+    expect(
+      await parseStrictly(
+        await request(`/api/audiobooks/${conversionId}`, { headers: { Cookie: grantCookie } }),
+        200,
+        audiobookSchema,
+      ),
+    ).toMatchObject({ status: "pending", preparationPhase });
+  }
+});
+
+test("a failed audiobook asks the listener to retry the track", async () => {
+  expect(
+    await parseStrictly(
+      await request(`/api/audiobooks/${failedConversionId}`),
+      200,
+      audiobookSchema,
+    ),
+  ).toMatchObject({
+    status: "failed",
+    explanation: "Preparation failed. Retry to load this track.",
+  });
+});
+
+test.each([
+  ["conversion-start", "starting"],
+  ["source-material-preparation", "reading-page"],
+  ["narration-content-selection", "selecting-content"],
+  ["narration-document-creation", "preparing-text"],
+  ["audiobook-storage", "preparing-text"],
+  ["finalization", "preparing-text"],
+  ["audio-segment-production", undefined],
+  ["audiobook-assembly", undefined],
+] as const)("the %s phase reports the preparation phase %s", (phase, preparationPhase) => {
+  expect(toPreparationPhase(phase)).toBe(preparationPhase);
 });
 
 test("an account start reports only the conversion ID", async () => {

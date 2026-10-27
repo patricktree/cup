@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { conversionPhaseSchema, type ConversionPhase } from "@cup/conversion-contracts";
+
 export const accountIdentitySchema = z
   .object({
     accountId: z.uuidv4(),
@@ -80,6 +82,8 @@ export type AccountConversion = {
   sourceUrl: string;
   createdAtMs: number;
   status: "pending" | "ready" | "failed";
+  /** The preparation phase the conversion last started; a settled conversion keeps it. */
+  lastStartedPhase: ConversionPhase;
 };
 
 export const startAccountConversionSchema = z
@@ -134,6 +138,7 @@ export const accountHistoryItemSchema = z
     sourceUrl: z.string(),
     createdAtMs: z.number(),
     status: z.enum(["pending", "insufficient-duration", "synthesizing", "ready", "failed"]),
+    lastStartedPhase: conversionPhaseSchema,
     outcome: accountOutcomeSchema.nullable(),
     completedAtMs: z.number().nullable(),
   })

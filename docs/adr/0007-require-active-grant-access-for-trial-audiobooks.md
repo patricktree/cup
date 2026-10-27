@@ -1,8 +1,10 @@
 ---
-status: accepted
+status: partially superseded by ADR 0013
 ---
 
 # Require active grant access for trial audiobooks
+
+[ADR 0013](0013-cache-cover-images-in-the-browser-for-a-day.md) supersedes this decision for cover responses only: successful cover responses are cached in the browser for a day, so a cover can stay visible from a device's cache for up to a day after the grant expires or is revoked. Every request that reaches the Worker still runs the checks below. The original decisions below are preserved as historical rationale.
 
 Trial audiobook links previously allowed anyone with the link to read prepared text and replay completed audio, including after the conversion grant expired or was revoked. The user chose to restrict this access to holders of a session for the owning grant while that grant remains unexpired and unrevoked.
 

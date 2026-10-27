@@ -129,6 +129,31 @@ export const coverImageSchema = z.object({
   alternativeText: z.string().min(1).optional(),
 });
 export type CoverImage = z.infer<typeof coverImageSchema>;
+/**
+ * The step of preparing a pending conversion's narration document that the conversion last started,
+ * as listeners see it. Several internal phases share one value.
+ */
+export const preparationPhaseSchema = z.enum([
+  "starting",
+  "reading-page",
+  "selecting-content",
+  "preparing-text",
+]);
+export type PreparationPhase = z.infer<typeof preparationPhaseSchema>;
+/**
+ * Absent when no listener phase applies. A value this client does not know parses as absent, so a
+ * newer Worker can add phases without failing the response. Preprocessing keeps the enum in the
+ * OpenAPI document, which describes the schema after it.
+ */
+const pendingPreparationPhaseSchema = z
+  .preprocess(
+    (value) =>
+      typeof value === "string" && !preparationPhaseSchema.safeParse(value).success
+        ? undefined
+        : value,
+    preparationPhaseSchema.optional(),
+  )
+  .optional();
 const readerBase = { originalUrl: sourceUrlSchema, canGenerate: z.boolean() };
 const preparedBase = {
   ...readerBase,
@@ -146,7 +171,11 @@ const preparedBase = {
   playbackPosition: playbackPositionSchema.nullable(),
 };
 export const audiobookSchema = z.discriminatedUnion("status", [
-  z.object({ ...readerBase, status: z.literal("pending") }),
+  z.object({
+    ...readerBase,
+    status: z.literal("pending"),
+    preparationPhase: pendingPreparationPhaseSchema,
+  }),
   z.object({ ...readerBase, status: z.literal("failed"), explanation: z.string() }),
   // The whole narration document did not fit the available duration; nothing was reserved.
   z.object({
@@ -244,11 +273,15 @@ export const historyItemSchema = z.object({
     createdAtMs: true,
     status: true,
   }).shape,
+  // Reported only while the conversion is pending.
+  preparationPhase: pendingPreparationPhaseSchema,
   outcome: z
     .discriminatedUnion("status", [
-      z.object(
-        readyAccountOutcomeSchema.pick({ status: true, title: true, hasCoverImage: true }).shape,
-      ),
+      z.object({
+        ...readyAccountOutcomeSchema.pick({ status: true, title: true, hasCoverImage: true }).shape,
+        // Present exactly when `hasCoverImage` is.
+        coverImage: coverImageSchema.pick({ url: true }).optional(),
+      }),
       z.object(failedAccountOutcomeSchema.pick({ status: true, explanation: true }).shape),
     ])
     .nullable(),

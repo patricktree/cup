@@ -6,6 +6,7 @@ import type {
 import type { AccountLifecycle } from "@cup/accounts/lifecycle";
 import type { Audiobook as StoredAudiobook } from "@cup/audiobook-production";
 import {
+  ConversionPhase,
   layOutConsecutively,
   type DurationBalance,
   type PlaybackPosition,
@@ -18,6 +19,7 @@ import type {
   DeletionChallenge,
   GrantSnapshot,
   HistoryItem,
+  PreparationPhase,
 } from "@cup/listener-api.routes";
 
 type ReadyAudiobook = Extract<Audiobook, { status: "ready" }>;
@@ -54,21 +56,31 @@ export function toDeletionChallengeResponse(challenge: ReturnType<AccountLifecyc
   } satisfies DeletionChallenge;
 }
 
-export function toAccountHistoryResponse(page: AccountHistoryPage) {
+/** `signCoverImageUrl` issues the signed media URL of a conversion's cover image. */
+export async function toAccountHistoryResponse(
+  page: AccountHistoryPage,
+  signCoverImageUrl: (conversionId: string) => Promise<string>,
+) {
   return {
-    items: page.items.map((item): HistoryItem => ({
-      conversionId: item.conversionId,
-      idempotencyKey: item.idempotencyKey,
-      sourceUrl: item.sourceUrl,
-      createdAtMs: item.createdAtMs,
-      status: item.status,
-      outcome: toHistoryOutcome(item.outcome),
-    })),
+    items: await Promise.all(
+      page.items.map(async (item): Promise<HistoryItem> => ({
+        conversionId: item.conversionId,
+        idempotencyKey: item.idempotencyKey,
+        sourceUrl: item.sourceUrl,
+        createdAtMs: item.createdAtMs,
+        status: item.status,
+        ...(item.status === "pending" ? toPreparationPhaseField(item.lastStartedPhase) : {}),
+        outcome: await toHistoryOutcome(item.outcome, () => signCoverImageUrl(item.conversionId)),
+      })),
+    ),
     nextCursor: page.nextCursor,
   } satisfies AccountHistory;
 }
 
-function toHistoryOutcome(outcome: AccountConversionOutcome | null): HistoryItem["outcome"] {
+async function toHistoryOutcome(
+  outcome: AccountConversionOutcome | null,
+  signCoverImageUrl: () => Promise<string>,
+): Promise<HistoryItem["outcome"]> {
   if (outcome === null) {
     return null;
   }
@@ -76,10 +88,38 @@ function toHistoryOutcome(outcome: AccountConversionOutcome | null): HistoryItem
     return {
       status: "ready",
       title: outcome.title,
-      ...(outcome.hasCoverImage === undefined ? {} : { hasCoverImage: outcome.hasCoverImage }),
+      ...(outcome.hasCoverImage === undefined
+        ? {}
+        : {
+            hasCoverImage: outcome.hasCoverImage,
+            coverImage: { url: await signCoverImageUrl() },
+          }),
     };
   }
   return { status: "failed", explanation: outcome.explanation };
+}
+
+const PREPARATION_PHASE_BY_CONVERSION_PHASE = {
+  [ConversionPhase.CONVERSION_START]: "starting",
+  [ConversionPhase.SOURCE_MATERIAL_PREPARATION]: "reading-page",
+  [ConversionPhase.NARRATION_CONTENT_SELECTION]: "selecting-content",
+  [ConversionPhase.NARRATION_DOCUMENT_CREATION]: "preparing-text",
+  // Preparation never starts these two phases; speech synthesis runs per segment after it.
+  [ConversionPhase.AUDIO_SEGMENT_PRODUCTION]: undefined,
+  [ConversionPhase.AUDIOBOOK_ASSEMBLY]: undefined,
+  [ConversionPhase.AUDIOBOOK_STORAGE]: "preparing-text",
+  [ConversionPhase.FINALIZATION]: "preparing-text",
+} as const satisfies Record<ConversionPhase, PreparationPhase | undefined>;
+
+/** The preparation phase listeners see for the phase a pending conversion last started. */
+export function toPreparationPhase(phase: ConversionPhase): PreparationPhase | undefined {
+  return PREPARATION_PHASE_BY_CONVERSION_PHASE[phase];
+}
+
+/** Leaves the field out when no listener phase applies. */
+export function toPreparationPhaseField(phase: ConversionPhase) {
+  const preparationPhase = toPreparationPhase(phase);
+  return preparationPhase === undefined ? {} : { preparationPhase };
 }
 
 export function toGrantSnapshotResponse(snapshot: StoredGrantSnapshot) {
