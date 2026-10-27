@@ -56,12 +56,7 @@ import {
   serveCoverImage,
   serveNarrationTrack,
 } from "#src/http/serve-audiobook.ts";
-import {
-  requireSignedMediaUrl,
-  signAudiobookMediaUrl,
-  type AudiobookMediaResource,
-  type MediaUrlPrincipal,
-} from "#src/http/signed-media-url.ts";
+import { createMediaUrlSigner, requireSignedMediaUrl } from "#src/http/signed-media-url.ts";
 import { applyWebAppCspNonce } from "#src/http/web-app-csp.ts";
 import { createConversionGrant } from "#src/use-cases/create-conversion-grant.ts";
 import { getSynthesisState } from "#src/use-cases/get-synthesis-state.ts";
@@ -1386,21 +1381,6 @@ function isApplicationOrigin(origin: string | undefined): origin is string {
  * Lets the web app read the response with credentials when the request comes from one of its
  * origins.
  */
-/** Signs media URLs on the request's origin for one principal, which must have access. */
-function createMediaUrlSigner(
-  context: { req: { url: string }; env: { MEDIA_URL_SIGNING_KEY: string } },
-  principal: MediaUrlPrincipal,
-): (conversionId: string, resource: AudiobookMediaResource) => Promise<string> {
-  return (conversionId, resource) =>
-    signAudiobookMediaUrl({
-      requestUrl: context.req.url,
-      signingKey: context.env.MEDIA_URL_SIGNING_KEY,
-      conversionId,
-      principal,
-      resource,
-    });
-}
-
 function allowApplicationOrigin(context: Context, origin: string | undefined): void {
   if (!isApplicationOrigin(origin)) {
     return;
