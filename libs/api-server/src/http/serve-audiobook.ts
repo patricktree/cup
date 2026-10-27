@@ -15,6 +15,8 @@ import { loadReadyAudiobook } from "#src/use-cases/load-ready-audiobook.ts";
 
 type RegistryStub = DurableObjectStub<RegistryDurableObject>;
 
+const COVER_IMAGE_CACHE_CONTROL = "private, max-age=86400, immutable";
+
 export async function loadReadyAudiobookFromEnvironment(
   env: ApiServerEnvironment,
   conversionId: string,
@@ -140,7 +142,10 @@ export async function serveCoverImage(
     return coverImageNotFound(requestId);
   }
 
+  // Its signed media URL changes once per UTC day, so the browser keeps a cover for that long
+  // (ADR 0013). Error responses keep the server-wide `private, no-store`.
   const headers = new Headers({
+    "Cache-Control": COVER_IMAGE_CACHE_CONTROL,
     "Content-Type": audiobook.coverImage.contentType,
     ETag: object.httpEtag,
   });

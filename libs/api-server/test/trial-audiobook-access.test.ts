@@ -89,7 +89,7 @@ function signCoverImageUrl() {
     conversionId,
     principal: { kind: "trial", grantId },
     signingKey: SIGNING_KEY,
-    issuedAtMs: Temporal.Now.instant().epochMilliseconds,
+    nowMs: Temporal.Now.instant().epochMilliseconds,
   });
 }
 
@@ -187,7 +187,7 @@ test("owning grant sessions can read the cover image the audiobook points to", a
       expect(response.headers.get("Content-Type")).toBe("image/jpeg");
       expect(response.headers.get("ETag")).toBe('"cover-etag"');
       expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://localhost");
-      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+      expect(response.headers.get("Cache-Control")).toBe("private, max-age=86400, immutable");
       expect(response.headers.get("Cross-Origin-Resource-Policy")).toBe("same-origin");
     }
   }

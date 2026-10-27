@@ -56,7 +56,11 @@ import {
   serveCoverImage,
   serveNarrationTrack,
 } from "#src/http/serve-audiobook.ts";
-import { requireSignedMediaUrl, signMediaUrl } from "#src/http/signed-media-url.ts";
+import {
+  requireSignedMediaUrl,
+  signAudiobookMediaUrl,
+  type AudiobookMediaResource,
+} from "#src/http/signed-media-url.ts";
 import { applyWebAppCspNonce } from "#src/http/web-app-csp.ts";
 import { createConversionGrant } from "#src/use-cases/create-conversion-grant.ts";
 import { getSynthesisState } from "#src/use-cases/get-synthesis-state.ts";
@@ -215,7 +219,19 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     const page = await auth.account.history(
       split?.[1] ? { createdAtMs: Number(split[0]), conversionId: split[1] } : undefined,
     );
-    return context.json(toAccountHistoryResponse(page), 200);
+    const principal = { kind: "account", accountId: auth.snapshot.accountId } as const;
+    return context.json(
+      await toAccountHistoryResponse(page, (conversionId) =>
+        signAudiobookMediaUrl({
+          requestUrl: context.req.url,
+          signingKey: context.env.MEDIA_URL_SIGNING_KEY,
+          conversionId,
+          principal,
+          resource: "cover-image",
+        }),
+      ),
+      200,
+    );
   },
   async getAccount(context) {
     const auth = await authenticateAccountRequest(context.req.raw, context.env);
@@ -512,16 +528,14 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
     if (!audiobook) {
       return jsonError(context.get("requestId"), "audiobook-not-found", "Article not found.", 404);
     }
-    const origin = new URL(context.req.url).origin;
-    const issuedAtMs = Temporal.Now.instant().epochMilliseconds;
-    const signAudiobookMediaUrl = (resource: "cover-image" | "narration-track.mp3") =>
-      signMediaUrl({
-        url: `${origin}/api/files/audiobooks/${conversionId}/${resource}`,
+    const signMediaUrlForOwner = (resource: AudiobookMediaResource) =>
+      signAudiobookMediaUrl({
+        requestUrl: context.req.url,
+        signingKey: context.env.MEDIA_URL_SIGNING_KEY,
         conversionId,
         // The ownership middleware admitted this request for the owner alone.
         principal: owner,
-        signingKey: context.env.MEDIA_URL_SIGNING_KEY,
-        issuedAtMs,
+        resource,
       });
     const segmentUsage = await reader.listAudioSegments();
     const narrationTrackDurations = findNarrationTrackDurations(segmentUsage);
@@ -565,7 +579,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
           ? {}
           : {
               coverImage: {
-                url: await signAudiobookMediaUrl("cover-image"),
+                url: await signMediaUrlForOwner("cover-image"),
                 ...(audiobook.coverImage.alternativeText === undefined
                   ? {}
                   : { alternativeText: audiobook.coverImage.alternativeText }),
@@ -575,7 +589,7 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
           ? {}
           : {
               narrationTrack: toNarrationTrackResponse(
-                await signAudiobookMediaUrl("narration-track.mp3"),
+                await signMediaUrlForOwner("narration-track.mp3"),
                 narrationTrackDurations,
               ),
             }),

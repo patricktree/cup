@@ -1925,6 +1925,18 @@
                                     "enum": [
                                       true
                                     ]
+                                  },
+                                  "coverImage": {
+                                    "type": "object",
+                                    "properties": {
+                                      "url": {
+                                        "type": "string",
+                                        "format": "uri"
+                                      }
+                                    },
+                                    "required": [
+                                      "url"
+                                    ]
                                   }
                                 },
                                 "required": [

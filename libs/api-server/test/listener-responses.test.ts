@@ -116,6 +116,11 @@ const failedAccountConversion = {
     explanation: "The page could not be loaded.",
   },
 };
+const uncoveredAccountConversion = {
+  ...readyAccountConversion,
+  conversionId: "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
+  outcome: { status: "ready", title: "No cover", audiobookReference },
+};
 const pendingAccountConversion = {
   conversionId: pendingConversionId,
   idempotencyKey,
@@ -153,7 +158,12 @@ const account = {
     account: { ...accountSnapshot, internalRevision: 7 },
   }),
   history: async () => ({
-    items: [readyAccountConversion, failedAccountConversion, pendingAccountConversion],
+    items: [
+      readyAccountConversion,
+      uncoveredAccountConversion,
+      failedAccountConversion,
+      pendingAccountConversion,
+    ],
     nextCursor: null,
   }),
   startConversion: async () => ({
@@ -384,14 +394,26 @@ test("deletion challenge, scheduling, and restore responses carry only declared 
   ).toEqual(accountSnapshot);
 });
 
-test("history leaves out internal outcome fields of ready and failed conversions", async () => {
+test("history leaves out internal outcome fields and signs cover URLs only for covered ready conversions", async () => {
   const history = await parseStrictly(
     await request("/api/account/conversions"),
     200,
     accountHistorySchema,
   );
   expect(history.items.map((item) => item.outcome)).toEqual([
-    { status: "ready", title: "A document", hasCoverImage: true },
+    {
+      status: "ready",
+      title: "A document",
+      hasCoverImage: true,
+      coverImage: {
+        url: expect.stringMatching(
+          new RegExp(
+            `^${origin}/api/files/audiobooks/${accountConversionId}/cover-image\\?token=v1\\.`,
+          ),
+        ),
+      },
+    },
+    { status: "ready", title: "No cover" },
     { status: "failed", explanation: "The page could not be loaded." },
     null,
   ]);
@@ -404,6 +426,7 @@ test("only a pending history item reports its preparation phase", async () => {
     accountHistorySchema,
   );
   expect(history.items.map((item) => item.preparationPhase)).toEqual([
+    undefined,
     undefined,
     undefined,
     "selecting-content",
