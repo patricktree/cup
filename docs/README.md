@@ -51,12 +51,12 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 
 Agents maintain these pages by the [wiki schema](agents/domain.md).
 
-| Page                                                           | Purpose                                                                                   |
-| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| [Wiki schema](agents/domain.md)                                | Layers, size budget, documentation search, decisions and evidence, landing, health review |
-| [Local documentation search](../tooling/docs-search/README.md) | Keyword and semantic search over this checkout's documentation                            |
-| [Issue tracker](agents/issue-tracker.md)                       | GitHub Issues conventions and wayfinder maps                                              |
-| [Triage labels](agents/triage-labels.md)                       | Label strings for the canonical triage roles                                              |
-| [Cloudflare documentation guidance](agents/cloudflare.md)      | Product references and the AI Gateway binding requirement                                 |
+| Page                                                      | Purpose                                                             |
+| --------------------------------------------------------- | ------------------------------------------------------------------- |
+| [Wiki schema](agents/domain.md)                           | Layers, size budget, decisions and evidence, landing, health review |
+| [Documentation search](agents/documentation-search.md)    | Find every page that describes a concept before changing it         |
+| [Issue tracker](agents/issue-tracker.md)                  | GitHub Issues conventions and wayfinder maps                        |
+| [Triage labels](agents/triage-labels.md)                  | Label strings for the canonical triage roles                        |
+| [Cloudflare documentation guidance](agents/cloudflare.md) | Product references and the AI Gateway binding requirement           |
 
 Run `pnpm docs:check` for Markdown, local-link, and [Mermaid diagram](../.patricktree-stack/tooling/mermaid-check/README.md) validation.

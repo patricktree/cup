@@ -44,7 +44,3 @@ TODO.md
 /supabase/.temp/
 /supabase/.branches/
 /supabase/.local/
-
-# Checkout-local documentation search; only the collection definition is shared.
-/.qmd/*
-!/.qmd/index.yml
