@@ -11,27 +11,15 @@ export const initializeAuthStorage =
     : platform === "ios"
       ? ios.initializeAuthStorage
       : web.initializeAuthStorage;
-export const addAuthResumeListener =
-  platform === "android"
-    ? android.addAuthResumeListener
-    : platform === "ios"
-      ? ios.addAuthResumeListener
-      : web.addAuthResumeListener;
 export const signInWithGoogle =
   platform === "android"
     ? android.signInWithGoogle
     : platform === "ios"
       ? ios.signInWithGoogle
       : web.signInWithGoogle;
-export const setNativeMediaSession =
+export const clearNativeSignIn =
   platform === "android"
-    ? android.setNativeMediaSession
+    ? android.clearNativeSignIn
     : platform === "ios"
-      ? ios.setNativeMediaSession
-      : web.setNativeMediaSession;
-export const clearNativeAuthSession =
-  platform === "android"
-    ? android.clearNativeAuthSession
-    : platform === "ios"
-      ? ios.clearNativeAuthSession
-      : web.clearNativeAuthSession;
+      ? ios.clearNativeSignIn
+      : web.clearNativeSignIn;

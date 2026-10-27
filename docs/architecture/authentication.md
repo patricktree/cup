@@ -43,11 +43,11 @@ On the web, the Supabase SDK persists the session and PKCE verifier in browser l
 
 The API verifies Supabase JWTs locally against the issuer's signing keys and their claims, and admits only identities whose provider is Google, whatever providers the Supabase project enables ([`account-auth.test.ts`](../../libs/api-server/test/account-auth.test.ts)); the [account authentication use case](../../libs/api-server/src/use-cases/authenticate-account.ts) then resolves the Cup account. First use provisions a separate Cup account ID through the registry. Provisioning is persisted and retried, and checks the provider identity before activation; ingress limits constrain new account creation. The account initializes its welcome duration allowance once; [`authenticate-account.test.ts`](../../libs/api-server/test/authenticate-account.test.ts) and the registry's [`accounts.test.ts`](../../libs/registry/test/accounts.test.ts) cover provisioning. Subsequent operations consult Cup lifecycle state in addition to token validity.
 
-The web client sends its API requests through one [request module](../../apps/web-app/src/data-fetching/api-request.ts), where each call states whether it sends no account token, the signed-in account's token if there is one, or requires a signed-in account; a call for an account is refused once a different account is signed in ([`api-request.test.ts`](../../apps/web-app/src/data-fetching/api-request.test.ts)). Only the session machine's own plumbing, which loads the auth configuration and issues media cookies, calls the API client directly; the [web app's lint configuration](../../apps/web-app/oxlint.config.ts) enforces both. Grant sessions travel as cookies regardless of this choice.
+The web client sends its API requests through one [request module](../../apps/web-app/src/data-fetching/api-request.ts), where each call states whether it sends no account token, the signed-in account's token if there is one, or requires a signed-in account; a call for an account is refused once a different account is signed in ([`api-request.test.ts`](../../apps/web-app/src/data-fetching/api-request.test.ts)). Only the session machine's own plumbing, which loads the auth configuration, calls the API client directly; the [web app's lint configuration](../../apps/web-app/oxlint.config.ts) enforces both. Grant sessions travel as cookies regardless of this choice.
 
 ### Local test account
 
-Local development offers one more sign-in, so that the web app can be tested, also from a phone, without a Google OAuth client ([ADR 0011](../adr/0011-offer-a-local-test-account-instead-of-google-in-development.md)). [`pnpm dev:services`](../local-development.md) creates an email and password identity in the local Supabase stack. Only while `LOCAL_DEVELOPMENT` is `"true"`, the Worker advertises its credentials in the public auth configuration and accepts its tokens; it refuses every other non-Google identity. The web client signs in with the password and shows the option only when the configuration offers it, and omits Google when the configuration names no Google client. Provisioning, ownership, and lifecycle checks treat the test account like any other account.
+Local development offers one more sign-in, so that the web app can be tested, also from a phone, without a Google OAuth client ([ADR 0012](../adr/0012-offer-a-local-test-account-instead-of-google-in-development.md)). [`pnpm dev:services`](../local-development.md) creates an email and password identity in the local Supabase stack. Only while `LOCAL_DEVELOPMENT` is `"true"`, the Worker advertises its credentials in the public auth configuration and accepts its tokens; it refuses every other non-Google identity. The web client signs in with the password and shows the option only when the configuration offers it, and omits Google when the configuration names no Google client. Provisioning, ownership, and lifecycle checks treat the test account like any other account.
 
 Sources: [web adapter](../../apps/web-app/src/platform/account-auth.web.ts), [Android adapter](../../apps/web-app/src/platform/account-auth.android.ts), [iOS adapter](../../apps/web-app/src/platform/account-auth.ios.ts), [token verification](../../libs/api-server/src/http/account-auth.ts), and [registry provisioning](../../libs/registry/src/durable-object/registry-durable-object.ts).
 
@@ -59,7 +59,7 @@ The web client models account auth as an [XState machine](../../apps/web-app/src
 stateDiagram-v2
     [*] --> uninitialized
     uninitialized --> initializing: INITIALIZE or SIGN_OUT
-    initializing --> error: config, resume listener, or restore fails
+    initializing --> error: config or restore fails
     error --> initializing: INITIALIZE or SIGN_OUT
     initializing --> connected: session restored
     state connected {
@@ -76,18 +76,17 @@ stateDiagram-v2
         }
         ready --> ready: SESSION_CHANGED to another subject or none
         ready --> signingOut: SIGN_OUT
-        signingOut --> ready: media sessions cleared, or a step failed
+        signingOut --> ready: native sign-in ended, or a step failed
     }
 ```
 
-Initialization loads the public auth configuration, creates the Supabase client, registers the native app-resume listener, and restores the stored session. When the app resumes with an account signed in, the media cookie is issued again; if that fails, playback stops. Every change of the signed-in subject stops playback, and signing into an account forgets the remembered trial. Replacing or removing a signed-in account also clears the query cache; the initial restoration does not, because route loaders may be awaiting it.
+Initialization loads the public auth configuration, creates the Supabase client, and restores the stored session. Every change of the signed-in subject stops playback, and signing into an account forgets the remembered trial. Replacing or removing a signed-in account also clears the query cache; the initial restoration does not, because route loaders may be awaiting it.
 
-The machine's comments hold the transition rules. It guarantees the following; [`account-session.test.ts`](../../apps/web-app/src/auth/account-session.test.ts) checks the session-scope, media-cookie, and sign-out rules:
+The machine's comments hold the transition rules. It guarantees the following; [`account-session.test.ts`](../../apps/web-app/src/auth/account-session.test.ts) checks the session-scope and sign-out rules:
 
 - A session read never resolves to another account's session: starting a sign-in or sign-out, or replacing the signed-in subject, ends the read's scope.
 - Only one OAuth flow runs at a time, because concurrent flows would overwrite each other's PKCE code verifier. A sign-in interrupted by a sign-out still settles with the provider's outcome, because the provider call cannot be recalled.
-- Media cookie issuance is serialized, and sign-out waits for an issuance in flight before clearing media sessions, so a late response cannot reestablish playback.
-- Sign-out stops and unloads audio, signs out of Supabase locally, and clears the stored session and the remembered trial. It completes locally even when Supabase could not confirm server revocation, and reports the failure; if initialization failed, the UI shows the auth error because the stored session could not be cleared.
+- Sign-out stops and unloads audio, signs out of Supabase locally, clears the stored session and the remembered trial, and ends the platform's own Google sign-in on Android. It completes locally even when Supabase could not confirm server revocation, and reports the failure; if initialization failed, the UI shows the auth error because the stored session could not be cleared.
 - When account auth cannot initialize and no account is signed in, requests that accept either authorization continue with the grant session alone.
 
 ## Resuming a conversion after sign-in
@@ -100,36 +99,42 @@ Sources: [pending request storage](../../apps/web-app/src/data-fetching/account-
 
 ## Private media access
 
-Browser audio elements need an authorization path beyond ordinary JSON requests. The client obtains a media session using its bearer token, and the Worker issues an HTTP-only cookie for media delivery that expires no later than the token. Android also installs the session through its [native media bridge](../../apps/mobile-app/android/app/src/main/java/audio/cup/app/AccountMediaPlugin.java).
+Browser audio and image elements cannot send an `Authorization` header, so media under `/api/files` is authorized by a signed media URL instead. The audiobook response carries one for the narration track and one for the cover image, each issued to the principal the response was authorized for; the client plays and shows them as they are.
 
 ```mermaid
 sequenceDiagram
     participant Client
     participant API as Worker API
-    participant Registry as Registry DO
-    participant Account as Account DO
+    participant Owner as Account or grant DO
     participant R2
-    Client->>API: Create media session with bearer token
-    API-->>Client: Media cookie scoped to /api/files
-    Client->>API: Request /api/files/audiobooks/{id} artifact
-    API->>Registry: Resolve conversion owner
-    API->>API: Verify bearer token or media cookie
-    API->>Account: Check active state and owning account
-    API->>R2: Read authorized artifact
-    R2-->>Client: Artifact through Worker
+    Client->>API: Audiobook request with bearer token or grant cookie
+    API-->>Client: Audiobook with signed track and cover image URLs
+    Client->>API: Request /api/files/audiobooks/{id} media with its token
+    API->>API: Verify the token's signature, expiry and audiobook
+    API->>Owner: Check that the principal still has access
+    API->>R2: Read authorized media
+    R2-->>Client: Media through Worker
 ```
 
-The [listener contracts](../../libs/listener-api.routes/src/hono-app.ts) define the routes. Audiobook JSON requires bearer identity for private audiobooks; audio segments and cover images under `/api/files` accept bearer identity or the cookie. Native players send the bearer token directly. Media-session creation and account API operations require bearer identity. Private delivery checks the conversion's owner and current account state on every request ([`private-account-access.test.ts`](../../libs/api-server/test/private-account-access.test.ts)). Scheduling deletion therefore blocks subsequent private requests even while a previously issued JWT remains unexpired. This is not a promise to retract bytes already downloaded by another client.
+The [listener contracts](../../libs/listener-api.routes/src/hono-app.ts) define the routes. Audiobook JSON requires bearer identity for private audiobooks and the owning grant session for trial audiobooks. Media routes accept only a signed media URL: a bearer token, the grant cookie or any other cookie alone answers `401`. Account API operations require bearer identity. Private delivery checks the conversion's owner and current account state on every request ([`private-account-access.test.ts`](../../libs/api-server/test/private-account-access.test.ts)), so scheduling deletion blocks subsequent private requests even while a previously issued JWT remains unexpired. This is not a promise to retract bytes already downloaded by another client.
 
-The web application's [`PlaybackSession`](../../apps/web-app/src/app/player/playback-session.ts) authorizes media only for the signed-in user its audiobook was loaded for. It requests the media cookie on load, on every Play, so access revoked while paused is noticed promptly, and before each preload, and never reuses a settled cookie, because its lifetime is computed on the Worker's clock. A refused cookie stops playback. Native players send the bearer token themselves; on native platforms the cookie serves only WebView requests such as cover images. Anonymous and trial listeners need no media cookie. [`playback-session.test.ts`](../../apps/web-app/src/app/player/playback-session.test.ts) and [`player-host.test.ts`](../../apps/web-app/src/app/player/player-host.test.ts) cover these rules. Local sign-out is not a global revocation of existing JWTs.
+The web player loads the narration track for the signed-in user the audiobook was loaded for, and a change of that user unloads it ([`player-host.test.ts`](../../apps/web-app/src/app/player/player-host.test.ts)). Local sign-out is not a global revocation of existing JWTs.
 
-Sources: [media cookie and token handling](../../libs/api-server/src/http/account-auth.ts), [ownership middleware](../../libs/api-server/src/api-server.ts), [delivery](../../libs/api-server/src/http/serve-audiobook.ts), [media cookie requests](../../apps/web-app/src/app/player/player-host.ts), and [client session transitions](../../apps/web-app/src/auth/account-session-machine.ts).
+### Signed media URL
+
+A signed media URL authorizes media requests by its `token` query parameter alone. The token is stateless: an HMAC with the `MEDIA_URL_SIGNING_KEY` Worker secret over the audiobook (conversion) ID, the principal, and an expiry 24 hours after issuance. The principal is the account for a signed-in request and the grant for a trial request. Nothing is stored, so a token cannot be revoked individually; rotating the secret invalidates every outstanding URL. Every audiobook response issues a fresh token.
+
+On every request, including HEAD, range and conditional requests, the Worker first checks the token's signature, expiry and audiobook ID against the route's `{conversionId}`; a missing, malformed, expired or foreign token answers `401` with `media-url-invalid`. It then runs the authoritative checks of the principal's own credentials: an active account that owns the conversion, or an unexpired, unrevoked grant that owns it. Scheduling account deletion and expiring or revoking a grant therefore block the next request, as [ADR 0007](../adr/0007-require-active-grant-access-for-trial-audiobooks.md) requires, and such denials answer as the equivalent audiobook request does. Responses stay `private, no-store`. The URL is a bearer credential for its lifetime: local sign-out does not invalidate a URL already issued, and anyone holding it can fetch that audiobook's media while the principal keeps access. [`signed-media-url.test.ts`](../../libs/api-server/test/signed-media-url.test.ts) and [`narration-track.test.ts`](../../libs/api-server/test/narration-track.test.ts) cover these rules.
+
+The web player renews the narration track URL on an in-app Play, from Cup’s Play button or a unit tap, so a listening session outlives the token. The [player host](../../apps/web-app/src/app/player/player-host.ts) records when the client received the current URL, by the client clock. Play renews when that URL is more than 12 hours old, which leaves room for a skewed client clock against the server’s 24 hours, or when the previous playback ended in a media error, as an expired token does: it requests the audiobook again through the page’s audiobook query, sets the new URL as the element’s `src`, seeks back to the position and plays. Every other Play starts the element synchronously within the gesture. A refused request, or a response without a narration track, keeps playback stopped and shows an error; a `play()` the browser refuses after the request leaves Play available, and the next tap starts the renewed track within its gesture. Nothing renews while the device is locked, because the lock screen and notification controls drive the element directly: a lock-screen Play after the token expired fails until the listener opens the app and presses Play. [`player-host.test.ts`](../../apps/web-app/src/app/player/player-host.test.ts) covers renewal with a fake clock.
+
+Sources: [token signing, verification and media authorization](../../libs/api-server/src/http/signed-media-url.ts), [ownership middleware](../../libs/api-server/src/api-server.ts), [delivery](../../libs/api-server/src/http/serve-audiobook.ts), and [client session transitions](../../apps/web-app/src/auth/account-session-machine.ts).
 
 ## Trial access
 
-A trial link carries a grant credential that is exchanged for a grant session. That session authorizes inspecting the grant and starting conversions while the grant permits it; it does not establish a personal account or authorize listing all grant conversions. Reading prepared trial text and replaying audio require a valid session for the owning grant, checked against the authoritative grant state before any artifact is loaded, including for HEAD, range, and conditional requests. Expired or revoked grants deny access; exhausted or fully reserved allowances still permit reading and replay. An audiobook link alone, another grant's session, or account sign-in alone does not authorize access. [ADR 0007](../adr/0007-require-active-grant-access-for-trial-audiobooks.md) records this policy and [`trial-audiobook-access.test.ts`](../../libs/api-server/test/trial-audiobook-access.test.ts) enforces it, including that credentialed CORS admits only the configured application origins and that responses default to `private, no-store`.
+A trial link carries a grant credential that is exchanged for a grant session. That session authorizes inspecting the grant and starting conversions while the grant permits it; it does not establish a personal account or authorize listing all grant conversions. Reading prepared trial text requires a valid session for the owning grant, checked against the authoritative grant state before any artifact is loaded; replaying audio requires a [signed media URL](#signed-media-url) issued to the owning grant, checked against the same state on every request. Expired or revoked grants deny access; exhausted or fully reserved allowances still permit reading and replay. The audiobook's link alone, another grant's session, or account sign-in alone does not authorize access. [ADR 0007](../adr/0007-require-active-grant-access-for-trial-audiobooks.md) records this policy and [`trial-audiobook-access.test.ts`](../../libs/api-server/test/trial-audiobook-access.test.ts) enforces it, including that credentialed CORS admits only the configured application origins and that responses default to `private, no-store`.
 
-Retrying preparation or synthesis also requires a session for the owning grant; preparation can proceed with exhausted duration, synthesis requires reservations covering the whole document. Trial media uses the HTTP-only [grant cookie](../../libs/conversion-grants/src/domain/grant-session.ts), which browser audio requests send as credentials and native players forward. Expiry and revocation cannot retract already downloaded text or audio. A missing or invalid grant session gets 401: the grant and conversion routes distinguish `grant-session-required` from `grant-session-invalid` and clear an invalid cookie, while audiobook, media, and retry requests answer both with `grant-session-required`, and the trial page asks the reader to open the original trial link again.
+Retrying preparation or synthesis also requires a session for the owning grant; preparation can proceed with exhausted duration, synthesis requires reservations covering the whole document. The HTTP-only [grant cookie](../../libs/conversion-grants/src/domain/grant-session.ts) authorizes JSON grant requests only; media routes do not accept it. Expiry and revocation cannot retract already downloaded text or audio. A missing or invalid grant session gets 401: the grant and conversion routes distinguish `grant-session-required` from `grant-session-invalid` and clear an invalid cookie, while audiobook and retry requests answer both with `grant-session-required`, and the trial page asks the reader to open the original trial link again.
 
 Listening positions belong to the signed-in listener, including positions on trial audiobooks authorized by their owning grant. Anonymous listeners keep positions locally on their browser or native device. Account history contains conversions started by that account, and the client clears its remembered trial when switching into an account.
 

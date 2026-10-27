@@ -1,8 +1,10 @@
 ---
-status: accepted
+status: partially superseded by ADR 0011
 ---
 
 # Use XState for client lifecycle state machines
+
+[ADR 0011](0011-serve-one-narration-track-and-play-it-with-one-audio-element.md) supersedes the player half: the web player plays one audio element and reads its state from the element, with no state machine. The account session machine and the rules below for client lifecycles remain accepted. The original decisions below are preserved as historical rationale.
 
 Two web app modules had grown into hand-rolled state machines. The account auth lifecycle kept its mode in module-level variables (an auth state, a client promise, a signing-out flag, a previous subject, and a promise queue for media cookie issuance) and compared a session generation counter after about six awaits only to discard results that arrived after sign-in, sign-out, or an account switch. The browser audio engine (`AudiobookPlayer`) tracked loading, playing, and segment transitions the same way. Each new rule had to be checked against every flag, and which async result was still current was decided at the far end of each await rather than by the code that started it. On 2026-10-15 the user chose to model these lifecycles with [XState v5](https://stately.ai/docs/xstate) in the web app.
 

@@ -5,13 +5,12 @@ import { estimateAudioDuration } from "@cup/conversion-contracts";
 import { grantSnapshotSchema, startConversionResponseSchema } from "@cup/listener-api.routes";
 
 import { expect, test, type WorkerEnvironment } from "#test-e2e/fixtures.ts";
+import { openNewTrial, startConversion, waitForAudiobook } from "#test-e2e/journey.ts";
 import {
-  getTrialSessionHeaders,
-  openNewTrial,
-  startConversion,
-  waitForAudiobook,
-} from "#test-e2e/journey.ts";
-import { waitForGeneratedAudio, waitForPreparedAudiobook } from "#test-e2e/synthesis.ts";
+  readAudiobook,
+  waitForGeneratedAudio,
+  waitForPreparedAudiobook,
+} from "#test-e2e/synthesis.ts";
 const DEFAULT_ALLOWANCE_MILLISECONDS = 7_200_000;
 
 test("charges every segment by encoded duration and reuses audio across reloads and retries", async ({
@@ -23,15 +22,14 @@ test("charges every segment by encoded duration and reuses audio across reloads 
   await waitForAudiobook(page);
   const id = new URL(page.url()).pathname.split("/").at(-1)!;
   const segments = await waitForGeneratedAudio(page, id);
-  let actual = 0;
-  for (const segment of segments) {
-    const audio = new Uint8Array(
-      await (
-        await page.request.get(segment.url, { headers: await getTrialSessionHeaders(page) })
-      ).body(),
-    );
-    actual += Math.ceil(analyzeMp3(audio).durationMilliseconds);
+  const audiobook = await readAudiobook(page, id);
+  if (audiobook.status !== "ready" || !audiobook.narrationTrack) {
+    throw new Error("Expected a narration track once every segment has audio.");
   }
+  // Every frame lasts a whole number of milliseconds, so the joined track's encoded duration is the
+  // sum of the segments' encoded durations.
+  const track = new Uint8Array(await (await page.request.get(audiobook.narrationTrack.url)).body());
+  const actual = analyzeMp3(track).durationMilliseconds;
   const before = await readGrant(page, grantId);
   expect(before.duration).toEqual({
     availableMilliseconds: DEFAULT_ALLOWANCE_MILLISECONDS - actual,

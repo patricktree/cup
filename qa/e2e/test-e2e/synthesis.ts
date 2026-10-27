@@ -45,20 +45,27 @@ export async function waitForPreparedAudiobook(
   return prepared;
 }
 
-/** Synthesis starts by itself after preparation; waits until every segment has audio. */
+/**
+ * Synthesis starts by itself after preparation; waits until every segment has audio. Returns each
+ * segment's settled duration, as the narration track's start offsets lay them out.
+ */
 export async function waitForGeneratedAudio(page: Page, conversionId: string, token?: string) {
   await expect
     .poll(async () => (await readAudiobook(page, conversionId, token)).status, { timeout: 90_000 })
     .toBe("ready");
   const audiobook = await readAudiobook(page, conversionId, token);
-  if (audiobook.status !== "ready") {
+  if (audiobook.status !== "ready" || !audiobook.narrationTrack) {
     throw new Error("Expected generated audio to remain ready.");
   }
-
-  return audiobook.segments.map((segment) => {
+  for (const segment of audiobook.segments) {
     if (segment.status !== "ready") {
       throw new Error(`Segment ${segment.sequence} has no audio.`);
     }
-    return segment;
-  });
+  }
+
+  const { startMilliseconds, durationMilliseconds } = audiobook.narrationTrack;
+  return startMilliseconds.map((start, sequence) => ({
+    sequence,
+    durationMilliseconds: (startMilliseconds[sequence + 1] ?? durationMilliseconds) - start,
+  }));
 }

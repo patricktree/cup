@@ -7,7 +7,7 @@ import process from "node:process";
 import { parseEnv } from "node:util";
 import { $ } from "zx";
 
-/** The local-only account that replaces Google sign-in during development; see ADR 0011. */
+/** The local-only account that replaces Google sign-in during development; see ADR 0012. */
 const TEST_ACCOUNT_EMAIL = "test-account@cup.test";
 /** The web app's Vite port and the local Supabase API port from `supabase/config.toml`. */
 const WEB_APP_PORT = 5173;
@@ -191,6 +191,9 @@ async function run(command: { action: "start"; tailnet: boolean } | { action: "s
       SUPABASE_PUBLISHABLE_KEY: status.ANON_KEY,
       SUPABASE_SECRET_KEY: status.SERVICE_ROLE_KEY,
       GOOGLE_WEB_CLIENT_ID: isGoogleConfigured ? clientId : "",
+      // Kept across restarts so that signed media URLs issued earlier stay valid.
+      MEDIA_URL_SIGNING_KEY:
+        workerEnv["MEDIA_URL_SIGNING_KEY"] ?? randomBytes(32).toString("base64url"),
       LOCAL_DEVELOPMENT: "true",
       LOCAL_TEST_ACCOUNT_EMAIL: TEST_ACCOUNT_EMAIL,
       LOCAL_TEST_ACCOUNT_PASSWORD: testAccountPassword,

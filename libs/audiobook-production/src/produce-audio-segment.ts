@@ -27,8 +27,6 @@ export {
   type NarrationSynthesisResponseMode,
 } from "#src/speech-synthesis.ts";
 
-const MP3_BITRATE_KILOBITS_PER_SECOND = 128;
-
 const speechProviderToSynthesizeMap = {
   elevenlabs: synthesizeElevenLabsAudio,
   "google-ai-studio": synthesizeGeminiAudio,
@@ -106,7 +104,7 @@ export async function produceAudioSegment({
     synthesisResponseMode,
   });
   const encodedAudio = await encodePcmAsMp3(providerAudio, {
-    bitrateKilobitsPerSecond: MP3_BITRATE_KILOBITS_PER_SECOND,
+    bitrateKilobitsPerSecond: AUDIO_FORMAT.bitrateKilobitsPerSecond,
     sampleRate: AUDIO_FORMAT.sampleRate,
   });
   const { audioStart, audioEnd, durationMilliseconds } = analyzeMp3(encodedAudio);

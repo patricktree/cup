@@ -7,7 +7,7 @@ export {
   type ProduceOptions,
   type SpeechSynthesisAi,
 } from "#src/produce-audio-segment.ts";
-export { analyzeMp3, type Mp3Analysis } from "#src/audio-format.ts";
+export { analyzeMp3, getSegmentByteLength, type Mp3Analysis } from "#src/audio-format.ts";
 export {
   createAudioSegmentReference,
   type AudioSegmentReference,

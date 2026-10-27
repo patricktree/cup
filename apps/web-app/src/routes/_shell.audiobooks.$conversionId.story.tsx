@@ -9,10 +9,15 @@ import { queryClient } from "#src/data-fetching/query-client.js";
 import { createAudiobookQuery } from "#src/data-fetching/reader.js";
 import { accountStory } from "#src/ui-gallery/account-fixtures.jsx";
 import gatesNotesAudiobook from "#src/ui-gallery/gates-notes-audiobook.json" with { type: "json" };
+import {
+  createStoryNarrationTrack,
+  storyNarrationTrackHandler,
+} from "#src/ui-gallery/narration-track.js";
 import type { Story } from "#src/ui-gallery/story.js";
 
 const CONVERSION_ID = "693af4c4-9fa8-430d-9dc5-c00e88fb38a7";
 const SOURCE_URL = "https://source.example.test/fixture";
+const SEGMENT_DURATION_MILLISECONDS = 5_000;
 const memoryHistory = createMemoryHistory({ initialEntries: [`/app/audiobooks/${CONVERSION_ID}`] });
 const router = createAppRouter(memoryHistory);
 
@@ -25,6 +30,7 @@ export const ReadyAudiobook = {
   component: () => <GlobalProviders router={router} />,
   handlers: [
     http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(createAudiobook())),
+    storyNarrationTrackHandler,
   ],
 } satisfies Story;
 
@@ -51,8 +57,14 @@ export const GatesNotesArticle = {
         segments: gatesNotesAudiobook.narrationDocument.synchronizationUnits.map(
           (_unit, sequence) => createReadySegment(sequence),
         ),
+        narrationTrack: createStoryNarrationTrack(
+          gatesNotesAudiobook.narrationDocument.synchronizationUnits.map(
+            () => SEGMENT_DURATION_MILLISECONDS,
+          ),
+        ),
       } satisfies Audiobook),
     ),
+    storyNarrationTrackHandler,
   ],
 } satisfies Story;
 
@@ -111,12 +123,18 @@ export const ListeningAcrossPages = accountStory({
         ...PREPARED_AUDIOBOOK,
         status: "ready",
         title: "A second document about listening",
-        segments: [0, 1, 2].map((sequence) => ({
-          ...createReadySegment(sequence),
-          url: `https://example.com/second/segments/${sequence}/audio.mp3`,
-        })),
+        segments: [0, 1, 2].map(createReadySegment),
+        narrationTrack: createStoryNarrationTrack(
+          [
+            SEGMENT_DURATION_MILLISECONDS,
+            SEGMENT_DURATION_MILLISECONDS,
+            SEGMENT_DURATION_MILLISECONDS,
+          ],
+          "second",
+        ),
       } satisfies Audiobook),
     ),
+    storyNarrationTrackHandler,
     http.put(
       "/api/audiobooks/:conversionId/position",
       () => new HttpResponse(null, { status: 204 }),
@@ -136,12 +154,7 @@ function createHistoryItem(conversionId: string, title: string) {
 }
 
 function createReadySegment(sequence: number) {
-  return {
-    sequence,
-    status: "ready" as const,
-    durationMilliseconds: 5000,
-    url: `https://example.com/segments/${sequence}/audio.mp3`,
-  };
+  return { sequence, status: "ready" as const };
 }
 
 const PREPARED_AUDIOBOOK = {
@@ -164,6 +177,11 @@ function createAudiobook(): Audiobook {
     ...PREPARED_AUDIOBOOK,
     status: "ready",
     segments: [createReadySegment(0), createReadySegment(1), createReadySegment(2)],
+    narrationTrack: createStoryNarrationTrack([
+      SEGMENT_DURATION_MILLISECONDS,
+      SEGMENT_DURATION_MILLISECONDS,
+      SEGMENT_DURATION_MILLISECONDS,
+    ]),
   };
 }
 

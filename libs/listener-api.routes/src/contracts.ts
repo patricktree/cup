@@ -60,7 +60,7 @@ export const authConfigResponseSchema = z.object({
   publishableKey: z.string().min(1),
   /** Absent when Google sign-in is unavailable, which happens only in local development. */
   googleWebClientId: z.string().min(1).optional(),
-  /** Advertised only in local development; see ADR 0011. */
+  /** Advertised only in local development; see ADR 0012. */
   testAccount: z.object({ email: z.string().min(1), password: z.string().min(1) }).optional(),
 });
 
@@ -112,22 +112,31 @@ export const startConversionResponseSchema = z.object({
 export type StartConversionResponse = z.infer<typeof startConversionResponseSchema>;
 
 export type { PlaybackPosition } from "@cup/conversion-contracts";
-export const segmentParamsSchema = conversionParamsSchema.extend({
-  sequence: z.coerce.number().int().min(0).max(199),
-});
 const audioSegmentBaseSchema = z.object({ sequence: z.number().int().nonnegative() });
+/** A segment's speech state. Ready segments play through the audiobook's `narrationTrack`. */
 export const audioSegmentSchema = z.discriminatedUnion("status", [
   audioSegmentBaseSchema.extend({ status: z.literal("absent") }),
   audioSegmentBaseSchema.extend({ status: z.literal("generating") }),
-  audioSegmentBaseSchema.extend({
-    status: z.literal("ready"),
-    durationMilliseconds: z.number().positive(),
-    url: z.url(),
-  }),
+  audioSegmentBaseSchema.extend({ status: z.literal("ready") }),
   audioSegmentBaseSchema.extend({ status: z.literal("failed"), explanation: z.string() }),
 ]);
 export type AudioSegment = z.infer<typeof audioSegmentSchema>;
-/** Where to request the audiobook's cover image; the bytes are served with audio-file authorization. */
+/**
+ * The query of a media route under `/api/files`. `token` is the opaque, expiring authorization a
+ * signed media URL carries, the only credential media routes accept.
+ */
+export const signedMediaUrlQuerySchema = z.object({ token: z.string() });
+/**
+ * Where to request the audiobook's narration track (a signed media URL), and where each segment
+ * starts in it. `startMilliseconds[i]` is the sum of the settled durations of segments `0..i-1`.
+ */
+export const narrationTrackSchema = z.object({
+  url: z.url(),
+  durationMilliseconds: z.number().int().positive(),
+  startMilliseconds: z.array(z.number().int().nonnegative()).min(1),
+});
+export type NarrationTrack = z.infer<typeof narrationTrackSchema>;
+/** Where to request the audiobook's cover image: a signed media URL. */
 export const coverImageSchema = z.object({
   url: z.url(),
   alternativeText: z.string().min(1).optional(),
@@ -145,6 +154,8 @@ const preparedBase = {
   }),
   // One entry per synchronization unit, in document order.
   segments: z.array(audioSegmentSchema),
+  // Present only when every segment has settled audio.
+  narrationTrack: narrationTrackSchema.optional(),
   playbackPosition: playbackPositionSchema.nullable(),
 };
 export const audiobookSchema = z.discriminatedUnion("status", [
@@ -195,7 +206,9 @@ export const ERROR_CODE = {
   INGRESS_UNAVAILABLE: "ingress-unavailable",
   INVALID_CREDENTIAL: "invalid-credential",
   INVALID_INPUT: "invalid-input",
+  MEDIA_URL_INVALID: "media-url-invalid",
   METHOD_NOT_ALLOWED: "method-not-allowed",
+  NARRATION_TRACK_NOT_FOUND: "narration-track-not-found",
   NOT_FOUND: "not-found",
   OPERATIONAL_ERROR: "operational-error",
   ORIGIN_BLOCKED: "origin-blocked",

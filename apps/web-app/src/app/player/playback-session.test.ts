@@ -9,19 +9,13 @@ import {
   type PlaybackSessionServices,
 } from "#src/app/player/playback-session.ts";
 
-const ready = (sequence: number, durationMilliseconds: number) => ({
+/** The session ignores a ready segment's own audio; only the narration track plays. */
+const ready = (sequence: number) => ({
   sequence,
   status: "ready" as const,
-  durationMilliseconds,
-  url: `https://example.com/segments/${sequence}/audio.mp3`,
-});
-const failed = (sequence: number) => ({
-  sequence,
-  status: "failed" as const,
-  explanation: "Rejected",
 });
 
-// The second segment failed, so the third starts where the first ends.
+// Units of 20, 10, 3 and 2 seconds on the narration track.
 const AUDIOBOOK: PlayableAudiobook = {
   status: "ready",
   canGenerate: true,
@@ -37,41 +31,33 @@ const AUDIOBOOK: PlayableAudiobook = {
       { id: "unit-4", narrationText: "Four" },
     ],
   },
-  segments: [ready(0, 20_000), failed(1), ready(2, 10_000), failed(3)],
+  segments: [ready(0), ready(1), ready(2), ready(3)],
+  narrationTrack: {
+    url: "https://example.com/narration-track.mp3?token=fixture",
+    durationMilliseconds: 35_000,
+    startMilliseconds: [0, 20_000, 30_000, 33_000],
+  },
 };
 
 function createSession({
   position = null,
   subject = "listener",
-  account = { subject: "listener", accessToken: "token-1" },
+  savePosition,
 }: {
   position?: PlaybackPosition | null;
   subject?: string | null;
-  account?: { subject: string; accessToken: string } | null;
+  savePosition?: PlaybackSessionServices["savePosition"];
 } = {}) {
-  const calls: string[] = [];
   const saved: Array<{ position: PlaybackPosition; subject: string | null }> = [];
-  const pendingCookies: Array<{ resolve: () => void; reject: (error: Error) => void }> = [];
-  const state = { now: 0, shouldHoldCookies: false };
+  const state = { now: 0 };
 
   const services: PlaybackSessionServices = {
-    getAccount: () => {
-      calls.push("getAccount");
-      return Promise.resolve(account);
-    },
-    issueMediaCookie: () => {
-      calls.push("issueMediaCookie");
-      if (!state.shouldHoldCookies) {
+    savePosition:
+      savePosition ??
+      ((value, savedSubject) => {
+        saved.push({ position: value, subject: savedSubject });
         return Promise.resolve();
-      }
-      return new Promise((resolve, reject) => {
-        pendingCookies.push({ resolve, reject });
-      });
-    },
-    savePosition: (value, savedSubject) => {
-      saved.push({ position: value, subject: savedSubject });
-      return Promise.resolve();
-    },
+      }),
     now: () => state.now,
   };
   const session = new PlaybackSession(
@@ -79,157 +65,73 @@ function createSession({
     services,
   );
 
-  return { session, calls, saved, pendingCookies, state };
+  return { session, saved, state };
 }
 
-const countCookies = (calls: string[]) =>
-  calls.filter((call) => call === "issueMediaCookie").length;
-
-test("restores the saved unit and offset", () => {
-  const { session } = createSession({
-    position: { synchronizationUnitId: "unit-3", offsetMilliseconds: 4_000 },
-  });
-
-  expect(session.initialLocation).toEqual({ entryIndex: 1, offsetMilliseconds: 4_000 });
-  expect(session.reportedPositionAt(session.initialLocation)).toEqual({
-    currentUnitIndex: 2,
-    positionMilliseconds: 24_000,
-  });
-});
-
-test("a restored unit without audio resumes at the start of the next unit with audio", () => {
+test("restores the saved unit and offset as a position on the narration track", () => {
   const { session } = createSession({
     position: { synchronizationUnitId: "unit-2", offsetMilliseconds: 4_000 },
   });
 
-  expect(session.initialLocation).toEqual({ entryIndex: 1, offsetMilliseconds: 0 });
+  expect(session.initialPositionMilliseconds).toBe(24_000);
 });
 
-test("an unknown position, or one after the last audio, restores the start", () => {
+test("an unknown unit, or no saved position, restores the start", () => {
   for (const position of [
     null,
     { synchronizationUnitId: "removed-unit", offsetMilliseconds: 4_000 },
-    { synchronizationUnitId: "unit-4", offsetMilliseconds: 4_000 },
   ]) {
-    expect(createSession({ position }).session.initialLocation).toEqual({
-      entryIndex: 0,
-      offsetMilliseconds: 0,
-    });
+    expect(createSession({ position }).session.initialPositionMilliseconds).toBe(0);
   }
 });
 
-test("a reported position becomes the unit and the offset within its audio", () => {
+test("a position on the narration track becomes the unit and the offset within its audio", () => {
   const { session } = createSession();
 
-  expect(
-    session.listeningPositionOf({ currentUnitIndex: 2, positionMilliseconds: 27_500 }),
-  ).toEqual({ synchronizationUnitId: "unit-3", offsetMilliseconds: 7_500 });
-  expect(session.listeningPositionOf({ currentUnitIndex: 0, positionMilliseconds: 0 })).toEqual({
+  expect(session.listeningPositionAt(27_500)).toEqual({
+    synchronizationUnitId: "unit-2",
+    offsetMilliseconds: 7_500,
+  });
+  expect(session.listeningPositionAt(0)).toEqual({
     synchronizationUnitId: "unit-1",
     offsetMilliseconds: 0,
   });
+  expect(session.listeningPositionAt(34_000)).toEqual({
+    synchronizationUnitId: "unit-4",
+    offsetMilliseconds: 1_000,
+  });
 });
 
-test("the position reported for a restored location restores it again", () => {
-  const position = { synchronizationUnitId: "unit-3", offsetMilliseconds: 4_000 };
+test("a restored position converts back to the saved listening position", () => {
+  const position = { synchronizationUnitId: "unit-3", offsetMilliseconds: 1_500 };
   const { session } = createSession({ position });
 
-  expect(session.listeningPositionOf(session.reportedPositionAt(session.initialLocation))).toEqual(
-    position,
-  );
+  expect(session.listeningPositionAt(session.initialPositionMilliseconds)).toEqual(position);
 });
 
-test("skipping moves between units with audio", () => {
-  const { session } = createSession();
-
-  expect(session.adjacentUnitIndex(0, 1)).toBe(2);
-  expect(session.adjacentUnitIndex(2, -1)).toBe(0);
-  expect(session.adjacentUnitIndex(2, 1)).toBeUndefined();
-  expect(session.adjacentUnitIndex(1, 1)).toBeUndefined();
+test("a narration track whose start offsets do not match the units is refused", () => {
+  expect(
+    () =>
+      new PlaybackSession(
+        {
+          conversionId: "conversion",
+          audiobook: {
+            ...AUDIOBOOK,
+            narrationTrack: { ...AUDIOBOOK.narrationTrack, startMilliseconds: [0, 20_000] },
+          },
+          position: null,
+          subject: null,
+        },
+        { savePosition: () => Promise.resolve(), now: () => 0 },
+      ),
+  ).toThrow("2 start offsets for 4 synchronization units");
 });
 
-test("media authorization checks the subject before issuing the cookie", async () => {
-  const { session, calls } = createSession();
+test("saves go to the subject in order", async () => {
+  const { session, saved } = createSession();
 
-  await session.authorizeMedia();
-
-  expect(calls).toEqual(["getAccount", "issueMediaCookie"]);
-});
-
-test("concurrent media authorizations share one cookie", async () => {
-  const { session, calls, pendingCookies, state } = createSession();
-  state.shouldHoldCookies = true;
-
-  // As when loading and playing in one gesture: the engine, the host, then Play.
-  const requests = [session.authorizeMedia(), session.authorizeMedia(), session.authorizeMedia()];
-  await expect.poll(() => pendingCookies.length).toBe(1);
-  pendingCookies[0]?.resolve();
-  await Promise.all(requests);
-
-  expect(countCookies(calls)).toBe(1);
-});
-
-test("each media authorization after the previous one settled issues a new cookie", async () => {
-  const { session, calls } = createSession();
-
-  await session.authorizeMedia();
-  await session.authorizeMedia();
-
-  expect(countCookies(calls)).toBe(2);
-});
-
-test("a failed media authorization does not block the next one", async () => {
-  const { session, calls, pendingCookies, state } = createSession();
-  state.shouldHoldCookies = true;
-
-  const failing = session.authorizeMedia();
-  await expect.poll(() => pendingCookies.length).toBe(1);
-  pendingCookies[0]?.reject(new Error("Sign in again to continue playback."));
-  await expect(failing).rejects.toThrow("Sign in again to continue playback.");
-
-  state.shouldHoldCookies = false;
-  await session.authorizeMedia();
-  expect(countCookies(calls)).toBe(2);
-});
-
-test("another signed-in user gets neither a cookie nor a token", async () => {
-  const { session, calls } = createSession({
-    account: { subject: "someone-else", accessToken: "token-2" },
-  });
-
-  await expect(session.authorizeMedia()).rejects.toThrow("Sign in again to continue playback.");
-  await expect(session.getAccessToken()).rejects.toThrow("Sign in again to continue playback.");
-  expect(calls).toEqual(["getAccount", "getAccount"]);
-});
-
-test("a signed-out account is refused", async () => {
-  const { session, calls } = createSession({ account: null });
-
-  await expect(session.authorizeMedia()).rejects.toThrow("Sign in again to continue playback.");
-  expect(calls).toEqual(["getAccount"]);
-});
-
-test("the access token is the subject's, without issuing a cookie", async () => {
-  const { session, calls } = createSession();
-
-  await expect(session.getAccessToken()).resolves.toBe("token-1");
-  expect(calls).toEqual(["getAccount"]);
-});
-
-test("anonymous and trial listeners need no media authorization", async () => {
-  const { session, calls } = createSession({ subject: null, account: null });
-
-  await session.authorizeMedia();
-  await expect(session.getAccessToken()).resolves.toBeNull();
-  expect(calls).toEqual([]);
-});
-
-test("saves go to the subject's account in order, without their own account lookup", async () => {
-  const { session, saved, calls } = createSession();
-
-  void session.save({ currentUnitIndex: 0, positionMilliseconds: 1_000 });
-  await session.save({ currentUnitIndex: 2, positionMilliseconds: 21_000 });
-  expect(calls).toEqual([]);
+  void session.save(1_000);
+  await session.save(21_000);
 
   expect(saved).toEqual([
     {
@@ -237,30 +139,49 @@ test("saves go to the subject's account in order, without their own account look
       subject: "listener",
     },
     {
-      position: { synchronizationUnitId: "unit-3", offsetMilliseconds: 1_000 },
+      position: { synchronizationUnitId: "unit-2", offsetMilliseconds: 1_000 },
       subject: "listener",
     },
   ]);
 });
 
+test("a refused save does not hold back the next one", async () => {
+  const saved: string[] = [];
+  let shouldRefuse = true;
+  const { session } = createSession({
+    savePosition: (position) => {
+      if (shouldRefuse) {
+        shouldRefuse = false;
+        return Promise.reject(new Error("Sign in again to continue playback."));
+      }
+      saved.push(position.synchronizationUnitId);
+      return Promise.resolve();
+    },
+  });
+
+  await expect(session.save(1_000)).rejects.toThrow("Sign in again to continue playback.");
+  await session.save(21_000);
+
+  expect(saved).toEqual(["unit-2"]);
+});
+
 test("saves during playback wait for the save interval", async () => {
   const { session, saved, state } = createSession();
-  const reported = { currentUnitIndex: 0, positionMilliseconds: 1_000 };
 
-  await session.saveIfDue(reported);
+  await session.saveIfDue(1_000);
   state.now = SAVE_INTERVAL_MILLISECONDS - 1;
-  await session.saveIfDue(reported);
+  await session.saveIfDue(2_000);
   expect(saved).toHaveLength(1);
 
   state.now = SAVE_INTERVAL_MILLISECONDS;
-  await session.saveIfDue(reported);
+  await session.saveIfDue(3_000);
   expect(saved).toHaveLength(2);
 });
 
-test("an anonymous listener's position stays on this device", async () => {
-  const { session, saved, calls } = createSession({ subject: null, account: null });
+test("an anonymous listener's position is saved without a subject", async () => {
+  const { session, saved } = createSession({ subject: null });
 
-  await session.save({ currentUnitIndex: 0, positionMilliseconds: 1_000 });
+  await session.save(1_000);
 
   expect(saved).toEqual([
     {
@@ -268,5 +189,4 @@ test("an anonymous listener's position stays on this device", async () => {
       subject: null,
     },
   ]);
-  expect(calls).toEqual([]);
 });

@@ -103,7 +103,7 @@
   "vars": {
     "LOCAL_DEVELOPMENT": "false",
     // Local development only: `pnpm dev:services` overrides these in `.env.local`, and the Worker
-    // ignores them unless LOCAL_DEVELOPMENT is "true" (docs/adr/0011). Local dev loads only
+    // ignores them unless LOCAL_DEVELOPMENT is "true" (docs/adr/0012). Local dev loads only
     // declared keys, so they need these empty defaults.
     "LOCAL_TEST_ACCOUNT_EMAIL": "",
     "LOCAL_TEST_ACCOUNT_PASSWORD": "",
@@ -131,6 +131,7 @@
       "SUPABASE_PUBLISHABLE_KEY",
       "GOOGLE_WEB_CLIENT_ID",
       "RESEND_API_KEY",
+      "MEDIA_URL_SIGNING_KEY",
     ],
   },
 }

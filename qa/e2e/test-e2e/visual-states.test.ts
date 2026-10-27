@@ -275,9 +275,8 @@ test("retries an audiobook loading failure", async ({
       );
       return;
     }
-    await fulfillJson(route, 200, createAudiobook(workerEnvironment.origin));
+    await fulfillJson(route, 200, createAudiobook());
   });
-  await mockSegmentAudio(page, workerEnvironment.origin);
   expectConsoleError(CONSOLE_ERRORS.serverError);
   expectConsoleError(/^RpcError: The article could not be loaded\./);
 
@@ -314,7 +313,7 @@ function createFailedConversion(): Record<string, unknown> {
   };
 }
 function createReadyConversion(): Record<string, unknown> {
-  return createAudiobook("");
+  return createAudiobook();
 }
 function createConversionBase(): Record<string, unknown> {
   return { conversionId: CONVERSION_ID, sourceUrl: SOURCE_URL, acceptedAt: "2026-08-28T10:05:00Z" };
@@ -334,19 +333,12 @@ function createStartResponse(): Record<string, unknown> {
   };
 }
 
-function createAudiobook(origin: string): Record<string, unknown> {
+function createAudiobook(): Record<string, unknown> {
   return {
     status: "ready",
     canGenerate: true,
     playbackPosition: null,
-    segments: [
-      {
-        sequence: 0,
-        status: "ready",
-        durationMilliseconds: 5_000,
-        url: `${origin}/api/files/audiobooks/${CONVERSION_ID}/segments/0/audio.mp3`,
-      },
-    ],
+    segments: [{ sequence: 0, status: "ready" }],
     title: "A deterministic document about careful testing",
     originalUrl: SOURCE_URL,
     narrationDocument: {
@@ -382,18 +374,11 @@ async function mockConversion(
 
 async function mockAudiobook(page: Page, origin: string): Promise<void> {
   await page.route(`${origin}/api/audiobooks/${CONVERSION_ID}`, async (route) => {
-    await fulfillJson(route, 200, createAudiobook(origin));
+    await fulfillJson(route, 200, createAudiobook());
   });
-  await mockSegmentAudio(page, origin);
 }
 
 /** The player preloads the first segment when it opens. */
-async function mockSegmentAudio(page: Page, origin: string): Promise<void> {
-  await page.route(`${origin}/api/files/audiobooks/${CONVERSION_ID}/segments/**`, async (route) => {
-    await route.fulfill({ status: 200, contentType: "audio/mpeg", body: Buffer.alloc(0) });
-  });
-}
-
 async function fulfillJson(route: Route, status: number, body: unknown): Promise<void> {
   await route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 }

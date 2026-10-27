@@ -5,6 +5,7 @@ import React from "react";
 
 import { ShellFooter } from "#src/app/components/main.tsx";
 import { DSButton } from "#src/app/design-system/button.js";
+import type { Player } from "#src/app/player/narration-track-player.js";
 import { formatDuration, formatTimelinePosition } from "#src/app/player/playback-format.js";
 import {
   usePlayerHost,
@@ -12,14 +13,13 @@ import {
   usePlayerState,
 } from "#src/app/player/player-host-provider.js";
 import type { LoadedAudiobook } from "#src/app/player/player-host.js";
-import type { Player } from "#src/platform/player.js";
 
 /**
  * Controls for the loaded audiobook, shown below every shell page. On the loaded audiobook's own
  * page they expand to its full controls; elsewhere they stay compact.
  */
 export function FloatingPlayer(): React.ReactNode {
-  const { loaded, shown, authorizationError } = usePlayerHostSnapshot();
+  const { loaded, shown } = usePlayerHostSnapshot();
 
   if (!loaded) {
     return null;
@@ -53,7 +53,7 @@ export function FloatingPlayer(): React.ReactNode {
       ) : (
         <CompactControls loaded={loaded} />
       )}
-      <PlaybackError player={loaded.player} authorizationError={authorizationError} />
+      <PlaybackError player={loaded.player} />
     </ShellFooter>
   );
 }
@@ -132,8 +132,6 @@ function PlayPauseButton({ loaded, iconSize }: { loaded: LoadedAudiobook; iconSi
     <DSButton
       variant="text"
       aria-label={isPlaying ? "Pause" : "Play"}
-      // Without consent to skip segments without audio, Play waits for "Play without them" on the page.
-      disabled={!isPlaying && !loaded.hasPlaybackConsent}
       onClick={() => (isPlaying ? host.pause() : host.play())}
     >
       {isPlaying ? <Pause size={iconSize} /> : <Play size={iconSize} />}
@@ -207,15 +205,8 @@ function usePlaybackProgress(player: Player) {
   };
 }
 
-function PlaybackError({
-  player,
-  authorizationError,
-}: {
-  player: Player;
-  authorizationError: string | null;
-}) {
-  const error = usePlayerState(player, (state) => state.error);
-  const message = error ?? authorizationError;
+function PlaybackError({ player }: { player: Player }) {
+  const message = usePlayerState(player, (state) => state.error);
   if (!message) {
     return null;
   }

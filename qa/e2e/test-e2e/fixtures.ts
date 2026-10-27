@@ -151,6 +151,8 @@ async function createWorkerEnvironment(
         "SUPABASE_SECRET_KEY:qa-admin",
         "--var",
         "GOOGLE_WEB_CLIENT_ID:qa-google-client",
+        "--var",
+        "MEDIA_URL_SIGNING_KEY:qa-media-url-signing-key",
       ],
       { cwd: qaRoot, detached: true, env: environment, stdio: ["ignore", "pipe", "pipe"] },
     );

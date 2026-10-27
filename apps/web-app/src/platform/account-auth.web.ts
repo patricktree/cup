@@ -1,4 +1,4 @@
-import type { Session, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** Prepares storage for the account session, which is kept under `storageKeys`. */
 export async function initializeAuthStorage(storageKeys: readonly string[]) {
@@ -13,7 +13,6 @@ export async function initializeAuthStorage(storageKeys: readonly string[]) {
     },
   };
 }
-export async function addAuthResumeListener(_onResume: () => void): Promise<void> {}
 export async function signInWithGoogle(
   client: SupabaseClient,
   _googleClientId: string | undefined,
@@ -33,5 +32,5 @@ export async function signInWithGoogle(
   }
 }
 
-export async function setNativeMediaSession(_session: Session): Promise<void> {}
-export async function clearNativeAuthSession(): Promise<void> {}
+/** The browser keeps no sign-in of its own beyond the account session. */
+export async function clearNativeSignIn(): Promise<void> {}

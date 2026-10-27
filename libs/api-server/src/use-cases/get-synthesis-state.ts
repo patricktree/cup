@@ -11,9 +11,6 @@ export type SynthesisState =
   | ({ status: "insufficient-duration"; segments: AudioSegment[] } & InsufficientDuration);
 
 export type GetSynthesisStateDependencies = {
-  listAudioSegments(): Promise<
-    readonly Pick<SegmentUsage, "sequence" | "state" | "actualMilliseconds">[]
-  >;
   getAvailableMilliseconds(): Promise<number>;
   getFailureExplanation(sequence: number): Promise<string | undefined>;
 };
@@ -26,19 +23,15 @@ export type GetSynthesisStateDependencies = {
  */
 export async function getSynthesisState(
   {
-    conversionId,
-    origin,
     narrationTextCharactersBySegment,
+    segmentUsage,
   }: {
-    conversionId: string;
-    origin: string;
     narrationTextCharactersBySegment: readonly number[];
+    segmentUsage: readonly Pick<SegmentUsage, "sequence" | "state">[];
   },
   dependencies: GetSynthesisStateDependencies,
 ): Promise<SynthesisState> {
-  const usage = new Map(
-    (await dependencies.listAudioSegments()).map((segment) => [segment.sequence, segment]),
-  );
+  const usage = new Map(segmentUsage.map((segment) => [segment.sequence, segment]));
 
   const segments = await Promise.all(
     narrationTextCharactersBySegment.map(async (_characters, sequence): Promise<AudioSegment> => {
@@ -50,12 +43,7 @@ export async function getSynthesisState(
         return { sequence, status: "generating" };
       }
       if (segment.state === "settled") {
-        return {
-          sequence,
-          status: "ready",
-          durationMilliseconds: segment.actualMilliseconds,
-          url: `${origin}/api/files/audiobooks/${conversionId}/segments/${sequence}/audio.mp3`,
-        };
+        return { sequence, status: "ready" };
       }
       if (segment.state === "released") {
         return {

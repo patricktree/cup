@@ -35,7 +35,7 @@ refresh_token_reuse_interval = 10
 enable_signup = true
 enable_anonymous_sign_ins = false
 
-# The local test account signs in with a password (ADR 0011). The CLI turns the whole email
+# The local test account signs in with a password (ADR 0012). The CLI turns the whole email
 # provider on or off with this setting, so `false` would also refuse password sign-ins.
 [auth.email]
 enable_signup = true

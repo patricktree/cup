@@ -103,7 +103,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -172,7 +174,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -241,7 +245,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -310,7 +316,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -379,7 +387,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -448,7 +458,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -517,7 +529,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -653,7 +667,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -722,7 +738,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -791,7 +809,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -860,7 +880,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -929,7 +951,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -998,7 +1022,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -1067,7 +1093,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -1253,7 +1281,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -1322,7 +1352,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -1391,7 +1423,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -1460,7 +1494,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -1529,7 +1565,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -1598,7 +1636,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -1667,7 +1707,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -1786,7 +1828,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -1983,7 +2027,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -2052,7 +2098,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -2121,7 +2169,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -2190,7 +2240,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -2342,7 +2394,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -2411,7 +2465,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -2480,7 +2536,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -2549,7 +2607,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -2618,475 +2678,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
-                            "not-found",
-                            "operational-error",
-                            "origin-blocked",
-                            "origin-forbidden",
-                            "range-not-satisfiable",
-                            "rate-limited",
-                            "request-too-large",
-                            "start-rate-limited",
-                            "unsupported-media-type"
-                          ]
-                        },
-                        "message": {
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        "requestId": {
-                          "type": "string",
-                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message",
-                        "requestId"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/files/session": {
-      "post": {
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "1"
-              ]
-            },
-            "required": true,
-            "name": "x-create-audiobook-from-url-request",
-            "in": "header"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {},
-                "additionalProperties": false
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": "Media cookie issued."
-          },
-          "400": {
-            "description": "Invalid request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "account-blocked",
-                            "account-session-required",
-                            "account-setup-pending",
-                            "account-start-conflict",
-                            "audiobook-not-found",
-                            "confirmation-unavailable",
-                            "conversion-not-found",
-                            "cover-image-not-found",
-                            "credits-unavailable",
-                            "dependency-unavailable",
-                            "fresh-auth-required",
-                            "grant-exhausted",
-                            "grant-expired",
-                            "grant-revoked",
-                            "grant-session-invalid",
-                            "grant-session-required",
-                            "grant-temporarily-full",
-                            "idempotency-conflict",
-                            "ingress-unavailable",
-                            "invalid-credential",
-                            "invalid-input",
-                            "method-not-allowed",
-                            "not-found",
-                            "operational-error",
-                            "origin-blocked",
-                            "origin-forbidden",
-                            "range-not-satisfiable",
-                            "rate-limited",
-                            "request-too-large",
-                            "start-rate-limited",
-                            "unsupported-media-type"
-                          ]
-                        },
-                        "message": {
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        "requestId": {
-                          "type": "string",
-                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message",
-                        "requestId"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sign in required.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "account-blocked",
-                            "account-session-required",
-                            "account-setup-pending",
-                            "account-start-conflict",
-                            "audiobook-not-found",
-                            "confirmation-unavailable",
-                            "conversion-not-found",
-                            "cover-image-not-found",
-                            "credits-unavailable",
-                            "dependency-unavailable",
-                            "fresh-auth-required",
-                            "grant-exhausted",
-                            "grant-expired",
-                            "grant-revoked",
-                            "grant-session-invalid",
-                            "grant-session-required",
-                            "grant-temporarily-full",
-                            "idempotency-conflict",
-                            "ingress-unavailable",
-                            "invalid-credential",
-                            "invalid-input",
-                            "method-not-allowed",
-                            "not-found",
-                            "operational-error",
-                            "origin-blocked",
-                            "origin-forbidden",
-                            "range-not-satisfiable",
-                            "rate-limited",
-                            "request-too-large",
-                            "start-rate-limited",
-                            "unsupported-media-type"
-                          ]
-                        },
-                        "message": {
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        "requestId": {
-                          "type": "string",
-                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message",
-                        "requestId"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Account blocked.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "account-blocked",
-                            "account-session-required",
-                            "account-setup-pending",
-                            "account-start-conflict",
-                            "audiobook-not-found",
-                            "confirmation-unavailable",
-                            "conversion-not-found",
-                            "cover-image-not-found",
-                            "credits-unavailable",
-                            "dependency-unavailable",
-                            "fresh-auth-required",
-                            "grant-exhausted",
-                            "grant-expired",
-                            "grant-revoked",
-                            "grant-session-invalid",
-                            "grant-session-required",
-                            "grant-temporarily-full",
-                            "idempotency-conflict",
-                            "ingress-unavailable",
-                            "invalid-credential",
-                            "invalid-input",
-                            "method-not-allowed",
-                            "not-found",
-                            "operational-error",
-                            "origin-blocked",
-                            "origin-forbidden",
-                            "range-not-satisfiable",
-                            "rate-limited",
-                            "request-too-large",
-                            "start-rate-limited",
-                            "unsupported-media-type"
-                          ]
-                        },
-                        "message": {
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        "requestId": {
-                          "type": "string",
-                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message",
-                        "requestId"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Unavailable.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "account-blocked",
-                            "account-session-required",
-                            "account-setup-pending",
-                            "account-start-conflict",
-                            "audiobook-not-found",
-                            "confirmation-unavailable",
-                            "conversion-not-found",
-                            "cover-image-not-found",
-                            "credits-unavailable",
-                            "dependency-unavailable",
-                            "fresh-auth-required",
-                            "grant-exhausted",
-                            "grant-expired",
-                            "grant-revoked",
-                            "grant-session-invalid",
-                            "grant-session-required",
-                            "grant-temporarily-full",
-                            "idempotency-conflict",
-                            "ingress-unavailable",
-                            "invalid-credential",
-                            "invalid-input",
-                            "method-not-allowed",
-                            "not-found",
-                            "operational-error",
-                            "origin-blocked",
-                            "origin-forbidden",
-                            "range-not-satisfiable",
-                            "rate-limited",
-                            "request-too-large",
-                            "start-rate-limited",
-                            "unsupported-media-type"
-                          ]
-                        },
-                        "message": {
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        "requestId": {
-                          "type": "string",
-                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message",
-                        "requestId"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "1"
-              ]
-            },
-            "required": true,
-            "name": "x-create-audiobook-from-url-request",
-            "in": "header"
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Media cookie removed."
-          },
-          "400": {
-            "description": "Invalid request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "account-blocked",
-                            "account-session-required",
-                            "account-setup-pending",
-                            "account-start-conflict",
-                            "audiobook-not-found",
-                            "confirmation-unavailable",
-                            "conversion-not-found",
-                            "cover-image-not-found",
-                            "credits-unavailable",
-                            "dependency-unavailable",
-                            "fresh-auth-required",
-                            "grant-exhausted",
-                            "grant-expired",
-                            "grant-revoked",
-                            "grant-session-invalid",
-                            "grant-session-required",
-                            "grant-temporarily-full",
-                            "idempotency-conflict",
-                            "ingress-unavailable",
-                            "invalid-credential",
-                            "invalid-input",
-                            "method-not-allowed",
-                            "not-found",
-                            "operational-error",
-                            "origin-blocked",
-                            "origin-forbidden",
-                            "range-not-satisfiable",
-                            "rate-limited",
-                            "request-too-large",
-                            "start-rate-limited",
-                            "unsupported-media-type"
-                          ]
-                        },
-                        "message": {
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        "requestId": {
-                          "type": "string",
-                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message",
-                        "requestId"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Origin blocked.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "account-blocked",
-                            "account-session-required",
-                            "account-setup-pending",
-                            "account-start-conflict",
-                            "audiobook-not-found",
-                            "confirmation-unavailable",
-                            "conversion-not-found",
-                            "cover-image-not-found",
-                            "credits-unavailable",
-                            "dependency-unavailable",
-                            "fresh-auth-required",
-                            "grant-exhausted",
-                            "grant-expired",
-                            "grant-revoked",
-                            "grant-session-invalid",
-                            "grant-session-required",
-                            "grant-temporarily-full",
-                            "idempotency-conflict",
-                            "ingress-unavailable",
-                            "invalid-credential",
-                            "invalid-input",
-                            "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -3235,7 +2829,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -3304,7 +2900,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -3373,7 +2971,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -3442,7 +3042,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -3625,7 +3227,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -3694,7 +3298,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -3763,7 +3369,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -3832,7 +3440,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -3901,7 +3511,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -4054,7 +3666,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -4123,7 +3737,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -4192,7 +3808,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -4534,7 +4152,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -4603,7 +4223,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -4672,7 +4294,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -4741,7 +4365,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -5256,7 +4882,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -5325,7 +4953,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -5394,7 +5024,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -5463,7 +5095,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -5532,7 +5166,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -5601,7 +5237,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -5827,22 +5465,11 @@
                                     "enum": [
                                       "ready"
                                     ]
-                                  },
-                                  "durationMilliseconds": {
-                                    "type": "number",
-                                    "minimum": 0,
-                                    "exclusiveMinimum": true
-                                  },
-                                  "url": {
-                                    "type": "string",
-                                    "format": "uri"
                                   }
                                 },
                                 "required": [
                                   "sequence",
-                                  "status",
-                                  "durationMilliseconds",
-                                  "url"
+                                  "status"
                                 ]
                               },
                               {
@@ -5870,6 +5497,33 @@
                               }
                             ]
                           }
+                        },
+                        "narrationTrack": {
+                          "type": "object",
+                          "properties": {
+                            "url": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "durationMilliseconds": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            },
+                            "startMilliseconds": {
+                              "type": "array",
+                              "items": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "minItems": 1
+                            }
+                          },
+                          "required": [
+                            "url",
+                            "durationMilliseconds",
+                            "startMilliseconds"
+                          ]
                         },
                         "playbackPosition": {
                           "type": "object",
@@ -6037,22 +5691,11 @@
                                     "enum": [
                                       "ready"
                                     ]
-                                  },
-                                  "durationMilliseconds": {
-                                    "type": "number",
-                                    "minimum": 0,
-                                    "exclusiveMinimum": true
-                                  },
-                                  "url": {
-                                    "type": "string",
-                                    "format": "uri"
                                   }
                                 },
                                 "required": [
                                   "sequence",
-                                  "status",
-                                  "durationMilliseconds",
-                                  "url"
+                                  "status"
                                 ]
                               },
                               {
@@ -6080,6 +5723,33 @@
                               }
                             ]
                           }
+                        },
+                        "narrationTrack": {
+                          "type": "object",
+                          "properties": {
+                            "url": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "durationMilliseconds": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            },
+                            "startMilliseconds": {
+                              "type": "array",
+                              "items": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "minItems": 1
+                            }
+                          },
+                          "required": [
+                            "url",
+                            "durationMilliseconds",
+                            "startMilliseconds"
+                          ]
                         },
                         "playbackPosition": {
                           "type": "object",
@@ -6236,22 +5906,11 @@
                                     "enum": [
                                       "ready"
                                     ]
-                                  },
-                                  "durationMilliseconds": {
-                                    "type": "number",
-                                    "minimum": 0,
-                                    "exclusiveMinimum": true
-                                  },
-                                  "url": {
-                                    "type": "string",
-                                    "format": "uri"
                                   }
                                 },
                                 "required": [
                                   "sequence",
-                                  "status",
-                                  "durationMilliseconds",
-                                  "url"
+                                  "status"
                                 ]
                               },
                               {
@@ -6279,6 +5938,33 @@
                               }
                             ]
                           }
+                        },
+                        "narrationTrack": {
+                          "type": "object",
+                          "properties": {
+                            "url": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "durationMilliseconds": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            },
+                            "startMilliseconds": {
+                              "type": "array",
+                              "items": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "minItems": 1
+                            }
+                          },
+                          "required": [
+                            "url",
+                            "durationMilliseconds",
+                            "startMilliseconds"
+                          ]
                         },
                         "playbackPosition": {
                           "type": "object",
@@ -6356,7 +6042,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -6425,7 +6113,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -6494,7 +6184,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -6653,7 +6345,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -6722,7 +6416,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -6791,7 +6487,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -6860,7 +6558,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -6929,7 +6629,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -7055,7 +6757,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -7124,7 +6828,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -7193,7 +6899,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -7262,7 +6970,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -7300,7 +7010,7 @@
         }
       }
     },
-    "/api/files/audiobooks/{conversionId}/segments/{sequence}/audio.mp3": {
+    "/api/files/audiobooks/{conversionId}/narration-track.mp3": {
       "get": {
         "parameters": [
           {
@@ -7314,19 +7024,16 @@
           },
           {
             "schema": {
-              "type": "integer",
-              "nullable": true,
-              "minimum": 0,
-              "maximum": 199
+              "type": "string"
             },
-            "required": false,
-            "name": "sequence",
-            "in": "path"
+            "required": true,
+            "name": "token",
+            "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "Unit audio.",
+            "description": "The narration track: every audio segment, joined in sequence order.",
             "content": {
               "audio/mpeg": {
                 "schema": {
@@ -7337,7 +7044,7 @@
             }
           },
           "206": {
-            "description": "Unit byte range.",
+            "description": "Narration track byte range.",
             "content": {
               "audio/mpeg": {
                 "schema": {
@@ -7384,7 +7091,151 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired authorization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "conversion-not-found",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access blocked, or the grant expired or was revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "conversion-not-found",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -7420,7 +7271,7 @@
             }
           },
           "404": {
-            "description": "Unit unavailable.",
+            "description": "Narration track unavailable.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7453,7 +7304,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -7522,7 +7375,80 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored segment is missing or does not match its settled duration.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "conversion-not-found",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -7572,19 +7498,16 @@
           },
           {
             "schema": {
-              "type": "integer",
-              "nullable": true,
-              "minimum": 0,
-              "maximum": 199
+              "type": "string"
             },
-            "required": false,
-            "name": "sequence",
-            "in": "path"
+            "required": true,
+            "name": "token",
+            "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "Unit audio.",
+            "description": "The narration track: every audio segment, joined in sequence order.",
             "content": {
               "audio/mpeg": {
                 "schema": {
@@ -7595,7 +7518,7 @@
             }
           },
           "206": {
-            "description": "Unit byte range.",
+            "description": "Narration track byte range.",
             "content": {
               "audio/mpeg": {
                 "schema": {
@@ -7642,7 +7565,151 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired authorization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "conversion-not-found",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access blocked, or the grant expired or was revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "conversion-not-found",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -7678,7 +7745,7 @@
             }
           },
           "404": {
-            "description": "Unit unavailable.",
+            "description": "Narration track unavailable.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7711,7 +7778,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -7780,7 +7849,80 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored segment is missing or does not match its settled duration.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "conversion-not-found",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -7829,6 +7971,14 @@
             "required": true,
             "name": "conversionId",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "query"
           }
         ],
         "responses": {
@@ -7904,7 +8054,151 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired authorization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "conversion-not-found",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access blocked, or the grant expired or was revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "conversion-not-found",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -7973,7 +8267,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -8020,6 +8316,14 @@
             "required": true,
             "name": "conversionId",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "query"
           }
         ],
         "responses": {
@@ -8095,7 +8399,151 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired authorization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "conversion-not-found",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access blocked, or the grant expired or was revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "conversion-not-found",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",
@@ -8164,7 +8612,9 @@
                             "ingress-unavailable",
                             "invalid-credential",
                             "invalid-input",
+                            "media-url-invalid",
                             "method-not-allowed",
+                            "narration-track-not-found",
                             "not-found",
                             "operational-error",
                             "origin-blocked",

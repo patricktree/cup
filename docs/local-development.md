@@ -11,9 +11,9 @@ pnpm dev:services
 pnpm --filter @cup/cloudflare-worker dev
 ```
 
-The [helper](../tooling/env-setup/src/dev-services.ts) generates an ignored signing key, starts the local Supabase stack, creates the local test account, and writes the stack's URL, API keys, the test account, and `LOCAL_DEVELOPMENT=true` into the ignored Worker environment file, keeping a copy of the previous environment to restore. The [local Supabase configuration](../supabase/config.toml) sets the ports and the short local JWT lifetime, and reads its host-dependent URLs from variables the helper sets. Run Supabase CLI commands through the helper, because the configuration does not parse without them. Cup does not store application history or duration data in Supabase Postgres.
+The [helper](../tooling/env-setup/src/dev-services.ts) generates an ignored signing key, starts the local Supabase stack, creates the local test account, and writes the stack's URL, API keys, the test account, a generated media URL signing key (kept when one is already set), and `LOCAL_DEVELOPMENT=true` into the ignored Worker environment file, keeping a copy of the previous environment to restore. The [local Supabase configuration](../supabase/config.toml) sets the ports and the short local JWT lifetime, and reads its host-dependent URLs from variables the helper sets. Run Supabase CLI commands through the helper, because the configuration does not parse without them. Cup does not store application history or duration data in Supabase Postgres.
 
-Open `http://localhost:5173/app/` and choose **Sign in with test account**. The helper gives the test account a new random password on every start; the Worker hands it to the web app, so you never type it. [ADR 0011](adr/0011-offer-a-local-test-account-instead-of-google-in-development.md) records why this account exists and what the Worker accepts.
+Open `http://localhost:5173/app/` and choose **Sign in with test account**. The helper gives the test account a new random password on every start; the Worker hands it to the web app, so you never type it. [ADR 0012](adr/0012-offer-a-local-test-account-instead-of-google-in-development.md) records why this account exists and what the Worker accepts.
 
 Stop the stack, any Tailscale serving it started, and restore the previous Worker environment:
 

@@ -27,13 +27,6 @@ export class ListenerApiClient {
     return this.#honoClient.api.auth.config.$get();
   }
 
-  async clearFilesSession() {
-    return this.#honoClient.api.files.session.$delete(
-      { header: browserHeaders() },
-      { init: { credentials: "include" } },
-    );
-  }
-
   async exchangeCredential(params: GrantParams, input: ExchangeCredentialRequest) {
     return this.#honoClient.api.grants[":grantId"].sessions.$post({
       param: params,
@@ -140,13 +133,6 @@ export class AuthenticatedRpcClient {
   async restoreAccount(input: AccountConfirmationRequest) {
     return this.#honoClient.api.account.deletion.restore.$post(
       { json: input, header: browserHeaders() },
-      this.#options(),
-    );
-  }
-
-  async createFilesSession() {
-    return this.#honoClient.api.files.session.$post(
-      { json: {}, header: browserHeaders() },
       this.#options(),
     );
   }
