@@ -48,6 +48,7 @@ import {
   toNarrationDocumentResponse,
   toNarrationTrackResponse,
   toPlaybackPositionResponse,
+  toPreparationPhaseField,
 } from "#src/http/listener-responses.ts";
 import { isDevelopmentOperatorRequest } from "#src/http/operator-access.ts";
 import {
@@ -488,14 +489,21 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
           .result === "valid");
     const base = { originalUrl: conversion.sourceUrl, canGenerate };
     if (conversion.status === "pending") {
-      return context.json({ ...base, status: "pending" } satisfies Audiobook, 200);
+      return context.json(
+        {
+          ...base,
+          status: "pending",
+          ...toPreparationPhaseField(conversion.lastStartedPhase),
+        } satisfies Audiobook,
+        200,
+      );
     }
     if (conversion.status === "failed") {
       return context.json(
         {
           ...base,
           status: "failed",
-          explanation: "Preparation failed. Retry to load this article.",
+          explanation: "Preparation failed. Retry to load this track.",
         } satisfies Audiobook,
         200,
       );

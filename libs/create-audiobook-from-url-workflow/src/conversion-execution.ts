@@ -58,7 +58,8 @@ export function resolveConversionExecution(
         const outcome = (await account.getConversion(conversionId))?.outcome;
         return outcome?.status === "ready" ? outcome.audiobookReference : undefined;
       },
-      phaseStarted: async () => account.assertExecution(conversionId, executionEpoch),
+      phaseStarted: async (phase) =>
+        account.recordPhaseStarted(conversionId, phase, executionEpoch),
       recordReady: async (outcome, narrationTextCharactersBySegment) =>
         account.settleConversion(
           conversionId,

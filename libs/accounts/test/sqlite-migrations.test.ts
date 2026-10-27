@@ -355,6 +355,48 @@ test("tracking the registry's usage confirmation keeps the account and starts un
   }
 });
 
+test("recording the last started phase backfills conversions with the start and keeps their jobs and segments", () => {
+  const database = new sqlite.DatabaseSync(":memory:");
+  try {
+    const { key, earlierKeys } = findMigration("conversion_last_started_phase");
+    applyMigrations(database, earlierKeys);
+    database.exec(`INSERT INTO account_conversions
+      (conversion_id, idempotency_key, source_url, created_at_ms, status, completed_at_ms, title, audiobook_reference_json, has_cover_image, failure_category, explanation)
+      VALUES
+      ('pending', 'key-pending', 'https://example.com/p', 1, 'pending', NULL, NULL, NULL, NULL, NULL, NULL),
+      ('ready', 'key-ready', 'https://example.com/r', 2, 'ready', 3, 'Ready', '{}', 1, NULL, NULL),
+      ('failed', 'key-failed', 'https://example.com/f', 4, 'failed', 5, NULL, NULL, NULL, 'source-preparation', 'Stopped.')`);
+    database.exec("INSERT INTO pending_jobs VALUES ('job', 'pending', 1, 'pending')");
+    database.exec(
+      "INSERT INTO credit_operations VALUES ('op-0', 'op-0', 'reservation', 'audio-millisecond', 1000, 'reserved', 'ready')",
+    );
+    database.exec(
+      "INSERT INTO audio_segments VALUES ('ready', 0, 10, 1000, 'reserved', 0, 0, 'op-0')",
+    );
+    const conversions = database
+      .prepare("SELECT * FROM account_conversions ORDER BY created_at_ms")
+      .all();
+    const jobs = database.prepare("SELECT * FROM pending_jobs").all();
+    const segments = database.prepare("SELECT * FROM audio_segments").all();
+
+    applyMigrations(database, [key]);
+
+    expect(
+      database.prepare("SELECT * FROM account_conversions ORDER BY created_at_ms").all(),
+    ).toEqual(conversions.map((row) => ({ ...row, last_started_phase: "conversion-start" })));
+    expect(database.prepare("SELECT * FROM pending_jobs").all()).toEqual(jobs);
+    expect(database.prepare("SELECT * FROM audio_segments").all()).toEqual(segments);
+    expect(() =>
+      database.exec("UPDATE account_conversions SET last_started_phase = 'unknown-phase'"),
+    ).toThrow(/CHECK constraint failed/);
+    expect(() =>
+      database.exec("INSERT INTO pending_jobs VALUES ('orphan', 'missing', 1, 'pending')"),
+    ).toThrow(/FOREIGN KEY constraint failed/);
+  } finally {
+    database.close();
+  }
+});
+
 /**
  * Finds a migration by its journal tag without its number prefix, so renumbering it after a rebase
  * keeps the test valid; also returns the keys of all migrations that run before it.
