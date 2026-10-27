@@ -5,10 +5,34 @@ export const AUDIOBOOK_MANIFEST_CONTENT_TYPE = "application/json";
 
 /** Audio format required from every synthesized narration segment. */
 export const AUDIO_FORMAT = {
+  bitrateKilobitsPerSecond: 128,
   channelCount: 1,
   encoding: "mp3",
   sampleRate: 24_000,
 } as const;
+
+const FRAME_DURATION_MILLISECONDS = 24;
+const FRAME_BYTE_LENGTH = 384;
+
+/**
+ * Derives a segment's byte length from its settled duration (`actual_milliseconds` × 16).
+ *
+ * The derivation holds because `analyzeMp3` accepts only unpadded MPEG-2 Layer III frames in
+ * `AUDIO_FORMAT`, each exactly 384 bytes and 24 ms long. Any future change to the segment encoding
+ * must start recording segment byte lengths, because derivation then no longer holds for older
+ * tracks.
+ */
+export function getSegmentByteLength(durationMilliseconds: number): number {
+  const frameCount = durationMilliseconds / FRAME_DURATION_MILLISECONDS;
+
+  if (!Number.isInteger(frameCount) || frameCount < 0) {
+    throw new Error(
+      `Segment duration must be a whole number of 24 ms frames: ${durationMilliseconds} ms`,
+    );
+  }
+
+  return frameCount * FRAME_BYTE_LENGTH;
+}
 
 /** Frame boundaries and playback duration derived from a complete MP3 byte sequence. */
 export type Mp3Analysis = {
@@ -77,18 +101,12 @@ export function analyzeMp3(audio: Uint8Array): Mp3Analysis {
       throw new Error(`MP3 audio contains a free or invalid bit-rate frame at byte ${offset}`);
     }
 
-    if (sampleRate !== AUDIO_FORMAT.sampleRate) {
-      throw new Error(`MP3 audio has unexpected sample rate at byte ${offset}: ${sampleRate} Hz`);
-    }
-
-    if (AUDIO_FORMAT.channelCount === 1 && channelMode !== 0b11) {
-      throw new Error(`MP3 audio has unexpected channel mode at byte ${offset}`);
-    }
+    assertFrameMatchesAudioFormat({ offset, sampleRate, channelMode, bitRateKilobits, padding });
 
     const samplesPerFrame = versionBits === 0b11 ? 1_152 : 576;
-    const frameLength =
-      Math.floor(((versionBits === 0b11 ? 144 : 72) * bitRateKilobits * 1_000) / sampleRate) +
-      padding;
+    const frameLength = Math.floor(
+      ((versionBits === 0b11 ? 144 : 72) * bitRateKilobits * 1_000) / sampleRate,
+    );
 
     if (offset + frameLength > audioEnd) {
       throw new Error(`MP3 audio ends with an incomplete frame at byte ${offset}`);
@@ -104,6 +122,38 @@ export function analyzeMp3(audio: Uint8Array): Mp3Analysis {
   }
 
   return { audioStart, audioEnd, durationMilliseconds };
+}
+
+function assertFrameMatchesAudioFormat({
+  offset,
+  sampleRate,
+  channelMode,
+  bitRateKilobits,
+  padding,
+}: {
+  offset: number;
+  sampleRate: number;
+  channelMode: number;
+  bitRateKilobits: number;
+  padding: number;
+}): void {
+  // Only MPEG-2 encodes 24 kHz, so this check also rejects every other MPEG version
+  if (sampleRate !== AUDIO_FORMAT.sampleRate) {
+    throw new Error(`MP3 audio has unexpected sample rate at byte ${offset}: ${sampleRate} Hz`);
+  }
+
+  if (AUDIO_FORMAT.channelCount === 1 && channelMode !== 0b11) {
+    throw new Error(`MP3 audio has unexpected channel mode at byte ${offset}`);
+  }
+
+  if (bitRateKilobits !== AUDIO_FORMAT.bitrateKilobitsPerSecond) {
+    throw new Error(`MP3 audio has unexpected bitrate at byte ${offset}: ${bitRateKilobits} kbps`);
+  }
+
+  // `getSegmentByteLength` relies on every frame having the same length
+  if (padding === 1) {
+    throw new Error(`MP3 audio contains a padded frame at byte ${offset}`);
+  }
 }
 
 function getId3v2End(audio: Uint8Array): number {
