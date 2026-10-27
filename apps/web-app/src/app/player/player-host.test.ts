@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import type { PlaybackPosition } from "@cup/listener-api.routes";
+import type { Audiobook, PlaybackPosition } from "@cup/listener-api.routes";
 
 import type { NarrationAudioElement } from "#src/app/player/narration-track-player.ts";
 import {
@@ -132,10 +132,13 @@ function createHost({
   localPositions = new Map<string, PlaybackPosition>(),
   subject = null as string | null,
   savePosition = (): Promise<void> => Promise.resolve(),
+  fetchAudiobook = (conversionId: string): Promise<Audiobook> =>
+    Promise.reject(new Error(`Unexpected fetch of audiobook ${conversionId}.`)),
 } = {}) {
   const elements: FakeAudioElement[] = [];
   const mediaMetadata: Array<string | null> = [];
   const saved: Array<{ position: PlaybackPosition; subject: string | null }> = [];
+  const fetchedConversionIds: string[] = [];
   const clock = { now: 0 };
   let account: PlayerHostAccount = { status: "known", subject };
 
@@ -159,6 +162,11 @@ function createHost({
     },
     getAccount: () => account,
     getLocalPosition: (conversionId) => localPositions.get(conversionId) ?? null,
+    fetchAudiobook: (conversionId) => {
+      fetchedConversionIds.push(conversionId);
+      return fetchAudiobook(conversionId);
+    },
+    now: () => clock.now,
   });
   host.accountChanged();
   /** Changes the account and reports it, like the provider does after a render. */
@@ -175,7 +183,17 @@ function createHost({
     return loaded.player;
   };
 
-  return { host, elements, element, player, mediaMetadata, saved, clock, setAccount };
+  return {
+    host,
+    elements,
+    element,
+    player,
+    mediaMetadata,
+    saved,
+    fetchedConversionIds,
+    clock,
+    setAccount,
+  };
 }
 
 /** Lets queued media events and settled saves run. */
@@ -229,6 +247,13 @@ const FIRST = createAudiobook("First");
 const SECOND = createAudiobook("Second");
 const FIRST_TRACK_URL = "https://example.com/First/narration-track.mp3?token=fixture";
 const SECOND_TRACK_URL = "https://example.com/Second/narration-track.mp3?token=fixture";
+const RENEWED_TRACK_URL = "https://example.com/First/narration-track.mp3?token=renewed";
+const TWELVE_HOURS_MILLISECONDS = 12 * 60 * 60 * 1_000;
+const RENEWAL_ERROR_MESSAGE = "The audio could not be loaded again. Press Play to try again.";
+
+function withTrackUrl(audiobook: PlayableAudiobook, url: string): PlayableAudiobook {
+  return { ...audiobook, narrationTrack: { ...audiobook.narrationTrack, url } };
+}
 
 test("showing an audiobook loads its narration track into the one element without playing", () => {
   const { host, elements, element, mediaMetadata } = createHost();
@@ -432,8 +457,91 @@ test("reaching the end returns to the start and saves it", async () => {
   });
 });
 
-test("a media error is shown, and Play loads the track again at the same position", () => {
-  const { host, element, player } = createHost();
+test("Play within 12 hours of receiving the track URL plays it without a refetch", () => {
+  const { host, element, fetchedConversionIds, clock } = createHost();
+  host.showConversion("first", FIRST);
+  element.loadMetadata(15);
+
+  clock.now = TWELVE_HOURS_MILLISECONDS;
+  host.play();
+
+  expect(fetchedConversionIds).toEqual([]);
+  expect(element.calls).toEqual([`src:${FIRST_TRACK_URL}`, "play"]);
+});
+
+test("Play more than 12 hours after receiving the track URL renews it and keeps the position", async () => {
+  const { host, element, player, fetchedConversionIds, clock } = createHost({
+    fetchAudiobook: () => Promise.resolve(withTrackUrl(FIRST, RENEWED_TRACK_URL)),
+  });
+  host.showConversion("first", FIRST);
+  element.loadMetadata(15);
+  host.play();
+  element.advanceTo(6);
+  host.pause();
+  await settle();
+
+  clock.now = TWELVE_HOURS_MILLISECONDS + 1;
+  host.play();
+  await settle();
+
+  expect(fetchedConversionIds).toEqual(["first"]);
+  expect(element.calls.slice(-2)).toEqual([`src:${RENEWED_TRACK_URL}`, "play"]);
+  expect(player().getSnapshot()).toMatchObject({ isPlaying: true, positionMilliseconds: 6_000 });
+  element.loadMetadata(15);
+  expect(element.calls.at(-1)).toBe("currentTime:6");
+
+  // The renewed URL is fresh: the next Play needs no refetch.
+  host.pause();
+  host.play();
+  expect(fetchedConversionIds).toEqual(["first"]);
+});
+
+test("the age of a shown audiobook's track URL counts from when the page received it", async () => {
+  const { host, element, fetchedConversionIds, clock } = createHost({
+    fetchAudiobook: () =>
+      Promise.resolve(
+        withTrackUrl(SECOND, "https://example.com/Second/narration-track.mp3?token=renewed"),
+      ),
+  });
+  host.showConversion("first", FIRST);
+  host.hideConversion("first");
+  host.showConversion("second", SECOND);
+
+  clock.now = TWELVE_HOURS_MILLISECONDS + 1;
+  host.playShown();
+  await settle();
+
+  expect(fetchedConversionIds).toEqual(["second"]);
+  expect(element.calls.slice(-2)).toEqual([
+    "src:https://example.com/Second/narration-track.mp3?token=renewed",
+    "play",
+  ]);
+});
+
+test("a unit tap that renews the track URL seeks to the unit once the renewed track is loaded", async () => {
+  const { host, element, clock } = createHost({
+    fetchAudiobook: () => Promise.resolve(withTrackUrl(FIRST, RENEWED_TRACK_URL)),
+  });
+  host.showConversion("first", FIRST);
+  element.loadMetadata(15);
+
+  clock.now = TWELVE_HOURS_MILLISECONDS + 1;
+  host.playShown(2);
+  await settle();
+  element.loadMetadata(15);
+
+  expect(element.calls.slice(1)).toEqual([
+    "currentTime:10",
+    `src:${RENEWED_TRACK_URL}`,
+    "play",
+    "currentTime:10",
+  ]);
+});
+
+test("a media error is shown, and Play renews the track URL and resumes at the same position", async () => {
+  const { host, element, player, fetchedConversionIds } = createHost({
+    fetchAudiobook: () => Promise.resolve(withTrackUrl(FIRST, RENEWED_TRACK_URL)),
+  });
   host.showConversion("first", FIRST);
   element.loadMetadata(15);
   host.play();
@@ -443,10 +551,103 @@ test("a media error is shown, and Play loads the track again at the same positio
   expect(player().getSnapshot()).toMatchObject({ isPlaying: false, error: MEDIA_ERROR_MESSAGE });
 
   host.play();
-  expect(element.calls.slice(-2)).toEqual(["load", "play"]);
+  await settle();
+
+  expect(fetchedConversionIds).toEqual(["first"]);
+  expect(element.calls.slice(-2)).toEqual([`src:${RENEWED_TRACK_URL}`, "play"]);
   expect(player().getSnapshot()).toMatchObject({ error: null, positionMilliseconds: 6_000 });
   element.loadMetadata(15);
   expect(element.calls.at(-1)).toBe("currentTime:6");
+});
+
+test("a refused renewal keeps playback stopped and shows an error", async () => {
+  const { host, element, player, clock } = createHost({
+    fetchAudiobook: () => Promise.reject(new Error("Forbidden")),
+  });
+  host.showConversion("first", FIRST);
+  element.loadMetadata(15);
+
+  clock.now = TWELVE_HOURS_MILLISECONDS + 1;
+  host.play();
+  await settle();
+
+  expect(element.calls).toEqual([`src:${FIRST_TRACK_URL}`]);
+  expect(player().getSnapshot()).toMatchObject({
+    isPlaying: false,
+    error: RENEWAL_ERROR_MESSAGE,
+  });
+});
+
+test("an audiobook response without a narration track refuses the renewal", async () => {
+  const { host, element, player, clock } = createHost({
+    fetchAudiobook: () =>
+      Promise.resolve(
+        withoutNarrationTrack(FIRST, [
+          ready(0),
+          { sequence: 1, status: "failed", explanation: "Rejected" },
+          ready(2),
+        ]),
+      ),
+  });
+  host.showConversion("first", FIRST);
+
+  clock.now = TWELVE_HOURS_MILLISECONDS + 1;
+  host.play();
+  await settle();
+
+  expect(element.calls).toEqual([`src:${FIRST_TRACK_URL}`]);
+  expect(player().getSnapshot().error).toBe(RENEWAL_ERROR_MESSAGE);
+});
+
+test("a play refused after the renewal leaves Play available", async () => {
+  const { host, element, player, fetchedConversionIds, clock } = createHost({
+    fetchAudiobook: () => Promise.resolve(withTrackUrl(FIRST, RENEWED_TRACK_URL)),
+  });
+  host.showConversion("first", FIRST);
+  element.loadMetadata(15);
+  clock.now = TWELVE_HOURS_MILLISECONDS + 1;
+  element.nextPlayError = new DOMException("Not allowed", "NotAllowedError");
+
+  host.play();
+  await settle();
+  expect(player().getSnapshot()).toMatchObject({ isPlaying: false, error: MEDIA_ERROR_MESSAGE });
+
+  host.play();
+  expect(element.calls.at(-1)).toBe("play");
+  expect(player().getSnapshot()).toMatchObject({ isPlaying: true, error: null });
+  expect(fetchedConversionIds).toEqual(["first"]);
+});
+
+test("Pause during a renewal keeps the track paused", async () => {
+  const { host, element, player, fetchedConversionIds, clock } = createHost({
+    fetchAudiobook: () => Promise.resolve(withTrackUrl(FIRST, RENEWED_TRACK_URL)),
+  });
+  host.showConversion("first", FIRST);
+  element.loadMetadata(15);
+
+  clock.now = TWELVE_HOURS_MILLISECONDS + 1;
+  host.play();
+  host.play();
+  host.pause();
+  await settle();
+
+  expect(fetchedConversionIds).toEqual(["first"]);
+  expect(element.calls).not.toContain("play");
+  expect(player().getSnapshot().isPlaying).toBe(false);
+});
+
+test("a renewal that completes after unloading plays nothing", async () => {
+  const { host, element, clock } = createHost({
+    fetchAudiobook: () => Promise.resolve(withTrackUrl(FIRST, RENEWED_TRACK_URL)),
+  });
+  host.showConversion("first", FIRST);
+
+  clock.now = TWELVE_HOURS_MILLISECONDS + 1;
+  host.play();
+  host.unload();
+  await settle();
+
+  expect(element.calls.slice(-2)).toEqual(["removeAttribute:src", "load"]);
 });
 
 test("a refused play is shown, and Play stays available", async () => {
