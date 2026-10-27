@@ -37,7 +37,10 @@ const PREPARED_AUDIOBOOK = {
   canGenerate: true,
   title: "Document",
   originalUrl: "https://example.com/source",
-  coverImage: { url: "https://example.com/cover-image", alternativeText: "Cover" },
+  coverImage: {
+    url: "https://example.com/cover-image?token=v1.payload.signature",
+    alternativeText: "Cover",
+  },
   narrationDocument: {
     html: "<article>Document</article>",
     synchronizationUnits: [{ id: "one", narrationText: "Document" }],

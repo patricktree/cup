@@ -229,6 +229,7 @@ const env = {
   SUPABASE_URL: "https://access-test.supabase.co",
   SUPABASE_PUBLISHABLE_KEY: "publishable-key",
   GOOGLE_WEB_CLIENT_ID: "google-client",
+  MEDIA_URL_SIGNING_KEY: "test-media-url-signing-key",
   ACCOUNTS: { idFromName: (name: string) => name, get: () => account },
   CONVERSION_GRANTS: { idFromName: (name: string) => name, get: () => grant },
   REGISTRY: {

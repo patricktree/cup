@@ -70,6 +70,7 @@ function fixture(state: GrantState = "open", hasCoverImage = true) {
   };
   const env = {
     SUPABASE_URL: "https://access-test.supabase.co",
+    MEDIA_URL_SIGNING_KEY: "test-media-url-signing-key",
     CONVERSION_GRANTS: { idFromName: (name: string) => name, get: () => grant },
     REGISTRY: {
       idFromName: (name: string) => name,
@@ -178,7 +179,10 @@ test("owning grant sessions can read the cover image the audiobook points to", a
     const headers = { Cookie: cookie, Origin: "https://localhost" };
     const audiobook = await app.request(origin + audiobookPath, { headers }, env);
     expect(await audiobook.json()).toMatchObject({
-      coverImage: { url: origin + coverImagePath, alternativeText: "A lighthouse" },
+      coverImage: {
+        url: expect.stringMatching(new RegExp(`^${origin + coverImagePath}\\?token=`)),
+        alternativeText: "A lighthouse",
+      },
     });
     for (const [method, extraHeaders, status, body] of [
       ["GET", {}, 200, [1, 2, 3]],

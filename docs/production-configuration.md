@@ -6,14 +6,15 @@ Use this guide to supply the production Worker's configuration and the provider 
 
 The [Worker configuration](../apps/cloudflare-worker/wrangler.jsonc) declares plain variables, including rate limits and the Supabase URL, and lists the required secrets. A [configuration test](../apps/cloudflare-worker/test/wrangler-config.test.ts) pins its custom domains, compatibility and asset settings, Durable Object and Workflow bindings, Durable Object migrations, required secrets, and observability settings, so changing them means updating that test deliberately. The API server's [environment contract](../libs/api-server/src/api-server-environment.ts) defines every value it reads. Supply secrets with Wrangler; they never belong in committed files or browser configuration.
 
-| Secret                     | Purpose                                               |
-| -------------------------- | ----------------------------------------------------- |
-| `SUPABASE_PUBLISHABLE_KEY` | Browser SDK configuration; intentionally public       |
-| `SUPABASE_SECRET_KEY`      | Server-only identity administration and deletion      |
-| `GOOGLE_WEB_CLIENT_ID`     | Web OAuth client and native Android ID-token audience |
-| `RESEND_API_KEY`           | Sending-only transactional email access               |
-| `CLOUDFLARE_API_KEY`       | AI Gateway access for narration content selection     |
-| `SOURCE_PAGE_COOKIES_JSON` | Cookies sent when visiting source pages               |
+| Secret                     | Purpose                                                                                                                                                                                            |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SUPABASE_PUBLISHABLE_KEY` | Browser SDK configuration; intentionally public                                                                                                                                                    |
+| `SUPABASE_SECRET_KEY`      | Server-only identity administration and deletion                                                                                                                                                   |
+| `GOOGLE_WEB_CLIENT_ID`     | Web OAuth client and native Android ID-token audience                                                                                                                                              |
+| `RESEND_API_KEY`           | Sending-only transactional email access                                                                                                                                                            |
+| `CLOUDFLARE_API_KEY`       | AI Gateway access for narration content selection                                                                                                                                                  |
+| `SOURCE_PAGE_COOKIES_JSON` | Cookies sent when visiting source pages                                                                                                                                                            |
+| `MEDIA_URL_SIGNING_KEY`    | Signs [signed media URLs](architecture/authentication.md#signed-media-url); a random value of at least 32 bytes, such as `openssl rand -base64 32`. Rotating it invalidates every outstanding URL. |
 
 The Worker's Resend key is sending-only; Terraform uses a separate management key.
 

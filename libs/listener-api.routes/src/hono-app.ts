@@ -6,6 +6,7 @@ import {
   retryConversionResponseSchema,
   scheduleDeletionResponseSchema,
   segmentParamsSchema,
+  signedMediaUrlQuerySchema,
   playbackPositionSchema,
   authConfigResponseSchema,
   accountSnapshotSchema,
@@ -372,7 +373,7 @@ const audioHeadRoute = createRoute({ ...audioRoute, method: "head" });
 const coverImageRoute = createRoute({
   method: "get",
   path: "/api/files/audiobooks/{conversionId}/cover-image",
-  request: { params: conversionParamsSchema },
+  request: { params: conversionParamsSchema, query: signedMediaUrlQuerySchema },
   responses: {
     200: {
       content: {
@@ -386,6 +387,8 @@ const coverImageRoute = createRoute({
     },
     304: { description: "Not modified." },
     400: errorResponse("Invalid request."),
+    401: errorResponse("Missing, invalid or expired authorization."),
+    403: errorResponse("Access blocked, or the grant expired or was revoked."),
     404: errorResponse("Cover image unavailable."),
   },
 });

@@ -4,7 +4,10 @@ import { analyzeMp3 } from "@cup/audiobook-production";
 
 import { getTrialSessionHeaders } from "#test-e2e/journey.ts";
 
-/** Follows the audiobook's cover image pointer and checks what the delivery route serves. */
+/**
+ * Follows the audiobook's cover image pointer, a signed media URL, and checks what the delivery
+ * route serves to it alone. Returns the route's URL without the token.
+ */
 export async function validateCoverImage({
   conversionId,
   origin,
@@ -21,10 +24,15 @@ export async function validateCoverImage({
   ).json();
   const coverImageUrl = `${origin}/api/files/audiobooks/${conversionId}/cover-image`;
   expect(audiobook).toMatchObject({
-    coverImage: { url: coverImageUrl, alternativeText: "A deterministic cover image" },
+    coverImage: {
+      url: expect.stringMatching(new RegExp(`^${coverImageUrl}\\?token=`)),
+      alternativeText: "A deterministic cover image",
+    },
   });
+  const signedCoverImageUrl = getCoverImageUrl(audiobook);
 
-  const imageResponse = await request.get(coverImageUrl, { headers });
+  // No session headers: the signed media URL authorizes the request by itself.
+  const imageResponse = await request.get(signedCoverImageUrl);
   expect(imageResponse.status()).toBe(200);
   expect(imageResponse.headers()["content-type"]).toBe("image/png");
   const image = await imageResponse.body();
@@ -36,12 +44,27 @@ export async function validateCoverImage({
   if (imageEtag === undefined) {
     throw new Error("Cover image response did not include an ETag");
   }
-  const unchangedImage = await request.get(coverImageUrl, {
-    headers: { ...headers, "If-None-Match": imageEtag },
+  const unchangedImage = await request.get(signedCoverImageUrl, {
+    headers: { "If-None-Match": imageEtag },
   });
   expect(unchangedImage.status()).toBe(304);
 
   return coverImageUrl;
+}
+
+function getCoverImageUrl(audiobook: unknown): string {
+  if (
+    typeof audiobook !== "object" ||
+    audiobook === null ||
+    !("coverImage" in audiobook) ||
+    typeof audiobook.coverImage !== "object" ||
+    audiobook.coverImage === null ||
+    !("url" in audiobook.coverImage) ||
+    typeof audiobook.coverImage.url !== "string"
+  ) {
+    throw new Error("The audiobook response has no cover image URL");
+  }
+  return audiobook.coverImage.url;
 }
 
 export async function validateAudioSegment({

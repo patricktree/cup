@@ -124,7 +124,12 @@ export const audioSegmentSchema = z.discriminatedUnion("status", [
   audioSegmentBaseSchema.extend({ status: z.literal("failed"), explanation: z.string() }),
 ]);
 export type AudioSegment = z.infer<typeof audioSegmentSchema>;
-/** Where to request the audiobook's cover image; the bytes are served with audio-file authorization. */
+/**
+ * The query of a media route under `/api/files`. `token` is the opaque, expiring authorization a
+ * signed media URL carries; requests without it fall back to the media cookie or a bearer token.
+ */
+export const signedMediaUrlQuerySchema = z.object({ token: z.string().optional() });
+/** Where to request the audiobook's cover image: a signed media URL. */
 export const coverImageSchema = z.object({
   url: z.url(),
   alternativeText: z.string().min(1).optional(),
@@ -192,6 +197,7 @@ export const ERROR_CODE = {
   INGRESS_UNAVAILABLE: "ingress-unavailable",
   INVALID_CREDENTIAL: "invalid-credential",
   INVALID_INPUT: "invalid-input",
+  MEDIA_URL_INVALID: "media-url-invalid",
   METHOD_NOT_ALLOWED: "method-not-allowed",
   NOT_FOUND: "not-found",
   OPERATIONAL_ERROR: "operational-error",

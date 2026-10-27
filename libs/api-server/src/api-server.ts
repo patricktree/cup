@@ -5,7 +5,7 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { Temporal } from "temporal-polyfill";
 
 import { countNarrationTextCharactersBySegment } from "@cup/audiobook-production";
-import { derivePreparedConversionStatus } from "@cup/conversion-contracts";
+import { derivePreparedConversionStatus, type ConversionOwner } from "@cup/conversion-contracts";
 import {
   clearGrantSessionCookie,
   createGrantSessionCookie,
@@ -13,6 +13,7 @@ import {
   getGrantSessionCookie,
   toGrantConversionSnapshot,
   type ConversionGrantDurableObject,
+  type GrantState,
 } from "@cup/conversion-grants";
 import { assertUnreachable, findRootCauseDescription, findRootCauseMessage } from "@cup/errors";
 import {
@@ -55,6 +56,11 @@ import {
   serveAudio,
   serveCoverImage,
 } from "#src/http/serve-audiobook.ts";
+import {
+  signMediaUrl,
+  verifyMediaUrlToken,
+  type MediaUrlPrincipal,
+} from "#src/http/signed-media-url.ts";
 import { applyWebAppCspNonce } from "#src/http/web-app-csp.ts";
 import { createConversionGrant } from "#src/use-cases/create-conversion-grant.ts";
 import { getGrantConversion as loadGrantConversion } from "#src/use-cases/get-grant-conversion.ts";
@@ -730,7 +736,14 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
           ? {}
           : {
               coverImage: {
-                url: `${new URL(context.req.url).origin}/api/files/audiobooks/${conversionId}/cover-image`,
+                url: await signMediaUrl({
+                  url: `${new URL(context.req.url).origin}/api/files/audiobooks/${conversionId}/cover-image`,
+                  conversionId,
+                  // The ownership middleware admitted this request for the owner alone.
+                  principal: owner,
+                  signingKey: context.env.MEDIA_URL_SIGNING_KEY,
+                  issuedAtMs: Temporal.Now.instant().epochMilliseconds,
+                }),
                 ...(audiobook.coverImage.alternativeText === undefined
                   ? {}
                   : { alternativeText: audiobook.coverImage.alternativeText }),
@@ -1339,7 +1352,8 @@ export function createApiServer(dependencies: ApiServerDependencies = production
   for (const path of ["/api/audiobooks/*", "/api/files/audiobooks/*"]) {
     app.use(path, async (context, next) => {
       const origin = context.req.header("Origin");
-      if (origin === "https://localhost" || origin === APPLICATION_ORIGIN) {
+      const isApplicationOrigin = origin === "https://localhost" || origin === APPLICATION_ORIGIN;
+      if (isApplicationOrigin) {
         context.header("Access-Control-Allow-Origin", origin);
         context.header("Access-Control-Allow-Credentials", "true");
         context.header("Vary", "Origin");
@@ -1357,6 +1371,26 @@ export function createApiServer(dependencies: ApiServerDependencies = production
       }
       const registry = getRegistryStub(context.env);
       const owner = await registry.findConversionOwner(conversionId);
+      const signedMediaUrl = isFile
+        ? await authorizeSignedMediaUrl(
+            context.env,
+            context.req.url,
+            conversionId,
+            owner,
+            context.get("requestId"),
+          )
+        : ({ result: "absent" } as const);
+      if (signedMediaUrl.result === "denied") {
+        return signedMediaUrl.response;
+      }
+      if (signedMediaUrl.result === "authorized") {
+        await next();
+        if (!isApplicationOrigin) {
+          context.header("Access-Control-Allow-Origin", undefined);
+        }
+        context.header("Cross-Origin-Resource-Policy", "same-origin");
+        return;
+      }
       if (owner?.kind === "trial") {
         const denied = await requireActiveTrialAudiobookSession(
           context.env,
@@ -1368,7 +1402,7 @@ export function createApiServer(dependencies: ApiServerDependencies = production
           return denied;
         }
         await next();
-        if (origin === "https://localhost" || origin === APPLICATION_ORIGIN) {
+        if (isApplicationOrigin) {
           context.header("Access-Control-Allow-Origin", origin);
           context.header("Access-Control-Allow-Credentials", "true");
           context.header("Vary", "Origin");
@@ -1398,7 +1432,7 @@ export function createApiServer(dependencies: ApiServerDependencies = production
         );
       }
       await next();
-      if (origin !== "https://localhost" && origin !== APPLICATION_ORIGIN) {
+      if (!isApplicationOrigin) {
         context.header("Access-Control-Allow-Origin", undefined);
       }
       context.header("Cross-Origin-Resource-Policy", "same-origin");
@@ -1560,17 +1594,104 @@ async function requireActiveTrialAudiobookSession(
       401,
     );
   }
-  if (auth.snapshot.state === "expired" || auth.snapshot.state === "revoked") {
+  return requireAccessibleGrantState(auth.snapshot.state, requestId);
+}
+
+function requireAccessibleGrantState(state: GrantState, requestId: string): Response | undefined {
+  if (state === "expired" || state === "revoked") {
     return jsonError(
       requestId,
-      `grant-${auth.snapshot.state}`,
-      auth.snapshot.state === "expired"
+      `grant-${state}`,
+      state === "expired"
         ? "This trial has expired. Its audiobooks are no longer accessible."
         : "This trial has been revoked. Its audiobooks are no longer accessible.",
       403,
     );
   }
   return undefined;
+}
+
+type SignedMediaUrlAuthorization =
+  | { result: "absent" }
+  | { result: "denied"; response: Response }
+  | { result: "authorized" };
+
+/**
+ * Authorizes a media request by its signed media URL token, for any route under
+ * `/api/files/audiobooks/{conversionId}/`. Without a token, the request falls back to the other
+ * media credentials. Without an owner, the route answers its own not-found response.
+ */
+async function authorizeSignedMediaUrl(
+  env: ApiServerEnvironment,
+  requestUrl: string,
+  conversionId: string,
+  owner: ConversionOwner | undefined,
+  requestId: string,
+): Promise<SignedMediaUrlAuthorization> {
+  const token = await verifyMediaUrlToken({
+    requestUrl,
+    conversionId,
+    signingKey: env.MEDIA_URL_SIGNING_KEY,
+    nowMs: Temporal.Now.instant().epochMilliseconds,
+  });
+  if (token.result === "absent") {
+    return { result: "absent" };
+  }
+  if (token.result === "invalid") {
+    return {
+      result: "denied",
+      response: jsonError(
+        requestId,
+        "media-url-invalid",
+        "The media URL is invalid or expired. Reload the audiobook.",
+        401,
+      ),
+    };
+  }
+  if (!owner) {
+    return { result: "authorized" };
+  }
+  const denied = await requireSignedMediaAccess(env, owner, token.principal, requestId);
+  return denied ? { result: "denied", response: denied } : { result: "authorized" };
+}
+
+/**
+ * Runs the authoritative checks behind a signed media URL whose signature and expiry are valid: the
+ * principal must still own the audiobook, as an active account or an unexpired, unrevoked grant.
+ * Denials answer as the same request with the account's or grant's own credentials would.
+ */
+async function requireSignedMediaAccess(
+  env: ApiServerEnvironment,
+  owner: ConversionOwner,
+  principal: MediaUrlPrincipal,
+  requestId: string,
+): Promise<Response | undefined> {
+  if (owner.kind === "account") {
+    if (principal.kind !== "account" || principal.accountId !== owner.accountId) {
+      return jsonError(requestId, "audiobook-not-found", "Audiobook not found.", 404);
+    }
+    const account = env.ACCOUNTS.get(env.ACCOUNTS.idFromName(owner.accountId));
+    if ((await account.inspect()).state !== "active") {
+      return accountAuthError("blocked", requestId);
+    }
+    return undefined;
+  }
+
+  if (principal.kind !== "trial" || principal.grantId !== owner.grantId) {
+    return jsonError(
+      requestId,
+      "grant-session-required",
+      "Open the original trial link to access this audiobook.",
+      401,
+    );
+  }
+  let grantState: GrantState;
+  try {
+    grantState = (await getGrantStub(env, owner.grantId).inspect()).state;
+  } catch {
+    return jsonError(requestId, "operational-error", "The grant could not be loaded.", 500);
+  }
+  return requireAccessibleGrantState(grantState, requestId);
 }
 
 function requireBrowserMutation(request: Request, requestId: string): Response | undefined {

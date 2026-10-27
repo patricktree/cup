@@ -1,5 +1,5 @@
 import { Command, CommanderError } from "@commander-js/extra-typings";
-import { generateKeyPairSync, randomUUID } from "node:crypto";
+import { generateKeyPairSync, randomBytes, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -135,6 +135,9 @@ async function run(action: "start" | "stop") {
       SUPABASE_PUBLISHABLE_KEY: status.ANON_KEY,
       SUPABASE_SECRET_KEY: status.SERVICE_ROLE_KEY,
       GOOGLE_WEB_CLIENT_ID: clientId,
+      // Kept across restarts so that signed media URLs issued earlier stay valid.
+      MEDIA_URL_SIGNING_KEY:
+        workerEnv["MEDIA_URL_SIGNING_KEY"] ?? randomBytes(32).toString("base64url"),
       LOCAL_DEVELOPMENT: "true",
     };
     await fs.mkdir(path.dirname(backupPath), { recursive: true });

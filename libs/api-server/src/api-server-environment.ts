@@ -10,6 +10,8 @@ export type ApiServerEnvironment = {
   GOOGLE_WEB_CLIENT_ID: string;
   SUPABASE_URL: string;
   SUPABASE_SECRET_KEY: string;
+  // Signs the stateless tokens of signed media URLs; rotating it invalidates every outstanding URL.
+  MEDIA_URL_SIGNING_KEY: string;
   ACCOUNTS: DurableObjectNamespace<AccountDurableObject>;
   REGISTRY: DurableObjectNamespace<RegistryDurableObject>;
   PREPARE_AUDIOBOOK_WORKFLOW: Workflow<ConversionParams>;

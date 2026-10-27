@@ -34,6 +34,7 @@ export const ERROR_CODE = {
   INGRESS_UNAVAILABLE: "ingress-unavailable",
   INVALID_CREDENTIAL: "invalid-credential",
   INVALID_INPUT: "invalid-input",
+  MEDIA_URL_INVALID: "media-url-invalid",
   METHOD_NOT_ALLOWED: "method-not-allowed",
   NOT_FOUND: "not-found",
   OPERATIONAL_ERROR: "operational-error",

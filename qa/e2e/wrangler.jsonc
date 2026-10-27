@@ -55,6 +55,7 @@
     "SUPABASE_PUBLISHABLE_KEY": "qa-key",
     "SUPABASE_SECRET_KEY": "qa-admin",
     "GOOGLE_WEB_CLIENT_ID": "qa-google-client",
+    "MEDIA_URL_SIGNING_KEY": "qa-media-url-signing-key",
     "OPERATOR_ACCESS_ISSUER": "https://access.example.test",
     "OPERATOR_ACCESS_AUDIENCE": "qa-operator",
     "OPERATOR_EMAIL": "operator@example.test",
