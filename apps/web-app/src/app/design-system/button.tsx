@@ -57,7 +57,7 @@ export const DSButton: React.FC<DSButtonProps> = ({
           }
 
           &[data-variant="contained"] {
-            color: var(--color-input-bg);
+            color: var(--color-surface);
             background-color: var(--color-primary);
           }
         `,

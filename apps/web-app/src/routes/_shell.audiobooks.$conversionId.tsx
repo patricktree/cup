@@ -1,14 +1,19 @@
 import { css } from "@linaria/core";
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
-import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, type ErrorComponentProps } from "@tanstack/react-router";
-import { ArrowLeft, Play } from "lucide-react";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute, type ErrorComponentProps } from "@tanstack/react-router";
 import React from "react";
 
-import { ErrorMessage } from "#src/app/components/error-message.js";
+import { DetailTopBar } from "#src/app/components/detail-top-bar.js";
+import type { DetailBackTarget } from "#src/app/components/detail-top-bar.js";
+import { fadeFooterClearance } from "#src/app/components/fade-footer.js";
 import { ShellContent } from "#src/app/components/main.tsx";
+import { PLAYER_SHEET_HEIGHTS, PlayerSheet } from "#src/app/components/player-sheet.js";
 import { QueryBoundary, QueryErrorScreen } from "#src/app/components/query-boundary.js";
 import { DSButton } from "#src/app/design-system/button.js";
+import { DSCoverImage } from "#src/app/design-system/cover-image.js";
+import { textStyles } from "#src/app/design-system/text-styles.js";
+import { interTypefaceScope } from "#src/app/global-styles.js";
 import { formatDuration } from "#src/app/player/playback-format.js";
 import type { PreparedAudiobook } from "#src/app/player/playback-session.js";
 import {
@@ -17,77 +22,183 @@ import {
   useShownConversion,
 } from "#src/app/player/player-host-provider.js";
 import type { LoadedAudiobook } from "#src/app/player/player-host.js";
+import { toPreparationPhaseLabel } from "#src/app/preparation-phase-label.js";
+import { toSourceHost } from "#src/app/source-host.js";
 import { composeClassnames } from "#src/app/utils.ts";
 import { useAccountSession } from "#src/auth/hooks.js";
 import { createAudiobookQuery, useRetryConversion } from "#src/data-fetching/reader.js";
 
 export const Route = createFileRoute("/_shell/audiobooks/$conversionId")({
-  component: AudiobookBoundary,
+  component: AudiobookRoute,
 });
 
-function AudiobookBoundary() {
+type RetryMutation = ReturnType<typeof useRetryConversion>;
+
+function AudiobookRoute() {
+  const { conversionId } = Route.useParams();
   // Outside the boundary, so the page counts as shown while it loads, fails, or is still preparing.
-  useShownConversion(Route.useParams().conversionId);
+  useShownConversion(conversionId);
 
   return (
-    <ShellContent
-      headerContent={<BackLink />}
-      mainContent={
-        <QueryBoundary pending={<ReaderSkeleton />} errorComponent={ReaderQueryError}>
-          <AudiobookPage />
-        </QueryBoundary>
+    <QueryBoundary
+      pending={
+        <DetailLayout topBar={<PlainTopBar />} statusLine={toPreparationPhaseLabel(undefined)}>
+          <PreparationView />
+        </DetailLayout>
       }
-    ></ShellContent>
+      errorComponent={ReaderQueryError}
+    >
+      {/* Another audiobook starts with a fresh retry outcome and its title in view. */}
+      <AudiobookPage key={conversionId} conversionId={conversionId} />
+    </QueryBoundary>
   );
 }
 
-function ReaderQueryError(props: ErrorComponentProps) {
-  return <QueryErrorScreen {...props} fallbackTitle="The article could not be loaded." />;
+/** Every detail view has the player sheet, disabled until the shown audiobook can play. */
+function DetailLayout({
+  topBar,
+  statusLine = "",
+  children,
+}: {
+  topBar: React.ReactNode;
+  /** The status line above the scrubber: the preparation phase or the synthesis progress. */
+  statusLine?: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <>
+      <ShellContent
+        headerContent={topBar}
+        mainContent={<div {...interTypefaceScope}>{children}</div>}
+        mainPaddingBlockEnd={fadeFooterClearance(PLAYER_SHEET_HEIGHTS)}
+      />
+      <PlayerSheet statusLine={statusLine} />
+    </>
+  );
 }
 
-function AudiobookPage(): React.JSX.Element {
-  const { conversionId } = Route.useParams();
-  const session = useAccountSession();
-  const query = useSuspenseQuery(createAudiobookQuery(conversionId));
-  const retry = useRetryConversion(conversionId, useQueryClient());
+/** The top bar before the audiobook has loaded: Back only. */
+function PlainTopBar() {
+  return <DetailTopBar backTo={useBackTarget()} compactTitle={undefined} menu={undefined} />;
+}
 
-  if (query.data.status === "pending") {
-    return <ReaderSkeleton />;
+/** Only accounts have Recents; trial listeners return to the start. */
+function useBackTarget(): DetailBackTarget {
+  return useAccountSession() ? "/recent" : "/";
+}
+
+function ReaderQueryError(props: ErrorComponentProps) {
+  return (
+    <DetailLayout topBar={<PlainTopBar />}>
+      <QueryErrorScreen {...props} fallbackTitle="The track could not be loaded." />
+    </DetailLayout>
+  );
+}
+
+function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.Element {
+  const session = useAccountSession();
+  const backTo = useBackTarget();
+  const { data: audiobook } = useSuspenseQuery(createAudiobookQuery(conversionId));
+  // The top bar's "…" menu and the page's Retry buttons share one mutation, so a refused retry is
+  // reported in the notices wherever it was started.
+  const retry = useRetryConversion(conversionId, useQueryClient());
+  const [isTitleScrolledAway, setIsTitleScrolledAway] = React.useState(false);
+
+  const topBar = (
+    <DetailTopBar
+      backTo={backTo}
+      compactTitle={
+        isTitleScrolledAway && "title" in audiobook
+          ? { title: audiobook.title, host: toSourceHost(audiobook.originalUrl) }
+          : undefined
+      }
+      menu={{
+        originalUrl: audiobook.originalUrl,
+        retry: audiobook.canGenerate
+          ? { isPending: retry.isPending, start: () => retry.mutate() }
+          : undefined,
+      }}
+    />
+  );
+
+  if (audiobook.status === "pending") {
+    return (
+      <DetailLayout
+        topBar={topBar}
+        statusLine={toPreparationPhaseLabel(audiobook.preparationPhase)}
+      >
+        <PreparationView />
+      </DetailLayout>
+    );
   }
 
-  if (query.data.status === "failed") {
+  if (audiobook.status === "failed") {
     return (
-      <ErrorMessage title="The article could not be prepared.">
-        <p>{query.data.explanation}</p>
-        <DSButton
-          disabled={retry.isPending || !query.data.canGenerate}
-          onClick={() => retry.mutate()}
+      <DetailLayout topBar={topBar}>
+        <section
+          className={css`
+            display: grid;
+            gap: var(--spacing-gutter);
+            justify-items: start;
+          `}
         >
-          Retry
-        </DSButton>
-      </ErrorMessage>
+          <h1 className={textStyles.h2}>{toSourceHost(audiobook.originalUrl)}</h1>
+          <h2 className={textStyles.h5}>This track could not be prepared.</h2>
+          <p
+            className={composeClassnames(
+              textStyles.paragraph,
+              css`
+                color: var(--color-ink-60);
+              `,
+            )}
+          >
+            {audiobook.explanation}
+          </p>
+          <DSButton
+            disabled={retry.isPending || !audiobook.canGenerate}
+            onClick={() => retry.mutate()}
+          >
+            Retry
+          </DSButton>
+        </section>
+      </DetailLayout>
     );
   }
 
   return (
-    <PreparedReader
-      key={`${conversionId}:${session?.user.id ?? "anonymous"}`}
-      conversionId={conversionId}
-      audiobook={query.data}
-    />
+    <DetailLayout
+      topBar={topBar}
+      statusLine={
+        audiobook.status === "synthesizing"
+          ? `Generating audio, ${audiobook.segments.filter((segment) => segment.status === "ready").length} of ${formatSegmentCount(audiobook.segments.length)} ready`
+          : ""
+      }
+    >
+      <PreparedReader
+        key={session?.user.id ?? "anonymous"}
+        conversionId={conversionId}
+        audiobook={audiobook}
+        retry={retry}
+        onTitleScrolledAwayChange={setIsTitleScrolledAway}
+      />
+    </DetailLayout>
   );
 }
 
 /**
- * Shows the narration document. Its audio plays in the shell's player, whose host loads the
- * audiobook once it has a narration track; only then can Play or a segment tap start it.
+ * Shows the narration document. Its audio plays in the shell's player, which the player sheet
+ * controls; once the audiobook has a narration track, a segment tap plays from that segment.
  */
 function PreparedReader({
   conversionId,
   audiobook,
+  retry,
+  onTitleScrolledAwayChange,
 }: {
   conversionId: string;
   audiobook: PreparedAudiobook;
+  retry: RetryMutation;
+  onTitleScrolledAwayChange: (isScrolledAway: boolean) => void;
 }) {
   const playback = useShownAudiobook(conversionId, audiobook);
   const { loaded, canPlay } = playback;
@@ -103,24 +214,19 @@ function PreparedReader({
 
   return (
     <>
-      {/* The player below the page has the controls of the loaded audiobook. */}
-      {loaded ? null : (
-        <div
+      {audiobook.coverImage ? (
+        <DSCoverImage
+          src={audiobook.coverImage.url}
+          alt={audiobook.coverImage.alternativeText ?? ""}
           className={css`
-            display: flex;
-            align-items: center;
-            margin-block-end: var(--spacing-base);
+            margin-block-end: calc(2 * var(--spacing-gutter));
           `}
-        >
-          <DSButton variant="text" aria-label="Play" disabled={!canPlay} onClick={playback.play}>
-            <Play size={48} />
-          </DSButton>
-        </div>
-      )}
+        />
+      ) : null}
 
       <ReaderNotices
-        conversionId={conversionId}
         audiobook={audiobook}
+        retry={retry}
         failedUnitIndexes={failedUnitIndexes}
         hasAudio={hasAudio}
       />
@@ -130,6 +236,7 @@ function PreparedReader({
         audiobook={audiobook}
         failedUnitIndexes={failedUnitIndexes}
         onSelectUnit={canPlay ? playback.playFromUnit : undefined}
+        onTitleScrolledAwayChange={onTitleScrolledAwayChange}
       />
       {loaded ? (
         <CurrentSegmentHighlight
@@ -144,17 +251,16 @@ function PreparedReader({
 
 /** Explains why audio is missing, and offers to retry its synthesis. */
 function ReaderNotices({
-  conversionId,
   audiobook,
+  retry,
   failedUnitIndexes,
   hasAudio,
 }: {
-  conversionId: string;
   audiobook: PreparedAudiobook;
+  retry: RetryMutation;
   failedUnitIndexes: readonly number[];
   hasAudio: boolean;
 }) {
-  const retry = useRetryConversion(conversionId, useQueryClient());
   const hasFailedSegments = audiobook.status === "ready" && failedUnitIndexes.length > 0;
 
   const retryButton = (
@@ -179,24 +285,14 @@ function ReaderNotices({
     <>
       {retryOutcomeNotice}
 
-      {audiobook.status === "synthesizing" ? (
-        <ReaderNotice>
-          <output>
-            Generating audio…{" "}
-            {audiobook.segments.filter((segment) => segment.status === "ready").length} of{" "}
-            {formatSegmentCount(audiobook.segments.length)} ready
-          </output>
-        </ReaderNotice>
-      ) : null}
-
       {audiobook.status === "insufficient-duration" ? (
         <ReaderNotice>
           {audiobook.availableMilliseconds >= audiobook.requiredMilliseconds ? (
             // Duration was freed since generation was refused; nothing starts until Retry.
-            <p>Audio has not been generated for this article yet.</p>
+            <p>Audio has not been generated for this track yet.</p>
           ) : (
             <p>
-              Not enough audio duration for this article. It needs about{" "}
+              Not enough audio duration for this track. It needs about{" "}
               {formatDuration(audiobook.requiredMilliseconds)}, and{" "}
               {formatDuration(audiobook.availableMilliseconds)} is available.
             </p>
@@ -211,7 +307,7 @@ function ReaderNotices({
           <p>
             {hasAudio
               ? `Audio could not be generated for ${formatSegmentCount(failedUnitIndexes.length)}, marked in the text.`
-              : "Audio could not be generated for this article."}
+              : "Audio could not be generated for this track."}
           </p>
           {retryButton}
         </ReaderNotice>
@@ -253,14 +349,92 @@ function NarrationDocument({
   audiobook,
   failedUnitIndexes,
   onSelectUnit,
+  onTitleScrolledAwayChange,
 }: {
   ref: React.RefObject<HTMLDivElement | null>;
   audiobook: PreparedAudiobook;
   failedUnitIndexes: readonly number[];
   onSelectUnit?: ((unitIndex: number) => void) | undefined;
+  onTitleScrolledAwayChange: (isScrolledAway: boolean) => void;
 }) {
   const units = audiobook.narrationDocument.synchronizationUnits;
   const isSelectable = onSelectUnit !== undefined;
+  const sourceHost = toSourceHost(audiobook.originalUrl);
+
+  React.useEffect(
+    function insertSourceHostBelowTitle() {
+      const narrationDocumentElement = narrationDocumentElementRef.current;
+      check.assert(narrationDocumentElement);
+
+      const title = findTitle(narrationDocumentElement, units);
+      const host = document.createElement("p");
+      host.dataset["sourceHost"] = "";
+      host.className = textStyles.tagline;
+      host.textContent = sourceHost;
+      title.after(host);
+
+      return () => host.remove();
+    },
+    // A changed document is rendered anew, which drops the host.
+    [sourceHost, units, narrationDocumentElementRef],
+  );
+
+  React.useLayoutEffect(
+    function applyHeadingTextStyles() {
+      const narrationDocumentElement = narrationDocumentElementRef.current;
+      check.assert(narrationDocumentElement);
+
+      const title = findTitle(narrationDocumentElement, units);
+      const subheadings = narrationDocumentElement.querySelectorAll("h2, h3, h4, h5, h6");
+      title.classList.add(textStyles.h2);
+      for (const subheading of subheadings) {
+        subheading.classList.add(textStyles.h4);
+      }
+
+      return () => {
+        title.classList.remove(textStyles.h2);
+        for (const subheading of subheadings) {
+          subheading.classList.remove(textStyles.h4);
+        }
+      };
+    },
+    // A changed document is rendered anew, which drops the classes.
+    [units, narrationDocumentElementRef],
+  );
+
+  const reportTitleScrolledAway = React.useEffectEvent((isScrolledAway: boolean) =>
+    onTitleScrolledAwayChange(isScrolledAway),
+  );
+
+  React.useEffect(
+    function observeTitleVisibility() {
+      const narrationDocumentElement = narrationDocumentElementRef.current;
+      check.assert(narrationDocumentElement);
+
+      const title = findTitle(narrationDocumentElement, units);
+      // Only a title above the shell's <main> is scrolled away. A large cover on a short screen can
+      // start it below the visible part, so the root reaches far below <main> and the title counts
+      // as intersecting there.
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry) {
+            reportTitleScrolledAway(!entry.isIntersecting);
+          }
+        },
+        {
+          root: narrationDocumentElement.closest("main"),
+          rootMargin: `0px 0px ${TITLE_OBSERVER_BOTTOM_MARGIN_PIXELS}px 0px`,
+        },
+      );
+      observer.observe(title);
+
+      return () => {
+        observer.disconnect();
+        reportTitleScrolledAway(false);
+      };
+    },
+    [units, narrationDocumentElementRef],
+  );
 
   React.useEffect(
     function markSegmentsWithoutAudio() {
@@ -326,84 +500,106 @@ function NarrationDocument({
   return (
     <div
       ref={narrationDocumentElementRef}
-      className={composeClassnames(css`
-        & > article > * {
-          margin-block-end: calc(2 * var(--spacing-base));
-        }
+      className={composeClassnames(
+        textStyles.paragraph,
+        css`
+          color: var(--color-ink-60);
 
-        [id]:has(> [data-segment-control]) {
-          /* "anchor" for the absolutely-positioned play-segment buttons */
-          position: relative;
-        }
+          & > article > * {
+            /* one blank line between blocks, as drawn */
+            margin-block-end: var(--line-height-paragraph);
+          }
 
-        [data-segment-control] {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          padding: 0;
-          cursor: pointer;
-          background: transparent;
-          border: 0;
-          border-radius: 0;
-        }
+          /* the title and the host inserted below it open the page as drawn */
+          /* the title and headings take the h2 and h4 text styles from applyHeadingTextStyles */
+          & > article > h1 {
+            margin-block-end: var(--spacing-gutter);
+            color: var(--color-ink);
+          }
 
-        [aria-current="true"] {
-          font-weight: var(--font-weight-inter-figma-medium);
-        }
+          & > article > [data-source-host] {
+            color: var(--color-ink-40);
+          }
 
-        [data-synthesis-failed] {
-          padding-inline-start: var(--spacing-base);
-          color: var(--color-fg-emphasized-sm);
-          border-inline-start: 3px solid var(--color-error);
-        }
-      `)}
+          [id]:has(> [data-segment-control]) {
+            /* "anchor" for the absolutely-positioned play-segment buttons */
+            position: relative;
+          }
+
+          [data-segment-control] {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            cursor: pointer;
+            background: transparent;
+            border: 0;
+            border-radius: inherit;
+          }
+
+          [aria-current="true"] {
+            color: var(--color-ink);
+            background-color: var(--color-ink-8);
+
+            /*
+              The highlight extends 12 px past the text on every side without moving it; the spread
+              grows the 12 px radius to the drawn 24 px.
+            */
+            border-radius: var(--spacing-gutter);
+            box-shadow: 0 0 0 var(--spacing-gutter) var(--color-ink-8);
+          }
+
+          [data-synthesis-failed] {
+            padding-inline-start: var(--spacing-base);
+            border-inline-start: 3px solid var(--color-error);
+          }
+        `,
+      )}
       dangerouslySetInnerHTML={{ __html: audiobook.narrationDocument.html }}
     />
   );
 }
 
-function BackLink() {
-  const session = useAccountSession();
+/** Far more than any screen, so a title below the visible part of the page never counts as gone. */
+const TITLE_OBSERVER_BOTTOM_MARGIN_PIXELS = 100_000;
 
-  return (
-    <div
-      className={css`
-        display: inline-flex;
-        gap: var(--spacing-base);
-        align-items: center;
-      `}
-    >
-      {/* Only accounts have a conversion history; trial listeners return to the start. */}
-      <Link
-        to={session ? "/history" : "/"}
-        aria-label={session ? "Back to history" : "Back to home"}
-      >
-        <ArrowLeft size="1em" />
-      </Link>
-    </div>
-  );
+/** Every narration document opens with its title as its first unit, which is narrated too. */
+function findTitle(
+  narrationDocumentElement: HTMLElement,
+  units: PreparedAudiobook["narrationDocument"]["synchronizationUnits"],
+): Element {
+  const title = narrationDocumentElement.querySelector(`[id="${units[0]?.id ?? ""}"]`);
+  check.assert(title, "The narration document has no title.");
+  return title;
 }
 
+/** Notices that explain missing audio, in the reader's flow above the text. */
 function ReaderNotice({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className={css`
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--spacing-base);
-        align-items: center;
-        padding: calc(1.5 * var(--spacing-base));
-        margin-block-end: calc(2 * var(--spacing-base));
+      className={composeClassnames(
+        textStyles.h5,
+        css`
+          display: flex;
+          flex-wrap: wrap;
+          gap: var(--spacing-gutter);
+          align-items: center;
+          padding: var(--spacing-gutter) calc(2 * var(--spacing-gutter));
+          margin-block-end: calc(2 * var(--spacing-gutter));
 
-        font-size: var(--font-size-sm);
-        border: 1px solid var(--color-fg-emphasized-xs);
-        border-radius: var(--border-radius-sm);
+          /* the h5 size and line height at the regular weight; notices are undrawn */
+          font-weight: 400;
 
-        p {
-          flex: 1 1 100%;
-        }
-      `}
+          background-color: var(--color-surface);
+          border: 1px solid var(--color-ink-4);
+          border-radius: var(--border-radius-lg);
+
+          p {
+            flex: 1 1 100%;
+          }
+        `,
+      )}
     >
       {children}
     </div>
@@ -414,34 +610,35 @@ function formatSegmentCount(count: number) {
   return `${count} ${count === 1 ? "segment" : "segments"}`;
 }
 
-function ReaderSkeleton() {
+/** Shown while the audiobook loads or its conversion is still preparing. */
+function PreparationView(): React.JSX.Element {
   return (
-    <section aria-busy="true" aria-label="Preparing article">
+    <section aria-busy="true" aria-label="Preparing track">
       <div
         aria-hidden="true"
         className={css`
-          max-width: 70ch;
-          div,
-          p {
-            background: hsl(var(--color-black-hsl) / 12%);
-            border-radius: 6px;
+          display: grid;
+          gap: var(--spacing-gutter);
+
+          & > div {
+            height: 24px;
+            background-color: var(--color-placeholder);
+            border-radius: var(--border-radius-full);
           }
-          div {
-            width: 65%;
-            height: 40px;
-            margin-bottom: 32px;
-          }
-          p {
-            height: 96px;
-            margin-bottom: 24px;
+
+          & > div:first-child {
+            height: auto;
+            aspect-ratio: 5 / 3;
+            margin-block-end: calc(2 * var(--spacing-gutter));
+            border-radius: var(--border-radius-lg);
           }
         `}
       >
         <div />
-        <p />
-        <p />
-        <p />
-        <p />
+        <div />
+        <div />
+        <div />
+        <div />
       </div>
     </section>
   );

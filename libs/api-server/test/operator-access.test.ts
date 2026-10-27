@@ -57,6 +57,7 @@ const inspection: {
         sourceUrl: "https://example.com/book",
         createdAtMs: 1,
         status: "ready",
+        lastStartedPhase: "finalization",
         completedAtMs: 2,
         outcome: {
           status: "ready",
@@ -76,6 +77,7 @@ const inspection: {
         sourceUrl: "https://example.com/partly-synthesized",
         createdAtMs: 1,
         status: "synthesizing",
+        lastStartedPhase: "finalization",
         completedAtMs: 2,
         outcome: {
           status: "ready",
@@ -94,6 +96,7 @@ const inspection: {
         sourceUrl: "https://example.com/over-allowance",
         createdAtMs: 1,
         status: "insufficient-duration",
+        lastStartedPhase: "finalization",
         completedAtMs: 2,
         outcome: {
           status: "ready",

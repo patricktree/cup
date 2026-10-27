@@ -61,8 +61,9 @@ export type PlayerHostServices = {
 };
 
 /**
- * How old a track URL may be before Play renews it. The signed URL expires 24 hours after the
- * server issued it, by the server clock; half of that tolerates a skewed client clock.
+ * How old a track URL may be before Play renews it. The signed URL stays valid for at least 24
+ * hours after the server handed it out, by the server clock; half of that tolerates a skewed client
+ * clock.
  */
 const TRACK_URL_RENEWAL_AGE_MILLISECONDS = 12 * 60 * 60 * 1_000;
 const RENEWAL_ERROR_MESSAGE = "The audio could not be loaded again. Press Play to try again.";
@@ -180,23 +181,46 @@ export class PlayerHost {
     this.snapshot.loaded?.player.pause();
   };
 
+  /** Pauses the loaded audiobook while it plays, and plays it otherwise, from a user gesture. */
+  togglePlayback = () => {
+    if (this.element.paused) {
+      this.play();
+    } else {
+      this.pause();
+    }
+  };
+
   /**
    * Plays the shown audiobook, optionally from the start of a unit, loading it first when another
    * one is loaded. Must be called from a user gesture, like `play`.
    */
   playShown = (unitIndex?: number) => {
+    const player = this.loadShown();
+    if (!player) {
+      return;
+    }
+
+    if (unitIndex !== undefined) {
+      player.seekToUnit(unitIndex);
+    }
+    this.play();
+  };
+
+  /**
+   * Loads the shown audiobook, paused, when another one is loaded, and returns its player, so the
+   * player sheet can seek it before it plays. Returns `null` while the shown audiobook has no
+   * narration track.
+   */
+  loadShown = (): Player | null => {
     const { shown } = this.snapshot;
     if (!shown?.canPlay) {
-      return;
+      return null;
     }
 
     if (!this.isShownLoaded()) {
       this.load(shown);
     }
-    if (unitIndex !== undefined) {
-      this.snapshot.loaded?.player.seekToUnit(unitIndex);
-    }
-    this.play();
+    return this.snapshot.loaded?.player ?? null;
   };
 
   /** Saves the position and empties the element: pause, remove its source, and load nothing. */

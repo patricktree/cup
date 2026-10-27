@@ -126,6 +126,18 @@ The state of a conversion: pending while its narration document is being prepare
 
 _Avoid_: workflow status
 
+## conversion phase
+
+A step of a conversion that it records as started, from conversion start through finalization. The preparation phase reports the steps among them that prepare a pending conversion's narration document.
+
+_Avoid_: workflow step, preparation phase for the steps after preparation
+
+## preparation phase
+
+The step of preparing a pending conversion's narration document that the conversion last started.
+
+_Avoid_: conversion phase for this reported step, workflow step
+
 ## audiobook source material
 
 An inclusive representation of a source page containing everything that might contribute to the audiobook. Visual material may be replaced with a visual description.
@@ -212,7 +224,7 @@ _Avoid_: passage, paragraph, section
 
 ## audiobook
 
-The adaptation produced from source content, comprising a prepared narration document and one narration audio segment per synchronization unit, delivered as one narration track once every segment has audio. Its text can be read while speech is generated. It becomes playable once every segment has audio and its narration track therefore exists, so its total duration is known before playback starts; when some segments finally failed, it stays unplayable until a retry succeeds.
+The adaptation produced from source content, comprising a prepared narration document and one narration audio segment per synchronization unit, delivered as one narration track once every segment has audio. Its text can be read while speech is generated. It becomes playable once every segment has audio and its narration track therefore exists, so its total duration is known before playback starts; when some segments finally failed, it stays unplayable until a retry succeeds. User-facing copy calls an audiobook a track, the way **segment** names a synchronization unit.
 
 _Avoid_: audio file, audio output, workflow output, article
 

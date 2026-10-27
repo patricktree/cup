@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { ACCOUNT_SESSION_STORAGE_KEY } from "#src/auth/account-session-storage.ts";
+import { PENDING_CONVERSION_KEY } from "#src/data-fetching/account-conversion-storage.ts";
 
 test.use({ serviceWorkers: "block" });
 
@@ -16,21 +17,33 @@ test("a late rate-limit response cannot change the next account's pending reques
       },
     }),
   );
-  await page.addInitScript((storageKey) => {
-    const subject = "880ce5b5-6542-40fd-8f2d-380f3066e98a";
-    const payload = btoa(JSON.stringify({ sub: subject, exp: 4102444800 })).replaceAll("=", "");
-    localStorage.setItem(
-      storageKey,
-      JSON.stringify({
-        access_token: "eyJhbGciOiJIUzI1NiJ9." + payload + ".fixture",
-        refresh_token: "test-refresh",
-        token_type: "bearer",
-        expires_at: 4102444800,
-        expires_in: 300,
-        user: { id: subject },
-      }),
-    );
-  }, ACCOUNT_SESSION_STORAGE_KEY);
+  await page.addInitScript(
+    ({ storageKey, pendingConversionKey }) => {
+      const subject = "880ce5b5-6542-40fd-8f2d-380f3066e98a";
+      const payload = btoa(JSON.stringify({ sub: subject, exp: 4102444800 })).replaceAll("=", "");
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          access_token: "eyJhbGciOiJIUzI1NiJ9." + payload + ".fixture",
+          refresh_token: "test-refresh",
+          token_type: "bearer",
+          expires_at: 4102444800,
+          expires_in: 300,
+          user: { id: subject },
+        }),
+      );
+      // A start from the home page that is still pending keeps a signed-in listener there instead of on Recents.
+      sessionStorage.setItem(
+        pendingConversionKey,
+        JSON.stringify({
+          sourceUrl: "https://example.com/earlier",
+          idempotencyKey: "0b6c1c2e-8f1a-4a57-9a43-6c1f0e4d2b7a",
+          submitted: false,
+        }),
+      );
+    },
+    { storageKey: ACCOUNT_SESSION_STORAGE_KEY, pendingConversionKey: PENDING_CONVERSION_KEY },
+  );
   let release: (() => void) | undefined;
   const held = new Promise<void>((resolve) => {
     release = resolve;

@@ -203,6 +203,19 @@ describe("listener API transport contracts", () => {
             outcome: { status: "ready", title: "Document", newField: true },
             newField: true,
           },
+          {
+            conversionId: UUID,
+            idempotencyKey: UUID,
+            sourceUrl: "https://example.com/covered",
+            createdAtMs: 1,
+            status: "ready",
+            outcome: {
+              status: "ready",
+              title: "Covered",
+              hasCoverImage: true,
+              coverImage: { url: "https://cup.audio/cover-image?token=t", newField: true },
+            },
+          },
         ],
         nextCursor: null,
         newField: true,
@@ -216,6 +229,19 @@ describe("listener API transport contracts", () => {
             createdAtMs: 1,
             status: "ready",
             outcome: { status: "ready", title: "Document" },
+          },
+          {
+            conversionId: UUID,
+            idempotencyKey: UUID,
+            sourceUrl: "https://example.com/covered",
+            createdAtMs: 1,
+            status: "ready",
+            outcome: {
+              status: "ready",
+              title: "Covered",
+              hasCoverImage: true,
+              coverImage: { url: "https://cup.audio/cover-image?token=t" },
+            },
           },
         ],
         nextCursor: null,
@@ -232,6 +258,30 @@ describe("listener API transport contracts", () => {
     },
   ])("drops unknown fields in the $name response", ({ schema, response, expected }) => {
     expect(schema.parse(response)).toStrictEqual(expected);
+  });
+
+  test.each([
+    { name: "a known", preparationPhase: "reading-page", expected: "reading-page" },
+    { name: "an unknown", preparationPhase: "translating", expected: undefined },
+    { name: "no", preparationPhase: undefined, expected: undefined },
+  ])("reads $name preparation phase of a pending conversion", ({ preparationPhase, expected }) => {
+    const pending = { status: "pending", originalUrl: "https://example.com/", canGenerate: true };
+    const historyItem = {
+      conversionId: UUID,
+      idempotencyKey: UUID,
+      sourceUrl: "https://example.com/",
+      createdAtMs: 1,
+      status: "pending",
+      outcome: null,
+    };
+    const field = preparationPhase === undefined ? {} : { preparationPhase };
+    expect(audiobookSchema.parse({ ...pending, ...field })).toEqual({
+      ...pending,
+      preparationPhase: expected,
+    });
+    expect(
+      accountHistorySchema.parse({ items: [{ ...historyItem, ...field }], nextCursor: null }),
+    ).toEqual({ items: [{ ...historyItem, preparationPhase: expected }], nextCursor: null });
   });
 
   test("accepts lowercase UUIDv4 only", () => {

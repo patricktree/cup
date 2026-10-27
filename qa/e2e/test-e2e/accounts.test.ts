@@ -8,7 +8,7 @@ import { readAudiobook, waitForGeneratedAudio } from "#test-e2e/synthesis.ts";
 
 const SOURCE_URL = "https://source.example.test/fixture";
 
-test("Google PKCE signup resumes conversion, protects history and media, and supports deletion recovery", async ({
+test("Google PKCE signup resumes conversion, protects Recents and media, and supports deletion recovery", async ({
   expectConsoleError,
   page,
   workerEnvironment,
@@ -53,9 +53,9 @@ test("Google PKCE signup resumes conversion, protects history and media, and sup
       ).status(),
     ).toBe(401);
   }
-  await page.goto(`${origin}/app/history`);
-  await expect(page.getByRole("link", { name: "Open audiobook" })).toHaveCount(1);
-  await expect(page.locator("main")).toHaveScreenshot("private-history.png");
+  await page.goto(`${origin}/app/recent`);
+  await expect(page.getByRole("list", { name: "Tracks" }).getByRole("link")).toHaveCount(1);
+  await expect(page.locator("main")).toHaveScreenshot("private-recents.png");
   await page.goto(`${origin}/app/account`);
   await page.getByRole("button", { name: "Delete account…" }).click();
   await expect(page.getByRole("button", { name: "Schedule deletion" })).toBeVisible();
@@ -84,8 +84,8 @@ test("Google PKCE signup resumes conversion, protects history and media, and sup
     ),
   ).toBeVisible();
   expect((await readAccount(page, origin)).balance.available).toBe(remainingAllowance);
-  await page.goto(`${origin}/app/history`);
-  await expect(page.getByRole("link", { name: "Open audiobook" })).toHaveCount(1);
+  await page.goto(`${origin}/app/recent`);
+  await expect(page.getByRole("list", { name: "Tracks" }).getByRole("link")).toHaveCount(1);
   let resumedRequests = 0;
   page.on("request", (request) => {
     if (
@@ -98,11 +98,11 @@ test("Google PKCE signup resumes conversion, protects history and media, and sup
   await page.goto(`${origin}/app/`);
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
   expect(resumedRequests).toBe(1);
-  await page.goto(`${origin}/app/history`);
-  await expect(page.getByRole("link", { name: "Open audiobook" })).toHaveCount(2);
+  await page.goto(`${origin}/app/recent`);
+  await expect(page.getByRole("list", { name: "Tracks" }).getByRole("link")).toHaveCount(2);
 });
 
-test("signup keeps trial conversions separate from the new account and its history", async ({
+test("signup keeps trial conversions separate from the new account and its Recents", async ({
   page,
   request: isolatedRequest,
   workerEnvironment,
@@ -168,8 +168,8 @@ test("signup keeps trial conversions separate from the new account and its histo
       })
     ).status(),
   ).toBe(401);
-  await page.goto(origin + "/app/history");
-  const ownConversions = page.getByRole("link", { name: "Open audiobook" });
+  await page.goto(origin + "/app/recent");
+  const ownConversions = page.getByRole("list", { name: "Tracks" }).getByRole("link");
   await expect(ownConversions).toHaveCount(1);
   await expect(ownConversions).toHaveAttribute("href", new URL(privateUrl).pathname);
   expect(importRequests).toBe(0);
@@ -207,7 +207,7 @@ test("signed-in accounts skip trial credentials and signed-out users can reopen 
     }
   });
   await page.goto(trialUrl);
-  await expect(page).toHaveURL(`${origin}/app/`);
+  await expect(page).toHaveURL(`${origin}/app/recent`);
   expect(trialRequests).toBe(0);
   await page.goto(`${origin}/app/account`);
   await page.getByRole("button", { name: "Delete account…", exact: true }).click();
@@ -266,13 +266,24 @@ test("root auth handles signup and session restoration without account navigatio
     timeout: 60_000,
   });
 
-  await page.goto(`${origin}/app/`);
-  await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
-  await page.getByRole("button", { name: "Load & listen" }).click();
-  await expect(page).toHaveURL(/\/app\/audiobooks\/[^?]+$/, { timeout: 60_000 });
+  await page.goto(`${origin}/app/recent/add`);
+  const addDialog = page.getByRole("dialog", { name: "Add a track" });
+  await addDialog.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
+  await addDialog.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(addDialog).toHaveCount(0, { timeout: 60_000 });
   expect(authProvider.exchanges()).toBe(1);
-  await page.goto(`${origin}/app/history`);
-  await expect(page.getByRole("link", { name: "Open audiobook" })).toHaveCount(2, {
+  // Recents lists the new conversion next to the first and shows its title once it is prepared.
+  const tracks = page.getByRole("list", { name: "Tracks" });
+  await expect(tracks.getByRole("listitem")).toHaveCount(2);
+  const titledTracks = tracks.getByRole("link", {
+    name: "A deterministic document about careful testing",
+  });
+  await expect(titledTracks).toHaveCount(2, { timeout: 90_000 });
+  await expect(tracks.getByText("source.example.test", { exact: true })).toHaveCount(2);
+  // Its audio is generated without the detail view being open, so the newest track plays at once.
+  await titledTracks.first().click();
+  await expect(page).not.toHaveURL(privateUrl);
+  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeEnabled({
     timeout: 60_000,
   });
 });

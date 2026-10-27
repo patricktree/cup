@@ -114,7 +114,7 @@ test("trial article links require the owning grant session for reading, and medi
   const reader = await anonymous.newPage();
   await reader.goto(page.url());
   await expect(
-    reader.getByRole("heading", { name: "The article could not be loaded." }),
+    reader.getByRole("heading", { name: "The track could not be loaded." }),
   ).toBeVisible();
   expect(
     (await anonymous.request.get(workerEnvironment.origin + `/api/audiobooks/${id}`)).status(),
@@ -187,7 +187,7 @@ test.describe("segment failure and recovery", () => {
     await openNewTrial(page, workerEnvironment);
     await startConversion(page);
     await waitForAudiobook(page);
-    await expect(page.getByText("Audio could not be generated for this article.")).toBeVisible({
+    await expect(page.getByText("Audio could not be generated for this track.")).toBeVisible({
       timeout: 90_000,
     });
     await waitForAudiobook(page);
@@ -212,7 +212,7 @@ test.describe("preparation recovery", () => {
     await startConversion(page);
     const url = page.url();
     await expect(
-      page.getByRole("heading", { name: "The article could not be prepared." }),
+      page.getByRole("heading", { name: "This track could not be prepared." }),
     ).toBeVisible({ timeout: 90000 });
     await workerEnvironment.restart("success");
     await page.getByRole("button", { name: "Retry", exact: true }).click();

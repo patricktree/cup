@@ -14,6 +14,12 @@ export function LandingPage(): React.ReactNode {
 }
 
 export const SignIn = {
+  // The landing page's route component is split into its own chunk. Loading the route before
+  // mounting keeps the page from rendering empty while that chunk downloads, which can take longer
+  // than the URL field lookup below waits.
+  beforeMount: async () => {
+    await router.load();
+  },
   component: LandingPage,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

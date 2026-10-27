@@ -10,25 +10,32 @@ import type { Story } from "#src/ui-gallery/story.js";
 
 const SUBJECT = "880ce5b5-6542-40fd-8f2d-380f3066e98a";
 const ACCOUNT_ID = "70fcf2d9-63c5-48be-b897-d3670f24ed43";
-export const CONVERSION_ID = "693af4c4-9fa8-430d-9dc5-c00e88fb38a7";
 const CHALLENGE_ID = "a3fcb5d8-9162-4c1a-b804-3be130c5e92a";
 const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/"] }));
+
+// Lets tests go back as the system Back gesture does, which no element of the page sees.
+Object.assign(window, { goBackInAccountStory: () => router.history.back() });
 
 /** Exercise the real session adapter against local deterministic identity and API responses. */
 export function accountStory({
   path,
   state = "active",
-  history = { items: [], nextCursor: null },
+  recents = { items: [], nextCursor: null },
   confirmation,
   setupFailure = false,
+  userMetadata = { name: "Verena Handler-Kunze" },
   handlers = [],
+  play,
 }: {
   path: string;
   state?: "active" | "deletion_scheduled" | "deleting";
-  history?: { items: Record<string, unknown>[]; nextCursor: string | null };
+  recents?: { items: Record<string, unknown>[]; nextCursor: string | null };
   confirmation?: "delete" | "restore";
   setupFailure?: boolean | "once";
+  /** The session user's metadata, which carries the name the avatar shows. */
+  userMetadata?: Record<string, unknown>;
   handlers?: RequestHandler[];
+  play?: Story["play"];
 }): Story {
   let setupFailed = false;
   function AccountStory(): React.ReactNode {
@@ -36,7 +43,7 @@ export function accountStory({
     const [error, setError] = React.useState<string>();
     React.useEffect(() => {
       const initialize = async () => {
-        await initializeAccountStorySession(confirmation);
+        await initializeAccountStorySession(userMetadata, confirmation);
         await router.navigate({ href: `/app${path}` });
         setReady(true);
       };
@@ -52,6 +59,7 @@ export function accountStory({
   }
   return {
     component: AccountStory,
+    ...(play && { play }),
     handlers: [
       ...handlers,
       http.get("/api/auth/config", () =>
@@ -95,14 +103,17 @@ export function accountStory({
                 ],
                 nextCursor: null,
               }
-            : history,
+            : recents,
         ),
       ),
     ],
   };
 }
 
-async function initializeAccountStorySession(confirmation?: "delete" | "restore") {
+async function initializeAccountStorySession(
+  userMetadata: Record<string, unknown>,
+  confirmation?: "delete" | "restore",
+) {
   const payload = btoa(JSON.stringify({ sub: SUBJECT, exp: 4102444800 })).replaceAll("=", "");
   localStorage.setItem(
     ACCOUNT_SESSION_STORAGE_KEY,
@@ -112,7 +123,7 @@ async function initializeAccountStorySession(confirmation?: "delete" | "restore"
       token_type: "bearer",
       expires_at: 4102444800,
       expires_in: 300,
-      user: { id: SUBJECT, email: "reader@example.test" },
+      user: { id: SUBJECT, email: "reader@example.test", user_metadata: userMetadata },
     }),
   );
   if (confirmation) {

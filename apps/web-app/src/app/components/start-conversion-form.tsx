@@ -1,18 +1,15 @@
 import { css } from "@linaria/core";
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
-import { revalidateLogic } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
 import React from "react";
 
-import { type GrantSnapshot, startConversionRequestSchema } from "@cup/listener-api.routes";
+import type { GrantSnapshot } from "@cup/listener-api.routes";
 
 import { SignInDialog } from "#src/app/components/sign-in-dialog.js";
-import { useAppForm } from "#src/app/form.js";
+import { SourceUrlForm } from "#src/app/components/source-url-form.js";
 import { useAccountConversionSubmission } from "#src/app/use-cases/account-conversions.js";
 import { useStartTrialConversionMutation } from "#src/data-fetching/conversion-grant.js";
 import { useRateLimitCountdown } from "#src/data-fetching/rate-limit.js";
-import { summarizeError } from "#src/errors.js";
-import { subscribeToSharedUrl } from "#src/platform/share-intake.js";
 
 type StartConversionFormProps =
   | { mode: "account"; grant?: never }
@@ -31,6 +28,8 @@ export function StartConversionForm(props: StartConversionFormProps): React.Reac
 function AccountConversionForm(): React.ReactNode {
   const navigate = useNavigate();
   const submission = useAccountConversionSubmission({
+    // A start survives the OAuth redirect and resumes when home mounts again.
+    requestStorage: "session",
     onStarted: async (conversionId) => {
       await navigate({ to: "/audiobooks/$conversionId", params: { conversionId } });
     },
@@ -42,6 +41,8 @@ function AccountConversionForm(): React.ReactNode {
       <ConversionForm
         refs={{ submitButton: submitButtonRef }}
         initialSourceUrl={submission.initialSourceUrl}
+        // Until auth settles, a signed-in listener may still be redirected to the Add dialog, which takes a shared URL instead.
+        shouldReceiveSharedUrl={!submission.isAuthLoading}
         isPending={submission.isPending}
         retryIn={submission.retryIn}
         error={submission.requiresSignIn ? undefined : submission.error}
@@ -76,6 +77,7 @@ function TrialConversionForm({ grant }: { grant: GrantSnapshot }): React.ReactNo
   return (
     <ConversionForm
       initialSourceUrl=""
+      shouldReceiveSharedUrl
       isPending={start.isPending}
       retryIn={retryIn}
       error={start.error}
@@ -88,6 +90,7 @@ function TrialConversionForm({ grant }: { grant: GrantSnapshot }): React.ReactNo
 
 function ConversionForm({
   initialSourceUrl,
+  shouldReceiveSharedUrl,
   isPending,
   retryIn,
   error,
@@ -96,93 +99,48 @@ function ConversionForm({
 }: {
   refs?: { submitButton?: React.Ref<HTMLButtonElement> | undefined };
   initialSourceUrl: string;
+  shouldReceiveSharedUrl: boolean;
   isPending: boolean;
   retryIn: number;
   error: unknown;
   onSubmit: (value: { sourceUrl: string }) => Promise<void>;
 }): React.ReactNode {
-  const form = useAppForm({
-    defaultValues: { sourceUrl: initialSourceUrl },
-    validationLogic: revalidateLogic({ mode: "submit", modeAfterSubmission: "change" }),
-    validators: { onDynamic: startConversionRequestSchema },
-    onSubmit: async ({ value }) => {
-      if (isPending || retryIn > 0) {
-        return;
-      }
-      await onSubmit(value);
-    },
-  });
-
-  React.useEffect(
-    () => subscribeToSharedUrl((url) => form.setFieldValue("sourceUrl", url)),
-    [form],
-  );
-
   return (
-    <>
-      <form
-        noValidate
-        className={css`
+    <SourceUrlForm
+      initialSourceUrl={initialSourceUrl}
+      shouldReceiveSharedUrl={shouldReceiveSharedUrl}
+      isPending={isPending}
+      retryIn={retryIn}
+      error={error}
+      errorFallbackMessage="The conversion could not start."
+      onSubmit={onSubmit}
+      submitLabel="Load & listen"
+      submittingLabel="Starting conversion..."
+      refs={{ submitButton: refs?.submitButton }}
+      sx={{
+        form: css`
           display: grid;
           gap: calc(3 * var(--spacing-base));
           padding-block: calc(5 * var(--spacing-base));
           padding-inline: calc(2 * var(--spacing-base));
-        `}
-        onSubmit={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          void form.handleSubmit();
-        }}
-      >
-        <form.AppForm>
-          <form.AppField name="sourceUrl">
-            {(field) => (
-              <field.TextField
-                sx={{
-                  input: css`
-                    height: 64px;
-                    padding-inline: 24px;
+        `,
+        input: css`
+          height: 64px;
+          padding-inline: 24px;
 
-                    font-family: var(--font-family-1);
-                    font-size: var(--font-size-md);
-                    background: var(--color-input-bg) padding-box;
-                    backdrop-filter: saturate(6);
+          font-family: var(--font-family-1);
+          font-size: var(--font-size-md);
+          background: var(--color-surface) padding-box;
+          backdrop-filter: saturate(6);
 
-                    &::placeholder {
-                      color: var(--color-fg-emphasized-sm);
-                    }
-                  `,
-                }}
-                label="URL"
-                maxLength={2048}
-                required
-                type="url"
-                placeholder="Paste URL here"
-                hideLabel
-              />
-            )}
-          </form.AppField>
-          <form.Subscribe selector={(state) => state.values.sourceUrl}>
-            {(sourceUrl) => (
-              <form.SubmitButton
-                refs={{ button: refs?.submitButton }}
-                sx={{
-                  button: css`
-                    justify-self: end;
-                  `,
-                }}
-                disabled={isPending || retryIn > 0 || !sourceUrl.trim()}
-                label={"Load & listen"}
-                submittingLabel="Starting conversion..."
-              />
-            )}
-          </form.Subscribe>
-        </form.AppForm>
-      </form>
-      {retryIn > 0 && <output>Try again in {retryIn} seconds.</output>}
-      {error ? (
-        <p role="alert">{summarizeError(error, "The conversion could not start.")}</p>
-      ) : null}
-    </>
+          &::placeholder {
+            color: var(--color-fg-emphasized-sm);
+          }
+        `,
+        submitButton: css`
+          justify-self: end;
+        `,
+      }}
+    />
   );
 }

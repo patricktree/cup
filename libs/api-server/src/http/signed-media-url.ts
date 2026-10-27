@@ -12,35 +12,87 @@ import { accountAuthError, jsonError, requireAccessibleGrantState } from "#src/h
  */
 export type MediaUrlPrincipal = ConversionOwner;
 
-/** How long a signed media URL authorizes requests after it was issued. */
-const SIGNED_MEDIA_URL_LIFETIME_MS = 24 * 60 * 60 * 1_000;
+const DAY_MS = 24 * 60 * 60 * 1_000;
+/**
+ * How long a signed media URL authorizes requests after its issue time, the start of the UTC day it
+ * was handed out on. Every URL therefore stays valid for at least 24 hours after it is handed out.
+ */
+const SIGNED_MEDIA_URL_LIFETIME_MS = 2 * DAY_MS;
 
 const TOKEN_QUERY_PARAMETER = "token";
 const TOKEN_VERSION = "v1";
 
+/** A media route under `/api/files/audiobooks/{conversionId}/`. */
+type AudiobookMediaResource = "cover-image" | "narration-track.mp3";
+
+/** Signs media URLs on the request's origin for one principal, which must have access. */
+export function createMediaUrlSigner(
+  context: { req: { url: string }; env: { MEDIA_URL_SIGNING_KEY: string } },
+  principal: MediaUrlPrincipal,
+): (conversionId: string, resource: AudiobookMediaResource) => Promise<string> {
+  return (conversionId, resource) =>
+    signAudiobookMediaUrl({
+      requestUrl: context.req.url,
+      signingKey: context.env.MEDIA_URL_SIGNING_KEY,
+      conversionId,
+      principal,
+      resource,
+    });
+}
+
+/** Issues the signed media URL of one media resource of an audiobook, on the request's origin. */
+function signAudiobookMediaUrl({
+  requestUrl,
+  signingKey,
+  conversionId,
+  principal,
+  resource,
+}: {
+  requestUrl: string;
+  signingKey: string;
+  conversionId: string;
+  principal: MediaUrlPrincipal;
+  resource: AudiobookMediaResource;
+}): Promise<string> {
+  return signMediaUrl({
+    url: `${new URL(requestUrl).origin}/api/files/audiobooks/${conversionId}/${resource}`,
+    conversionId,
+    principal,
+    signingKey,
+    nowMs: Temporal.Now.instant().epochMilliseconds,
+  });
+}
+
 /**
  * Appends a `token` query parameter that authorizes requests to `url` for one audiobook and one
- * principal, until {@link SIGNED_MEDIA_URL_LIFETIME_MS} after `issuedAtMs`. The token is stateless:
- * rotating `signingKey` invalidates every outstanding URL.
+ * principal, until {@link SIGNED_MEDIA_URL_LIFETIME_MS} after the start of the UTC day of `nowMs`.
+ * Within one UTC day, the same URL and principal therefore get a byte-identical URL, which lets
+ * browsers cache cover images (ADR 0013). The token is stateless: rotating `signingKey` invalidates
+ * every outstanding URL.
  */
 export async function signMediaUrl({
   url,
   conversionId,
   principal,
   signingKey,
-  issuedAtMs,
+  nowMs,
 }: {
   url: string;
   conversionId: string;
   principal: MediaUrlPrincipal;
   signingKey: string;
-  issuedAtMs: number;
+  nowMs: number;
 }): Promise<string> {
+  const issuedAtMs = nowMs - (nowMs % DAY_MS);
   const payload = encodeBase64Url(
     new TextEncoder().encode(
       JSON.stringify({
         conversionId,
-        principal,
+        // Rebuilt in a fixed key order, so equal principals always encode to the same token.
+        principal:
+          principal.kind === "account"
+            ? { kind: principal.kind, accountId: principal.accountId }
+            : { kind: principal.kind, grantId: principal.grantId },
         expiresAtMs: issuedAtMs + SIGNED_MEDIA_URL_LIFETIME_MS,
       }),
     ),

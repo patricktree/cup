@@ -308,6 +308,20 @@ test("Play starts the element within the call, before anything is awaited", () =
   expect(player().getSnapshot().isBuffering).toBe(false);
 });
 
+test("toggling pauses a playing audiobook and plays a paused one", () => {
+  const { host, element } = createHost();
+  host.showConversion("first", FIRST);
+  host.playShown();
+
+  host.togglePlayback();
+  expect(element.calls.at(-1)).toBe("pause");
+  expect(element.paused).toBe(true);
+
+  host.togglePlayback();
+  expect(element.calls.at(-1)).toBe("play");
+  expect(element.paused).toBe(false);
+});
+
 test("a unit tap sets the element's time to the unit's start offset", () => {
   const { host, element, player } = createHost();
   host.showConversion("first", FIRST);
@@ -418,6 +432,55 @@ test("seeking saves the new position right away", async () => {
   expect(saved.map(({ position }) => position)).toEqual([
     { synchronizationUnitId: "unit-2", offsetMilliseconds: 0 },
   ]);
+});
+
+test("skipping moves the element's time by the given amount and saves the new position", async () => {
+  const { host, element, player, saved } = createHost();
+  host.showConversion("first", FIRST);
+  element.loadMetadata(15);
+  host.play();
+  element.advanceTo(12.5);
+
+  player().skipBy(-5_000);
+  player().skipBy(2_000);
+  await settle();
+
+  expect(element.calls.slice(2)).toEqual(["currentTime:7.5", "currentTime:9.5"]);
+  expect(player().getSnapshot().currentUnitIndex).toBe(1);
+  expect(saved.map(({ position }) => position)).toEqual([
+    // the first time update during playback is due
+    { synchronizationUnitId: "unit-3", offsetMilliseconds: 2_500 },
+    { synchronizationUnitId: "unit-2", offsetMilliseconds: 3_500 },
+    { synchronizationUnitId: "unit-2", offsetMilliseconds: 5_500 },
+  ]);
+});
+
+test("skipping back stops at the start, and skipping forward short of the end", () => {
+  const { host, element, player } = createHost();
+  host.showConversion("first", FIRST);
+  element.loadMetadata(15);
+  host.play();
+
+  element.advanceTo(14);
+  player().skipBy(-15_000);
+  element.advanceTo(3);
+  player().skipBy(15_000);
+
+  expect(element.calls.slice(2)).toEqual(["currentTime:0", "currentTime:14.999"]);
+  expect(player().getSnapshot().positionMilliseconds).toBe(14_999);
+});
+
+test("skipping before metadata is loaded skips from the restored position once it is", () => {
+  const { host, element, player } = createHost({ subject: "user-1" });
+  host.showConversion(
+    "first",
+    createAudiobook("First", { synchronizationUnitId: "unit-3", offsetMilliseconds: 2_000 }),
+  );
+
+  player().skipBy(-5_000);
+  element.loadMetadata(15);
+
+  expect(element.calls).toEqual([`src:${FIRST_TRACK_URL}`, "currentTime:7"]);
 });
 
 test("a refused save is shown as the player's error", async () => {
@@ -689,6 +752,57 @@ test("playing another audiobook sets its narration track on the same element", a
 
   element.loadMetadata(15);
   expect(element.calls.at(-1)).toBe("currentTime:10");
+});
+
+test("seeking the shown audiobook while another one plays loads it paused at that position", async () => {
+  const { host, element, saved } = createHost();
+
+  host.showConversion("first", FIRST);
+  element.loadMetadata(15);
+  host.play();
+  element.advanceTo(3);
+  host.hideConversion("first");
+  host.showConversion("second", SECOND);
+
+  const callCountBeforeSeek = element.calls.length;
+  host.loadShown()?.seekTo(12_000);
+  await settle();
+
+  expect(host.getSnapshot().loaded?.conversionId).toBe("second");
+  expect(element.paused).toBe(true);
+  expect(saved[0]?.position).toEqual({
+    synchronizationUnitId: "unit-1",
+    offsetMilliseconds: 3_000,
+  });
+
+  element.loadMetadata(15);
+  expect(element.calls.slice(callCountBeforeSeek)).toEqual([
+    "pause",
+    `src:${SECOND_TRACK_URL}`,
+    "currentTime:12",
+  ]);
+});
+
+test("the shown audiobook without a narration track loads nothing, and Play leaves the loaded one", () => {
+  const { host, element } = createHost();
+
+  host.showConversion("first", FIRST);
+  element.loadMetadata(15);
+  host.hideConversion("first");
+  host.showConversion(
+    "second",
+    withoutNarrationTrack(
+      SECOND,
+      [ready(0), { sequence: 1, status: "generating" }, ready(2)],
+      "synthesizing",
+    ),
+  );
+
+  expect(host.loadShown()).toBeNull();
+  host.playShown();
+
+  expect(host.getSnapshot().loaded?.conversionId).toBe("first");
+  expect(element.calls).toEqual([`src:${FIRST_TRACK_URL}`]);
 });
 
 test("an audiobook without a narration track is never loaded", () => {

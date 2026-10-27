@@ -100,14 +100,12 @@ type ShownAudiobookPlayback = {
   loaded: LoadedAudiobook | null;
   canPlay: boolean;
   /** Must be called from a user gesture. */
-  play: () => void;
-  /** Must be called from a user gesture. */
   playFromUnit: (unitIndex: number) => void;
 };
 
 /**
  * Reports the prepared audiobook a page shows, below `useShownConversion`, and describes its
- * playback. Play and taps load the audiobook first when another one is loaded.
+ * playback. Segment taps load the audiobook first when another one is loaded.
  */
 export function useShownAudiobook(
   conversionId: string,
@@ -126,8 +124,6 @@ export function useShownAudiobook(
   return {
     loaded: loaded?.conversionId === conversionId ? loaded : null,
     canPlay: shown?.conversionId === conversionId && shown.canPlay,
-    // Wrapped so that a click event is not taken for a unit index.
-    play: () => host.playShown(),
     playFromUnit: host.playShown,
   };
 }

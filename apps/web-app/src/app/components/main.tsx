@@ -25,47 +25,18 @@ export function Main({ children, className, ...delegated }: MainProps): React.JS
   );
 }
 
-type ShellFooterProps = React.ComponentProps<"footer">;
-
-export function ShellFooter({
-  children,
-  className,
-  ...delegated
-}: ShellFooterProps): React.JSX.Element {
-  return (
-    <footer
-      {...delegated}
-      className={composeClassnames(
-        className,
-        css`
-          /* positioning anchor for absolutely-positioned fading child element */
-          position: relative;
-        `,
-      )}
-    >
-      <div
-        className={css`
-          position: absolute;
-          bottom: 100%;
-          width: 100%;
-          height: var(--app-padding-block);
-
-          /* let clicks reach the content fading underneath */
-          pointer-events: none;
-          background-image: linear-gradient(to top, var(--color-bg), transparent);
-        `}
-      />
-      {children}
-    </footer>
-  );
-}
-
 type ShellContentProps = {
   headerContent?: React.ReactNode;
   mainContent: React.ReactNode;
+  /** Room below the content, for a footer that fades over the page's end. */
+  mainPaddingBlockEnd?: string | undefined;
 };
 
-export function ShellContent({ headerContent, mainContent }: ShellContentProps): React.JSX.Element {
+export function ShellContent({
+  headerContent,
+  mainContent,
+  mainPaddingBlockEnd,
+}: ShellContentProps): React.JSX.Element {
   return (
     <>
       {headerContent && (
@@ -116,11 +87,14 @@ export function ShellContent({ headerContent, mainContent }: ShellContentProps):
           align-content: start;
           width: 100%;
           max-width: var(--app-max-width);
-          padding-block: var(--app-padding-block);
+          padding-block: var(--app-padding-block) var(--padding-block-end);
           padding-inline: var(--app-padding-inline);
           margin-inline: auto;
         `}
-        style={{ ["--grid-area"]: headerContent ? "shell-main" : "shell-header / shell-main" }}
+        style={{
+          ["--grid-area"]: headerContent ? "shell-main" : "shell-header / shell-main",
+          ["--padding-block-end"]: mainPaddingBlockEnd ?? "var(--app-padding-block)",
+        }}
       >
         {mainContent}
       </Main>

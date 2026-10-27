@@ -4,6 +4,8 @@ import { Temporal } from "temporal-polyfill";
 import { z } from "zod";
 
 import {
+  ConversionPhase,
+  conversionPhaseSchema,
   playbackPositionSchema,
   type PlaybackPosition,
   createConversionArtifactPrefix,
@@ -192,6 +194,7 @@ export class AccountSqlite {
           sourceUrl: accountConversions.sourceUrl,
           createdAtMs: accountConversions.createdAtMs,
           status: accountConversions.status,
+          lastStartedPhase: accountConversions.lastStartedPhase,
         })
         .from(accountConversions)
         .where(eq(accountConversions.idempotencyKey, request.idempotencyKey))
@@ -215,6 +218,7 @@ export class AccountSqlite {
           sourceUrl: request.sourceUrl,
           createdAtMs: nowMs,
           status: "pending",
+          lastStartedPhase: ConversionPhase.CONVERSION_START,
         })
         .run();
       this.database
@@ -228,7 +232,13 @@ export class AccountSqlite {
         .run();
       return {
         result: "created",
-        conversion: { conversionId, ...request, createdAtMs: nowMs, status: "pending" },
+        conversion: {
+          conversionId,
+          ...request,
+          createdAtMs: nowMs,
+          status: "pending",
+          lastStartedPhase: ConversionPhase.CONVERSION_START,
+        },
       };
     });
   }
@@ -258,11 +268,31 @@ export class AccountSqlite {
     this.requireActive();
     this.database
       .update(accountConversions)
-      .set({ status: "pending", completedAtMs: null, ...EMPTY_OUTCOME_COLUMNS })
+      .set({
+        status: "pending",
+        lastStartedPhase: ConversionPhase.CONVERSION_START,
+        completedAtMs: null,
+        ...EMPTY_OUTCOME_COLUMNS,
+      })
       .where(
         and(
           eq(accountConversions.conversionId, conversionId),
           eq(accountConversions.status, "failed"),
+        ),
+      )
+      .run();
+  }
+
+  /** A settled conversion keeps the phase it last started; callers check the execution first. */
+  recordPhaseStarted(conversionId: string, phase: ConversionPhase) {
+    const parsed = conversionPhaseSchema.parse(phase);
+    this.database
+      .update(accountConversions)
+      .set({ lastStartedPhase: parsed })
+      .where(
+        and(
+          eq(accountConversions.conversionId, conversionId),
+          eq(accountConversions.status, "pending"),
         ),
       )
       .run();
@@ -479,6 +509,7 @@ export class AccountSqlite {
       sourceUrl: row.sourceUrl,
       createdAtMs: row.createdAtMs,
       status: row.status,
+      lastStartedPhase: row.lastStartedPhase,
       completedAtMs: row.completedAtMs,
       outcome: toOutcome(row),
     };

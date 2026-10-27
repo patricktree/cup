@@ -1,11 +1,17 @@
 import { sql } from "drizzle-orm";
 import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import type { AudiobookReference } from "@cup/conversion-contracts";
+import { conversionPhaseOrder } from "@cup/conversion-contracts";
+import type { AudiobookReference, ConversionPhase } from "@cup/conversion-contracts";
 import { defineAudioSegments } from "@cup/duration-ledger";
 
 // Re-exported so that the account migrations create the shared duration ledger tables.
 export { creditBalances, creditLedger, creditOperations } from "@cup/duration-ledger";
+
+/** Every conversion phase as an SQL list, so the CHECK below follows the enum. */
+const CONVERSION_PHASE_SQL_LIST = sql.raw(
+  conversionPhaseOrder.map((phase) => `'${phase}'`).join(", "),
+);
 
 export const accounts = sqliteTable(
   "account",
@@ -36,6 +42,8 @@ export const accountConversions = sqliteTable(
     sourceUrl: text("source_url").notNull(),
     createdAtMs: integer("created_at_ms").notNull(),
     status: text({ enum: ["pending", "ready", "failed"] }).notNull(),
+    // The preparation phase the conversion last started; settling keeps it, as grants do.
+    lastStartedPhase: text("last_started_phase").$type<ConversionPhase>().notNull(),
     completedAtMs: integer("completed_at_ms"),
     title: text(),
     audiobookReference: text("audiobook_reference_json", {
@@ -48,6 +56,10 @@ export const accountConversions = sqliteTable(
   },
   (table) => [
     check("account_conversion_status", sql`${table.status} IN ('pending', 'ready', 'failed')`),
+    check(
+      "account_conversion_phase",
+      sql`${table.lastStartedPhase} IN (${CONVERSION_PHASE_SQL_LIST})`,
+    ),
     check(
       "account_conversion_reference_json",
       sql`${table.audiobookReference} IS NULL OR json_valid(${table.audiobookReference})`,

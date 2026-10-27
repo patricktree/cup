@@ -4,7 +4,9 @@ import React from "react";
 import { Temporal } from "temporal-polyfill";
 
 import { AccountQueryBoundary } from "#src/app/components/account-query-boundary.js";
+import { AccountTabBar } from "#src/app/components/account-tab-bar.js";
 import { ShellContent } from "#src/app/components/main.tsx";
+import { MiniPlayer } from "#src/app/components/mini-player.js";
 import { DSButton } from "#src/app/design-system/button.js";
 import { useAccountSession, useAccountAuthState } from "#src/auth/hooks.js";
 import { useAccountConfirmation } from "#src/data-fetching/account-confirmation.js";
@@ -17,24 +19,33 @@ function AccountPage(): React.ReactNode {
   const session = useAccountSession();
   const authState = useAccountAuthState();
   return (
-    <ShellContent
-      mainContent={
+    <>
+      <ShellContent
+        mainContent={
+          <>
+            <h1>Account settings</h1>
+            {authState.status === "loading" ? (
+              <output>Loading account…</output>
+            ) : authState.status === "error" ? (
+              <p role="alert">{authState.error.message}</p>
+            ) : session ? (
+              <AccountQueryBoundary key={session.user.id}>
+                <AccountSettings subject={session.user.id} email={session.user.email} />
+              </AccountQueryBoundary>
+            ) : (
+              <p>Sign in with Google to manage or restore your account.</p>
+            )}
+          </>
+        }
+      ></ShellContent>
+      {/* Signed out, the account page only offers sign-in, and Recents would send the listener home. */}
+      {authState.status !== "signed-out" && (
         <>
-          <h1>Account settings</h1>
-          {authState.status === "loading" ? (
-            <output>Loading account…</output>
-          ) : authState.status === "error" ? (
-            <p role="alert">{authState.error.message}</p>
-          ) : session ? (
-            <AccountQueryBoundary key={session.user.id}>
-              <AccountSettings subject={session.user.id} email={session.user.email} />
-            </AccountQueryBoundary>
-          ) : (
-            <p>Sign in with Google to manage or restore your account.</p>
-          )}
+          <MiniPlayer />
+          <AccountTabBar />
         </>
-      }
-    ></ShellContent>
+      )}
+    </>
   );
 }
 function AccountSettings({

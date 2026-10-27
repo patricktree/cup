@@ -10,7 +10,9 @@ import type { ApiServerEnvironment } from "#src/api-server-environment.ts";
 
 export type ConversionReader = {
   artifactPrefix: string;
-  getConversion(): Promise<Pick<GrantConversion, "sourceUrl" | "status"> | undefined>;
+  getConversion(): Promise<
+    Pick<GrantConversion, "sourceUrl" | "status" | "lastStartedPhase"> | undefined
+  >;
   getReadyAudiobookReference(): Promise<AudiobookReference | undefined>;
   listAudioSegments(): Promise<
     readonly Pick<SegmentUsage, "sequence" | "state" | "actualMilliseconds">[]

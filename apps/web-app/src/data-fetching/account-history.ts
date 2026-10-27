@@ -18,7 +18,7 @@ export function createAccountHistoryQuery(subject?: string) {
       );
     },
     getNextPageParam: (page) => page.nextCursor ?? undefined,
-    meta: { errorTitle: "Your conversions could not be updated." },
+    meta: { errorTitle: "Your tracks could not be updated." },
     refetchInterval: (query) =>
       query.state.status !== "error" &&
       query.state.data?.pages.some((page) => page.items.some((item) => item.status === "pending"))
