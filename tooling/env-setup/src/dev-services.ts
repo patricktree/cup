@@ -9,6 +9,8 @@ import { $ } from "zx";
 
 /** The local-only account that replaces Google sign-in during development; see ADR 0012. */
 const TEST_ACCOUNT_EMAIL = "test-account@cup.test";
+/** Fixed and short so it is easy to type on a phone; Supabase requires at least six characters. */
+const TEST_ACCOUNT_PASSWORD = "testtest";
 /** The web app's Vite port and the local Supabase API port from `supabase/config.toml`. */
 const WEB_APP_PORT = 5173;
 const SUPABASE_PORT = 55321;
@@ -173,8 +175,7 @@ async function run(command: { action: "start"; tailnet: boolean } | { action: "s
       );
     }
 
-    const testAccountPassword = randomBytes(18).toString("base64url");
-    await ensureTestAccount(status.API_URL, status.SERVICE_ROLE_KEY, testAccountPassword);
+    await ensureTestAccount(status.API_URL, status.SERVICE_ROLE_KEY, TEST_ACCOUNT_PASSWORD);
 
     if (tailnetHost) {
       for (const port of [WEB_APP_PORT, SUPABASE_PORT]) {
@@ -196,7 +197,7 @@ async function run(command: { action: "start"; tailnet: boolean } | { action: "s
         workerEnv["MEDIA_URL_SIGNING_KEY"] ?? randomBytes(32).toString("base64url"),
       LOCAL_DEVELOPMENT: "true",
       LOCAL_TEST_ACCOUNT_EMAIL: TEST_ACCOUNT_EMAIL,
-      LOCAL_TEST_ACCOUNT_PASSWORD: testAccountPassword,
+      LOCAL_TEST_ACCOUNT_PASSWORD: TEST_ACCOUNT_PASSWORD,
     };
     await fs.mkdir(path.dirname(backupPath), { recursive: true });
 
@@ -292,7 +293,7 @@ async function readIssuer(apiUrl: string) {
     : undefined;
 }
 
-/** Creates the test account, or resets its password when it already exists. */
+/** Creates the test account, or resets its password when it already exists with another one. */
 async function ensureTestAccount(apiUrl: string, secretKey: string, password: string) {
   const headers = {
     apikey: secretKey,
