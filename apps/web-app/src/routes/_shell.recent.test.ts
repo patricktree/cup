@@ -276,6 +276,32 @@ test("renders a refused start inside the Add dialog", async ({ mount, page }) =>
   await expect(page).toHaveScreenshot("add-dialog-error.png");
 });
 
+test("a refused start in the Add dialog leaves nothing for home or a reopened dialog", async ({
+  mount,
+  page,
+}) => {
+  const starts: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && new URL(request.url()).pathname.endsWith("/conversions")) {
+      starts.push(request.url());
+    }
+  });
+  const component = await mount("routes/_shell.recent/AddDialogError");
+  const dialog = page.getByRole("dialog", { name: "Add a track" });
+  await expect(dialog.getByRole("alert")).toHaveText("This page cannot be converted.");
+  // The stored request belongs to the home page's start, which resumes it after sign-in.
+  expect(await page.evaluate(() => window.sessionStorage.getItem("cup_pending_conversion"))).toBe(
+    null,
+  );
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await component.getByRole("link", { name: "Add", exact: true }).click();
+  await expect(dialog.getByRole("textbox", { name: "URL" })).toHaveValue("");
+  await expect(dialog.getByRole("button", { name: "Add" })).toBeDisabled();
+  expect(starts).toHaveLength(1);
+});
+
 test("validates the source URL in the Add dialog before starting", async ({ mount, page }) => {
   await mount("routes/_shell.recent/AddDialog");
   const dialog = page.getByRole("dialog", { name: "Add a track" });

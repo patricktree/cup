@@ -29,6 +29,8 @@ export function StartConversionForm(props: StartConversionFormProps): React.Reac
 function AccountConversionForm(): React.ReactNode {
   const navigate = useNavigate();
   const submission = useAccountConversionSubmission({
+    // A start survives the OAuth redirect and resumes when home mounts again.
+    requestStorage: "session",
     onStarted: async (conversionId) => {
       await navigate({ to: "/audiobooks/$conversionId", params: { conversionId } });
     },

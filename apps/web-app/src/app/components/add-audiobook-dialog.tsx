@@ -14,6 +14,8 @@ import { summarizeError } from "#src/errors.js";
  */
 export function AddAudiobookDialog({ onClose }: { onClose: () => void }): React.ReactNode {
   const submission = useAccountConversionSubmission({
+    // The dialog's start never resumes on home or in a later dialog.
+    requestStorage: "memory",
     // The start mutation has already invalidated the history query that Recents lists.
     onStarted: async () => onClose(),
   });

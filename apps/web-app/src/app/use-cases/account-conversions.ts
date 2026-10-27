@@ -4,6 +4,7 @@ import { useAccountSession, useAccountAuthState, useSignInMethods } from "#src/a
 import {
   readPendingAccountConversion,
   storePendingAccountConversion,
+  type PendingAccountConversion,
 } from "#src/data-fetching/account-conversion-storage.js";
 import {
   useSignInMutation,
@@ -11,9 +12,28 @@ import {
 } from "#src/data-fetching/account.js";
 import { useRateLimitCountdown } from "#src/data-fetching/rate-limit.js";
 
+type PendingRequestStore = {
+  read: () => PendingAccountConversion | null;
+  store: (request: PendingAccountConversion) => void;
+};
+
+const SESSION_REQUEST_STORE: PendingRequestStore = {
+  read: readPendingAccountConversion,
+  store: storePendingAccountConversion,
+};
+
+/**
+ * Submits a source URL as an account conversion, asking for sign-in first when needed.
+ *
+ * With `requestStorage: "session"` the pending request lives in `sessionStorage`, so the home
+ * page's start survives the OAuth redirect and resumes on its next mount. With `"memory"` it lives
+ * only as long as the mounted form, such as the Add dialog, whose starts never resume elsewhere.
+ */
 export function useAccountConversionSubmission({
+  requestStorage,
   onStarted,
 }: {
+  requestStorage: "session" | "memory";
   onStarted: (conversionId: string) => Promise<void>;
 }) {
   const session = useAccountSession();
@@ -25,17 +45,21 @@ export function useAccountConversionSubmission({
 
   const [requiresSignIn, setRequiresSignIn] = React.useState(false);
   const resumed = React.useRef(false);
+  const requests = React.useMemo(
+    () => (requestStorage === "session" ? SESSION_REQUEST_STORE : createMemoryRequestStore()),
+    [requestStorage],
+  );
 
   React.useEffect(() => {
-    const request = readPendingAccountConversion();
+    const request = requests.read();
     if (session && request?.submitted && !resumed.current) {
       resumed.current = true;
       start.mutate({ ...request, subject: session.user.id });
     }
-  }, [session, start]);
+  }, [requests, session, start]);
 
   return {
-    initialSourceUrl: readPendingAccountConversion()?.sourceUrl ?? "",
+    initialSourceUrl: requests.read()?.sourceUrl ?? "",
     isPending: start.isPending || authState.status === "loading",
     isAuthLoading: authState.status === "loading",
     retryIn,
@@ -49,14 +73,14 @@ export function useAccountConversionSubmission({
       }
       signIn.reset();
       const sourceUrl = new URL(input).toString();
-      const stored = readPendingAccountConversion();
+      const stored = requests.read();
       const request = {
         sourceUrl,
         idempotencyKey:
           stored?.sourceUrl === sourceUrl ? stored.idempotencyKey : crypto.randomUUID(),
         submitted: true,
       };
-      storePendingAccountConversion(request);
+      requests.store(request);
       if (!session) {
         resumed.current = false;
         setRequiresSignIn(true);
@@ -69,11 +93,21 @@ export function useAccountConversionSubmission({
       if (signIn.isPending) {
         return;
       }
-      const request = readPendingAccountConversion();
+      const request = requests.read();
       if (request) {
-        storePendingAccountConversion({ ...request, submitted: false });
+        requests.store({ ...request, submitted: false });
       }
       setRequiresSignIn(false);
+    },
+  };
+}
+
+function createMemoryRequestStore(): PendingRequestStore {
+  let current: PendingAccountConversion | null = null;
+  return {
+    read: () => current,
+    store: (request) => {
+      current = request;
     },
   };
 }
