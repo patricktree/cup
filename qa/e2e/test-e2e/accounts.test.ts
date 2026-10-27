@@ -272,8 +272,20 @@ test("root auth handles signup and session restoration without account navigatio
   await addDialog.getByRole("button", { name: "Add", exact: true }).click();
   await expect(addDialog).toHaveCount(0, { timeout: 60_000 });
   expect(authProvider.exchanges()).toBe(1);
-  // Recents lists the new conversion next to the first, whatever state it has reached.
-  await expect(page.locator("main li")).toHaveCount(2);
+  // Recents lists the new conversion next to the first and shows its title once it is prepared.
+  const tracks = page.getByRole("list", { name: "Tracks" });
+  await expect(tracks.getByRole("listitem")).toHaveCount(2);
+  const titledTracks = tracks.getByRole("link", {
+    name: "A deterministic document about careful testing",
+  });
+  await expect(titledTracks).toHaveCount(2, { timeout: 90_000 });
+  await expect(tracks.getByText("source.example.test", { exact: true })).toHaveCount(2);
+  // Its audio is generated without the detail view being open, so the newest track plays at once.
+  await titledTracks.first().click();
+  await expect(page).not.toHaveURL(privateUrl);
+  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeEnabled({
+    timeout: 60_000,
+  });
 });
 
 test("failed sign-in leaves anonymous trial access available", async ({
