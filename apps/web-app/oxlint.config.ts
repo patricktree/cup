@@ -1,19 +1,6 @@
 import { defineConfig } from "oxlint";
 
-import { config as repoConfig } from "@cup/config-oxlint/oxlint-base.js";
-
-type RestrictedImportsOptions = { paths?: unknown[]; patterns?: unknown[] };
-
-/*
- * The override entries replace the repository's `no-restricted-imports` options, so they keep their
- * paths and patterns and add their own.
- */
-const [severity, ...repoOptions] = (repoConfig.rules?.["no-restricted-imports"] ?? ["error"]) as [
-  string,
-  ...RestrictedImportsOptions[],
-];
-const repoPaths = repoOptions.flatMap((options) => options.paths ?? []);
-const repoPatterns = repoOptions.flatMap((options) => options.patterns ?? []);
+import { config as repoConfig, restrictImports } from "@cup/config-oxlint/oxlint-base.js";
 
 export default defineConfig({
   extends: [repoConfig],
@@ -36,20 +23,11 @@ export default defineConfig({
     {
       files: ["**"],
       rules: {
-        "no-restricted-imports": [
-          severity,
-          {
-            paths: repoPaths,
-            patterns: [
-              ...repoPatterns,
-              {
-                group: ["#src/api-client.js"],
-                message:
-                  "Send API requests through `requestApi` in `src/data-fetching/api-request.ts`, which attaches the account token each call asks for.",
-              },
-            ],
-          },
-        ],
+        "no-restricted-imports": restrictImports({
+          group: ["#src/api-client.js"],
+          message:
+            "Send API requests through `requestApi` in `src/data-fetching/api-request.ts`, which attaches the account token each call asks for.",
+        }),
       },
     },
     {
@@ -57,7 +35,7 @@ export default defineConfig({
        * media cookie), which runs below account sessions and so cannot go through `requestApi`. */
       files: ["src/data-fetching/api-request.ts", "src/auth/account-session.ts"],
       rules: {
-        "no-restricted-imports": [severity, { paths: repoPaths, patterns: repoPatterns }],
+        "no-restricted-imports": restrictImports(),
       },
     },
   ],
