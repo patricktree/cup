@@ -5,7 +5,7 @@ import { encodePcmAsMp3 } from "@cup/mp3-encoding";
 import { analyzeMp3, AUDIO_FORMAT } from "#src/audio-format.ts";
 
 const ENCODING_OPTIONS = {
-  bitrateKilobitsPerSecond: 128,
+  bitrateKilobitsPerSecond: AUDIO_FORMAT.bitrateKilobitsPerSecond,
   sampleRate: AUDIO_FORMAT.sampleRate,
 };
 
