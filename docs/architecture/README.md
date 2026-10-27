@@ -64,7 +64,7 @@ The libraries are code boundaries inside the deployed system, not separate netwo
 - [Conversion grants](../../libs/conversion-grants/README.md): trial grants.
 - [Registry](../../libs/registry/README.md): account identity mapping and provisioning, grant inventory, conversion ownership for accounts and trials, ingress limits, and account deletion coordination. Owner objects call it through narrow RPC interfaces, and its integration tests exercise the three objects together.
 - [Duration ledger](../../libs/duration-ledger/README.md): the allowance, reservation, and charge storage that accounts and grants share.
-- [Conversion contracts](../../libs/conversion-contracts/README.md): runtime-independent shared schemas, types, and duration calculations.
+- [Conversion contracts](../../libs/conversion-contracts/README.md): runtime-independent shared schemas, types, and duration calculations; its [lint configuration](../../libs/conversion-contracts/oxlint.config.ts) refuses `cloudflare:` and `node:` imports, because the Worker, the workflows, and the browser load it.
 - [Rolling limits](../../libs/rolling-limits/README.md): the rolling-window rate limiter, whose table each of the three objects keeps in its own database.
 - [Errors](../../libs/errors/README.md): error helpers shared by server code: server logs record only a caught error's root cause, so wrapper errors carrying SQL parameters or request data are never logged. It imports no Cup package, so any library can depend on it; the graph below leaves it out.
 
@@ -89,6 +89,8 @@ flowchart TD
     Grants -. usage projection RPC .-> Registry
 ```
 
+The owners reach the registry only through the RPC interfaces drawn as dashed lines, never as a package dependency: the registry depends on both owner libraries, so such a dependency would form a cycle, which every `turbo run` refuses. `pnpm boundaries` (`turbo boundaries`, part of `pnpm validate:fast`) also fails when a package imports a package its `package.json` does not declare, or a file outside its own directory.
+
 ## API definitions
 
 Cup has two HTTP APIs. Each has a contract package that defines its routes, request and response schemas, and error codes, and checks its generated OpenAPI document against a committed snapshot, so contract changes show in diffs. Each has a typed client package, and the [server composition](../../libs/api-server/src/api-server.ts) mounts the handlers of both; the [API server guide](../../libs/api-server/AGENTS.md) describes its layout.
@@ -104,15 +106,15 @@ Durable Object RPC and Workflow invocation are internal platform interfaces, not
 
 [ADR 0010](../adr/0010-tolerate-unknown-keys-at-the-listener-api.md) sets how strictly each boundary validates:
 
-- The server parses every request against its route's schemas and answers one that fails them with `400 invalid-input`, except operator account inspection, which answers an invalid account ID with `404 account-unavailable`.
+- The server parses every request against its route's schemas and answers one that fails them with `400 invalid-input`, except operator account inspection, which answers an invalid account ID with `404 account-unavailable`. Each contract package's `openapi.test.ts` checks that every operation with request schemas declares that response.
 - Listener requests and responses drop unknown keys, so installed apps running older code keep working when the server adds or stops reading a field. Operator requests and internal inputs, such as Durable Object RPC, storage, and workflow parameters, stay strict.
 - The server does not parse its own responses. Handlers are checked against the contract types at compile time, and route tests parse responses with strict schemas, so drift fails in tests instead of as a server error in production.
-- Listener responses carry only the fields their contract declares. The [listener response mappings](../../libs/api-server/src/http/listener-responses.ts) copy declared fields out of Durable Object results, so internal fields, such as an outcome's storage reference, never reach listeners.
+- Listener responses carry only the fields their contract declares. The [listener response mappings](../../libs/api-server/src/http/listener-responses.ts) copy declared fields out of Durable Object results, so internal fields, such as an outcome's storage reference, never reach listeners; [`listener-responses.test.ts`](../../libs/api-server/test/listener-responses.test.ts) parses each response strictly.
 - A contract that exposes another package's data derives its shapes from that package's contracts, such as the [account contracts](../../libs/accounts/src/domain/account-contracts.ts), instead of copying them.
 
 ### Errors
 
-Every error response carries the same envelope: an error code from its API's contract, a message, and the request ID. Both clients turn every unsuccessful response into an `RpcError` with that code, the HTTP status, the retry delay, and the request ID, through the shared [response handling](../../libs/api-rpc.client/src/rpc-response.ts). A response without a code the client knows, such as a proxy's error page, gets `operational-error`. The contract guides describe how to add an error code.
+Every error response carries the same envelope: an error code from its API's contract, a message, and the request ID; the OpenAPI tests check that every operation declares its errors with the shared schema. Both clients turn every unsuccessful response into an `RpcError` with that code, the HTTP status, the retry delay, and the request ID, through the shared [response handling](../../libs/api-rpc.client/src/rpc-response.ts). A response without a code the client knows, such as a proxy's error page, gets `operational-error`. The contract guides describe how to add an error code.
 
 ## Storage ownership
 
@@ -144,4 +146,4 @@ Cloudflare Workflows owns execution state; the account or grant object owns the 
 
 Local web development runs the Worker through Vite and can use a local Supabase stack; native apps always use the production API origin. See [local development](../local-development.md).
 
-Free tests reach no paid or external service: libraries with Durable Objects or workflows run against their own `wrangler.test.jsonc` bindings, the [Worker integration tests](../../apps/cloudflare-worker/AGENTS.md#integration-tests) run the production Worker entry without the AI and browser bindings and with provider URLs pointed at an unreachable address, the [application E2E tests](../../qa/e2e/README.md) replace source preparation, narration selection, and speech synthesis with deterministic fakes, and source-material E2E tests replay [recorded source pages](../../libs/prepare-source-material/test-e2e/fixtures/README.md). Browser tests run through Docker. Fixtures and local-development authentication paths are test infrastructure, not production identity providers. The [validation guide](../../AGENTS.md#validation) distinguishes free checks from paid narration evals.
+Free tests reach no paid or external service (the Worker's [`wrangler-config.test.ts`](../../apps/cloudflare-worker/test/wrangler-config.test.ts) checks that the integration tests bind no paid service): libraries with Durable Objects or workflows run against their own `wrangler.test.jsonc` bindings, the [Worker integration tests](../../apps/cloudflare-worker/AGENTS.md#integration-tests) run the production Worker entry without the AI and browser bindings and with provider URLs pointed at an unreachable address, the [application E2E tests](../../qa/e2e/README.md) replace source preparation, narration selection, and speech synthesis with deterministic fakes, and source-material E2E tests replay [recorded source pages](../../libs/prepare-source-material/test-e2e/fixtures/README.md). Browser tests run through Docker. Fixtures and local-development authentication paths are test infrastructure, not production identity providers. The [validation guide](../../AGENTS.md#validation) distinguishes free checks from paid narration evals.

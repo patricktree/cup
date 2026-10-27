@@ -9,7 +9,7 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 | [Glossary](GLOSSARY.md)                                            | Canonical concepts, terminology, and rejected synonyms                                                   |
 | [System overview](architecture/README.md)                          | Runtime components, API definitions, storage ownership, external services, and development boundaries    |
 | [Authentication and authorization](architecture/authentication.md) | Google and Supabase sign-in, Cup account provisioning, media access, trials, and operator authentication |
-| [Durable Object schemas](architecture/durable-object-storage.md)   | SQLite tables, columns, keys, and relationships for all three Durable Object stores                      |
+| [Durable Object schemas](architecture/durable-object-storage.md)   | SQLite tables, relationships, and naming conventions for all three Durable Object stores                 |
 | [R2 objects and key layout](architecture/r2-storage.md)            | Account and trial prefixes, stored objects, metadata, access, and cleanup                                |
 | [Conversion](architecture/conversion.md)                           | Source preparation through delivery, duration accounting, retries, and failure boundaries                |
 | [Account deletion](architecture/account-deletion.md)               | Fresh authentication, recovery, write fencing, cleanup, and notification retries                         |
@@ -38,7 +38,7 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 | [Terraform infrastructure](../terraform/README.md)                                    | Manage infrastructure state, provider configuration, and manual prerequisites          |
 | [Declaration builds](declaration-builds.md)                                           | Understand source and declaration package scopes, compiler settings, and build caching |
 | [Brand assets](../tooling/brand-assets/README.md)                                     | Maintain generated application branding                                                |
-| [Migration generator](../tooling/drizzle-migrations/README.md)                        | Generate SQLite migrations, snapshots, and Worker bundles                              |
+| [Migration generator](../tooling/drizzle-migrations/README.md)                        | Generate SQLite migrations, snapshots, Worker bundles, and schema diagrams             |
 | [Submodule check](../.patricktree-stack/tooling/submodule-check/README.md)            | Reject commits that move a submodule pointer backwards                                 |
 | [Mermaid check](../.patricktree-stack/tooling/mermaid-check/README.md)                | Parse Mermaid diagrams in documentation                                                |
 

@@ -22,7 +22,7 @@ Deletion and recovery require a one-use challenge and fresh Google authenticatio
 
 Lifecycle endpoints belong to the [listener API](README.md#api-definitions). A refused confirmation is an explicit conflict, while unexpected storage or registry failures remain operational errors. After scheduling, the API attempts Google token revocation when the client supplies a provider token, verifies that it belongs to the same identity, and records the outcome. Revocation failure does not undo scheduling; a failure to record the outcome is reported as an operational error, not a rejected confirmation.
 
-Scheduling signs the requesting client out, which stops playback, and blocks subsequent private access checks. Lifecycle inspection and explicit recovery, after signing in again, remain available until the deadline. Recovery preserves history and allowance; once the deadline is reached, recovery is refused.
+Scheduling signs the requesting client out, which stops playback, and blocks subsequent private access checks. Lifecycle inspection and explicit recovery, after signing in again, remain available until the deadline. Recovery preserves history and allowance; once the deadline is reached, recovery is refused. The registry's [`accounts.test.ts`](../../libs/registry/test/accounts.test.ts) covers fresh authentication and recovery, and [`account-lifecycle-api.test.ts`](../../libs/api-server/test/account-lifecycle-api.test.ts) the API's origin checks and revocation outcomes.
 
 Sources: [client confirmation](../../apps/web-app/src/data-fetching/account-confirmation.ts), [lifecycle API](../../libs/api-server/src/api-server.ts), and [atomic account transitions](../../libs/accounts/src/storage/account-lifecycle.ts).
 
@@ -30,9 +30,9 @@ Sources: [client confirmation](../../apps/web-app/src/data-fetching/account-conf
 
 The account persists lifecycle changes and delivery intent together, then delivers that intent to the registry through a replayable outbox. At cleanup, changing the execution epoch prevents old workflow activity from writing. Registered artifact writers must drain and uncertain storage effects must be reconciled before erasure; a lost acknowledgement does not prove a writer stopped.
 
-Account erasure removes the account's R2 prefix, conversion-owner routes, and account records, retaining a constant erasure marker to reject late execution. The registry deletes the exact old Supabase identity and removes its mapping only after both identity and account cleanup succeed. Original trial conversions and other accounts remain separate.
+Account erasure removes the account's R2 prefix, conversion-owner routes, and account records, retaining a constant erasure marker to reject late execution. The registry deletes the exact old Supabase identity and removes its mapping only after both identity and account cleanup succeed. Original trial conversions and other accounts remain separate; the registry's `accounts.test.ts` checks that erasure waits for an in-flight upload and preserves both.
 
-The coordinator awaits account and provider calls with its Durable Object input gate open, so a restore delivery or a Google revocation outcome can be accepted while it waits. It continues from the stored job after an awaited fence, and a failed attempt does not overwrite a restore accepted meanwhile.
+The coordinator awaits account and provider calls with its Durable Object input gate open, so a restore delivery or a Google revocation outcome can be accepted while it waits. It continues from the stored job after an awaited fence, and a failed attempt does not overwrite a restore accepted meanwhile ([`deletion-coordinator.test.ts`](../../libs/registry/test/deletion-coordinator.test.ts)).
 
 Failures retain durable progress and retry with backoff. Operators can inspect overdue cleanup with the [operator CLI](../../apps/operator/README.md#list-account-deletions); there is no force-complete action that discards uncertain writers.
 
