@@ -122,7 +122,7 @@ test("playback continues across pages until another audiobook is played", async 
   await expectPlayingFrom(page, 5);
   expect((await readNarrationAudio(page)).src).toContain("audiobook=story");
 
-  await component.getByRole("link", { name: "Back to Recents" }).click();
+  await component.getByRole("link", { name: "Back", exact: true }).click();
   await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
   await expect(
     player.getByRole("link", { name: "A deterministic document about careful testing" }),
@@ -165,9 +165,12 @@ test("playback continues across pages until another audiobook is played", async 
   ).toHaveCount(0);
 });
 
-test("renders audiobook without showing preparation skeletons", async ({ mount, page }) => {
+test("a trial audiobook renders without preparation skeletons and leads back home", async ({
+  mount,
+  page,
+}) => {
   await page.addInitScript(() => {
-    const skeletonSelector = '[aria-label="Preparing article"]';
+    const skeletonSelector = '[aria-label="Preparing track"]';
     new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
@@ -186,21 +189,118 @@ test("renders audiobook without showing preparation skeletons", async ({ mount, 
   await expect(
     component.getByRole("heading", { name: "A deterministic document about careful testing" }),
   ).toBeVisible();
+  await expect(component.getByText("source.example.test", { exact: true })).toBeVisible();
   await expect(
     component.getByText("Keep the important boundaries real.", { exact: true }),
   ).toBeVisible();
   await expect(component.getByRole("link", { name: /Download/ })).toHaveCount(0);
+  await expect(component.getByRole("link", { name: "Back", exact: true })).toHaveAttribute(
+    "href",
+    "/app/",
+  );
+  await expect(component.getByRole("main").getByRole("status")).toHaveText("");
   expect(
     await page.evaluate(() => document.documentElement.dataset["sawReaderSkeleton"]),
   ).toBeUndefined();
-  await expect(component).toHaveScreenshot("audiobook.png");
+  await expect(component).toHaveScreenshot("trial-audiobook.png");
+});
+
+test("an account audiobook opens with its cover, title and host below a plain top bar", async ({
+  mount,
+}) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/AccountAudiobook");
+  const title = "The turbulent AI era is here. The choices we make now are critical.";
+
+  await expect(component.getByRole("heading", { name: title })).toBeVisible();
+  await expect(component.getByRole("img", { name: "A person reading by a window" })).toBeVisible();
+  await expect(component.getByText("gatesnotes.com", { exact: true })).toBeVisible();
+  const topBar = component.getByRole("banner");
+  await expect(topBar.getByRole("link", { name: "Back", exact: true })).toHaveAttribute(
+    "href",
+    "/app/recent",
+  );
+  await expect(topBar.getByText(title)).toHaveCount(0);
+  await expect(component).toHaveScreenshot("account-audiobook-at-start.png");
+});
+
+test("once the title scrolls away the top bar shows it, and the playing segment is highlighted", async ({
+  mount,
+  page,
+}) => {
+  await captureNarrationAudio(page);
+
+  const component = await mount("routes/_shell.audiobooks.$conversionId/AccountAudiobook");
+  const title = "The turbulent AI era is here. The choices we make now are critical.";
+  const topBar = component.getByRole("banner");
+  await expect(component.getByRole("heading", { name: title })).toBeVisible();
+
+  const segment = component.locator("#narration-unit-0005");
+  await segment.scrollIntoViewIfNeeded();
+  await component.getByRole("button", { name: "Play segment 5", exact: true }).click();
+  await expect(segment).toHaveAttribute("aria-current", "true");
+  await expect(topBar.getByText(title)).toBeVisible();
+  await expect(topBar.getByText("gatesnotes.com", { exact: true })).toBeVisible();
+
+  // Paused at the segment's start, so nothing moves for the screenshot.
+  await component.getByRole("button", { name: "Pause", exact: true }).click();
+  await page.evaluate(() => {
+    if ("narrationAudio" in window && window.narrationAudio instanceof HTMLAudioElement) {
+      window.narrationAudio.currentTime = 20;
+    }
+  });
+  await expect.poll(async () => (await readNarrationAudio(page)).currentTime).toBe(20);
+  expect(await segment.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
+    "rgba(18, 18, 18, 0.08)",
+  );
+  expect(await segment.evaluate((element) => getComputedStyle(element).fontWeight)).toBe("400");
+  await expect(component).toHaveScreenshot("account-audiobook-scrolled.png");
+
+  await component.getByRole("main").evaluate((main) => main.scrollTo({ top: 0 }));
+  await expect(topBar.getByText(title)).toHaveCount(0);
+});
+
+test("the top bar's menu opens the original page and retries", async ({ mount, page }) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/AccountAudiobook");
+  await expect(
+    component.getByRole("heading", {
+      name: "The turbulent AI era is here. The choices we make now are critical.",
+    }),
+  ).toBeVisible();
+  await component.getByRole("button", { name: "More", exact: true }).click();
+
+  const openOriginal = page.getByRole("menuitem", { name: "Open original page" });
+  await expect(openOriginal).toHaveAttribute(
+    "href",
+    "https://www.gatesnotes.com/a-turbulent-ai-era-and-critical-choices-to-make",
+  );
+  await expect(openOriginal).toHaveAttribute("target", "_blank");
+  await expect(page).toHaveScreenshot("menu-open.png");
+
+  const retryRequest = page.waitForRequest(
+    (request) => request.method() === "POST" && request.url().endsWith("/retry"),
+  );
+  await page.getByRole("menuitem", { name: "Retry", exact: true }).click();
+  await retryRequest;
+});
+
+test("the top bar's menu offers no Retry when the audiobook cannot generate", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/AudiobookWithoutRetry");
+  await component.getByRole("button", { name: "More", exact: true }).click();
+
+  await expect(page.getByRole("menuitem", { name: "Open original page" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Retry", exact: true })).toHaveCount(0);
 });
 
 test("shows generation progress and keeps Play disabled while audio is generated", async ({
   mount,
 }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/SynthesizingAudiobook");
-  await expect(component.getByText("Generating audio… 1 of 3 segments ready")).toBeVisible();
+  await expect(component.getByRole("main").getByRole("status")).toHaveText(
+    "Generating audio, 1 of 3 segments ready",
+  );
   await expect(
     component.getByText("Keep the important boundaries real.", { exact: true }),
   ).toBeVisible();
@@ -215,7 +315,7 @@ test("explains the needed and available duration when the document does not fit"
   const component = await mount("routes/_shell.audiobooks.$conversionId/InsufficientDuration");
   await expect(
     component.getByText(
-      "Not enough audio duration for this article. It needs about 12 min 34 s, and 1 min 35 s is available.",
+      "Not enough audio duration for this track. It needs about 12 min 34 s, and 1 min 35 s is available.",
     ),
   ).toBeVisible();
   await expect(component.getByRole("button", { name: "Retry", exact: true })).toBeEnabled();
@@ -250,7 +350,7 @@ test("a failed segment is marked and playback waits for a successful Retry", asy
 test("an audiobook whose every segment failed offers only Retry", async ({ mount }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/AudiobookWithoutAudio");
   await expect(
-    component.getByText("Audio could not be generated for this article.", { exact: true }),
+    component.getByText("Audio could not be generated for this track.", { exact: true }),
   ).toBeVisible();
   await expect(component.getByRole("button", { name: "Retry", exact: true })).toBeEnabled();
   await expect(component.getByRole("button", { name: /Play without/ })).toHaveCount(0);
@@ -261,7 +361,7 @@ test("an audiobook whose every segment failed offers only Retry", async ({ mount
 test("renders audiobook-not-found", async ({ mount }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/AudiobookNotFound");
   await expect(
-    component.getByRole("heading", { name: "The article could not be loaded." }),
+    component.getByRole("heading", { name: "The track could not be loaded." }),
   ).toBeVisible();
   await expect(component.getByText("The audiobook was not found.")).toBeVisible();
   // Trying again cannot find an audiobook that does not exist.
@@ -272,7 +372,7 @@ test("renders audiobook-not-found", async ({ mount }) => {
 test("renders audiobook-load-error", async ({ mount, page }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/AudiobookLoadError");
   await expect(
-    component.getByRole("heading", { name: "The article could not be loaded." }),
+    component.getByRole("heading", { name: "The track could not be loaded." }),
   ).toBeVisible();
   await expect(component).toHaveScreenshot("audiobook-load-error.png");
 
@@ -282,21 +382,47 @@ test("renders audiobook-load-error", async ({ mount, page }) => {
     }),
   );
   await component.getByRole("button", { name: "Try again" }).click();
-  await expect(component.getByLabel("Preparing article")).toHaveAttribute("aria-busy", "true");
+  await expect(component.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
+});
+
+test("shows loading skeletons with an unknown preparation phase", async ({ mount }) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/LoadingAudiobook");
+  await expect(component.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
+  await expect(component.getByRole("main").getByRole("status")).toHaveText("Preparing");
+  await expect(component).toHaveScreenshot("loading-audiobook.png");
 });
 
 test("shows preparation skeletons without playback controls", async ({ mount }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/PendingConversion");
-  await expect(component.getByLabel("Preparing article")).toHaveAttribute("aria-busy", "true");
+  await expect(component.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
+  await expect(component.getByRole("main").getByRole("status")).toHaveText("Preparing");
   await expect(component.getByRole("button", { name: "Play", exact: true })).toHaveCount(0);
   await expect(component).toHaveScreenshot("pending-conversion.png");
 });
+
+for (const [story, label] of [
+  ["PendingStarting", "Starting"],
+  ["PendingReadingPage", "Reading the page"],
+  ["PendingSelectingContent", "Selecting narration content"],
+  ["PendingPreparingText", "Preparing the text"],
+] as const) {
+  test(`the status line of a pending conversion reads "${label}"`, async ({ mount }) => {
+    const component = await mount(`routes/_shell.audiobooks.$conversionId/${story}`);
+    await expect(component.getByRole("main").getByRole("status")).toHaveText(label);
+  });
+}
+
 test("preparation failure replaces skeletons with Retry", async ({ mount }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/FailedConversion");
+  await expect(component.getByRole("heading", { name: "example.com", exact: true })).toBeVisible();
   await expect(
-    component.getByRole("heading", { name: "The article could not be prepared." }),
+    component.getByRole("heading", { name: "This track could not be prepared." }),
+  ).toBeVisible();
+  await expect(
+    component.getByText("Preparation failed. Retry to load this track.", { exact: true }),
   ).toBeVisible();
   await expect(component.getByRole("button", { name: "Retry", exact: true })).toBeEnabled();
+  await expect(component.getByRole("button", { name: "More", exact: true })).toBeVisible();
   await expect(component).toHaveScreenshot("failed-conversion.png");
 });
 
@@ -312,7 +438,7 @@ test("a refused retry is reported with a toast and leaves the reader in place", 
     "The retry could not start.This trial no longer permits new speech generation.",
   );
   await expect(
-    component.getByText("Audio could not be generated for this article.", { exact: true }),
+    component.getByText("Audio could not be generated for this track.", { exact: true }),
   ).toBeVisible();
   await expect(page).toHaveScreenshot("retry-refused-toast.png");
 
@@ -320,14 +446,14 @@ test("a refused retry is reported with a toast and leaves the reader in place", 
   await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(0);
 });
 
-test("failed polling keeps the article and shows one toast until polling recovers", async ({
+test("failed polling keeps the track and shows one toast until polling recovers", async ({
   mount,
   page,
 }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/PollingInterrupted");
   const toasts = page.getByRole("alertdialog", { includeHidden: true });
   await expect(toasts).toHaveCount(1);
-  await expect(toasts).toContainText("The article could not be updated.");
+  await expect(toasts).toContainText("The track could not be updated.");
 
   // Three failed polls replace one toast, which closes once polling succeeds again.
   const toastCounts: number[] = [];

@@ -220,6 +220,6 @@ test("signed in, home redirects to Recents, where the Add dialog opens on a mask
   await expect(recents.first().getByText("source.example.test", { exact: true })).toBeVisible();
   await newCard.click();
   await expect(page).toHaveURL(`${origin}${newCardPath}`);
-  await page.getByRole("link", { name: "Back to Recents" }).click();
+  await page.getByRole("link", { name: "Back", exact: true }).click();
   await expect(page).toHaveURL(`${origin}/app/recent`);
 });

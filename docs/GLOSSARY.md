@@ -218,7 +218,7 @@ _Avoid_: passage, paragraph, section
 
 ## audiobook
 
-The adaptation produced from source content, comprising a prepared narration document and one narration audio segment per synchronization unit, delivered as one narration track once every segment has audio. Its text can be read while speech is generated. It becomes playable once every segment has audio and its narration track therefore exists, so its total duration is known before playback starts; when some segments finally failed, it stays unplayable until a retry succeeds.
+The adaptation produced from source content, comprising a prepared narration document and one narration audio segment per synchronization unit, delivered as one narration track once every segment has audio. Its text can be read while speech is generated. It becomes playable once every segment has audio and its narration track therefore exists, so its total duration is known before playback starts; when some segments finally failed, it stays unplayable until a retry succeeds. User-facing copy calls an audiobook a track, the way **segment** names a synchronization unit.
 
 _Avoid_: audio file, audio output, workflow output, article
 
