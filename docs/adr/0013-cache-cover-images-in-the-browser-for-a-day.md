@@ -4,7 +4,7 @@ status: accepted
 
 # Cache cover images in the browser for a day
 
-The redesigned Recents screen shows each ready audiobook's cover on its card ([patricktree/cup#89](https://github.com/patricktree/cup/issues/89)). Cover images were served `private, no-store` through a [signed media URL](../architecture/authentication.md#signed-media-url) whose token changed on every response, because it carried the exact issue time. Every poll, page load and app start therefore produced new URLs, and browsers downloaded every cover again: covers popped in on each app start, and the detail view re-downloaded its cover on every 1-second poll. [patricktree/cup#83](https://github.com/patricktree/cup/issues/83) compared the options, and [patricktree/cup#86](https://github.com/patricktree/cup/issues/86) (2026-10-27) chose one.
+The redesigned Recents screen shows each ready audiobook's cover on its card ([patricktree/cup#89](https://github.com/patricktree/cup/issues/89)). Cover images were served `private, no-store` through a [signed media URL](../architecture/authentication.md#signed-media-url) whose token changed on every response, because it carried the exact issue time. Every poll, page load and app start therefore produced new URLs, and browsers downloaded every cover again: covers popped in on each app start, and the detail view re-downloaded its cover on every 1-second poll. [patricktree/cup#83](https://github.com/patricktree/cup/issues/83) compared the options, and [patricktree/cup#86](https://github.com/patricktree/cup/issues/86) (2026-10-27) chose one. [patricktree/cup#101](https://github.com/patricktree/cup/pull/101) (commit `8cccf1e`) implemented it.
 
 ## Decision
 

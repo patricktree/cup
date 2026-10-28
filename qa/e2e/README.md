@@ -23,7 +23,7 @@ This command builds the workspace and runs the tests with at most two parallel w
 
 This suite runs in `pnpm validate:extended` and `pnpm validate`. The root `pnpm test:e2e` command runs this suite followed by the live source-material extraction suite.
 
-Routing tests exercise the built Worker: redirect statuses and targets, browser navigation from `/` and `/app`, credential exchange after a legacy trial redirect, query preservation, refresh, `/app/` asset loading, domain association delivery, and 404 responses for retired routes and missing assets. The credential test uses a real browser because fragments are not sent in HTTP requests.
+The [routing tests](test-e2e/routing.test.ts) exercise the built Worker's redirects and asset serving; the legacy trial redirect test uses a real browser because fragments are not sent in HTTP requests.
 
 ## Update screenshots
 

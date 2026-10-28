@@ -2,7 +2,8 @@ import React from "react";
 
 /*
  * The icons drawn for the Recents and detail-view designs, exported from Figma as SVG (see
- * `recents-design-tokens.md` of #84). They paint in `currentColor` and are decorative: the control
+ * https://github.com/patricktree/cup/tree/7587d6e172e94b5a844a8dba0b4d4f0b51e0d3b5/docs/research/recents-design-tokens/icons).
+ * They paint in `currentColor` and are decorative: the control
  * that holds one carries the accessible name. The export's full-size clip paths are left out
  * because they clip nothing.
  */

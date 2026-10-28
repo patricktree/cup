@@ -4,7 +4,7 @@ This package defines the listener API's routes, request and response schemas, an
 
 ## OpenAPI snapshot
 
-The [OpenAPI test](test/openapi.test.ts) generates the listener API's OpenAPI document with `createListenerOpenApiDocument`, the same function the [listener client's export script](../listener-api.client/scripts/export-openapi-json.ts) uses, and compares it with the committed [snapshot](test/__snapshots__/openapi.json). The test also checks that every operation declares error responses with the shared error schema, that every operation with request parameters or a request body declares the `400 invalid-input` response its validation hook returns, that request bodies are required JSON, and that every mutation requires the request-forgery header.
+The [OpenAPI test](test/openapi.test.ts) generates the listener API's OpenAPI document with `createListenerOpenApiDocument`, the same function the [listener client's export script](../listener-api.client/scripts/export-openapi-json.ts) uses, and compares it with the committed [snapshot](test/__snapshots__/openapi.json). The test also checks contract-wide rules, such as the shared error schema and the `400 invalid-input` response.
 
 After an intended contract change, update the snapshot and review its diff:
 

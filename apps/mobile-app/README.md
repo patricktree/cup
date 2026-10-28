@@ -81,7 +81,7 @@ Capacitor's native HTTP response headers can expose Set-Cookie to JavaScript, so
 
 The iOS app bundles `CupShare.appex`, displayed as **Cup** in Safari and Chrome's Share Sheets. Share a web URL or text containing an HTTP(S) URL, then tap **Open in Cup** to open the main app and prefill the conversion form. Cup trial links open their app route, including the credential exchange.
 
-The handoff uses `audio.cup.app://share?url=<encoded-url>`. Cup links under `https://cup.audio/app` open their corresponding app route, preserving trial credential fragments. Other HTTP(S) URLs prefill a conversion form without submitting it: the Add dialog over Recents when an account is signed in, otherwise the form of the last authorized trial. If no trial has been authorized, the URL remains pending in memory until a form opens; closing the app discards it.
+The handoff uses `audio.cup.app://share?url=<encoded-url>`. Cup links under `https://cup.audio/app` open their corresponding app route, preserving trial credential fragments. Other HTTP(S) URLs prefill a conversion form as on [Android](#android-app-links-and-sharing); a URL still pending in memory is discarded when the app closes.
 
 The extension uses the same responder-chain URL-opening approach as Chromium, calling `openURL:options:completionHandler:` dynamically. Apple does not support this handoff from Share Extensions; test it after iOS updates. A failed handoff stays in the extension with an error and retry button. The extension does not start conversions or access session cookies.
 
@@ -105,4 +105,4 @@ Edit the canonical artwork in `tooling/brand-assets/assets/` at the repository r
 
 ## Playback
 
-The shells have no native audio player. Playback goes through the web player in the WebView and is best-effort: it is unsupported and untested until [#55](https://github.com/patricktree/cup/issues/55), and nothing detects or gates it.
+The shells have no native audio player; see [playback](../../docs/architecture/conversion.md#playback). Nothing detects or gates WebView playback until [#55](https://github.com/patricktree/cup/issues/55).

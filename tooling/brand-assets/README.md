@@ -15,6 +15,4 @@ The root commands delegate to the `@cup/brand-assets` package and cover web, And
 
 The web build and native sync use checked-in assets without regenerating them. `pnpm validate:extended` checks assets without writing and reports stale paths with the repair command. Run `pnpm brand-assets:sync` after changing a source and review the generated changes before validation.
 
-The generator also creates Android's `drawable-v24/ic_launcher_foreground.xml`. Its SVG-to-vector conversion supports paths with explicit six-digit hex fills and rejects unsupported SVG features. The raster renderer preserves the complete SVG. Extend vector conversion before introducing shapes or effects that Android cannot currently reproduce.
-
-Generated outputs include both web favicons, the web touch/social PNG, iOS app and splash PNGs, Android launcher/adaptive foreground and splash PNGs, and the Android vector foreground. The platform wrappers and white background resources remain native configuration.
+The generator also creates Android's `drawable-v24/ic_launcher_foreground.xml`. Its SVG-to-vector conversion supports paths with explicit six-digit hex fills and rejects unsupported SVG features. The raster renderer preserves the complete SVG. Extend vector conversion before introducing shapes or effects that Android cannot currently reproduce. The platform wrappers and white background resources remain native configuration.

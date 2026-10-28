@@ -18,7 +18,7 @@
 - Send requests with `worker.fetch(url)`; an absolute URL sets the hostname the Worker sees, such as `https://www.cup-audio.com/` for a redirect or `http://localhost/` for the development operator token.
 - `test/wrangler.test.jsonc` mirrors the production bindings without `AI` (Workers AI) and `BROWSER` (Browser Run), so code that would call them fails instead of costing money. Its Supabase, Cloudflare Access, and Resend URLs point at an unreachable local port, and `useWorker()` supplies dummy values for every required secret. Keep tests away from conversions, sign-in, and account deletion, which reach those providers; account-deletion notices are tested against the Resend stub in `libs/registry/test`.
 - The config lives in `test/` so that Wrangler does not load this package's `.env.local`. It serves the small fixture in `test/assets/` instead of the built web app.
-- `test/wrangler-config.test.ts` pins the production `wrangler.jsonc` (custom domains, compatibility, assets, Durable Object bindings and migrations, Workflows, required secrets, observability) and checks that the test config binds the same resources. Update it deliberately when production configuration changes; never rewrite deployed migrations.
+- `test/wrangler-config.test.ts` pins the production `wrangler.jsonc` and checks that the test config binds the same resources. Update it deliberately when production configuration changes; never rewrite deployed migrations.
 
 ## Cloudflare documentation
 

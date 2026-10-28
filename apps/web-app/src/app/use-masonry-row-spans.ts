@@ -12,7 +12,7 @@ import React from "react";
  * its styles switch to 1 px rows only then, so without the hook the list stays an ordinary grid.
  * Items must not stretch (`align-self: start`), or the observer would measure the spanned area.
  *
- * Why not `display: grid-lanes` or multi-column: https://github.com/patricktree/cup/issues/82.
+ * Why not `display: grid-lanes` or multi-column: docs/research/recents-masonry-layout.md.
  */
 export function useMasonryRowSpans(): React.RefCallback<HTMLElement> {
   return React.useCallback((list: HTMLElement | null) => {

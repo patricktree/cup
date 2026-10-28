@@ -13,6 +13,7 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 | [R2 objects and key layout](architecture/r2-storage.md)            | Account and trial prefixes, stored objects, metadata, access, and cleanup                                |
 | [Conversion](architecture/conversion.md)                           | Source preparation through delivery, duration accounting, retries, and failure boundaries                |
 | [Account deletion](architecture/account-deletion.md)               | Fresh authentication, recovery, write fencing, cleanup, and notification retries                         |
+| [Web application screens](architecture/web-app.md)                 | Routes and redirects, the Add dialog, Recents, the detail view, and the account chrome                   |
 
 ## Operate and develop Cup
 

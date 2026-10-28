@@ -1,10 +1,10 @@
 # Registry
 
-Registry account provisioning and deletion require `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `RESEND_API_KEY`, and `RESEND_BASE_URL`. Provisioning always checks the provider identity before activation; integration tests supply a local identity provider. Deletion notice tests send to a [Resend stub](../../qa/resend-stub/src/resend-stub.ts) started per test, and a [holding `ACCOUNTS` double](test/holding-accounts.ts) pins calls that land on the coordinator while it awaits an account.
+Registry account provisioning and deletion need the Supabase and Resend settings its [providers](src/providers/) declare. Provisioning always checks the provider identity before activation; integration tests supply a local identity provider. Deletion notice tests send to a [Resend stub](../../qa/resend-stub/src/resend-stub.ts) started per test, and a [holding `ACCOUNTS` double](test/holding-accounts.ts) pins calls that land on the coordinator while it awaits an account.
 
 This library owns the singleton `RegistryDurableObject`: provider identity mapping, account provisioning, grant inventory, grant and account usage projections, conversion ownership, ingress rate limits, and durable account deletion coordination and notifications. Account and grant objects keep their owner-specific conversion state and accounting. Integration tests here exercise all three Durable Object classes together.
 
-The shared `REGISTRY` binding resolves the existing singleton name `registry`. `conversion_owners` is the sole mapping from each conversion ID to an account or conversion grant, with a check constraint requiring exactly the matching owner identifier. The undeployed unified baseline contains no `conversion_grants` table or compatibility lookup; the legacy table is dropped during the transition.
+The shared `REGISTRY` binding resolves the existing singleton name `registry`. [Conversion ownership](../../docs/architecture/durable-object-storage.md#registry) lives in `conversion_owners`. The undeployed unified baseline contains no `conversion_grants` table or compatibility lookup; the legacy table is dropped during the transition.
 
 ## Preserve deployed storage
 
