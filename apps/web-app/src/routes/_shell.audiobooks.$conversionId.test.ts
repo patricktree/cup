@@ -301,6 +301,15 @@ test("an account audiobook opens with its cover, title and host below a plain to
   await expect(page).toHaveScreenshot("account-audiobook-at-start.png");
 });
 
+// An invalid end padding makes the whole `padding-block` that carries it invalid, which drops the top padding too.
+test("the narration ends where the player sheet's 70 px fade begins", async ({ mount }) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/AccountAudiobook");
+  const main = component.getByRole("main");
+
+  await expect(main).toHaveCSS("padding-top", "12px");
+  await expect(main).toHaveCSS("padding-bottom", "70px");
+});
+
 test("once the title scrolls away the top bar shows it, and the playing segment is highlighted", async ({
   mount,
   page,

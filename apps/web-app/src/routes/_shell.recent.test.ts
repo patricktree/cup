@@ -127,6 +127,15 @@ for (const state of [
   });
 }
 
+// An invalid padding is dropped silently, and the production build merges it into the `padding-block` shorthand, which then drops the top padding too.
+test("the tracks end where the tab bar's 50 px fade begins", async ({ mount }) => {
+  const component = await mount("routes/_shell.recent/Recents");
+  const main = component.getByRole("main");
+
+  await expect(main).toHaveCSS("padding-top", "24px");
+  await expect(main).toHaveCSS("padding-bottom", "50px");
+});
+
 test("the mini player names the loaded audiobook and its host", async ({ mount }) => {
   const component = await mount("routes/_shell.recent/RecentsWithMiniPlayer");
   const player = component.getByRole("region", { name: "Player" });
