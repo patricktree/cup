@@ -1,6 +1,6 @@
 # Production configuration
 
-Use this guide to supply the production Worker's configuration and the provider settings that Terraform does not manage, and to find those it does. The [authentication](architecture/authentication.md) and [account deletion](architecture/account-deletion.md) pages explain the behavior this configuration enables. The [Terraform guide](../terraform/README.md) covers infrastructure state, the Supabase project, the Resend domain, and Supabase's Google provider. Apple sign-in and native iOS account support are deferred.
+Use this guide to supply the production Worker's configuration and the provider settings that Terraform does not manage, to find those it does, and to deploy. The [authentication](architecture/authentication.md) and [account deletion](architecture/account-deletion.md) pages explain the behavior this configuration enables. The [Terraform guide](../terraform/README.md) covers infrastructure state, the Supabase project, the Resend domain, and Supabase's Google provider. Apple sign-in and native iOS account support are deferred.
 
 ## Worker configuration
 
@@ -27,3 +27,13 @@ Register the Android OAuth client for package `audio.cup.app` and its signing ce
 ## Email
 
 Deletion notices go to the Resend API at the `RESEND_BASE_URL` variable, `https://api.resend.com`, from the Resend domain declared in the [Terraform guide](../terraform/README.md#resend-domain). Inspect notification outcomes with the [operator CLI](../apps/operator/README.md#list-account-deletions); provider acceptance is not proof of inbox delivery.
+
+## Deploy
+
+Deploys are manual: no CI workflow deploys, and pushing to `main` deploys nothing. Deploy from an up-to-date `main` after `pnpm validate` passes:
+
+```sh
+pnpm --filter '@cup/cloudflare-worker' run deploy
+```
+
+The script builds the web app and the Worker, then runs `wrangler deploy` with the [Worker configuration](../apps/cloudflare-worker/wrangler.jsonc), which sets `LOCAL_DEVELOPMENT` to `"false"`. Wrangler authenticates with the operator's own login (`wrangler login`). Keep the Cloudflare credentials from `apps/cloudflare-worker/.env.local` out of the deploying shell: that token covers development AI calls only, and Wrangler fails the asset upload with "No access to the specified resource" when it uses it. `wrangler deployments list`, run in `apps/cloudflare-worker`, shows the version now serving traffic.

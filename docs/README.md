@@ -25,7 +25,7 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 | [Application E2E tests](../qa/e2e/README.md)                                          | Run the complete local conversion path and update screenshots                          |
 | [Recorded source pages](../libs/prepare-source-material/test-e2e/fixtures/README.md)  | Replay source-page fixtures in source-material E2E tests                               |
 | [Narration selection evals](../libs/narration-content-selection/test/evals/README.md) | Run the paid narration content selection evals                                         |
-| [Production configuration](production-configuration.md)                               | Supply Worker secrets and provider settings                                            |
+| [Production configuration](production-configuration.md)                               | Supply Worker secrets and provider settings, and deploy                                |
 | [Mobile development](../apps/mobile-app/README.md)                                    | Build native shells and configure platform links and sharing                           |
 | [Account migrations](../libs/accounts/README.md#database-migrations)                  | Change account Drizzle schemas and validate account storage                            |
 | [Grant migrations](../libs/conversion-grants/README.md)                               | Change trial Drizzle schemas and validate grant storage                                |
