@@ -1,6 +1,21 @@
 import { parseFragment, serialize } from "parse5";
 import type { DefaultTreeAdapterMap } from "parse5";
 
+import {
+  collectMetadata,
+  extractNodeText,
+  findAllElements,
+  findFirstElement,
+  getAttribute,
+  isTemplateElement,
+  NARRATION_TEXT_ELEMENT_TAG_NAMES,
+  normalizeWhitespace,
+  type HtmlElement,
+  type HtmlParentNode,
+  type Metadata,
+} from "#src/html-tree.ts";
+import { extractMetadataDescriptions, findSourceSubtitleElement } from "#src/source-subtitle.ts";
+
 /** A cookie installed before source-page navigation. */
 export type SourcePageCookie = {
   name: string;
@@ -36,47 +51,8 @@ const IRRELEVANT_ELEMENT_TAG_NAMES = new Set<string>([
   "style",
   "svg",
 ]);
-const NARRATION_TEXT_ELEMENT_TAG_NAMES = new Set<string>([
-  "blockquote",
-  "figcaption",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  "li",
-  "p",
-  "pre",
-  "td",
-  "th",
-]);
 // The loader marks the visible headline in the source page; `prepareLoadedSourcePage` reads it.
 export const VISIBLE_HEADLINE_ATTRIBUTE = "data-cup-visible-headline";
-// A `class`, `itemprop` or `data-*` word that marks a source subtitle candidate or its wrapper.
-// Each word is proven by a recorded source page; add a word only with a fixture that needs it.
-const SOURCE_SUBTITLE_WORDS = new Set<string>([
-  "subtitle",
-  "subheadline",
-  "summary",
-  "desc",
-  "description",
-]);
-// Date and byline blocks between the headline and the source subtitle are skipped, never candidates.
-const DATE_OR_BYLINE_CLASS_WORDS = new Set<string>(["author", "byline", "date"]);
-const AUTHOR_LINK_SEPARATOR_WORDS = new Set<string>(["and", "und"]);
-// Month and weekday names and their abbreviations in English and German, clock words, and English
-// ordinal suffixes; a block whose words are all among them, beside digits, is a date.
-const DATE_WORDS = new Set<string>(
-  [
-    "january february march april may june july august september october november december",
-    "jan feb mar apr jun jul aug sep sept oct nov dec",
-    "januar jänner februar märz mai juni juli oktober dezember jän mär okt dez",
-    "monday tuesday wednesday thursday friday saturday sunday mon tue wed thu fri sat sun",
-    "montag dienstag mittwoch donnerstag freitag samstag sonntag",
-    "am pm uhr st nd rd th",
-  ].flatMap((words) => words.split(" ")),
-);
 // Keep equivalent static pages; rendering often adds small dynamic counters and page chrome.
 const BETTER_SOURCE_MATERIAL_TEXT_FACTOR = 1.1;
 const SOURCE_PAGE_JAVASCRIPT_MODES = [false, true] as const;
@@ -90,11 +66,6 @@ const OPEN_GRAPH_IMAGE_URL_PROPERTIES = [
   "og:image:url",
 ] as const;
 const TWITTER_IMAGE_URL_PROPERTIES = ["twitter:image", "twitter:image:src"] as const;
-const META_DESCRIPTION_PROPERTIES = new Set<string>([
-  "og:description",
-  "description",
-  "twitter:description",
-]);
 const RENDERED_SOURCE_PAGE_READY_TIMEOUT_MS = 30_000;
 const RENDERED_SOURCE_PAGE_READINESS = {
   minimumBlockCount: 2,
@@ -178,8 +149,10 @@ export type LoadSourcePageOptions = {
 export type LoadedSourcePage = {
   bodyHtml: string;
   documentTitle: string;
-  // Descriptions the page declares in metadata; a source subtitle candidate whose
-  // whitespace-normalized text equals one of them is accepted.
+  /**
+   * Descriptions the page declares in metadata; a source subtitle candidate whose
+   * whitespace-normalized text equals one of them is accepted.
+   */
   metadataDescriptions?: readonly string[];
   coverImage?: CoverImageDeclaration;
   responseStatus: number;
@@ -246,9 +219,9 @@ export function prepareLoadedSourcePage(sourcePage: LoadedSourcePage): SourceMat
   }
 
   const documentFragment = parseFragment(sourcePage.bodyHtml);
-  const visibleHeadline = findFirstElementWithAttribute(
+  const visibleHeadline = findFirstElement(
     documentFragment,
-    VISIBLE_HEADLINE_ATTRIBUTE,
+    (element) => getAttribute(element, VISIBLE_HEADLINE_ATTRIBUTE) !== undefined,
   );
   const title = normalizeWhitespace(
     visibleHeadline ? extractNodeText(visibleHeadline) : sourcePage.documentTitle,
@@ -264,7 +237,7 @@ export function prepareLoadedSourcePage(sourcePage: LoadedSourcePage): SourceMat
   removeAttribute(documentFragment, VISIBLE_HEADLINE_ATTRIBUTE);
   removeIrrelevantAndEmptyElements(documentFragment);
 
-  // After the cut, the first block in document order is the first block after the headline.
+  // After the cut, the first block in document order is the first block after the visible headline.
   const subtitleElement = visibleHeadline
     ? findSourceSubtitleElement(documentFragment, title, sourcePage.metadataDescriptions ?? [])
     : undefined;
@@ -284,155 +257,7 @@ export function prepareLoadedSourcePage(sourcePage: LoadedSourcePage): SourceMat
   };
 }
 
-/**
- * Takes the first prose block, skipping date and byline blocks, as the only source subtitle
- * candidate. Precision beats recall: a candidate without an accepting signal means no source
- * subtitle, and no further block is tried.
- */
-function findSourceSubtitleElement(
-  parentNode: DefaultTreeAdapterMap["parentNode"],
-  title: string,
-  metadataDescriptions: readonly string[],
-): DefaultTreeAdapterMap["element"] | undefined {
-  const candidate = findFirstProseBlock(parentNode);
-
-  if (!candidate) {
-    return undefined;
-  }
-
-  const candidateText = normalizeWhitespace(extractNodeText(candidate));
-  const isAccepted =
-    candidateText !== title &&
-    (metadataDescriptions.some(
-      (description) => normalizeWhitespace(description) === candidateText,
-    ) ||
-      hasSourceSubtitleAttributeWord(candidate));
-
-  return isAccepted ? candidate : undefined;
-}
-
-function findFirstProseBlock(
-  parentNode: DefaultTreeAdapterMap["parentNode"],
-): DefaultTreeAdapterMap["element"] | undefined {
-  for (const childNode of parentNode.childNodes) {
-    if (!("tagName" in childNode)) {
-      continue;
-    }
-
-    if (NARRATION_TEXT_ELEMENT_TAG_NAMES.has(childNode.tagName)) {
-      if (normalizeWhitespace(extractNodeText(childNode)).length === 0) {
-        continue;
-      }
-
-      if (!isDateOrBylineBlock(childNode)) {
-        return childNode;
-      }
-
-      continue;
-    }
-
-    const descendant = findFirstProseBlock(
-      isTemplateElement(childNode) ? childNode.content : childNode,
-    );
-
-    if (descendant) {
-      return descendant;
-    }
-  }
-
-  return undefined;
-}
-
-function isDateOrBylineBlock(element: DefaultTreeAdapterMap["element"]): boolean {
-  const text = normalizeWhitespace(extractNodeText(element));
-  const className = element.attrs.find((attribute) => attribute.name === "class")?.value ?? "";
-
-  return (
-    findFirstElement(element, "time") !== undefined ||
-    isDateOnlyText(text) ||
-    /^(?:By\s|Author:)/u.test(text) ||
-    isAuthorLinkBlock(element) ||
-    splitAttributeWords(className).some((word) => DATE_OR_BYLINE_CLASS_WORDS.has(word))
-  );
-}
-
-function isDateOnlyText(text: string): boolean {
-  const words = text.match(/\p{L}+/gu) ?? [];
-
-  return (
-    /\d/u.test(text) &&
-    /^[\p{L}\d\s.,:/-]+$/u.test(text) &&
-    words.every((word) => DATE_WORDS.has(word.toLowerCase()))
-  );
-}
-
-/** Whether the block's words are author link texts joined only by separators such as "and". */
-function isAuthorLinkBlock(element: DefaultTreeAdapterMap["element"]): boolean {
-  let hasAuthorLink = false;
-  const collectTextOutsideAuthorLinks = (parentNode: DefaultTreeAdapterMap["parentNode"]): string =>
-    parentNode.childNodes
-      .map((childNode) => {
-        if ("value" in childNode) {
-          return childNode.value;
-        }
-
-        if (!("tagName" in childNode)) {
-          return "";
-        }
-
-        if (childNode.tagName === "a" && isAuthorLink(childNode)) {
-          hasAuthorLink = true;
-          return " ";
-        }
-
-        return collectTextOutsideAuthorLinks(childNode);
-      })
-      .join("");
-  const textOutsideAuthorLinks = collectTextOutsideAuthorLinks(element);
-  const separatorWords = textOutsideAuthorLinks.match(/\p{L}+/gu) ?? [];
-
-  return (
-    hasAuthorLink &&
-    /^[\p{L}\s,&]*$/u.test(textOutsideAuthorLinks) &&
-    separatorWords.every((word) => AUTHOR_LINK_SEPARATOR_WORDS.has(word.toLowerCase()))
-  );
-}
-
-function isAuthorLink(link: DefaultTreeAdapterMap["element"]): boolean {
-  const getAttribute = (name: string) =>
-    link.attrs.find((attribute) => attribute.name === name)?.value ?? "";
-
-  return (
-    getAttribute("rel").split(/\s+/u).includes("author") ||
-    /\/authors?\//iu.test(getAttribute("href"))
-  );
-}
-
-function hasSourceSubtitleAttributeWord(element: DefaultTreeAdapterMap["element"]): boolean {
-  const { parentNode } = element;
-  const wrapper = parentNode && "tagName" in parentNode ? parentNode : undefined;
-
-  return [element, ...(wrapper ? [wrapper] : [])].some((markedElement) =>
-    markedElement.attrs.some(
-      (attribute) =>
-        (attribute.name === "class" ||
-          attribute.name === "itemprop" ||
-          attribute.name.startsWith("data-")) &&
-        splitAttributeWords(attribute.value).some((word) => SOURCE_SUBTITLE_WORDS.has(word)),
-    ),
-  );
-}
-
-/** Splits an attribute value such as `ArticleSubtitle hero__sub-headline` into lowercase words. */
-function splitAttributeWords(attributeValue: string): string[] {
-  return attributeValue
-    .split(/[^\p{L}\p{N}]+/u)
-    .flatMap((token) => token.split(/(?<=[\p{Ll}\p{N}])(?=\p{Lu})|(?<=\p{Lu})(?=\p{Lu}\p{Ll})/u))
-    .filter((word) => word.length > 0)
-    .map((word) => word.toLowerCase());
-}
-
-function removeElement(element: DefaultTreeAdapterMap["element"]): void {
+function removeElement(element: HtmlElement): void {
   const { parentNode } = element;
 
   if (!parentNode) {
@@ -602,109 +427,12 @@ function resolveCoverImageUrl(
 }
 
 /**
- * Reads the descriptions a page declares: Open Graph, page and Twitter card descriptions, the
- * `description` of each JSON-LD entity, and microdata `itemprop="description"` values.
- */
-function extractMetadataDescriptions(documentHtml: string): string[] {
-  const documentFragment = parseFragment(documentHtml);
-  const metaDescriptions = collectMetadata(documentFragment).flatMap(({ property, content }) =>
-    META_DESCRIPTION_PROPERTIES.has(property) ? [content] : [],
-  );
-  const descriptions: string[] = [];
-  const collectMarkupDescriptions = (parentNode: DefaultTreeAdapterMap["parentNode"]) => {
-    for (const childNode of parentNode.childNodes) {
-      if (!("tagName" in childNode)) {
-        continue;
-      }
-
-      const getAttribute = (name: string) =>
-        childNode.attrs.find((attribute) => attribute.name === name)?.value;
-
-      if (
-        childNode.tagName === "script" &&
-        getAttribute("type")?.trim().toLowerCase() === "application/ld+json"
-      ) {
-        descriptions.push(...extractJsonLinkedDataDescriptions(extractNodeText(childNode)));
-        continue;
-      }
-
-      if (getAttribute("itemprop")?.split(/\s+/u).includes("description")) {
-        descriptions.push(
-          childNode.tagName === "meta"
-            ? (getAttribute("content") ?? "")
-            : extractNodeText(childNode),
-        );
-      }
-
-      collectMarkupDescriptions(isTemplateElement(childNode) ? childNode.content : childNode);
-    }
-  };
-
-  collectMarkupDescriptions(documentFragment);
-
-  return [...metaDescriptions, ...descriptions]
-    .map((description) => normalizeWhitespace(description))
-    .filter((description) => description.length > 0);
-}
-
-/** Reads the `description` of each top-level and `@graph` entity; nested entities describe others. */
-function extractJsonLinkedDataDescriptions(json: string): string[] {
-  let linkedData: unknown;
-
-  try {
-    linkedData = JSON.parse(json);
-  } catch {
-    // Publisher markup is untrusted; malformed JSON-LD declares nothing.
-    return [];
-  }
-
-  const entities = (Array.isArray(linkedData) ? linkedData : [linkedData]).flatMap(
-    (entity: unknown) =>
-      isRecord(entity) && Array.isArray(entity["@graph"])
-        ? [entity, ...entity["@graph"]]
-        : [entity],
-  );
-
-  return entities.flatMap((entity: unknown) =>
-    isRecord(entity) && typeof entity["description"] === "string" ? [entity["description"]] : [],
-  );
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-type Metadata = { property: string; content: string };
-
-function collectMetadata(parentNode: DefaultTreeAdapterMap["parentNode"]): Metadata[] {
-  return parentNode.childNodes.flatMap((childNode) => {
-    if (!("tagName" in childNode)) {
-      return [];
-    }
-
-    if (childNode.tagName !== "meta") {
-      return collectMetadata(childNode);
-    }
-
-    const getAttribute = (name: string) =>
-      childNode.attrs.find((attribute) => attribute.name === name)?.value;
-    // Open Graph uses `property`; Twitter cards and many publishers use `name` for either.
-    const property = (getAttribute("property") ?? getAttribute("name"))?.trim().toLowerCase();
-    const content = normalizeWhitespace(getAttribute("content") ?? "");
-
-    return property && content.length > 0 ? [{ property, content }] : [];
-  });
-}
-
-/**
  * Open Graph attaches structured properties such as `og:image:secure_url` and `og:image:alt` to the
  * `og:image` they accompany. A page can declare several images; only the first one's properties are
  * returned, so a later image's properties never describe the first.
  */
 function selectFirstOpenGraphImage(metadata: readonly Metadata[]): Metadata[] {
-  const isImageProperty = (item: Metadata) =>
-    item.property === "og:image" || item.property.startsWith("og:image:");
-  const firstIndex = metadata.findIndex(isImageProperty);
+  const firstIndex = metadata.findIndex(isOpenGraphImageProperty);
 
   if (firstIndex === -1) {
     return [];
@@ -721,35 +449,16 @@ function selectFirstOpenGraphImage(metadata: readonly Metadata[]): Metadata[] {
   return metadata.slice(firstIndex, nextImageIndex === -1 ? undefined : nextImageIndex);
 }
 
+function isOpenGraphImageProperty(item: Metadata): boolean {
+  return item.property === "og:image" || item.property.startsWith("og:image:");
+}
+
 function findMetadataContent(metadata: readonly Metadata[], property: string): string | undefined {
   return metadata.find((item) => item.property === property)?.content;
 }
 
-function findFirstElementWithAttribute(
-  parentNode: DefaultTreeAdapterMap["parentNode"],
-  attributeName: string,
-): DefaultTreeAdapterMap["element"] | undefined {
-  for (const childNode of parentNode.childNodes) {
-    if (!("tagName" in childNode)) {
-      continue;
-    }
-
-    if (childNode.attrs.some((attribute) => attribute.name === attributeName)) {
-      return childNode;
-    }
-
-    const descendant = findFirstElementWithAttribute(childNode, attributeName);
-
-    if (descendant) {
-      return descendant;
-    }
-  }
-
-  return undefined;
-}
-
 /** Removes the element and everything before it in document order; its ancestors stay. */
-function cutBeforeAndIncluding(element: DefaultTreeAdapterMap["element"]): void {
+function cutBeforeAndIncluding(element: HtmlElement): void {
   let node: DefaultTreeAdapterMap["childNode"] = element;
   let parentNode = element.parentNode;
   let shouldRemoveNode = true;
@@ -768,41 +477,10 @@ function cutBeforeAndIncluding(element: DefaultTreeAdapterMap["element"]): void 
   }
 }
 
-function removeAttribute(
-  parentNode: DefaultTreeAdapterMap["parentNode"],
-  attributeName: string,
-): void {
-  for (const childNode of parentNode.childNodes) {
-    if (!("tagName" in childNode)) {
-      continue;
-    }
-
-    childNode.attrs = childNode.attrs.filter((attribute) => attribute.name !== attributeName);
-    removeAttribute(isTemplateElement(childNode) ? childNode.content : childNode, attributeName);
+function removeAttribute(parentNode: HtmlParentNode, attributeName: string): void {
+  for (const element of findAllElements(parentNode, () => true)) {
+    element.attrs = element.attrs.filter((attribute) => attribute.name !== attributeName);
   }
-}
-
-function findFirstElement(
-  parentNode: DefaultTreeAdapterMap["parentNode"],
-  tagName: string,
-): DefaultTreeAdapterMap["element"] | undefined {
-  for (const childNode of parentNode.childNodes) {
-    if (!("tagName" in childNode)) {
-      continue;
-    }
-
-    if (childNode.tagName === tagName) {
-      return childNode;
-    }
-
-    const descendant = findFirstElement(childNode, tagName);
-
-    if (descendant) {
-      return descendant;
-    }
-  }
-
-  return undefined;
 }
 
 function selectBetterSourceMaterial(sourceMaterials: readonly SourceMaterial[]): SourceMaterial {
@@ -824,13 +502,15 @@ function selectBetterSourceMaterial(sourceMaterials: readonly SourceMaterial[]):
 
 function getSourceMaterialTextLength(sourceMaterial: SourceMaterial): number {
   const documentFragment = parseFragment(sourceMaterial.html);
-  const contentRoot = findFirstElement(documentFragment, "article") ?? documentFragment;
+  const contentRoot =
+    findFirstElement(documentFragment, (element) => element.tagName === "article") ??
+    documentFragment;
   const narrationText = extractNarrationText(contentRoot);
 
   return normalizeWhitespace(narrationText || extractNodeText(contentRoot)).length;
 }
 
-function extractNarrationText(parentNode: DefaultTreeAdapterMap["parentNode"]): string {
+function extractNarrationText(parentNode: HtmlParentNode): string {
   return parentNode.childNodes
     .map((childNode) => {
       if (!("tagName" in childNode)) {
@@ -842,22 +522,6 @@ function extractNarrationText(parentNode: DefaultTreeAdapterMap["parentNode"]): 
         : extractNarrationText(childNode);
     })
     .join("");
-}
-
-function extractNodeText(parentNode: DefaultTreeAdapterMap["parentNode"]): string {
-  return parentNode.childNodes
-    .map((childNode) => {
-      if ("value" in childNode) {
-        return childNode.value;
-      }
-
-      return "tagName" in childNode ? extractNodeText(childNode) : "";
-    })
-    .join("");
-}
-
-function normalizeWhitespace(text: string): string {
-  return text.replace(/\s+/gu, " ").trim();
 }
 
 function describeError(error: unknown): string {
@@ -924,7 +588,7 @@ function isPrivateIpv6(hostname: string): boolean {
   return mapped !== undefined && isPrivateIpv4(mapped);
 }
 
-function removeIrrelevantAndEmptyElements(parentNode: DefaultTreeAdapterMap["parentNode"]): void {
+function removeIrrelevantAndEmptyElements(parentNode: HtmlParentNode): void {
   for (let childIndex = parentNode.childNodes.length - 1; childIndex >= 0; childIndex -= 1) {
     const childNode = parentNode.childNodes[childIndex];
 
@@ -937,7 +601,7 @@ function removeIrrelevantAndEmptyElements(parentNode: DefaultTreeAdapterMap["par
       continue;
     }
 
-    const role = childNode.attrs.find((attribute) => attribute.name === "role")?.value;
+    const role = getAttribute(childNode, "role");
     if (
       IRRELEVANT_ELEMENT_TAG_NAMES.has(childNode.tagName) ||
       role === "navigation" ||
@@ -963,10 +627,4 @@ function removeIrrelevantAndEmptyElements(parentNode: DefaultTreeAdapterMap["par
 
     parentNode.childNodes.splice(childIndex, 1);
   }
-}
-
-function isTemplateElement(
-  element: DefaultTreeAdapterMap["element"],
-): element is DefaultTreeAdapterMap["template"] {
-  return element.tagName === "template" && "content" in element;
 }

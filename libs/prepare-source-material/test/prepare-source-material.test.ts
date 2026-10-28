@@ -240,9 +240,10 @@ test.each([
 });
 
 test.each([
+  ["a block of only a time element", '<time datetime="2026-01-09">Jan 09, 2026</time>'],
   [
-    "a block containing a time element",
-    'Published <time datetime="2026-01-09">Jan 09, 2026</time>',
+    "a block of time elements and separators",
+    '<time datetime="2026-01-09">Jan 09, 2026</time> · <time datetime="2026-01-10">Jan 10</time>',
   ],
   ["an English date", "January 9, 2026"],
   ["a German date", "28. Oktober 2026, 09:00"],
@@ -265,6 +266,21 @@ test.each([
     html: `<main><p>${blockHtml}</p><p>First paragraph.</p></main>`,
     title: "Source title",
     subtitle: "Summary line",
+  });
+});
+
+test("detects a source subtitle that only mentions a date in an inline time element", () => {
+  const sourceMaterial = prepareLoadedSourcePage({
+    bodyHtml:
+      '<main><h1 data-cup-visible-headline>Source title</h1><p class="summary">What changed after the vote on <time datetime="2026-01-09">January 9</time>.</p><p>First paragraph.</p></main>',
+    documentTitle: "Source title",
+    responseStatus: 200,
+  });
+
+  expect(sourceMaterial).toEqual({
+    html: "<main><p>First paragraph.</p></main>",
+    title: "Source title",
+    subtitle: "What changed after the vote on January 9.",
   });
 });
 
