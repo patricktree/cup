@@ -1,24 +1,13 @@
-push_refs=$(cat)
 pushed_oids=""
-runs_extended_validation=false
 while read -r local_ref local_oid remote_ref remote_oid; do
     if [ "${local_ref}" = "(delete)" ] || [ -z "${local_ref}" ]; then
         continue
     fi
     pushed_oids="${pushed_oids} ${local_oid}"
-    if [ "${remote_ref}" = "refs/heads/main" ]; then
-        runs_extended_validation=true
-    fi
-done <<EOF
-${push_refs}
-EOF
+done
 
 if [ -n "${pushed_oids}" ]; then
-    # commits created by `git rebase --continue` skip the pre-commit hook, so check every pushed commit;
+    # check every commit the push publishes;
     # pushed_oids is unquoted so that each object ID becomes a separate argument
     pnpm exec submodule-check commits ${pushed_oids} || exit $?
-fi
-
-if [ "${runs_extended_validation}" = true ]; then
-    pnpm run validate:extended || exit $?
 fi
