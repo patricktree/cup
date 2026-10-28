@@ -15,12 +15,17 @@ Create a descriptive directory under `test/evals/cases/` with this structure:
 ```text
 <case-id>/
   source-title.txt
+  source-subtitle.txt  # optional
   input.html
   expected.json
-  case.json       # optional
+  case.json            # optional
 ```
 
-Put the title returned by source material preparation in `source-title.txt` and the accepted audiobook source material in `input.html`. Put the best synchronization units in `expected.json`. The golden is a JSON array containing each unit's `id` and `narrationText`.
+Put the title returned by source material preparation in `source-title.txt` and the accepted audiobook source material in `input.html`. When source material preparation detects a source subtitle on the page, put it in `source-subtitle.txt`; leave the file out when the page has none. The harness passes the source title and source subtitle to narration document creation, just as the production workflow does.
+
+`input.html` has the prepared shape that content selection receives in production. When the page has a visible headline, preparation cuts everything before the headline, the headline itself, and the source subtitle element, so `input.html` contains none of them. Derive a new case's `input.html` from what `prepareLoadedSourcePage` in `libs/prepare-source-material` returns for the page.
+
+Put the best synchronization units in `expected.json`. The golden is a JSON array containing each unit's `id` and `narrationText`. It opens with the source title as unit `narration-unit-0001`; with a source subtitle, the source subtitle follows as unit `narration-unit-0002` and the selected content starts at `narration-unit-0003`.
 
 Optional `case.json` metadata accepts only `description` and `tags`:
 

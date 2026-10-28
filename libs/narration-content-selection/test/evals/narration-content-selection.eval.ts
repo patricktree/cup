@@ -58,6 +58,9 @@ for (const candidate of CANDIDATES) {
         test(evalCase.id, async ({ run }) => {
           const result = await run({
             sourceTitle: evalCase.sourceTitle,
+            ...(evalCase.sourceSubtitle === undefined
+              ? {}
+              : { sourceSubtitle: evalCase.sourceSubtitle }),
             caseId: evalCase.id,
             inputHtml: evalCase.inputHtml,
             ...(evalCase.metadata ? { metadata: evalCase.metadata } : {}),

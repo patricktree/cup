@@ -16,6 +16,7 @@ export type NarrationContentSelectionCandidate = SelectionConfig & {
 
 export type NarrationContentSelectionEvalInput = {
   sourceTitle: string;
+  sourceSubtitle?: string;
   caseId: string;
   inputHtml: string;
   metadata?: CaseMetadata;
@@ -51,6 +52,7 @@ export function createNarrationContentSelectionHarness(
       });
       const narrationDocument = createNarrationDocument({
         sourceTitle: input.sourceTitle,
+        ...(input.sourceSubtitle === undefined ? {} : { sourceSubtitle: input.sourceSubtitle }),
         sourceMaterialHtml: selection.selectedSourceMaterialHtml,
       });
       const output = {
