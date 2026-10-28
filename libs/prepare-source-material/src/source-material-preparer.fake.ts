@@ -1,6 +1,7 @@
 import {
   assertPublicSourceUrl,
   prepareLoadedSourcePage,
+  VISIBLE_HEADLINE_ATTRIBUTE,
   type CoverImageDeclaration,
   type SourceMaterialPreparer,
 } from "#src/prepare-source-material.ts";
@@ -25,7 +26,8 @@ export function createControlledSourceMaterialPreparer({
     }
 
     return prepareLoadedSourcePage({
-      bodyHtml: html,
+      // Without a browser to render it, the controlled HTML's first `<h1>` is its visible headline.
+      bodyHtml: html.replace("<h1", `<h1 ${VISIBLE_HEADLINE_ATTRIBUTE}`),
       documentTitle: "Controlled source fixture",
       ...(coverImage === undefined ? {} : { coverImage }),
       responseStatus: 200,

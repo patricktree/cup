@@ -2,10 +2,22 @@ import http from "node:http";
 
 import anthropic from "#test-e2e/fixtures/anthropic.json" with { type: "json" };
 import cloudflare from "#test-e2e/fixtures/cloudflare.json" with { type: "json" };
+import derStandard from "#test-e2e/fixtures/derstandard.json" with { type: "json" };
 import gatesNotes from "#test-e2e/fixtures/gates-notes.json" with { type: "json" };
+import openAiDevelopers from "#test-e2e/fixtures/openai-developers.json" with { type: "json" };
+import washingtonPost from "#test-e2e/fixtures/washington-post.json" with { type: "json" };
+import wikipedia from "#test-e2e/fixtures/wikipedia.json" with { type: "json" };
 
 const recordings = new Map(
-  [...anthropic, ...cloudflare, ...gatesNotes].map((recording) => [recording.url, recording]),
+  [
+    ...anthropic,
+    ...cloudflare,
+    ...gatesNotes,
+    ...derStandard,
+    ...openAiDevelopers,
+    ...washingtonPost,
+    ...wikipedia,
+  ].map((recording) => [recording.url, recording]),
 );
 
 const server = http.createServer((request, response) => {

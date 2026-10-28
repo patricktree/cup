@@ -51,6 +51,8 @@ const NARRATION_TEXT_ELEMENT_TAG_NAMES = new Set<string>([
   "td",
   "th",
 ]);
+// The loader marks the visible headline in the source page; `prepareLoadedSourcePage` reads it.
+export const VISIBLE_HEADLINE_ATTRIBUTE = "data-cup-visible-headline";
 // Keep equivalent static pages; rendering often adds small dynamic counters and page chrome.
 const BETTER_SOURCE_MATERIAL_TEXT_FACTOR = 1.1;
 const SOURCE_PAGE_JAVASCRIPT_MODES = [false, true] as const;
@@ -99,6 +101,7 @@ type SourcePage = {
     argument: RenderedSourcePageReadinessOptions,
     options: { timeout: number },
   ): Promise<unknown>;
+  evaluate(pageFunction: (attributeName: string) => void, attributeName: string): Promise<unknown>;
   locator(selector: "body" | "head"): { innerHTML(): Promise<string> };
   title(): Promise<string>;
   close(): Promise<void>;
@@ -200,9 +203,28 @@ export function prepareLoadedSourcePage(sourcePage: LoadedSourcePage): SourceMat
     throw new Error(`Source page responded with HTTP ${sourcePage.responseStatus}`);
   }
 
+  const documentFragment = parseFragment(sourcePage.bodyHtml);
+  const visibleHeadline = findFirstElementWithAttribute(
+    documentFragment,
+    VISIBLE_HEADLINE_ATTRIBUTE,
+  );
+  const title = normalizeWhitespace(
+    visibleHeadline ? extractNodeText(visibleHeadline) : sourcePage.documentTitle,
+  );
+
+  if (title.length === 0) {
+    throw new Error("Expected the source page to have a title");
+  }
+
+  if (visibleHeadline) {
+    cutBeforeAndIncluding(visibleHeadline);
+  }
+  removeAttribute(documentFragment, VISIBLE_HEADLINE_ATTRIBUTE);
+  removeIrrelevantAndEmptyElements(documentFragment);
+
   return {
-    html: cleanAudiobookSourceMaterialHtml(sourcePage.bodyHtml),
-    title: extractSourceTitle(sourcePage.bodyHtml, sourcePage.documentTitle),
+    html: serialize(documentFragment),
+    title,
     ...(sourcePage.coverImage === undefined ? {} : { coverImage: sourcePage.coverImage }),
   };
 }
@@ -275,6 +297,8 @@ export async function loadPublicSourcePage({
     }
 
     const coverImage = extractCoverImageDeclaration(await page.locator("head").innerHTML(), url);
+    // The mark must be in the DOM before the body is serialized below.
+    await page.evaluate(markVisibleHeadline, VISIBLE_HEADLINE_ATTRIBUTE);
 
     return {
       bodyHtml: await page.locator("body").innerHTML(),
@@ -285,6 +309,27 @@ export async function loadPublicSourcePage({
   } finally {
     await page.close();
   }
+}
+
+/**
+ * Marks the first `<h1>` that renders visibly with {@link VISIBLE_HEADLINE_ATTRIBUTE}, so the
+ * source title never comes from a hidden heading such as a consent wall's. The browser serializes
+ * this function into the source page, so it must stay self-contained.
+ */
+function markVisibleHeadline(attributeName: string): void {
+  const visibleHeadline = Array.from(document.querySelectorAll("h1")).find((heading) => {
+    const boundingRectangle = heading.getBoundingClientRect();
+
+    return (
+      (heading.textContent?.trim() ?? "").length > 0 &&
+      heading.checkVisibility({ opacityProperty: true, visibilityProperty: true }) &&
+      // Visually hidden headings, such as `.sr-only`, keep a one-pixel box.
+      boundingRectangle.width > 1 &&
+      boundingRectangle.height > 1
+    );
+  });
+
+  visibleHeadline?.setAttribute(attributeName, "");
 }
 
 /** Reads the publisher-declared cover image from page metadata; body images are never considered. */
@@ -390,16 +435,61 @@ function findMetadataContent(metadata: readonly Metadata[], property: string): s
   return metadata.find((item) => item.property === property)?.content;
 }
 
-function extractSourceTitle(bodyHtml: string, documentTitle: string): string {
-  const documentFragment = parseFragment(bodyHtml);
-  const heading = findFirstElement(documentFragment, "h1");
-  const title = normalizeWhitespace(heading ? extractNodeText(heading) : documentTitle);
+function findFirstElementWithAttribute(
+  parentNode: DefaultTreeAdapterMap["parentNode"],
+  attributeName: string,
+): DefaultTreeAdapterMap["element"] | undefined {
+  for (const childNode of parentNode.childNodes) {
+    if (!("tagName" in childNode)) {
+      continue;
+    }
 
-  if (title.length === 0) {
-    throw new Error("Expected the source page to have a title");
+    if (childNode.attrs.some((attribute) => attribute.name === attributeName)) {
+      return childNode;
+    }
+
+    const descendant = findFirstElementWithAttribute(childNode, attributeName);
+
+    if (descendant) {
+      return descendant;
+    }
   }
 
-  return title;
+  return undefined;
+}
+
+/** Removes the element and everything before it in document order; its ancestors stay. */
+function cutBeforeAndIncluding(element: DefaultTreeAdapterMap["element"]): void {
+  let node: DefaultTreeAdapterMap["childNode"] = element;
+  let parentNode = element.parentNode;
+  let shouldRemoveNode = true;
+
+  while (parentNode) {
+    const nodeIndex = parentNode.childNodes.indexOf(node);
+    parentNode.childNodes.splice(0, shouldRemoveNode ? nodeIndex + 1 : nodeIndex);
+
+    if (!("tagName" in parentNode)) {
+      break;
+    }
+
+    node = parentNode;
+    parentNode = parentNode.parentNode;
+    shouldRemoveNode = false;
+  }
+}
+
+function removeAttribute(
+  parentNode: DefaultTreeAdapterMap["parentNode"],
+  attributeName: string,
+): void {
+  for (const childNode of parentNode.childNodes) {
+    if (!("tagName" in childNode)) {
+      continue;
+    }
+
+    childNode.attrs = childNode.attrs.filter((attribute) => attribute.name !== attributeName);
+    removeAttribute(isTemplateElement(childNode) ? childNode.content : childNode, attributeName);
+  }
 }
 
 function findFirstElement(
