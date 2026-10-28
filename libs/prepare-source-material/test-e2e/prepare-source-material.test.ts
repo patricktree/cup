@@ -16,6 +16,8 @@ type SourcePageFixture = {
   coverImage: { url: string; alternativeText?: string };
   snapshotFilename: string;
   stabilizeSourceMaterial: (html: string) => string;
+  // The source subtitle that preparation detects and removes from the source material, if any.
+  subtitle?: string;
   // The visible headline; the cut removes it and everything before it.
   title: string;
   // Text the page sets above its visible headline, which the cut removes.
@@ -33,6 +35,8 @@ const SOURCE_PAGES: readonly SourcePageFixture[] = [
       alternativeText: "Demystifying evals for AI agents",
     },
     snapshotFilename: "anthropic.html",
+    subtitle:
+      "The capabilities that make agents useful also make them difficult to evaluate. The strategies that work across deployments combine techniques to match the complexity of the systems they measure.",
     stabilizeSourceMaterial: (html: string) =>
       html.replace(
         /http:\/\/claude\.ai\/redirect\/website\.v1\.[^"]+/g,
@@ -58,6 +62,7 @@ const SOURCE_PAGES: readonly SourcePageFixture[] = [
       url: "https://images.gatesnotes.com/12514eb8-7b51-008e-41a9-512542cf683b/f93f0cc8-be6d-4e33-870b-ab6d546576f1/AI-Article-08.19.2026-Share-Image-1200x630.jpg",
     },
     snapshotFilename: "gates-notes.html",
+    subtitle: "We need a plan to ensure that the good outweighs the bad.",
     stabilizeSourceMaterial: (html: string) =>
       extractElementById(html, "a_turbulent_ai_era_and_critical_choices_to_make_a").replace(
         /(published <span class="ArtDateTime">)[^<]+(<\/span>)/,
@@ -72,6 +77,8 @@ const SOURCE_PAGES: readonly SourcePageFixture[] = [
       url: "https://i.ds.at/kJMDLg/rs:fill:1200:600/plain/lido-images/2026/10/27/4e361b46-b4dd-454e-a75b-335dbb5ac943.jpg",
     },
     snapshotFilename: "derstandard.html",
+    subtitle:
+      "Medienberichten zufolge wird das Modell der Tochtermarke Yangwang Anfang November in Dubai präsentiert",
     stabilizeSourceMaterial: (html: string) => html,
     title: "BYD will mit neuer Luxus-Limousine Rolls-Royce und Maybach Konkurrenz machen",
     textBeforeHeadline: ["Obere Oberklasse"],
@@ -91,6 +98,8 @@ const SOURCE_PAGES: readonly SourcePageFixture[] = [
       alternativeText: "Maintaining software with the GPT-6 family | OpenAI Developers",
     },
     snapshotFilename: "openai-developers.html",
+    subtitle:
+      "How OpenAI’s Core Experimentation team uses Codex to remove unused code, clean up stale experiments, and improve CI.",
     stabilizeSourceMaterial: (html: string) => html,
     title: "Maintaining software with the GPT-6 family",
     textBeforeHeadline: [],
@@ -101,6 +110,8 @@ const SOURCE_PAGES: readonly SourcePageFixture[] = [
       url: "https://www.washingtonpost.com/wp-apps/imrs.php?src=https://cloudfront-us-east-1.images.arcpublishing.com/wapo/FDOM3ZHHDNC5HBXBMB3JHXI5JU.png&w=1440",
     },
     snapshotFilename: "washington-post.html",
+    subtitle:
+      "Polls show tight races in a handful of states, making it hard to tell whether Democrats or Republicans will prevail next week.",
     stabilizeSourceMaterial: (html: string) => html,
     title: "The seven races that will decide control of the Senate",
     textBeforeHeadline: [],
@@ -127,6 +138,7 @@ for (const {
   coverImage,
   snapshotFilename,
   stabilizeSourceMaterial,
+  subtitle,
   textBeforeHeadline,
   title,
   unrecordedRequests = [],
@@ -159,6 +171,12 @@ for (const {
     ).toEqual([]);
     expect(sourceMaterial.coverImage).toEqual(coverImage);
     expect(sourceMaterial.title).toBe(title);
+    expect(sourceMaterial.subtitle).toBe(subtitle);
+    if (subtitle !== undefined) {
+      expect(extractText(parseFragment(sourceMaterial.html)).replace(/\s+/gu, " ")).not.toContain(
+        subtitle,
+      );
+    }
     expect(extractHeadingTexts(sourceMaterial.html)).not.toContain(title);
     for (const text of textBeforeHeadline) {
       expect(sourceMaterial.html).not.toContain(text);

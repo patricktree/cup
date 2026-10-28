@@ -8,6 +8,8 @@ Gates Notes retains its original empty HTML shell, Next.js bundles, and content 
 
 Each page asserts that its source title is its visible headline, the first `<h1>` that renders visibly, and that the cut removed the headline and the text above it, such as Gates Notes' eyebrow and Der Standard's kicker. The recorded pages hold no hidden `<h1>`, so a separate test serves a page with hidden headings, including one inside a hidden consent wall, and checks in both load modes that the visible one becomes the source title.
 
+Each page also asserts its source subtitle, by whitespace-normalized equality, or its absence, as listed in the [acceptance set table](#source-subtitle-acceptance-set), and that the prepared HTML no longer contains an accepted source subtitle. The page's metadata descriptions come from the recorded `<head>` and body, so a recording must keep them for the metadata rule to apply.
+
 Run the suite from the repository root:
 
 ```sh

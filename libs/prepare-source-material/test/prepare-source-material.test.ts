@@ -142,6 +142,7 @@ test("waits for rendered narration content without requiring an h1", async () =>
     bodyHtml:
       "<main><p>The first complete source paragraph contains enough narration text to distinguish it from a loading shell.</p><p>The second complete paragraph makes the rendered source ready even though this page intentionally has no level-one heading.</p></main>",
     documentTitle: "Rendered document | Publisher",
+    metadataDescriptions: [],
     responseStatus: 200,
   });
 });
@@ -186,6 +187,164 @@ test("falls back to the document title and cuts nothing without a visible headli
     html: bodyHtml,
     title: "Document title | Publisher",
   });
+});
+
+test("detects a source subtitle that equals a metadata description and removes it", () => {
+  const sourceMaterial = prepareLoadedSourcePage({
+    bodyHtml: `<main><header><h1 data-cup-visible-headline>Source title</h1><div class="lead"><p class="text-lg">  A short
+      summary line. </p></div></header><p>First paragraph.</p></main>`,
+    documentTitle: "Source title | Publisher",
+    metadataDescriptions: ["A teaser", "A short summary line."],
+    responseStatus: 200,
+  });
+
+  expect(sourceMaterial).toEqual({
+    html: "<main><p>First paragraph.</p></main>",
+    title: "Source title",
+    subtitle: "A short summary line.",
+  });
+});
+
+test.each([
+  ["a class word on the candidate", '<p class="hero__summary">Summary line</p>'],
+  ["an itemprop word on the candidate", '<p itemprop="description">Summary line</p>'],
+  ["a data attribute word on the candidate", '<p data-qa="subheadline">Summary line</p>'],
+  ["a camelCase class word on the candidate", '<p class="ArticleSubtitle">Summary line</p>'],
+  ["a class word on the wrapper", '<div class="ArtDesc GNDescCopy"><p>Summary line</p></div>'],
+])("detects a source subtitle marked by %s", (_description, subtitleHtml) => {
+  const sourceMaterial = prepareLoadedSourcePage({
+    bodyHtml: `<main><h1 data-cup-visible-headline>Source title</h1>${subtitleHtml}<p>First paragraph.</p></main>`,
+    documentTitle: "Source title | Publisher",
+    responseStatus: 200,
+  });
+
+  expect(sourceMaterial).toEqual({
+    html: "<main><p>First paragraph.</p></main>",
+    title: "Source title",
+    subtitle: "Summary line",
+  });
+});
+
+test.each([
+  ["a word that only contains a subtitle word", '<p class="descendant">Teaser line</p>'],
+  ["a subtitle word on an attribute that is not inspected", '<p id="summary">Teaser line</p>'],
+])("detects no source subtitle for %s", (_description, candidateHtml) => {
+  const bodyHtml = `<main><h1 data-cup-visible-headline>Source title</h1>${candidateHtml}<p>First paragraph.</p></main>`;
+
+  expect(
+    prepareLoadedSourcePage({ bodyHtml, documentTitle: "Source title", responseStatus: 200 }),
+  ).toEqual({
+    html: `<main>${candidateHtml}<p>First paragraph.</p></main>`,
+    title: "Source title",
+  });
+});
+
+test.each([
+  [
+    "a block containing a time element",
+    'Published <time datetime="2026-01-09">Jan 09, 2026</time>',
+  ],
+  ["an English date", "January 9, 2026"],
+  ["a German date", "28. Oktober 2026, 09:00"],
+  ["a numeric date", "2026-10-28"],
+  ["a block starting with By", "By Jane Doe"],
+  ["a block starting with Author:", "<span>Author:</span> Jane Doe"],
+  [
+    "a block of author links",
+    '<a href="/authors/jane-doe">Jane Doe</a> and <a rel="author" href="/team/john">John Roe</a>',
+  ],
+])("skips %s before the source subtitle candidate", (_description, blockHtml) => {
+  const sourceMaterial = prepareLoadedSourcePage({
+    bodyHtml: `<main><h1 data-cup-visible-headline>Source title</h1><p>${blockHtml}</p><p>Summary line</p><p>First paragraph.</p></main>`,
+    documentTitle: "Source title",
+    metadataDescriptions: ["Summary line"],
+    responseStatus: 200,
+  });
+
+  expect(sourceMaterial).toEqual({
+    html: `<main><p>${blockHtml}</p><p>First paragraph.</p></main>`,
+    title: "Source title",
+    subtitle: "Summary line",
+  });
+});
+
+test.each(["article-author", "byline", "PostDate"])(
+  "skips a block whose class names it %s before the source subtitle candidate",
+  (className) => {
+    const sourceMaterial = prepareLoadedSourcePage({
+      bodyHtml: `<main><h1 data-cup-visible-headline>Source title</h1><p class="${className}">Jane Doe, Publisher</p><p class="summary">Summary line</p></main>`,
+      documentTitle: "Source title",
+      responseStatus: 200,
+    });
+
+    expect(sourceMaterial.subtitle).toBe("Summary line");
+  },
+);
+
+test("detects no source subtitle when the candidate repeats the source title", () => {
+  const sourceMaterial = prepareLoadedSourcePage({
+    bodyHtml:
+      '<main><h1 data-cup-visible-headline>Source title</h1><p class="summary">Source  title</p><p>First paragraph.</p></main>',
+    documentTitle: "Source title",
+    metadataDescriptions: ["Source title"],
+    responseStatus: 200,
+  });
+
+  expect(sourceMaterial).toEqual({
+    html: '<main><p class="summary">Source  title</p><p>First paragraph.</p></main>',
+    title: "Source title",
+  });
+});
+
+test("detects no source subtitle when the metadata description only nearly equals the candidate", () => {
+  const sourceMaterial = prepareLoadedSourcePage({
+    bodyHtml:
+      "<main><h1 data-cup-visible-headline>Source title</h1><p>Polls show tight races, making it hard to tell.</p><p>First paragraph.</p></main>",
+    documentTitle: "Source title",
+    metadataDescriptions: ["Polls show tight races, making it difficult to tell."],
+    responseStatus: 200,
+  });
+
+  expect(sourceMaterial.subtitle).toBeUndefined();
+  expect(sourceMaterial.html).toContain("Polls show tight races");
+});
+
+test("tries no further block when the first candidate is not a source subtitle", () => {
+  const sourceMaterial = prepareLoadedSourcePage({
+    bodyHtml:
+      '<main><h1 data-cup-visible-headline>Source title</h1><p id="siteSub">From the free encyclopedia</p><p class="summary">Summary line</p></main>',
+    documentTitle: "Source title",
+    metadataDescriptions: ["Summary line"],
+    responseStatus: 200,
+  });
+
+  expect(sourceMaterial).toEqual({
+    html: '<main><p id="siteSub">From the free encyclopedia</p><p class="summary">Summary line</p></main>',
+    title: "Source title",
+  });
+});
+
+test("leaves the subtitle field absent when the page has no source subtitle", () => {
+  const sourceMaterial = prepareLoadedSourcePage({
+    bodyHtml: "<main><h1 data-cup-visible-headline>Source title</h1><p>First paragraph.</p></main>",
+    documentTitle: "Source title",
+    responseStatus: 200,
+  });
+
+  expect(sourceMaterial).not.toHaveProperty("subtitle");
+});
+
+test("detects no source subtitle without a visible headline", () => {
+  const bodyHtml = '<main><h1>Hidden heading</h1><p class="summary">Summary line</p></main>';
+
+  expect(
+    prepareLoadedSourcePage({
+      bodyHtml,
+      documentTitle: "Document title",
+      metadataDescriptions: ["Summary line"],
+      responseStatus: 200,
+    }),
+  ).toEqual({ html: bodyHtml, title: "Document title" });
 });
 
 test("uses the JavaScript-rendered source page when the static page has no source content", async () => {
@@ -265,6 +424,31 @@ test("uses the source page with more source content when both loads are usable",
     title: "Rendered document",
   });
 });
+
+test.each([
+  [false, "Static summary"],
+  [true, "Rendered summary"],
+])(
+  "keeps the source subtitle of the source material it picks (rendered load has more text: %s)",
+  async (hasRenderedLoadMoreText, expectedSubtitle) => {
+    const paragraphs = "<p>First paragraph.</p><p>Second paragraph.</p>";
+    const sourceMaterial = await prepareSourceMaterial({
+      browser: UNUSED_BROWSER,
+      url: SOURCE_URL,
+      loadSourcePage: async ({ javaScriptEnabled }) => ({
+        bodyHtml: `<main><h1 data-cup-visible-headline>Source title</h1><p class="summary">${javaScriptEnabled ? "Rendered summary" : "Static summary"}</p>${hasRenderedLoadMoreText === javaScriptEnabled ? paragraphs : "<p>Preview.</p>"}</main>`,
+        documentTitle: "Source title | Publisher",
+        responseStatus: 200,
+      }),
+    });
+
+    expect(sourceMaterial).toEqual({
+      html: `<main>${paragraphs}</main>`,
+      title: "Source title",
+      subtitle: expectedSubtitle,
+    });
+  },
+);
 
 test("keeps the static source page when rendering adds only dynamic page chrome", async () => {
   const staticSourceMaterialHtml =
@@ -464,6 +648,53 @@ test("keeps the static load's cover image when the rendered load declares none",
   expect(sourceMaterial.coverImage).toEqual({ url: "https://cdn.publisher.example/static.jpg" });
 });
 
+test("reads the metadata descriptions from the loaded page's head and body", async () => {
+  const browser = {
+    newPage: async () => ({
+      route: async () => {},
+      context: () => ({ addCookies: async () => {} }),
+      goto: async () => ({ status: () => 200 }),
+      evaluate: async () => {},
+      waitForFunction: async () => {},
+      locator: (selector) => ({
+        innerHTML: async () =>
+          selector === "head"
+            ? `
+              <meta property="og:description" content="Open Graph  description">
+              <meta name="description" content="Page description">
+              <meta name="twitter:description" content="Twitter description">
+              <meta property="og:title" content="Not a description">
+              <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"NewsArticle","description":"Graph description","publisher":{"description":"Publisher description"}}]}</script>
+              <script type="application/ld+json">{ invalid JSON</script>
+            `
+            : `
+              <script type="application/ld+json">[{"@type":"Article","description":"JSON-LD description"}]</script>
+              <meta itemprop="description" content="Microdata meta description">
+              <p itemprop="description">Microdata <b>text</b> description</p>
+            `,
+      }),
+      title: async () => "Source title",
+      close: async () => {},
+    }),
+  } satisfies Browser;
+
+  const { metadataDescriptions } = await loadPublicSourcePage({
+    browser,
+    javaScriptEnabled: false,
+    url: SOURCE_URL,
+  });
+
+  expect(metadataDescriptions).toEqual([
+    "Open Graph description",
+    "Page description",
+    "Twitter description",
+    "Graph description",
+    "JSON-LD description",
+    "Microdata meta description",
+    "Microdata text description",
+  ]);
+});
+
 test("reads the cover image declaration from the loaded page's head", async () => {
   const browser = {
     newPage: async () => ({
@@ -488,6 +719,7 @@ test("reads the cover image declaration from the loaded page's head", async () =
   ).resolves.toEqual({
     bodyHtml: "<p>Source content</p>",
     documentTitle: "Source title",
+    metadataDescriptions: [],
     coverImage: { url: "https://cdn.publisher.example/cover.jpg" },
     responseStatus: 200,
   });
