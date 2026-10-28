@@ -24,6 +24,18 @@ The URL submitted to locate the source page carrying the source content.
 
 _Avoid_: source page URL
 
+## source title
+
+The headline the source page gives the source content.
+
+_Avoid_: page title, headline
+
+## source subtitle
+
+The short summary line the source page sets directly beneath the source title, such as a news article's dek or a blog post's subtitle. Many source pages have none. It is not a section heading within the source content, a kicker above the source title, a byline, or a date.
+
+_Avoid_: subheading, dek, standfirst, teaser
+
 ## conversion
 
 The transformation of source content into an audiobook.
