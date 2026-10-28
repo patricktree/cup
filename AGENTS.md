@@ -42,7 +42,7 @@ Git hooks run no validation, so deciding when to validate is up to you. Prefer t
 
 The groups are independent and stop on failure. Extended does not run the fast group. Both free groups require Docker; extended also needs internet access, `uvx`, and GitHub CLI authentication for zizmor. Source-material E2E tests replay locally hosted page fixtures, including the scripts and content API responses needed for JavaScript rendering; see `libs/prepare-source-material/test-e2e/fixtures/README.md`. Fast validation requires the configured environment files but does not invoke paid AI services. Declutter runs after the build because Knip loads the Worker's Vite config, which requires the built web app.
 
-Test suites can run concurrently in several checkouts. Each run starts its own servers on ports the operating system assigns and never attaches to a server that is already running, so keep fixed ports and `reuseExistingServer` out of test configuration.
+Test suites can run concurrently in several checkouts. Each run starts its own servers on ports the operating system assigns and never attaches to a server that is already running, so keep fixed ports and `reuseExistingServer` out of test configuration. The one exception is the Playwright Server container from the shared Playwright configuration: all runs of one Playwright version share it, and it stops itself when idle (see the [shared configuration](.patricktree-stack/tooling/config-playwright/README.md#shared-playwright-server-container)).
 
 Tests are never retried: leave Vitest `retry` and Playwright `retries` at their default of 0 in configs and individual tests (an explicit 0 is fine), and fix a flaky test instead of retrying it.
 

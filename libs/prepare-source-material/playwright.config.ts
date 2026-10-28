@@ -14,7 +14,6 @@ export default defineConfig({
   // HTML baselines stay beside the tests rather than using platform-specific image paths.
   snapshotPathTemplate: "{testDir}/{arg}{ext}",
   webServer: [
-    ...(dockerConfig.webServer ? [dockerConfig.webServer].flat() : []),
     {
       command: "node test-e2e/source-page-server.ts",
       // The server listens on a port the operating system assigns so concurrent runs cannot collide.
