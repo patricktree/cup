@@ -2,18 +2,18 @@ import { css } from "@linaria/core";
 
 /** The heights of a fade footer, which set its `--fade-height` and the clearance above it. */
 type FadeFooterHeights = {
-  /** Height of the drawn fade, from its transparent top to the bottom of the screen. */
+  /** Height of the drawn fade, from its transparent top down to the footer's top edge. */
   fadeHeightPixels: number;
-  /** The footer's own row; the rest of the fade reaches over the page above. */
+  /** The footer's own row, below the fade. */
   footerHeightPixels: number;
 };
 
-/** Bottom padding of the page above a fade footer, so its last content ends where the fade begins. */
-export function fadeFooterClearance({
-  fadeHeightPixels,
-  footerHeightPixels,
-}: FadeFooterHeights): string {
-  return `${fadeHeightPixels - footerHeightPixels}px`;
+/**
+ * Bottom padding of the page above a fade footer, so its last content ends where the fade begins.
+ * The footer has its own row below the page, so only the fade reaches over the page.
+ */
+export function fadeFooterClearance({ fadeHeightPixels }: FadeFooterHeights): string {
+  return `${fadeHeightPixels}px`;
 }
 
 /**
