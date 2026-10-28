@@ -33,12 +33,14 @@ function AccountDialog(): React.ReactNode {
   const isConfirmationPending = useIsAccountConfirmationPending();
   const signIn = useSignInMutation();
   const signInMethods = useSignInMethods();
+  // Leaving while a step runs would lose the return from Google, which comes back to this URL.
+  const isCloseBlocked = isConfirmationPending || signIn.isPending;
 
   return (
     <DSDialog
       open
       onOpenChange={(open) => {
-        if (!open && !isConfirmationPending && !signIn.isPending) {
+        if (!open && !isCloseBlocked) {
           close();
         }
       }}
@@ -46,7 +48,7 @@ function AccountDialog(): React.ReactNode {
       finalFocus={undefined}
       title={<>Account settings</>}
       cancelButtonText={<>Close</>}
-      cancelButtonDisabled={isConfirmationPending || signIn.isPending}
+      cancelButtonDisabled={isCloseBlocked}
     >
       {authState.status === "loading" ? (
         <output>Loading account…</output>

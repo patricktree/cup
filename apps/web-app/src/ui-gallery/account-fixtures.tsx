@@ -52,7 +52,10 @@ export function accountStory({
       // Lets tests go back as the system Back gesture does, which no element of the page sees.
       Object.assign(window, { goBackInAccountStory: () => router.history.back() });
       const initialize = async () => {
-        await initializeAccountStorySession(userMetadata, confirmation, isSignedOut);
+        // A signed-out story stores no session, so neither its user nor a confirmation applies.
+        await (isSignedOut
+          ? ensureAuthInitialized()
+          : initializeAccountStorySession(userMetadata, confirmation));
         setReady(true);
       };
       void initialize().catch((failure: unknown) => setError(String(failure)));
@@ -121,12 +124,7 @@ export function accountStory({
 async function initializeAccountStorySession(
   userMetadata: Record<string, unknown>,
   confirmation?: "delete" | "restore",
-  isSignedOut = false,
 ) {
-  if (isSignedOut) {
-    await ensureAuthInitialized();
-    return;
-  }
   const payload = btoa(JSON.stringify({ sub: SUBJECT, exp: 4102444800 })).replaceAll("=", "");
   localStorage.setItem(
     ACCOUNT_SESSION_STORAGE_KEY,

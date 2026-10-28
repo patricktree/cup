@@ -120,5 +120,7 @@ test("signed out, the account dialog offers sign-in instead of leading home", as
 
   await expect(dialog.getByRole("region", { name: "Sign in" })).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Continue with Google" })).toBeVisible();
+  // Signed out, Recents behind the dialog offers no tabs to use.
+  await expect(page.getByRole("navigation", { name: "Tabs", includeHidden: true })).toHaveCount(0);
   await expect(page).toHaveScreenshot("signed-out.png");
 });

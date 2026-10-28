@@ -169,9 +169,15 @@ function RecentPage(): React.ReactNode {
           )}
         </main>
       </div>
-      <MiniPlayer />
-      <AccountTabBar />
-      {/* the Add and account dialogs (`_shell.recent.add.tsx`, `_shell.recent.account.tsx`) */}
+      {/* Signed out, only the account dialog is left to show; nothing else here may be used. */}
+      {authState.status !== "signed-out" && (
+        <>
+          <MiniPlayer />
+          <AccountTabBar />
+        </>
+      )}
+      {/* the Add and account dialogs (`_shell.recent.add.tsx`, `_shell.recent.account.tsx`) open
+          over Recents */}
       <Outlet />
     </>
   );
