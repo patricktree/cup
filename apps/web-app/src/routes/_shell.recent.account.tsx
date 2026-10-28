@@ -4,50 +4,59 @@ import React from "react";
 import { Temporal } from "temporal-polyfill";
 
 import { AccountQueryBoundary } from "#src/app/components/account-query-boundary.js";
-import { AccountTabBar } from "#src/app/components/account-tab-bar.js";
-import { ShellContent } from "#src/app/components/main.tsx";
-import { MiniPlayer } from "#src/app/components/mini-player.js";
 import { DSButton } from "#src/app/design-system/button.js";
+import { DSDialog } from "#src/app/design-system/dialog.js";
+import { useCloseRecentsDialog } from "#src/app/use-close-recents-dialog.js";
 import { useAccountSession, useAccountAuthState } from "#src/auth/hooks.js";
-import { useAccountConfirmation } from "#src/data-fetching/account-confirmation.js";
+import {
+  useAccountConfirmation,
+  useIsAccountConfirmationPending,
+} from "#src/data-fetching/account-confirmation.js";
 import { accountQuery } from "#src/data-fetching/account.js";
 
-export const Route = createFileRoute("/_shell/account")({
-  component: AccountPage,
+/**
+ * The account dialog over Recents. Unlike the Add dialog, no route mask hides its URL: confirming a
+ * deletion or recovery signs in with Google again, and that sign-in returns to the URL bar's path,
+ * where the dialog has to open again to show the confirmation step.
+ */
+export const Route = createFileRoute("/_shell/recent/account")({
+  component: AccountDialog,
 });
-function AccountPage(): React.ReactNode {
+
+function AccountDialog(): React.ReactNode {
   const session = useAccountSession();
   const authState = useAccountAuthState();
+  const close = useCloseRecentsDialog(Route.id);
+  const isConfirmationPending = useIsAccountConfirmationPending();
+
   return (
-    <>
-      <ShellContent
-        mainContent={
-          <>
-            <h1>Account settings</h1>
-            {authState.status === "loading" ? (
-              <output>Loading account…</output>
-            ) : authState.status === "error" ? (
-              <p role="alert">{authState.error.message}</p>
-            ) : session ? (
-              <AccountQueryBoundary key={session.user.id}>
-                <AccountSettings subject={session.user.id} email={session.user.email} />
-              </AccountQueryBoundary>
-            ) : (
-              <p>Sign in with Google to manage or restore your account.</p>
-            )}
-          </>
+    <DSDialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !isConfirmationPending) {
+          close();
         }
-      ></ShellContent>
-      {/* Signed out, the account page only offers sign-in, and Recents would send the listener home. */}
-      {authState.status !== "signed-out" && (
-        <>
-          <MiniPlayer />
-          <AccountTabBar />
-        </>
-      )}
-    </>
+      }}
+      initialFocus={undefined}
+      finalFocus={undefined}
+      title={<>Account settings</>}
+      cancelButtonText={<>Close</>}
+      cancelButtonDisabled={isConfirmationPending}
+    >
+      {/* Signed out, Recents behind the dialog redirects home. */}
+      {authState.status === "loading" ? (
+        <output>Loading account…</output>
+      ) : authState.status === "error" ? (
+        <p role="alert">{authState.error.message}</p>
+      ) : session ? (
+        <AccountQueryBoundary key={session.user.id}>
+          <AccountSettings subject={session.user.id} email={session.user.email} />
+        </AccountQueryBoundary>
+      ) : null}
+    </DSDialog>
   );
 }
+
 function AccountSettings({
   subject,
   email,
@@ -67,7 +76,7 @@ function AccountSettings({
       <p>{email}</p>
       {data.state === "active" ? (
         <section aria-label="Delete account">
-          <h2>Delete account</h2>
+          <h3>Delete account</h3>
           <p>
             Access stops immediately. You can restore this account for seven days. After that, your
             account and private conversions are deleted. Original trial conversions stay separate.
@@ -78,7 +87,7 @@ function AccountSettings({
         </section>
       ) : (
         <section aria-label="Account recovery">
-          <h2>Deletion scheduled</h2>
+          <h3>Deletion scheduled</h3>
           <p>Account access is blocked. Signing in alone does not cancel deletion.</p>
           {data.recoveryDeadlineMs !== null && (
             <p>

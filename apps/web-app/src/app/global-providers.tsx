@@ -41,8 +41,8 @@ declare module "@tanstack/react-router" {
     router: ReturnType<typeof createAppRouter>;
   }
   interface HistoryState {
-    /** Set when the app itself opened the Add dialog, so closing it goes back one entry. */
-    isAddDialogOpenedInApp?: boolean;
+    /** Set when the app itself opened a dialog over Recents, so closing it goes back one entry. */
+    isRecentsDialogOpenedInApp?: boolean;
   }
   // oxlint-enable typescript/consistent-type-definitions
 }

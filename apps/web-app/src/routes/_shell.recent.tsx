@@ -168,7 +168,7 @@ function RecentPage(): React.ReactNode {
       </div>
       <MiniPlayer />
       <AccountTabBar />
-      {/* the Add dialog (`_shell.recent.add.tsx`) opens over Recents */}
+      {/* the Add and account dialogs (`_shell.recent.add.tsx`, `_shell.recent.account.tsx`) */}
       <Outlet />
     </>
   );
@@ -195,7 +195,7 @@ function EmptyRecents(): React.JSX.Element {
       </span>
       <Link
         to="/recent/add"
-        state={{ isAddDialogOpenedInApp: true }}
+        state={{ isRecentsDialogOpenedInApp: true }}
         className={composeClassnames(
           textStyles.h3,
           css`

@@ -29,9 +29,9 @@ const PLAY_ICON_SIZE = 32;
 const GAP_ABOVE_TAB_ICONS_PIXELS = 18;
 
 /**
- * A floating pill above the tab bar of the account pages that controls the loaded audiobook: −15 s
- * and play/pause. Pressing its cover or title opens the audiobook's detail view. Shows nothing
- * while no audiobook is loaded.
+ * A floating pill above the tab bar of Recents that controls the loaded audiobook: −15 s and
+ * play/pause. Pressing its cover or title opens the audiobook's detail view. Shows nothing while no
+ * audiobook is loaded.
  */
 export function MiniPlayer(): React.ReactNode {
   const { loaded } = usePlayerHostSnapshot();

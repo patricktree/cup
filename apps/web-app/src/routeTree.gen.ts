@@ -11,10 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root.js'
 import { Route as IndexRouteImport } from './routes/index.js'
 import { Route as ShellRouteImport } from './routes/_shell.js'
-import { Route as ShellAccountRouteImport } from './routes/_shell.account.js'
 import { Route as ShellRecentRouteImport } from './routes/_shell.recent.js'
 import { Route as TrialsGrantIdRouteImport } from './routes/trials.$grantId.js'
 import { Route as ShellAudiobooksConversionIdRouteImport } from './routes/_shell.audiobooks.$conversionId.js'
+import { Route as ShellRecentAccountRouteImport } from './routes/_shell.recent.account.js'
 import { Route as ShellRecentAddRouteImport } from './routes/_shell.recent.add.js'
 
 const IndexRoute = IndexRouteImport.update({
@@ -25,11 +25,6 @@ const IndexRoute = IndexRouteImport.update({
 const ShellRoute = ShellRouteImport.update({
   id: '/_shell',
   getParentRoute: () => rootRouteImport,
-} as any)
-const ShellAccountRoute = ShellAccountRouteImport.update({
-  id: '/account',
-  path: '/account',
-  getParentRoute: () => ShellRoute,
 } as any)
 const ShellRecentRoute = ShellRecentRouteImport.update({
   id: '/recent',
@@ -47,6 +42,11 @@ const ShellAudiobooksConversionIdRoute =
     path: '/audiobooks/$conversionId',
     getParentRoute: () => ShellRoute,
   } as any)
+const ShellRecentAccountRoute = ShellRecentAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => ShellRecentRoute,
+} as any)
 const ShellRecentAddRoute = ShellRecentAddRouteImport.update({
   id: '/add',
   path: '/add',
@@ -55,55 +55,55 @@ const ShellRecentAddRoute = ShellRecentAddRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/account': typeof ShellAccountRoute
   '/recent': typeof ShellRecentRouteWithChildren
   '/trials/$grantId': typeof TrialsGrantIdRoute
   '/audiobooks/$conversionId': typeof ShellAudiobooksConversionIdRoute
+  '/recent/account': typeof ShellRecentAccountRoute
   '/recent/add': typeof ShellRecentAddRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/account': typeof ShellAccountRoute
   '/recent': typeof ShellRecentRouteWithChildren
   '/trials/$grantId': typeof TrialsGrantIdRoute
   '/audiobooks/$conversionId': typeof ShellAudiobooksConversionIdRoute
+  '/recent/account': typeof ShellRecentAccountRoute
   '/recent/add': typeof ShellRecentAddRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_shell': typeof ShellRouteWithChildren
-  '/_shell/account': typeof ShellAccountRoute
   '/_shell/recent': typeof ShellRecentRouteWithChildren
   '/trials/$grantId': typeof TrialsGrantIdRoute
   '/_shell/audiobooks/$conversionId': typeof ShellAudiobooksConversionIdRoute
+  '/_shell/recent/account': typeof ShellRecentAccountRoute
   '/_shell/recent/add': typeof ShellRecentAddRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/account'
     | '/recent'
     | '/trials/$grantId'
     | '/audiobooks/$conversionId'
+    | '/recent/account'
     | '/recent/add'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/account'
     | '/recent'
     | '/trials/$grantId'
     | '/audiobooks/$conversionId'
+    | '/recent/account'
     | '/recent/add'
   id:
     | '__root__'
     | '/'
     | '/_shell'
-    | '/_shell/account'
     | '/_shell/recent'
     | '/trials/$grantId'
     | '/_shell/audiobooks/$conversionId'
+    | '/_shell/recent/account'
     | '/_shell/recent/add'
   fileRoutesById: FileRoutesById
 }
@@ -129,13 +129,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_shell/account': {
-      id: '/_shell/account'
-      path: '/account'
-      fullPath: '/account'
-      preLoaderRoute: typeof ShellAccountRouteImport
-      parentRoute: typeof ShellRoute
-    }
     '/_shell/recent': {
       id: '/_shell/recent'
       path: '/recent'
@@ -157,6 +150,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellAudiobooksConversionIdRouteImport
       parentRoute: typeof ShellRoute
     }
+    '/_shell/recent/account': {
+      id: '/_shell/recent/account'
+      path: '/account'
+      fullPath: '/recent/account'
+      preLoaderRoute: typeof ShellRecentAccountRouteImport
+      parentRoute: typeof ShellRecentRoute
+    }
     '/_shell/recent/add': {
       id: '/_shell/recent/add'
       path: '/add'
@@ -168,10 +168,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface ShellRecentRouteChildren {
+  ShellRecentAccountRoute: typeof ShellRecentAccountRoute
   ShellRecentAddRoute: typeof ShellRecentAddRoute
 }
 
 const ShellRecentRouteChildren: ShellRecentRouteChildren = {
+  ShellRecentAccountRoute: ShellRecentAccountRoute,
   ShellRecentAddRoute: ShellRecentAddRoute,
 }
 
@@ -180,13 +182,11 @@ const ShellRecentRouteWithChildren = ShellRecentRoute._addFileChildren(
 )
 
 interface ShellRouteChildren {
-  ShellAccountRoute: typeof ShellAccountRoute
   ShellRecentRoute: typeof ShellRecentRouteWithChildren
   ShellAudiobooksConversionIdRoute: typeof ShellAudiobooksConversionIdRoute
 }
 
 const ShellRouteChildren: ShellRouteChildren = {
-  ShellAccountRoute: ShellAccountRoute,
   ShellRecentRoute: ShellRecentRouteWithChildren,
   ShellAudiobooksConversionIdRoute: ShellAudiobooksConversionIdRoute,
 }

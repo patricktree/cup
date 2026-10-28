@@ -24,7 +24,7 @@ test("a web app route without a file serves the shell with a fresh CSP nonce per
 }) => {
   const worker = await useWorker({ onTestFinished });
 
-  const responses = await Promise.all([worker.fetch("/app/account"), worker.fetch("/app/account")]);
+  const responses = await Promise.all([worker.fetch("/app/recent"), worker.fetch("/app/recent")]);
   const nonces = await Promise.all(
     responses.map(async (response) => {
       const nonce = response.headers

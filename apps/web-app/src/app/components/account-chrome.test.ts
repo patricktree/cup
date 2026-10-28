@@ -9,16 +9,6 @@ test("the tab bar on Recents marks Recent as the current tab", async ({ mount })
   await expect(tabs).toHaveScreenshot("tab-bar-recent.png");
 });
 
-test("the tab bar on the account page marks no tab as current", async ({ mount }) => {
-  const component = await mount("routes/_shell.account/ActiveAccount");
-  await expect(component.getByText("Delete account…", { exact: true })).toBeVisible();
-  const tabs = component.getByRole("navigation", { name: "Tabs" });
-
-  await expect(tabs.getByRole("link", { name: "Recent" })).not.toHaveAttribute("aria-current");
-  await expect(tabs.getByRole("link", { name: "Add" })).not.toHaveAttribute("aria-current");
-  await expect(tabs).toHaveScreenshot("tab-bar-account.png");
-});
-
 test("Add never shows as current, even with the Add dialog open", async ({ mount, page }) => {
   await mount("routes/_shell.recent/AddDialog");
   await expect(page.getByRole("dialog", { name: "Add a track" })).toBeVisible();
@@ -31,13 +21,6 @@ test("Add never shows as current, even with the Add dialog open", async ({ mount
     "aria-current",
     "page",
   );
-});
-
-test("the tab bar's Recent tab leads from the account page to Recents", async ({ mount }) => {
-  const component = await mount("routes/_shell.account/ActiveAccount");
-  await component.getByRole("link", { name: "Recent" }).click();
-
-  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
 });
 
 for (const story of [
@@ -56,8 +39,9 @@ for (const story of [
   });
 }
 
-test("the avatar shows the account holder's initials and links to the account page", async ({
+test("the avatar shows the account holder's initials and opens the account dialog", async ({
   mount,
+  page,
 }) => {
   const component = await mount("routes/_shell.recent/EmptyRecents");
   const avatar = component.getByRole("link", { name: "Account" });
@@ -65,7 +49,11 @@ test("the avatar shows the account holder's initials and links to the account pa
   await expect(avatar).toHaveText("vh", { useInnerText: true });
   await expect(avatar).toHaveScreenshot("avatar-initials.png");
   await avatar.click();
-  await expect(component.getByRole("heading", { name: "Account settings" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Account settings" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Account settings" })).toHaveCount(0);
+  await expect(avatar).toBeVisible();
 });
 
 test("the avatar shows a glyph when the session carries no name", async ({ mount }) => {

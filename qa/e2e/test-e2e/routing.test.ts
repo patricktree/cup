@@ -159,22 +159,24 @@ test("returns real 404s outside the app and for missing assets", async ({
   expect(association.headers()["content-type"]).toContain("application/json");
 });
 
-test("signed out, Recents and the Add dialog redirect home, and the old History page is gone", async ({
+test("signed out, Recents and its dialogs redirect home, and the old History and account pages are gone", async ({
   page,
   workerEnvironment,
 }) => {
   const { origin } = workerEnvironment;
-  for (const pathname of ["/app/recent", "/app/recent/add"]) {
+  for (const pathname of ["/app/recent", "/app/recent/add", "/app/recent/account"]) {
     await gotoPage(page, `${origin}${pathname}`);
     await expect(page).toHaveURL(`${origin}/app/`);
     await expect(page.getByRole("heading", { name: "Just listen." })).toBeVisible();
   }
 
-  await gotoPage(page, `${origin}/app/history`);
-  await expect(page.getByText("Not Found", { exact: true })).toBeVisible();
+  for (const pathname of ["/app/history", "/app/account"]) {
+    await gotoPage(page, `${origin}${pathname}`);
+    await expect(page.getByText("Not Found", { exact: true })).toBeVisible();
+  }
 });
 
-test("signed in, home redirects to Recents, where the Add dialog opens on a masked URL", async ({
+test("signed in, home redirects to Recents, which opens the account dialog and the masked Add dialog", async ({
   page,
   workerEnvironment,
 }) => {
@@ -194,6 +196,15 @@ test("signed in, home redirects to Recents, where the Add dialog opens on a mask
   await expect(page.getByRole("link", { name: "Account" })).toHaveText("rd", {
     useInnerText: true,
   });
+
+  // The account dialog keeps its own URL, so a Google sign-in to confirm a change returns to it.
+  const accountDialog = page.getByRole("dialog", { name: "Account settings" });
+  await page.getByRole("link", { name: "Account" }).click();
+  await expect(accountDialog).toBeVisible();
+  await expect(page).toHaveURL(`${origin}/app/recent/account`);
+  await accountDialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(accountDialog).toHaveCount(0);
+  await expect(page).toHaveURL(`${origin}/app/recent`);
 
   const addDialog = page.getByRole("dialog", { name: "Add a track" });
   const addTab = page.getByRole("navigation", { name: "Tabs" }).getByRole("link", { name: "Add" });

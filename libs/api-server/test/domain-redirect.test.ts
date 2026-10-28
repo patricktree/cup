@@ -31,7 +31,7 @@ test.each(REDIRECTED_ORIGINS)("redirects every other path and method on %s", (or
   for (const pathname of [
     "/",
     "/app/",
-    "/app/account",
+    "/app/recent",
     "/api/operator/grants",
     "/api/grants/existing",
     "/.well-known/assetlinks.json",

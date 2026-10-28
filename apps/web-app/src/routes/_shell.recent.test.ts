@@ -183,15 +183,17 @@ test("pressing the mini player's cover opens the loaded audiobook's detail view,
   await expect(component.getByRole("region", { name: "Player" })).toHaveCount(0);
 });
 
-test("the mini player stays on the account page", async ({ mount }) => {
+test("the mini player stays behind the account dialog", async ({ mount, page }) => {
   const component = await mount("routes/_shell.recent/RecentsWithMiniPlayer");
 
   await component.getByRole("link", { name: "Account" }).click();
-  await expect(component.getByRole("heading", { name: "Account settings" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Account settings" })).toBeVisible();
+  // The open dialog hides the page behind it from the accessibility tree.
   await expect(
-    component
-      .getByRole("region", { name: "Player" })
-      .getByRole("link", { name: /^Sure, let’s smoosh SpaceX and xAI together/ }),
+    page.getByRole("region", { name: "Player", includeHidden: true }).getByRole("link", {
+      name: /^Sure, let’s smoosh SpaceX and xAI together/,
+      includeHidden: true,
+    }),
   ).toBeVisible();
 });
 
@@ -360,7 +362,8 @@ test("a start that succeeds after Back closed the Add dialog leaves the listener
   });
   await expect(dialog).toHaveCount(0);
   await component.getByRole("link", { name: "Account", exact: true }).click();
-  await expect(component.getByText("Delete account…")).toBeVisible();
+  const accountDialog = page.getByRole("dialog", { name: "Account settings" });
+  await expect(accountDialog.getByText("Delete account…")).toBeVisible();
 
   // A successful start refreshes the account, then reports that the dialog's start succeeded.
   const accountRefresh = page.waitForResponse(
@@ -377,8 +380,8 @@ test("a start that succeeds after Back closed the Add dialog leaves the listener
   await page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   );
-  await expect(component.getByText("Delete account…")).toBeVisible();
-  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toHaveCount(0);
+  // The Add dialog is no longer shown, so its late success neither goes back nor closes this one.
+  await expect(accountDialog.getByText("Delete account…")).toBeVisible();
 });
 
 test("closing an Add dialog that was not opened from Recents shows Recents", async ({

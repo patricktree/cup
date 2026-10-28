@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useIsMutating, useMutation } from "@tanstack/react-query";
 import React from "react";
 
 import { deletionChallengeSchema } from "@cup/listener-api.routes";
@@ -14,13 +14,17 @@ import {
   storeAccountChallenge,
   clearAccountChallenge,
 } from "#src/data-fetching/account-confirmation-storage.js";
+import { invalidateAccountHistory } from "#src/data-fetching/account-history.js";
 import { invalidateAccountQueries } from "#src/data-fetching/account.js";
 import { requestApi } from "#src/data-fetching/api-request.js";
 import { summarizeError, UserFacingError } from "#src/errors.js";
 
+const ACCOUNT_CONFIRMATION_MUTATION_KEY = ["account-confirmation"];
+
 export function useAccountConfirmation(subject: string) {
   const [challenge, setChallenge] = React.useState(readPendingAccountChallenge);
   const change = useMutation({
+    mutationKey: ACCOUNT_CONFIRMATION_MUTATION_KEY,
     // The confirmation flow shows its failure next to the step the user is taking.
     meta: { errorDisplay: "inline" },
     mutationFn: async (
@@ -84,6 +88,8 @@ export function useAccountConfirmation(subject: string) {
         await signOut();
         return null;
       }
+      // Recents behind the account dialog failed to list the blocked account's history.
+      await invalidateAccountHistory(subject);
       return "Your account is restored. Your existing minutes and conversions are available again.";
     },
   });
@@ -105,4 +111,12 @@ export function useAccountConfirmation(subject: string) {
       change.reset();
     },
   };
+}
+
+/**
+ * Whether a deletion or recovery step is running. Leaving the account dialog then would lose the
+ * return from Google, which comes back to the dialog's URL.
+ */
+export function useIsAccountConfirmationPending(): boolean {
+  return useIsMutating({ mutationKey: ACCOUNT_CONFIRMATION_MUTATION_KEY }) > 0;
 }
