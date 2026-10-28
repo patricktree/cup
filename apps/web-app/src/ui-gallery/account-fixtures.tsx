@@ -20,6 +20,7 @@ export function accountStory({
   confirmation,
   setupFailure = false,
   userMetadata = { name: "Verena Handler-Kunze" },
+  isSignedOut = false,
   handlers = [],
   play,
 }: {
@@ -30,6 +31,8 @@ export function accountStory({
   setupFailure?: boolean | "once";
   /** The session user's metadata, which carries the name the avatar shows. */
   userMetadata?: Record<string, unknown>;
+  /** Starts without a stored session, as a listener following a link does. */
+  isSignedOut?: boolean;
   handlers?: RequestHandler[];
   play?: Story["play"];
 }): Story {
@@ -49,7 +52,7 @@ export function accountStory({
       // Lets tests go back as the system Back gesture does, which no element of the page sees.
       Object.assign(window, { goBackInAccountStory: () => router.history.back() });
       const initialize = async () => {
-        await initializeAccountStorySession(userMetadata, confirmation);
+        await initializeAccountStorySession(userMetadata, confirmation, isSignedOut);
         setReady(true);
       };
       void initialize().catch((failure: unknown) => setError(String(failure)));
@@ -118,7 +121,12 @@ export function accountStory({
 async function initializeAccountStorySession(
   userMetadata: Record<string, unknown>,
   confirmation?: "delete" | "restore",
+  isSignedOut = false,
 ) {
+  if (isSignedOut) {
+    await ensureAuthInitialized();
+    return;
+  }
   const payload = btoa(JSON.stringify({ sub: SUBJECT, exp: 4102444800 })).replaceAll("=", "");
   localStorage.setItem(
     ACCOUNT_SESSION_STORAGE_KEY,

@@ -61,8 +61,10 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   await expect(page.getByRole("button", { name: "Schedule deletion" })).toBeVisible();
   await expect.poll(() => authProvider.exchanges()).toBe(2);
   await page.getByRole("button", { name: "Schedule deletion" }).click();
-  // Scheduling deletion signs the browser out, and signed out, Recents and its dialogs lead home.
-  await expect(page).toHaveURL(`${origin}/app/`);
+  // Scheduling deletion signs the browser out, and the account dialog offers to sign in again.
+  await expect(
+    page.getByRole("dialog", { name: "Account settings" }).getByRole("region", { name: "Sign in" }),
+  ).toBeVisible();
   // The unexpired signed URL is refused like a bearer request of an account scheduled for deletion.
   await expect.poll(async () => (await page.request.get(trackUrl)).status()).toBe(403);
   expectConsoleError(/^Failed to load resource: the server responded with a status of 403/);
@@ -106,6 +108,7 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
 });
 
 test("signup keeps trial conversions separate from the new account and its Recents", async ({
+  expectConsoleError,
   page,
   request: isolatedRequest,
   workerEnvironment,
@@ -188,6 +191,14 @@ test("signup keeps trial conversions separate from the new account and its Recen
       await isolatedRequest.get(`${origin}/api/files/audiobooks/${originalId}/narration-track.mp3`)
     ).status(),
   ).toBe(401);
+
+  // As the scheduled-deletion email directs, signing in again in the account dialog offers recovery.
+  // Recents behind the dialog cannot list the blocked account's history.
+  expectConsoleError(/^Failed to load resource: the server responded with a status of 403/);
+  const accountDialog = page.getByRole("dialog", { name: "Account settings" });
+  await accountDialog.getByRole("button", { name: "Continue with Google", exact: true }).click();
+  await expect(accountDialog.getByRole("heading", { name: "Deletion scheduled" })).toBeVisible();
+  await expect(page).toHaveURL(`${origin}/app/recent/account`);
 });
 
 test("signed-in accounts skip trial credentials and signed-out users can reopen trial links", async ({
@@ -215,8 +226,10 @@ test("signed-in accounts skip trial credentials and signed-out users can reopen 
   await page.goto(`${origin}/app/recent/account`);
   await page.getByRole("button", { name: "Delete account…", exact: true }).click();
   await page.getByRole("button", { name: "Schedule deletion", exact: true }).click();
-  // Scheduling deletion signs the browser out, and signed out, Recents and its dialogs lead home.
-  await expect(page).toHaveURL(`${origin}/app/`);
+  // Scheduling deletion signs the browser out, and the account dialog offers to sign in again.
+  await expect(
+    page.getByRole("dialog", { name: "Account settings" }).getByRole("region", { name: "Sign in" }),
+  ).toBeVisible();
   await page.goto(trialUrl);
   await expect(page).toHaveURL(`${origin}/app/trials/${grant.grantId}`);
   await expect(page.getByRole("textbox", { name: "URL", exact: true })).toBeVisible();
