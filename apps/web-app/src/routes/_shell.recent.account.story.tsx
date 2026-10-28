@@ -22,4 +22,3 @@ export const ConfirmDeletionPending = accountStory({
   confirmation: "delete",
   handlers: [http.post("/api/account/deletion", () => delay("infinite"))],
 });
-export const SignedOut = accountStory({ path: "/recent/account", isSignedOut: true });

@@ -159,24 +159,22 @@ test("returns real 404s outside the app and for missing assets", async ({
   expect(association.headers()["content-type"]).toContain("application/json");
 });
 
-test("signed out, Recents and the Add dialog redirect home, the account dialog offers sign-in, and the old History and account pages are gone", async ({
+test("signed out, Recents and its dialogs redirect home, account recovery offers sign-in, and the old History and account pages are gone", async ({
   page,
   workerEnvironment,
 }) => {
   const { origin } = workerEnvironment;
-  for (const pathname of ["/app/recent", "/app/recent/add"]) {
+  for (const pathname of ["/app/recent", "/app/recent/add", "/app/recent/account"]) {
     await gotoPage(page, `${origin}${pathname}`);
     await expect(page).toHaveURL(`${origin}/app/`);
     await expect(page.getByRole("heading", { name: "Just listen." })).toBeVisible();
   }
 
-  // The scheduled-deletion email links the account dialog, where the listener signs in.
-  await gotoPage(page, `${origin}/app/recent/account`);
-  await expect(page).toHaveURL(`${origin}/app/recent/account`);
+  // The scheduled-deletion email links the account recovery page, where the listener signs in.
+  await gotoPage(page, `${origin}/app/account-recovery`);
+  await expect(page.getByRole("heading", { name: "Restore your account" })).toBeVisible();
   await expect(
-    page
-      .getByRole("dialog", { name: "Account settings" })
-      .getByRole("button", { name: "Continue with Google", exact: true }),
+    page.getByRole("button", { name: "Continue with Google", exact: true }),
   ).toBeVisible();
 
   for (const pathname of ["/app/history", "/app/account"]) {

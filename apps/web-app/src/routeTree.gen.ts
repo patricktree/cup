@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root.js'
 import { Route as IndexRouteImport } from './routes/index.js'
 import { Route as ShellRouteImport } from './routes/_shell.js'
+import { Route as AccountRecoveryRouteImport } from './routes/account-recovery.js'
 import { Route as ShellRecentRouteImport } from './routes/_shell.recent.js'
 import { Route as TrialsGrantIdRouteImport } from './routes/trials.$grantId.js'
 import { Route as ShellAudiobooksConversionIdRouteImport } from './routes/_shell.audiobooks.$conversionId.js'
@@ -24,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const ShellRoute = ShellRouteImport.update({
   id: '/_shell',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRecoveryRoute = AccountRecoveryRouteImport.update({
+  id: '/account-recovery',
+  path: '/account-recovery',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShellRecentRoute = ShellRecentRouteImport.update({
@@ -55,6 +61,7 @@ const ShellRecentAddRoute = ShellRecentAddRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account-recovery': typeof AccountRecoveryRoute
   '/recent': typeof ShellRecentRouteWithChildren
   '/trials/$grantId': typeof TrialsGrantIdRoute
   '/audiobooks/$conversionId': typeof ShellAudiobooksConversionIdRoute
@@ -63,6 +70,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account-recovery': typeof AccountRecoveryRoute
   '/recent': typeof ShellRecentRouteWithChildren
   '/trials/$grantId': typeof TrialsGrantIdRoute
   '/audiobooks/$conversionId': typeof ShellAudiobooksConversionIdRoute
@@ -73,6 +81,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_shell': typeof ShellRouteWithChildren
+  '/account-recovery': typeof AccountRecoveryRoute
   '/_shell/recent': typeof ShellRecentRouteWithChildren
   '/trials/$grantId': typeof TrialsGrantIdRoute
   '/_shell/audiobooks/$conversionId': typeof ShellAudiobooksConversionIdRoute
@@ -83,6 +92,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account-recovery'
     | '/recent'
     | '/trials/$grantId'
     | '/audiobooks/$conversionId'
@@ -91,6 +101,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account-recovery'
     | '/recent'
     | '/trials/$grantId'
     | '/audiobooks/$conversionId'
@@ -100,6 +111,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_shell'
+    | '/account-recovery'
     | '/_shell/recent'
     | '/trials/$grantId'
     | '/_shell/audiobooks/$conversionId'
@@ -110,6 +122,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ShellRoute: typeof ShellRouteWithChildren
+  AccountRecoveryRoute: typeof AccountRecoveryRoute
   TrialsGrantIdRoute: typeof TrialsGrantIdRoute
 }
 
@@ -127,6 +140,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof ShellRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account-recovery': {
+      id: '/account-recovery'
+      path: '/account-recovery'
+      fullPath: '/account-recovery'
+      preLoaderRoute: typeof AccountRecoveryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_shell/recent': {
@@ -196,6 +216,7 @@ const ShellRouteWithChildren = ShellRoute._addFileChildren(ShellRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ShellRoute: ShellRouteWithChildren,
+  AccountRecoveryRoute: AccountRecoveryRoute,
   TrialsGrantIdRoute: TrialsGrantIdRoute,
 }
 export const routeTree = rootRouteImport

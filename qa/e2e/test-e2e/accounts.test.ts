@@ -61,10 +61,8 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   await expect(page.getByRole("button", { name: "Schedule deletion" })).toBeVisible();
   await expect.poll(() => authProvider.exchanges()).toBe(2);
   await page.getByRole("button", { name: "Schedule deletion" }).click();
-  // Scheduling deletion signs the browser out, and the account dialog offers to sign in again.
-  await expect(
-    page.getByRole("dialog", { name: "Account settings" }).getByRole("region", { name: "Sign in" }),
-  ).toBeVisible();
+  // Scheduling deletion signs the browser out, and signed out, Recents and its dialogs lead home.
+  await expect(page).toHaveURL(`${origin}/app/`);
   // The unexpired signed URL is refused like a bearer request of an account scheduled for deletion.
   await expect.poll(async () => (await page.request.get(trackUrl)).status()).toBe(403);
   expectConsoleError(/^Failed to load resource: the server responded with a status of 403/);
@@ -74,11 +72,8 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect.poll(() => authProvider.exchanges()).toBe(3);
   await expect(page.getByRole("alert")).toBeVisible();
-  // Recents behind the account dialog lists the blocked account's history, refused while deletion is
-  // scheduled: on opening the dialog, and again when the Google sign-in returns to it.
-  expectConsoleError(/^Failed to load resource: the server responded with a status of 403/);
-  expectConsoleError(/^Failed to load resource: the server responded with a status of 403/);
-  await page.goto(`${origin}/app/recent/account`);
+  // The scheduled-deletion email links the account recovery page.
+  await page.goto(`${origin}/app/account-recovery`);
   await expect(page.getByRole("heading", { name: "Deletion scheduled" })).toBeVisible();
   await page.getByRole("button", { name: "Restore account…" }).click();
   await expect.poll(() => authProvider.exchanges()).toBe(4);
@@ -108,7 +103,6 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
 });
 
 test("signup keeps trial conversions separate from the new account and its Recents", async ({
-  expectConsoleError,
   page,
   request: isolatedRequest,
   workerEnvironment,
@@ -192,13 +186,11 @@ test("signup keeps trial conversions separate from the new account and its Recen
     ).status(),
   ).toBe(401);
 
-  // As the scheduled-deletion email directs, signing in again in the account dialog offers recovery.
-  // Recents behind the dialog cannot list the blocked account's history.
-  expectConsoleError(/^Failed to load resource: the server responded with a status of 403/);
-  const accountDialog = page.getByRole("dialog", { name: "Account settings" });
-  await accountDialog.getByRole("button", { name: "Continue with Google", exact: true }).click();
-  await expect(accountDialog.getByRole("heading", { name: "Deletion scheduled" })).toBeVisible();
-  await expect(page).toHaveURL(`${origin}/app/recent/account`);
+  // Signed out, the account recovery page that the scheduled-deletion email links signs in itself.
+  await page.goto(`${origin}/app/account-recovery`);
+  await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Deletion scheduled" })).toBeVisible();
+  await expect(page).toHaveURL(`${origin}/app/account-recovery`);
 });
 
 test("signed-in accounts skip trial credentials and signed-out users can reopen trial links", async ({
@@ -226,10 +218,8 @@ test("signed-in accounts skip trial credentials and signed-out users can reopen 
   await page.goto(`${origin}/app/recent/account`);
   await page.getByRole("button", { name: "Delete account…", exact: true }).click();
   await page.getByRole("button", { name: "Schedule deletion", exact: true }).click();
-  // Scheduling deletion signs the browser out, and the account dialog offers to sign in again.
-  await expect(
-    page.getByRole("dialog", { name: "Account settings" }).getByRole("region", { name: "Sign in" }),
-  ).toBeVisible();
+  // Scheduling deletion signs the browser out, and signed out, Recents and its dialogs lead home.
+  await expect(page).toHaveURL(`${origin}/app/`);
   await page.goto(trialUrl);
   await expect(page).toHaveURL(`${origin}/app/trials/${grant.grantId}`);
   await expect(page.getByRole("textbox", { name: "URL", exact: true })).toBeVisible();

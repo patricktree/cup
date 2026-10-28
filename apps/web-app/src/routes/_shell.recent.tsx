@@ -1,6 +1,6 @@
 import { css } from "@linaria/core";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, Navigate, Outlet, useMatch } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate, Outlet } from "@tanstack/react-router";
 import React from "react";
 
 import { AccountAvatar } from "#src/app/components/account-avatar.js";
@@ -28,8 +28,6 @@ function RecentPage(): React.ReactNode {
   const recents = useInfiniteQuery(createAccountHistoryQuery(session?.user.id));
   const masonryRef = useMasonryRowSpans();
   const [sentinelRef, isSentinelInReach] = useIsInScrollReach();
-  const isAccountDialogShown =
-    useMatch({ from: "/_shell/recent/account", shouldThrow: false }) !== undefined;
 
   const { hasNextPage, isFetching, isFetchNextPageError, fetchNextPage } = recents;
   // Keeps loading while the end of the list stays in reach, one page at a time. A failed page waits
@@ -40,9 +38,8 @@ function RecentPage(): React.ReactNode {
     }
   }, [isSentinelInReach, hasNextPage, isFetching, isFetchNextPageError, fetchNextPage]);
 
-  // Only accounts have Recents; signed-out listeners, including on the Add dialog, start at home. The
-  // account dialog offers sign-in instead, for links such as the scheduled-deletion email's.
-  if (authState.status === "signed-out" && !isAccountDialogShown) {
+  // Only accounts have Recents; signed-out listeners, including on the Add dialog, start at home.
+  if (authState.status === "signed-out") {
     return <Navigate to="/" replace />;
   }
 
@@ -169,13 +166,8 @@ function RecentPage(): React.ReactNode {
           )}
         </main>
       </div>
-      {/* Signed out, only the account dialog is left to show; nothing else here may be used. */}
-      {authState.status !== "signed-out" && (
-        <>
-          <MiniPlayer />
-          <AccountTabBar />
-        </>
-      )}
+      <MiniPlayer />
+      <AccountTabBar />
       {/* the Add and account dialogs (`_shell.recent.add.tsx`, `_shell.recent.account.tsx`) open
           over Recents */}
       <Outlet />
