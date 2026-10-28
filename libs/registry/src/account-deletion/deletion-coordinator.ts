@@ -129,7 +129,7 @@ export class DeletionCoordinator {
           attempt,
           "scheduled",
           "Your Cup account deletion is scheduled",
-          `Your Cup account is scheduled for deletion on ${Temporal.Instant.fromEpochMilliseconds(attempt.deadlineMs).toString()}. Until that time, sign in at https://cup.audio/app/account-recovery and choose Restore account. Signing in alone does not cancel deletion.`,
+          `Your Cup account is scheduled for deletion on ${Temporal.Instant.fromEpochMilliseconds(attempt.deadlineMs).toString()}. Until that time, sign in at https://cup.audio/app/account-recovery and choose "Restore account". Signing in alone does not cancel deletion.`,
         );
       }
     });

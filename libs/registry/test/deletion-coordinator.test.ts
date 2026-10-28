@@ -66,7 +66,7 @@ test("a deletion notice is sent once with its notification key and then purged",
         from: "Cup <no-reply@cup.audio>",
         to: [RECIPIENT],
         subject: "Your Cup account deletion is scheduled",
-        text: expect.stringContaining("choose Restore account"),
+        text: expect.stringContaining('choose "Restore account"'),
       },
     },
   ]);
