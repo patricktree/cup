@@ -76,7 +76,7 @@ test("account setup query failure can be retried", async ({ mount, page }) => {
   await expect(dialog.getByRole("button", { name: "Delete account…" })).toBeVisible();
 });
 
-test("confirmation cannot use a challenge that was cleared after the page rendered", async ({
+test("confirmation cannot use a challenge that was cleared after the dialog rendered", async ({
   mount,
   page,
 }) => {

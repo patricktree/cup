@@ -35,3 +35,13 @@ test("an active account has nothing to restore and is sent to Recents", async ({
   await component.getByRole("link", { name: "Go to Recent" }).click();
   await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
 });
+
+test("a deletion left unconfirmed in the account dialog is not offered for confirmation", async ({
+  mount,
+}) => {
+  const component = await mount("routes/account-recovery/LeftoverDeletionChallenge");
+  await expect(component.getByRole("button", { name: "Restore account…" })).toBeVisible();
+
+  await expect(component.getByRole("button", { name: "Schedule deletion" })).toHaveCount(0);
+  await expect(component.getByRole("region", { name: "Confirm account change" })).toHaveCount(0);
+});

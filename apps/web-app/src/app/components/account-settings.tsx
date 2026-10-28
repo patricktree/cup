@@ -24,7 +24,15 @@ export function AccountSettings({
 }): React.ReactNode {
   const account = useSuspenseQuery(accountQuery(subject));
   const confirmation = useAccountConfirmation(subject);
-  const { challenge, isPending: pending, error, result, begin, confirm, cancel } = confirmation;
+  const { isPending: pending, error, result, begin, confirm, cancel } = confirmation;
+  // A deletion begun in the account dialog but not confirmed stays stored for this tab; the recovery
+  // page must not offer to finish it.
+  const challenge =
+    purpose === "recovery" && confirmation.challenge?.action === "delete"
+      ? null
+      : confirmation.challenge;
+  // Each section heading sits one level below the dialog's h2 title or the page's h1.
+  const SectionHeading = purpose === "settings" ? "h3" : "h2";
   const data = account.data;
   if (account.error && !account.isFetching) {
     throw account.error;
@@ -35,7 +43,7 @@ export function AccountSettings({
       {data.state === "active" ? (
         purpose === "settings" ? (
           <section aria-label="Delete account">
-            <h3>Delete account</h3>
+            <SectionHeading>Delete account</SectionHeading>
             <p>
               Access stops immediately. You can restore this account for seven days. After that,
               your account and private conversions are deleted. Original trial conversions stay
@@ -52,7 +60,7 @@ export function AccountSettings({
         )
       ) : (
         <section aria-label="Account recovery">
-          <h3>Deletion scheduled</h3>
+          <SectionHeading>Deletion scheduled</SectionHeading>
           <p>Account access is blocked. Signing in alone does not cancel deletion.</p>
           {data.recoveryDeadlineMs !== null && (
             <p>
