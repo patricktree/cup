@@ -9,16 +9,16 @@ import { textStyles } from "#src/app/design-system/text-styles.js";
 import { interTypefaceScope } from "#src/app/global-styles.js";
 import { composeClassnames } from "#src/app/utils.js";
 
-const PADDING_BLOCK_PIXELS = 32;
+const PADDING_BLOCK_PIXELS = 24;
 const TAB_PADDING_PIXELS = 5;
 /**
  * The tab bar's fade and own row, which is its padding around the tabs' padding, 24 px icon, 4 px
  * gap and caption. The page above leaves `fadeFooterClearance(TAB_BAR_HEIGHTS)` free at its end.
  */
 export const TAB_BAR_HEIGHTS = {
-  fadeHeightPixels: 194,
+  fadeHeightPixels: 50,
   footerHeightPixels: 2 * PADDING_BLOCK_PIXELS + 2 * TAB_PADDING_PIXELS + 24 + 4 + 24,
-};
+} as const;
 
 /** Distance from the top of the tab bar down to its tab icons. */
 export const TAB_BAR_ICONS_OFFSET_PIXELS = PADDING_BLOCK_PIXELS + TAB_PADDING_PIXELS;
@@ -42,6 +42,7 @@ export function AccountTabBar(): React.JSX.Element {
           grid-area: shell-tab-bar;
           min-height: ${TAB_BAR_HEIGHTS.footerHeightPixels}px;
           padding: ${PADDING_BLOCK_PIXELS}px 24px;
+          background-color: var(--color-surface);
         `,
       )}
     >

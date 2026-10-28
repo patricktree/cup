@@ -260,7 +260,9 @@ test("a trial audiobook renders without preparation skeletons and leads back hom
   await expect(
     component.getByRole("heading", { name: "A deterministic document about careful testing" }),
   ).toBeVisible();
-  await expect(component.getByText("source.example.test", { exact: true })).toBeVisible();
+  await expect(
+    component.getByRole("article").getByText("source.example.test", { exact: true }),
+  ).toBeVisible();
   await expect(
     component.getByText("Keep the important boundaries real.", { exact: true }),
   ).toBeVisible();
@@ -286,13 +288,15 @@ test("an account audiobook opens with its cover, title and host below a plain to
 
   await expect(component.getByRole("heading", { name: title })).toBeVisible();
   await expect(component.getByRole("img", { name: "A person reading by a window" })).toBeVisible();
-  await expect(component.getByText("gatesnotes.com", { exact: true })).toBeVisible();
+  await expect(
+    component.getByRole("article").getByText("gatesnotes.com", { exact: true }),
+  ).toBeVisible();
   const topBar = component.getByRole("banner");
   await expect(topBar.getByRole("link", { name: "Back", exact: true })).toHaveAttribute(
     "href",
     "/app/recent",
   );
-  await expect(topBar.getByText(title)).toHaveCount(0);
+  await expect(topBar.getByText(title)).toBeHidden();
   await expect(component).toHaveScreenshot("account-audiobook-at-start.png");
 });
 
@@ -329,7 +333,7 @@ test("once the title scrolls away the top bar shows it, and the playing segment 
   await expect(component).toHaveScreenshot("account-audiobook-scrolled.png");
 
   await component.getByRole("main").evaluate((main) => main.scrollTo({ top: 0 }));
-  await expect(topBar.getByText(title)).toHaveCount(0);
+  await expect(topBar.getByText(title)).toBeHidden();
 });
 
 test("the top bar's menu opens the original page and retries", async ({ mount, page }) => {

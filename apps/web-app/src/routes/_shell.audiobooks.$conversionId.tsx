@@ -108,8 +108,12 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
     <DetailTopBar
       backTo={backTo}
       compactTitle={
-        isTitleScrolledAway && "title" in audiobook
-          ? { title: audiobook.title, host: toSourceHost(audiobook.originalUrl) }
+        "title" in audiobook
+          ? {
+              title: audiobook.title,
+              host: toSourceHost(audiobook.originalUrl),
+              isShown: isTitleScrolledAway,
+            }
           : undefined
       }
       menu={{

@@ -30,9 +30,9 @@ import { composeClassnames } from "#src/app/utils.js";
  * taller, which only moves the page further up.
  */
 export const PLAYER_SHEET_HEIGHTS = {
-  fadeHeightPixels: 305,
+  fadeHeightPixels: 70,
   footerHeightPixels: 200,
-};
+} as const;
 
 type SheetPlayback =
   | { status: "disabled"; title: string | undefined }
@@ -97,9 +97,9 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
           display: grid;
           grid-area: shell-player;
           align-content: end;
-          min-height: ${PLAYER_SHEET_HEIGHTS.footerHeightPixels}px;
           padding-block: 0 24px;
           padding-inline: 24px;
+          background-color: var(--color-surface);
         `,
       )}
     >

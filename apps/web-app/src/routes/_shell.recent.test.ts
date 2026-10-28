@@ -102,7 +102,7 @@ test("scrolling to the end loads the next page without moving existing cards", a
 
   // the first page is longer than the sentinel's margin, so the next page waits for scrolling
   expect(nextPageRequests).toBe(0);
-  await component.getByRole("main").evaluate((main) => main.scrollTo({ top: main.scrollHeight }));
+  await component.getByRole("main").evaluate((main) => main.scrollIntoView({ block: "end" }));
 
   await expect(cardsOf(component)).toHaveCount(FIRST_PAGE_SIZE + 12);
   await expectCoversLoaded(page);
@@ -156,13 +156,21 @@ test("the mini player's −15 s skips the narration track back 15 seconds", asyn
   await expect.poll(() => readNarrationAudioTime(page)).toBe(0);
 });
 
-test("pressing the mini player outside its buttons opens the loaded audiobook's detail view", async ({
+test("pressing the mini player's cover opens the loaded audiobook's detail view, the rest of the pill does not", async ({
   mount,
   page,
 }) => {
   const component = await mount("routes/_shell.recent/RecentsWithMiniPlayer");
-  const cover = component.getByRole("region", { name: "Player" }).locator("img");
+  const player = component.getByRole("region", { name: "Player" });
+  const cover = player.locator("img");
   await expectCoversLoaded(page);
+
+  // the gap between the link and the −15 s button
+  const linkBox = await player.getByRole("link").boundingBox();
+  expect(linkBox).not.toBeNull();
+  await page.mouse.click(linkBox!.x + linkBox!.width + 4, linkBox!.y + linkBox!.height / 2);
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+  await expect(player).toBeVisible();
 
   const coverBox = await cover.boundingBox();
   expect(coverBox).not.toBeNull();

@@ -24,6 +24,7 @@ export const Compact = createTopBarStory({
   compactTitle: {
     title: "A deterministic document about careful testing that runs long enough to be cut off",
     host: "source.example.test",
+    isShown: true,
   },
   menu: MENU,
 });

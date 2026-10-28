@@ -31,7 +31,7 @@ export const fadeFooter = css`
   &::before {
     position: absolute;
     inset-inline: 0;
-    bottom: 0;
+    bottom: 100%;
     z-index: -1;
     height: var(--fade-height);
 

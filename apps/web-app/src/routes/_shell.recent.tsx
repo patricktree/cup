@@ -6,7 +6,6 @@ import React from "react";
 import { AccountAvatar } from "#src/app/components/account-avatar.js";
 import { AccountTabBar, TAB_BAR_HEIGHTS } from "#src/app/components/account-tab-bar.js";
 import { fadeFooterClearance } from "#src/app/components/fade-footer.js";
-import { Main } from "#src/app/components/main.tsx";
 import { MiniPlayer } from "#src/app/components/mini-player.js";
 import { RecentsCard } from "#src/app/components/recents-card.js";
 import { DSButton } from "#src/app/design-system/button.js";
@@ -48,115 +47,128 @@ function RecentPage(): React.ReactNode {
 
   return (
     <>
-      <header
-        {...interTypefaceScope}
-        className={composeClassnames(
-          pageWidth,
-          css`
-            /* put above shell <main> */
-            z-index: 1;
-            display: flex;
-            grid-area: shell-header;
-            gap: var(--spacing-gutter);
-            align-items: center;
-            justify-content: space-between;
-            min-height: 44px;
-            padding-block-start: var(--spacing-gutter);
-          `,
-        )}
+      {/* the page's one scroll container, so the header scrolls away with the tracks */}
+      <div
+        // stable key under which the router's scroll restoration stores this container's position
+        data-scroll-restoration-id="main"
+        className={css`
+          grid-area: shell-main;
+          overflow-y: auto;
+        `}
       >
-        <h1
+        <header
+          {...interTypefaceScope}
           className={composeClassnames(
-            textStyles.h1,
+            pageWidth,
             css`
-              padding-block-end: 8px;
-              padding-inline-start: var(--spacing-gutter);
-              margin: 0;
+              /* put above shell <main> */
+              z-index: 1;
+              display: flex;
+              grid-area: shell-header;
+              gap: var(--spacing-gutter);
+              align-items: center;
+              justify-content: space-between;
+              min-height: 44px;
+              padding-block-start: var(--spacing-gutter);
             `,
           )}
         >
-          Recent
-        </h1>
-        {session && <AccountAvatar userMetadata={session.user.user_metadata} />}
-      </header>
-      <Main
-        {...interTypefaceScope}
-        className={composeClassnames(
-          pageWidth,
-          css`
-            display: flex;
-            flex-direction: column;
-            grid-area: shell-main;
-            padding-block: 24px;
-
-            /* the tab bar's fade reaches this far over the end of <main> */
-            padding-block-end: ${fadeFooterClearance(TAB_BAR_HEIGHTS)};
-          `,
-        )}
-      >
-        {authState.status === "loading" && <output>Loading account…</output>}
-        {authState.status === "error" && <p role="alert">{authState.error.message}</p>}
-        {recents.isLoading && <output>Loading tracks…</output>}
-        {/* Once tracks are listed, a failed refresh or next page is reported with a toast. */}
-        {recents.error && !recents.data && (
-          <>
-            <RecentsLoadError error={recents.error} />
-            <DSButton disabled={recents.isFetching} onClick={() => void recents.refetch()}>
-              Retry
-            </DSButton>
-          </>
-        )}
-        {items?.length === 0 && <EmptyRecents />}
-        {items !== undefined && items.length > 0 && (
-          // the container for the column count's container queries below
-          <div
-            className={css`
-              container-type: inline-size;
-            `}
-          >
-            <ul
-              ref={masonryRef}
-              aria-label="Tracks"
-              className={css`
-                --columns: 2;
-
-                display: grid;
-                grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
-                gap: var(--spacing-gutter);
-                padding: 0;
+          <h1
+            className={composeClassnames(
+              textStyles.h1,
+              css`
+                padding-block-end: 8px;
+                padding-inline-start: var(--spacing-gutter);
                 margin: 0;
-                list-style: none;
+              `,
+            )}
+          >
+            Recent
+          </h1>
+          {session && <AccountAvatar userMetadata={session.user.user_metadata} />}
+        </header>
+        <main
+          {...interTypefaceScope}
+          className={composeClassnames(
+            pageWidth,
+            css`
+              display: flex;
+              flex-direction: column;
+              grid-area: shell-main;
+              padding-block: 24px;
 
-                /* each item spans its height in 1 px rows plus the gap, see useMasonryRowSpans */
-                &[data-masonry] {
-                  grid-auto-rows: 1px;
-                  row-gap: 0;
-                }
-
-                /* another column once it fits at the drawn card width of 183 px */
-                @container (width >= 573px) {
-                  --columns: 3;
-                }
-
-                @container (width >= 768px) {
-                  --columns: 4;
-                }
-              `}
-            >
-              {items.map((item) => (
-                <RecentsCard key={item.conversionId} item={item} />
-              ))}
-            </ul>
-            {/* loads the next page once the end of the list comes within about one screen */}
-            {recents.hasNextPage && <div ref={sentinelRef} />}
-            {recents.isFetchNextPageError && (
-              <DSButton disabled={recents.isFetching} onClick={() => void recents.fetchNextPage()}>
+              /* the tab bar's fade reaches this far over the end of <main> */
+              padding-block-end: ${fadeFooterClearance(TAB_BAR_HEIGHTS)};
+            `,
+          )}
+        >
+          {authState.status === "loading" && <output>Loading account…</output>}
+          {authState.status === "error" && <p role="alert">{authState.error.message}</p>}
+          {recents.isLoading && <output>Loading tracks…</output>}
+          {/* Once tracks are listed, a failed refresh or next page is reported with a toast. */}
+          {recents.error && !recents.data && (
+            <>
+              <RecentsLoadError error={recents.error} />
+              <DSButton disabled={recents.isFetching} onClick={() => void recents.refetch()}>
                 Retry
               </DSButton>
-            )}
-          </div>
-        )}
-      </Main>
+            </>
+          )}
+          {items?.length === 0 && <EmptyRecents />}
+          {items !== undefined && items.length > 0 && (
+            // the container for the column count's container queries below
+            <div
+              className={css`
+                container-type: inline-size;
+              `}
+            >
+              <ul
+                ref={masonryRef}
+                aria-label="Tracks"
+                className={css`
+                  --columns: 2;
+
+                  display: grid;
+                  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+                  gap: var(--spacing-gutter);
+                  padding: 0;
+                  margin: 0;
+                  list-style: none;
+
+                  /* each item spans its height in 1 px rows plus the gap, see useMasonryRowSpans */
+                  &[data-masonry] {
+                    grid-auto-rows: 1px;
+                    row-gap: 0;
+                  }
+
+                  /* another column once it fits at the drawn card width of 183 px */
+                  @container (width >= 573px) {
+                    --columns: 3;
+                  }
+
+                  @container (width >= 768px) {
+                    --columns: 4;
+                  }
+                `}
+              >
+                {items.map((item) => (
+                  <RecentsCard key={item.conversionId} item={item} />
+                ))}
+              </ul>
+              {/* loads the next page once the end of the list comes within about one screen */}
+              {recents.hasNextPage && <div ref={sentinelRef} />}
+              {recents.isFetchNextPageError && (
+                <DSButton
+                  disabled={recents.isFetching}
+                  onClick={() => void recents.fetchNextPage()}
+                >
+                  Retry
+                </DSButton>
+              )}
+            </div>
+          )}
+        </main>
+      </div>
       <MiniPlayer />
       <AccountTabBar />
       {/* the Add dialog (`_shell.recent.add.tsx`) opens over Recents */}

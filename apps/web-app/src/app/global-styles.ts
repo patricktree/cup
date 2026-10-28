@@ -90,6 +90,8 @@ export const cssBase = css`
       font-family: var(--font-family-1);
       font-size: ${16 / 16}rem;
       color: var(--color-fg);
+      /* inherited, so it styles every scroll container */
+      scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
       background-color: var(--color-bg);
       --font-family-1: "Inter Variable", sans-serif;
       --font-family-2: "Space Mono", monospace;
@@ -152,22 +154,22 @@ export const cssBase = css`
 
       --shadow-card: 4px -4px 20px rgb(0 0 0 / 12%);
       /* transparent-to-white fades behind the tab bar and the player sheet, opaque from the given stop */
-      --background-fade-tab-bar: linear-gradient(
-        to bottom,
-        rgb(255 255 255 / 0%),
-        var(--color-surface) 54%
-      );
-      --background-fade-player-sheet: linear-gradient(
-        to bottom,
-        rgb(255 255 255 / 0%),
-        var(--color-surface) 35%
-      );
+      --background-fade-tab-bar: linear-gradient(to bottom, transparent, var(--color-surface));
+      --background-fade-player-sheet: linear-gradient(to bottom, transparent, var(--color-surface));
 
       --background-dialog-backdrop: rgb(var(--color-ink-rgb) / 35%);
 
       /* the focus ring, also drawn by containers whose focused element shows none */
       --focus-ring: 2px solid var(--color-ink);
       --focus-ring-offset: 2px;
+
+      --scrollbar-thumb: var(--color-fg);
+      --scrollbar-track: transparent;
+    }
+
+    /* not inherited; the thin variant is the one that draws no arrow buttons */
+    * {
+      scrollbar-width: thin;
     }
 
     /* undrawn state: every interactive element shows the same focus ring */

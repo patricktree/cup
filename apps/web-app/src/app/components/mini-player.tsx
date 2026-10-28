@@ -27,8 +27,8 @@ const GAP_ABOVE_TAB_ICONS_PIXELS = 18;
 
 /**
  * A floating pill above the tab bar of the account pages that controls the loaded audiobook: −15 s
- * and play/pause. Pressing it anywhere else opens the audiobook's detail view. Shows nothing while
- * no audiobook is loaded.
+ * and play/pause. Pressing its cover or title opens the audiobook's detail view. Shows nothing
+ * while no audiobook is loaded.
  */
 export function MiniPlayer(): React.ReactNode {
   const { loaded } = usePlayerHostSnapshot();
@@ -47,10 +47,9 @@ export function MiniPlayer(): React.ReactNode {
         z-index: 2;
         display: grid;
         grid-area: shell-player;
-        gap: 8px;
         width: 100%;
         max-width: var(--app-max-width);
-        padding-inline: 10px;
+        padding-inline: var(--spacing-gutter);
 
         /* the pill reaches into the tab bar's top padding, ending the drawn gap above its icons */
         margin-block-end: ${GAP_ABOVE_TAB_ICONS_PIXELS - TAB_BAR_ICONS_OFFSET_PIXELS}px;
@@ -60,13 +59,10 @@ export function MiniPlayer(): React.ReactNode {
       <PlaybackError player={player} />
       <div
         className={css`
-          /* containing block for the link's pressable area below, which spans the whole pill */
-          position: relative;
           display: grid;
-          grid-template-columns: 41px minmax(0, 1fr) auto auto;
+          grid-template-columns: minmax(0, 1fr) auto auto;
           gap: 8px;
           align-items: center;
-          height: 56px;
           padding-block: 8px;
           padding-inline: 8px 18px;
 
@@ -74,72 +70,50 @@ export function MiniPlayer(): React.ReactNode {
           border: 1px solid var(--color-ink-4);
           border-radius: var(--border-radius-full);
           box-shadow: var(--shadow-card);
-
-          /* the link is the pill's focus target, so the pill shows its focus ring */
-          &:has(> a:focus-visible) {
-            outline: var(--focus-ring);
-            outline-offset: var(--focus-ring-offset);
-          }
-
-          /* 6 px between the 44 px hit areas draws the icons 16 px apart */
-          & > button + button {
-            margin-inline-start: -2px;
-          }
         `}
       >
-        <DSCoverImage
-          src={audiobook.coverImage?.url}
-          alt=""
-          shape="circle"
-          className={css`
-            width: 41px;
-          `}
-        />
         <Link
           to="/audiobooks/$conversionId"
           params={{ conversionId: loaded.conversionId }}
           className={composeClassnames(
             pressableOverlay,
             css`
-              /* the pill is the containing block, so the overlay and the area below span it */
-              position: static;
               display: grid;
+              grid-template-columns: 41px minmax(0, 1fr);
+              gap: 8px;
+              align-items: center;
               min-width: 0;
 
               color: var(--color-ink);
               text-decoration: none;
-              border-radius: inherit;
-
-              &:focus-visible {
-                outline: none;
-              }
-
-              /* pressing the pill outside the buttons opens the detail view */
-              &::before {
-                position: absolute;
-                inset: 0;
-                content: "";
-              }
+              border-radius: var(--border-radius-full);
             `,
           )}
         >
-          <span className={composeClassnames(textStyles.h5, singleLine)}>{audiobook.title}</span>
+          <DSCoverImage src={audiobook.coverImage?.url} alt="" shape="circle" />
           <span
-            className={composeClassnames(
-              textStyles.label,
-              singleLine,
-              css`
-                color: var(--color-ink-40);
-              `,
-            )}
+            className={css`
+              display: grid;
+              min-width: 0;
+            `}
           >
-            {toSourceHost(audiobook.originalUrl)}
+            <span className={composeClassnames(textStyles.h5, singleLine)}>{audiobook.title}</span>
+            <span
+              className={composeClassnames(
+                textStyles.label,
+                singleLine,
+                css`
+                  color: var(--color-ink-40);
+                `,
+              )}
+            >
+              {toSourceHost(audiobook.originalUrl)}
+            </span>
           </span>
         </Link>
         <DSIconButton
           label="Back 15 seconds"
           icon={<SkipBack15Icon />}
-          className={controlAbovePill}
           onClick={() => player.skipBy(-SKIP_MILLISECONDS)}
         />
         <PlayPauseButton loaded={loaded} />
@@ -158,13 +132,7 @@ function PlayPauseButton({ loaded }: { loaded: LoadedAudiobook }): React.JSX.Ele
       icon={
         isPlaying ? <PauseMiniIcon /> : <PlayIcon width={PLAY_ICON_SIZE} height={PLAY_ICON_SIZE} />
       }
-      className={controlAbovePill}
       onClick={host.togglePlayback}
     />
   );
 }
-
-/** Lifts a button above the link's pressable area, which spans the pill. */
-const controlAbovePill = css`
-  z-index: 1;
-`;

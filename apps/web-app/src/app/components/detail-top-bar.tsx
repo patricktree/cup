@@ -15,8 +15,11 @@ export type DetailBackTarget = "/recent" | "/";
 
 type DetailTopBarProps = {
   backTo: DetailBackTarget;
-  /** Shown in the middle once the page's own title has scrolled out of view. */
-  compactTitle: { title: string; host: string } | undefined;
+  /**
+   * Fades in in the middle once the page's own title has scrolled out of view (`isShown`). Absent
+   * while the audiobook has no title.
+   */
+  compactTitle: { title: string; host: string; isShown: boolean } | undefined;
   /** Absent until the audiobook has loaded. */
   menu: DetailMenuProps | undefined;
 };
@@ -57,12 +60,31 @@ export function DetailTopBar({ backTo, compactTitle, menu }: DetailTopBarProps):
 
       {compactTitle ? (
         <div
+          data-shown={compactTitle.isShown}
           className={css`
             display: grid;
             grid-area: title;
             gap: 4px;
             justify-items: center;
             text-align: center;
+
+            /* hidden also leaves the accessibility tree, once the fade-out has finished */
+            &[data-shown="false"] {
+              visibility: hidden;
+              opacity: 0;
+            }
+
+            @media (prefers-reduced-motion: no-preference) {
+              transition:
+                opacity 200ms ease,
+                visibility 0s;
+
+              &[data-shown="false"] {
+                transition:
+                  opacity 200ms ease,
+                  visibility 0s 200ms;
+              }
+            }
 
             & > p {
               max-width: 100%;
