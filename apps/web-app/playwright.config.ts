@@ -42,11 +42,6 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: [
-    ...(dockerConfig.webServer === undefined
-      ? []
-      : Array.isArray(dockerConfig.webServer)
-        ? dockerConfig.webServer
-        : [dockerConfig.webServer]),
     {
       // Each run starts its own gallery on a port the operating system assigns, so concurrent runs and
       // gallery servers from other checkouts cannot collide with or stand in for this one.
