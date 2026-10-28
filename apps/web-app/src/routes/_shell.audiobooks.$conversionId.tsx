@@ -392,7 +392,10 @@ function NarrationDocument({
       check.assert(narrationDocumentElement);
 
       const title = findTitle(narrationDocumentElement, units);
-      const subheadings = narrationDocumentElement.querySelectorAll("h2, h3, h4, h5, h6");
+      // The source subtitle is drawn in the subheading text style.
+      const subheadings = narrationDocumentElement.querySelectorAll(
+        "h2, h3, h4, h5, h6, hgroup > h1 + p",
+      );
       title.classList.add(textStyles.h2);
       for (const subheading of subheadings) {
         subheading.classList.add(textStyles.h4);
@@ -526,6 +529,11 @@ function NarrationDocument({
           & > article > hgroup > h1 {
             margin-block-end: var(--spacing-gutter);
             color: var(--color-ink);
+          }
+
+          /* the source subtitle sits closer to the title than the host does, as drawn */
+          & > article > hgroup > h1 {
+            margin-block-end: var(--spacing-base);
           }
 
           /* the source subtitle, which only ever follows the title inside the <hgroup> */
