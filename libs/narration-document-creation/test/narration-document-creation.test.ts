@@ -215,7 +215,7 @@ test("ignores HTML formatting whitespace while preserving explicit breaks", () =
 test("opens with the source title and source subtitle as two units inside an hgroup", () => {
   const narrationDocument = createNarrationDocument({
     sourceTitle: "A Source Title",
-    sourceSubtitle: "  A short summary\n  beneath the title.  ",
+    sourceSubtitle: "  A short summary beneath the title.  ",
     sourceMaterialHtml: "<p>The first paragraph.</p><p>The second paragraph.</p>",
   });
 

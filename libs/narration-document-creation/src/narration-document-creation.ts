@@ -122,7 +122,7 @@ export function createNarrationDocument({
   }
 
   const normalizedSourceSubtitle =
-    sourceSubtitle === undefined ? undefined : normalizeComparableNarrationText(sourceSubtitle);
+    sourceSubtitle === undefined ? undefined : normalizeNarrationText(sourceSubtitle);
 
   if (normalizedSourceSubtitle?.length === 0) {
     throw new Error("Expected the source subtitle to contain narration text");
@@ -292,7 +292,7 @@ export function createNarrationDocument({
     // Added before any body block, so the source subtitle never absorbs a pending heading.
     addSynchronizationUnit(
       normalizedSourceSubtitle,
-      `<p id="{{SYNCHRONIZATION_UNIT_ID}}">${escapeHtmlText(normalizedSourceSubtitle)}</p>`,
+      `<p id="{{SYNCHRONIZATION_UNIT_ID}}">${serializeNarrationText(normalizedSourceSubtitle)}</p>`,
       openingWrappers,
     );
   }
