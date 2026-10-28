@@ -284,7 +284,11 @@ export const AddDialogStartsLater = (() => {
 })();
 
 async function submitSourceUrl({ canvasElement }: Parameters<NonNullable<Story["play"]>>[0]) {
-  const dialog = within(await within(canvasElement.ownerDocument.body).findByRole("dialog"));
+  // The router renders nothing until the route chunks have loaded, which under a full parallel test
+  // run can take longer than the lookup's default second.
+  const dialog = within(
+    await within(canvasElement.ownerDocument.body).findByRole("dialog", {}, { timeout: 10_000 }),
+  );
   const user = userEvent.setup();
   const input = await dialog.findByRole("textbox", { name: "URL" });
   await user.type(input, ADDED_SOURCE_URL);

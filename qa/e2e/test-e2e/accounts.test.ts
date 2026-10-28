@@ -56,14 +56,13 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   await page.goto(`${origin}/app/recent`);
   await expect(page.getByRole("list", { name: "Tracks" }).getByRole("link")).toHaveCount(1);
   await expect(page.locator("main")).toHaveScreenshot("private-recents.png");
-  await page.goto(`${origin}/app/account`);
+  await page.goto(`${origin}/app/recent/account`);
   await page.getByRole("button", { name: "Delete account…" }).click();
   await expect(page.getByRole("button", { name: "Schedule deletion" })).toBeVisible();
   await expect.poll(() => authProvider.exchanges()).toBe(2);
   await page.getByRole("button", { name: "Schedule deletion" }).click();
-  await expect(
-    page.getByText("Sign in with Google to manage or restore your account."),
-  ).toBeVisible();
+  // Scheduling deletion signs the browser out, and signed out, Recents and its dialogs lead home.
+  await expect(page).toHaveURL(`${origin}/app/`);
   // The unexpired signed URL is refused like a bearer request of an account scheduled for deletion.
   await expect.poll(async () => (await page.request.get(trackUrl)).status()).toBe(403);
   expectConsoleError(/^Failed to load resource: the server responded with a status of 403/);
@@ -73,7 +72,8 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect.poll(() => authProvider.exchanges()).toBe(3);
   await expect(page.getByRole("alert")).toBeVisible();
-  await page.goto(`${origin}/app/account`);
+  // The scheduled-deletion email links the account recovery page.
+  await page.goto(`${origin}/app/account-recovery`);
   await expect(page.getByRole("heading", { name: "Deletion scheduled" })).toBeVisible();
   await page.getByRole("button", { name: "Restore account…" }).click();
   await expect.poll(() => authProvider.exchanges()).toBe(4);
@@ -83,6 +83,8 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
       "Your account is restored. Your existing minutes and conversions are available again.",
     ),
   ).toBeVisible();
+  // The restored account is active again; the confirmation replaces the page's notice for that.
+  await expect(page.getByText("This account is not scheduled for deletion.")).toHaveCount(0);
   expect((await readAccount(page, origin)).balance.available).toBe(remainingAllowance);
   await page.goto(`${origin}/app/recent`);
   await expect(page.getByRole("list", { name: "Tracks" }).getByRole("link")).toHaveCount(1);
@@ -173,7 +175,7 @@ test("signup keeps trial conversions separate from the new account and its Recen
   await expect(ownConversions).toHaveCount(1);
   await expect(ownConversions).toHaveAttribute("href", new URL(privateUrl).pathname);
   expect(importRequests).toBe(0);
-  await page.goto(`${origin}/app/account`);
+  await page.goto(`${origin}/app/recent/account`);
   await page.getByRole("button", { name: "Delete account…", exact: true }).click();
   await page.getByRole("button", { name: "Schedule deletion", exact: true }).click();
   // Scheduling deletion signs the browser out. Its unexpired track URL is refused like a bearer
@@ -185,6 +187,12 @@ test("signup keeps trial conversions separate from the new account and its Recen
       await isolatedRequest.get(`${origin}/api/files/audiobooks/${originalId}/narration-track.mp3`)
     ).status(),
   ).toBe(401);
+
+  // Signed out, the account recovery page that the scheduled-deletion email links signs in itself.
+  await page.goto(`${origin}/app/account-recovery`);
+  await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Deletion scheduled" })).toBeVisible();
+  await expect(page).toHaveURL(`${origin}/app/account-recovery`);
 });
 
 test("signed-in accounts skip trial credentials and signed-out users can reopen trial links", async ({
@@ -209,12 +217,11 @@ test("signed-in accounts skip trial credentials and signed-out users can reopen 
   await page.goto(trialUrl);
   await expect(page).toHaveURL(`${origin}/app/recent`);
   expect(trialRequests).toBe(0);
-  await page.goto(`${origin}/app/account`);
+  await page.goto(`${origin}/app/recent/account`);
   await page.getByRole("button", { name: "Delete account…", exact: true }).click();
   await page.getByRole("button", { name: "Schedule deletion", exact: true }).click();
-  await expect(
-    page.getByText("Sign in with Google to manage or restore your account."),
-  ).toBeVisible();
+  // Scheduling deletion signs the browser out, and signed out, Recents and its dialogs lead home.
+  await expect(page).toHaveURL(`${origin}/app/`);
   await page.goto(trialUrl);
   await expect(page).toHaveURL(`${origin}/app/trials/${grant.grantId}`);
   await expect(page.getByRole("textbox", { name: "URL", exact: true })).toBeVisible();

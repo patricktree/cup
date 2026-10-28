@@ -38,7 +38,7 @@ test("the canonical domain serves the web app instead of redirecting", async ({
 }) => {
   const worker = await useWorker({ onTestFinished });
 
-  const response = await worker.fetch(`${CANONICAL_ORIGIN}/app/account`, { redirect: "manual" });
+  const response = await worker.fetch(`${CANONICAL_ORIGIN}/app/recent`, { redirect: "manual" });
 
   expect(response.status).toBe(200);
   expect(response.headers.get("Content-Type")).toMatch(/^text\/html/);

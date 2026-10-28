@@ -24,9 +24,8 @@ export const TAB_BAR_HEIGHTS = {
 export const TAB_BAR_ICONS_OFFSET_PIXELS = PADDING_BLOCK_PIXELS + TAB_PADDING_PIXELS;
 
 /**
- * Tabs of the account shell pages (Recents and the account page), at the bottom of the page on the
- * drawn fade. The tab of the current page is at full ink; Add opens the Add dialog and, being an
- * action, never shows as current.
+ * Tabs of Recents, at the bottom of the page on the drawn fade. The tab of the current page is at
+ * full ink; Add opens the Add dialog and, being an action, never shows as current.
  */
 export function AccountTabBar(): React.JSX.Element {
   return (
@@ -66,7 +65,7 @@ export function AccountTabBar(): React.JSX.Element {
         <li>
           <ActionLink
             to="/recent/add"
-            state={{ isAddDialogOpenedInApp: true }}
+            state={{ isRecentsDialogOpenedInApp: true }}
             className={tabStyles}
           >
             <TabAddIcon />

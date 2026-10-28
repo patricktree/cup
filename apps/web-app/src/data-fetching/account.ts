@@ -24,7 +24,7 @@ export const accountQuery = (subject?: string) =>
       return requestApi({ subject }, (client) => client.getAccount());
     },
     retry: false,
-    // Account settings replace themselves with the setup error, which explains rate limiting.
+    // The account settings replace themselves with the setup error, which explains rate limiting.
     meta: { errorDisplay: "inline" },
   });
 

@@ -15,7 +15,7 @@ import { composeClassnames } from "#src/app/utils.js";
 const RING_STROKE_WIDTH = 4;
 
 /**
- * Link to the account page showing the account holder's initials in the drawn ring, or a person
+ * Link to the account dialog showing the account holder's initials in the drawn ring, or a person
  * glyph when the session carries no usable name. Cup stores no name: Supabase fills `name` (and the
  * deprecated `full_name`) from the identity provider.
  */
@@ -29,7 +29,8 @@ export function AccountAvatar({
   return (
     <Link
       {...interTypefaceScope}
-      to="/account"
+      to="/recent/account"
+      state={{ isRecentsDialogOpenedInApp: true }}
       // the initials are decoration; the link says where it goes
       aria-label="Account"
       className={composeClassnames(
