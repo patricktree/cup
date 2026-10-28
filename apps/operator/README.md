@@ -1,6 +1,6 @@
 # Operator runbook
 
-Use the operator CLI to create and manage production conversion grants and to inspect and manage accounts. Each grant expires after 90 days and starts with 120 minutes of audio duration allowance.
+Use the operator CLI to create and manage production conversion grants and to inspect and manage accounts. New grants expire after 90 days and start with 120 minutes of audio duration allowance.
 
 Run all commands from the repository root.
 
@@ -139,8 +139,6 @@ pnpm operator grant inspect "GRANT_ID"
 
 The total includes reserved and spent duration. The command rejects totals below their sum. Repeating the same total is safe. The original link, browser sessions, and expiry remain valid.
 
-Newly created grants start with 120 minutes.
-
 For a manual refund after permanent audio loss, inspect the grant and increase its total allowance by the duration being refunded. Changing the total does not reset spent duration. The grant records the difference from its previous total as an adjustment in its duration ledger.
 
 ### Revoke a grant
@@ -187,7 +185,7 @@ Filter by Registry phase (`provisioning`, `active`, or `deleting_identity`), and
 pnpm operator account list --phase active --limit 100
 ```
 
-Use the returned opaque cursor with `--cursor` to fetch the next page. Each entry shows the account ID, the Supabase user ID (`Subject`), the Registry phase, the creation time, and the account's allowance, spent, reserved, and available minutes. Usage comes from the Registry's projection, which can lag the account by up to about a minute; an account shows `Usage: not yet projected` until the Registry first receives it. Use `account inspect` for the authoritative balance. The Registry does not record which sign-in provider created an account; look up the subject in Supabase for provider details.
+Use the returned opaque cursor with `--cursor` to fetch the next page. Usage comes from the Registry's projection, which can lag the account by up to about a minute; an account shows `Usage: not yet projected` until the Registry first receives it. Use `account inspect` for the authoritative balance. The Registry does not record which sign-in provider created an account; look up the subject in Supabase for provider details.
 
 ### Inspect an account
 
@@ -197,7 +195,7 @@ Read the account's lifecycle state, balance, ledger totals, first history page, 
 pnpm operator account inspect "ACCOUNT_ID"
 ```
 
-The history reports each conversion's status as account history does: a prepared conversion shows the [state of its audio](../../docs/architecture/conversion.md#whole-document-synthesis-and-accounting) (`insufficient-duration`, `synthesizing`, or `ready`) next to its stored outcome. The account defines the shapes of this response in its [contracts](../../libs/accounts/src/domain/account-contracts.ts).
+The history reports each conversion's status as account history does: a prepared conversion shows the [state of its audio](../../docs/architecture/conversion.md#whole-document-synthesis-and-accounting) next to its stored outcome. The account defines the shapes of this response in its [contracts](../../libs/accounts/src/domain/account-contracts.ts).
 
 ### Adjust an account allowance
 

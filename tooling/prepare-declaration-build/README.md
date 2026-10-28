@@ -17,7 +17,7 @@ Cleanup paths must remain inside the current package. The declaration directory 
 
 ## Manifest rewriting
 
-The source manifest is copied with local `imports` target endings rewritten: `.ts` and `.tsx` become `.d.ts`, `.mts` and `.mtsx` become `.d.mts`, and `.cts` and `.ctsx` become `.d.cts`. Generic mappings such as `"#src/*": "./*"` also produce explicit `.ts`, `.tsx`, `.mts`, `.mtsx`, `.cts`, and `.ctsx` declaration mappings. Existing explicit mappings take precedence; the generic mapping remains available for other files. Generated extension mappings append the source extension to wildcard captures before rewriting local targets, preserving external package targets. Conditions, arrays, null targets, existing declaration extensions, and other manifest fields remain unchanged.
+The source manifest is copied with local `imports` targets rewritten from source to declaration extensions, and generic mappings such as `"#src/*": "./*"` gain explicit declaration mappings; the [rewriter](src/prepare-declaration-build.ts) holds the rules. Other manifest fields remain unchanged.
 
 The CLI writes the generated manifest to `package.json` inside the declaration output directory. Local imports retain their relative layout; the CLI does not rebase targets or copy assets.
 

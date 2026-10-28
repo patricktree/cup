@@ -4,7 +4,7 @@ Cup keeps application state in three kinds of SQLite stores: one per account, on
 
 The Drizzle schemas linked in each section define the columns, types, constraints, and indexes. The diagrams are generated from those schemas by each owning library's `migrations:generate`: they name every table and draw each declared foreign key from the referenced table to the referencing one, labelled with the referencing columns, as one-to-one when those columns are unique in the referencing table. Do not edit them by hand; each library's `sqlite-migrations.test.ts` fails when its diagram differs from the generated one, next to the check that the schema matches its latest migration snapshot.
 
-All three stores define `rate_events` from the [shared rate-limit schema](../../libs/rolling-limits/src/rate-limit-schema.ts) and enforce their limits through the same [rolling-window implementation](../../libs/rolling-limits/src/rolling-limits.ts), which prunes expired rows in SQL. Each store keeps its own events, separated by bucket name.
+All three stores keep their own `rate_events` table from the [rolling limits library](../../libs/rolling-limits/README.md).
 
 ## Naming conventions
 

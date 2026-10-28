@@ -1,6 +1,6 @@
 # Masonry layout for the Recents grid
 
-> Historical research, incorporated 2026-10-28. Cup adopted the recommended row spans on a CSS grid with 1 px rows, measured by a `ResizeObserver` over one newest-first list, with no `grid-lanes` path, through [spec #89](https://github.com/patricktree/cup/issues/89), built in [#101](https://github.com/patricktree/cup/pull/101) (`8cccf1e`) as [`useMasonryRowSpans`](../../apps/web-app/src/app/use-masonry-row-spans.ts); covers reserve their space with a fixed 5:3 crop. See [Recents](../architecture/web-app.md#recents). The revisit condition for `grid-lanes` below still applies. Repository observations below describe `dcec7ecd`.
+> Historical research, incorporated 2026-10-28. Adopted as recommended, built in [#101](https://github.com/patricktree/cup/pull/101); see [Recents covers and order](../architecture/web-app.md#recents-covers-and-order). The revisit condition for `grid-lanes` below still applies. Repository observations below describe `dcec7ecd`.
 
 [Original investigation](https://github.com/patricktree/cup/blob/9a8f475982ba867facd1008e57cc1b0f9c9606e0/docs/research/recents-masonry-layout.md).
 

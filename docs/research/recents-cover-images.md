@@ -1,6 +1,6 @@
 # Cover images on Recents cards
 
-> Historical research, incorporated 2026-10-28. [ADR 0013](../adr/0013-cache-cover-images-in-the-browser-for-a-day.md) adopted signed cover URLs on ready history items and stable URLs, with the issue time rounded to the UTC day (not the hour) and covers cached in the browser for a day, built in [#101](https://github.com/patricktree/cup/pull/101) (`8cccf1e`). Covers are cropped to 5:3, the drawn ratio, rather than the 1.91:1 suggested below, with no stored dimensions. The card rendition was not built; it is [issue #90](https://github.com/patricktree/cup/issues/90). The Capacitor shells' `Cross-Origin-Resource-Policy` risk remains untested. See [Recents](../architecture/web-app.md#recents) and [signed media URL](../architecture/authentication.md#signed-media-url). Repository observations below describe `dcec7ecd`.
+> Historical research, incorporated 2026-10-28. Adopted as [ADR 0013](../adr/0013-cache-cover-images-in-the-browser-for-a-day.md), built in [#101](https://github.com/patricktree/cup/pull/101); see [Recents covers and order](../architecture/web-app.md#recents-covers-and-order). Cup differs from the recommendations below: the issue time rounds to the UTC day, not the hour; covers crop to 5:3, not 1.91:1; the card rendition is unbuilt ([#90](https://github.com/patricktree/cup/issues/90)). Repository observations below describe `dcec7ecd`.
 
 [Original investigation](https://github.com/patricktree/cup/blob/87904fc6059ccdf8da4f86534271557fcc36abfc/docs/research/recents-cover-images.md).
 

@@ -85,7 +85,7 @@ The libraries are code boundaries inside the deployed system, not separate netwo
 - [Duration ledger](../../libs/duration-ledger/README.md): the allowance, reservation, and charge storage that accounts and grants share.
 - [Conversion contracts](../../libs/conversion-contracts/README.md): runtime-independent shared schemas, types, and duration calculations; its [lint configuration](../../libs/conversion-contracts/oxlint.config.ts) refuses `cloudflare:` and `node:` imports, because the Worker, the workflows, and the browser load it.
 - [Rolling limits](../../libs/rolling-limits/README.md): the rolling-window rate limiter, whose table each of the three objects keeps in its own database.
-- [Errors](../../libs/errors/README.md): error helpers shared by server code: server logs record only a caught error's root cause, so wrapper errors carrying SQL parameters or request data are never logged. It imports no Cup package, so any library can depend on it; the graph below leaves it out.
+- [Errors](../../libs/errors/README.md): error helpers shared by server code, including the rule that server logs record only a caught error's root cause. It imports no Cup package, so the graph below leaves it out.
 
 ```mermaid
 flowchart TD
@@ -112,7 +112,7 @@ flowchart TD
 
 The owners reach the registry only through the RPC interfaces drawn as dashed lines, never as a package dependency: the registry depends on both owner libraries, so such a dependency would form a cycle, which every `turbo run` refuses. `pnpm boundaries` (`turbo boundaries`, part of `pnpm validate:fast`) also fails when a package imports a package its `package.json` does not declare, or a file outside its own directory.
 
-Each package exposes its production code through its `.` export, so a caller sees one public interface per package; subpath exports carry only what production does not run, such as test fakes and build configuration. Accounts and conversion grants keep a few production subpaths, because their `.` export loads the Durable Object, which the browser, Node, and other Worker callers must not load ([ADR 0010](../adr/0010-tolerate-unknown-keys-at-the-listener-api.md) requires this for contracts). Each such subpath is listed with its reason under `cup.subpathExportExceptions` in its `package.json`. The [package export check](../../qa/workspace-checks/README.md) enforces the rule in `pnpm validate:fast`.
+Each package exposes its production code through its `.` export, so a caller sees one public interface per package; the [package export check](../../qa/workspace-checks/README.md) enforces this in `pnpm validate:fast` and lists the allowed exceptions. Accounts and conversion grants keep a few production subpaths, because their `.` export loads the Durable Object, which the browser, Node, and other Worker callers must not load ([ADR 0010](../adr/0010-tolerate-unknown-keys-at-the-listener-api.md) requires this for contracts).
 
 ## API definitions
 
@@ -143,7 +143,7 @@ Every error response carries the same envelope: an error code from its API's con
 
 Each Durable Object has its own SQLite database; account and grant objects isolate state by owner. See the [database schema diagrams](durable-object-storage.md) for tables, columns, keys, and declared relationships in all three stores. Drizzle schemas define the tables, constraints, and indexes for all three stores, and application queries use the Drizzle Durable Object driver. Each object applies its generated migrations before accepting work; database changes follow the [account migration guide](../../libs/accounts/README.md#database-migrations), the [grant migration guide](../../libs/conversion-grants/README.md), or the [registry migration guide](../../libs/registry/README.md). The registry reuses the deployed grant registry's storage; the [registry guide](../../libs/registry/README.md#preserve-deployed-storage) explains how.
 
-The one-time transition from handwritten trial schemas preserves grant identities, credentials, settings, and registry inventory while discarding old conversions and restoring full configured allowances. Old audiobook ownership routes are removed, so those links stop resolving; R2 artifacts are retained separately. New conversions survive subsequent migration replays. [ADR 0004](../adr/0004-preserve-only-grants-during-drizzle-transition.md) defines this exception to historical retention.
+The one-time transition from handwritten trial schemas kept grants and discarded their old conversions ([ADR 0004](../adr/0004-preserve-only-grants-during-drizzle-transition.md)); the [grant migration guide](../../libs/conversion-grants/README.md) describes what it preserves.
 
 | Store                   | Ownership and purpose                                                                                                                          | Primary source                                                                                     |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |

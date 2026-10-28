@@ -6,7 +6,7 @@ Live evals call Gemini through Cloudflare AI Gateway and can incur usage charges
 
 ## Configure credentials
 
-After the initial dependency installation attempt, run `node tooling/env-setup/src/cli.ts setup --from /absolute/path/to/existing.env` from the repository root to create `.env.evals` and the Worker’s `.env.local` with matching credentials. Then retry `pnpm install`; postinstall checks that both files are configured and match. See the root AGENTS.md for initial setup. The production candidate uses `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_KEY`. An experimental candidate can supply a different `SelectionCompletion` implementation and its required credentials. The local environment file is optional and ignored by Git; you can instead export the required credentials. Evals do not require the Worker’s environment file.
+The root [environment setup](../../../../AGENTS.md#environment-setup) creates `.env.evals`. The production candidate uses `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_KEY`. An experimental candidate can supply a different `SelectionCompletion` implementation and its required credentials. The local environment file is optional and ignored by Git; you can instead export the required credentials. Evals do not require the Worker’s environment file.
 
 ## Add an eval case
 
