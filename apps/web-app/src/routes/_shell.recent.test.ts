@@ -20,7 +20,7 @@ for (const state of [
       await expect(cardsOf(component)).toHaveCount(state.cards);
     }
     await expectCoversLoaded(page);
-    await expect(component).toHaveScreenshot(`${state.name}.png`);
+    await expect(page).toHaveScreenshot(`${state.name}.png`);
   });
 }
 

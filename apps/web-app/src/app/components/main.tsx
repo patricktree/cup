@@ -1,28 +1,11 @@
 import { css } from "@linaria/core";
 import React from "react";
 
-import { composeClassnames } from "#src/app/utils.ts";
-
 type MainProps = React.ComponentProps<"main">;
 
-export function Main({ children, className, ...delegated }: MainProps): React.JSX.Element {
-  return (
-    <main
-      {...delegated}
-
-      // stable key under which the router's scroll restoration stores this container's position
-      data-scroll-restoration-id="main"
-      className={composeClassnames(
-        className,
-        css`
-          /* scrolls its content instead of the document; callers give it a height bound to the viewport */
-          overflow-y: auto;
-        `,
-      )}
-    >
-      {children}
-    </main>
-  );
+/** The page's content; the document scrolls it (see the shell layout in `routes/_shell.tsx`). */
+export function Main({ children, ...delegated }: MainProps): React.JSX.Element {
+  return <main {...delegated}>{children}</main>;
 }
 
 type ShellContentProps = {
@@ -41,15 +24,18 @@ export function ShellContent({
     <>
       {headerContent && (
         <header
+          data-shell-header
           className={css`
-            /* positioning anchor for absolutely-positioned fading child element */
-            position: relative;
+            /* stays at the top of the screen while the document scrolls; also the fade's anchor */
+            position: sticky;
+            top: 0;
 
             /* put above shell <main> */
             z-index: 1;
             grid-area: shell-header;
 
             font-size: var(--font-size-xxxl);
+            background-color: var(--color-bg);
           `}
         >
           <div

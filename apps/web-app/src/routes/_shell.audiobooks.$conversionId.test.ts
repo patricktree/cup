@@ -277,11 +277,12 @@ test("a trial audiobook renders without preparation skeletons and leads back hom
   expect(
     await page.evaluate(() => document.documentElement.dataset["sawReaderSkeleton"]),
   ).toBeUndefined();
-  await expect(component).toHaveScreenshot("trial-audiobook.png");
+  await expect(page).toHaveScreenshot("trial-audiobook.png");
 });
 
 test("an account audiobook opens with its cover, title and host below a plain top bar", async ({
   mount,
+  page,
 }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/AccountAudiobook");
   const title = "The turbulent AI era is here. The choices we make now are critical.";
@@ -297,7 +298,7 @@ test("an account audiobook opens with its cover, title and host below a plain to
     "/app/recent",
   );
   await expect(topBar.getByText(title)).toBeHidden();
-  await expect(component).toHaveScreenshot("account-audiobook-at-start.png");
+  await expect(page).toHaveScreenshot("account-audiobook-at-start.png");
 });
 
 test("once the title scrolls away the top bar shows it, and the playing segment is highlighted", async ({
@@ -330,9 +331,9 @@ test("once the title scrolls away the top bar shows it, and the playing segment 
     "rgba(18, 18, 18, 0.08)",
   );
   expect(await segment.evaluate((element) => getComputedStyle(element).fontWeight)).toBe("400");
-  await expect(component).toHaveScreenshot("account-audiobook-scrolled.png");
+  await expect(page).toHaveScreenshot("account-audiobook-scrolled.png");
 
-  await component.getByRole("main").evaluate((main) => main.scrollTo({ top: 0 }));
+  await page.evaluate(() => window.scrollTo({ top: 0 }));
   await expect(topBar.getByText(title)).toBeHidden();
 });
 
@@ -373,6 +374,7 @@ test("the top bar's menu offers no Retry when the audiobook cannot generate", as
 
 test("shows generation progress and keeps Play disabled while audio is generated", async ({
   mount,
+  page,
 }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/SynthesizingAudiobook");
   await expect(
@@ -383,11 +385,12 @@ test("shows generation progress and keeps Play disabled while audio is generated
   ).toBeVisible();
   await expect(component.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
   await expect(component.getByRole("button", { name: /^Play segment/ })).toHaveCount(0);
-  await expect(component).toHaveScreenshot("synthesizing-audiobook.png");
+  await expect(page).toHaveScreenshot("synthesizing-audiobook.png");
 });
 
 test("explains the needed and available duration when the document does not fit", async ({
   mount,
+  page,
 }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/InsufficientDuration");
   await expect(
@@ -397,10 +400,13 @@ test("explains the needed and available duration when the document does not fit"
   ).toBeVisible();
   await expect(component.getByRole("button", { name: "Retry", exact: true })).toBeEnabled();
   await expect(component.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
-  await expect(component).toHaveScreenshot("insufficient-duration.png");
+  await expect(page).toHaveScreenshot("insufficient-duration.png");
 });
 
-test("a failed segment is marked and playback waits for a successful Retry", async ({ mount }) => {
+test("a failed segment is marked and playback waits for a successful Retry", async ({
+  mount,
+  page,
+}) => {
   const component = await mount(
     "routes/_shell.audiobooks.$conversionId/AudiobookWithFailedSegment",
   );
@@ -413,7 +419,7 @@ test("a failed segment is marked and playback waits for a successful Retry", asy
   await expect(component.getByRole("button", { name: /Play without/ })).toHaveCount(0);
   await expect(component.getByText(/skipped during playback/)).toHaveCount(0);
   await expect(component.getByRole("button", { name: "Retry", exact: true })).toBeEnabled();
-  await expect(component).toHaveScreenshot("audiobook-with-failed-segment.png");
+  await expect(page).toHaveScreenshot("audiobook-with-failed-segment.png");
 
   // A refused retry leaves the audiobook unchanged, so the reader has to say why.
   await component.getByRole("button", { name: "Retry", exact: true }).click();
@@ -422,11 +428,12 @@ test("a failed segment is marked and playback waits for a successful Retry", asy
       "Not enough audio duration to retry. The missing audio needs about 3 s, and 1 s is available.",
     ),
   ).toBeVisible();
-  await expect(component).toHaveScreenshot("retry-refused-for-duration.png");
+  await expect(page).toHaveScreenshot("retry-refused-for-duration.png");
 });
 
 test("an audiobook whose generation waits for freed duration asks for a Retry", async ({
   mount,
+  page,
 }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/AudiobookNotYetGenerated");
   await expect(
@@ -434,10 +441,10 @@ test("an audiobook whose generation waits for freed duration asks for a Retry", 
   ).toBeVisible();
   await expect(component.getByRole("button", { name: "Retry", exact: true })).toBeEnabled();
   await expect(component.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
-  await expect(component).toHaveScreenshot("audiobook-not-yet-generated.png");
+  await expect(page).toHaveScreenshot("audiobook-not-yet-generated.png");
 });
 
-test("an audiobook whose every segment failed offers only Retry", async ({ mount }) => {
+test("an audiobook whose every segment failed offers only Retry", async ({ mount, page }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/AudiobookWithoutAudio");
   await expect(
     component.getByText("Audio could not be generated for this track.", { exact: true }),
@@ -446,10 +453,10 @@ test("an audiobook whose every segment failed offers only Retry", async ({ mount
   await expect(component.getByRole("button", { name: /Play without/ })).toHaveCount(0);
   await expect(component.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
   await expect(component.getByRole("button", { name: /^Play segment/ })).toHaveCount(0);
-  await expect(component).toHaveScreenshot("audiobook-without-audio.png");
+  await expect(page).toHaveScreenshot("audiobook-without-audio.png");
 });
 
-test("renders audiobook-not-found", async ({ mount }) => {
+test("renders audiobook-not-found", async ({ mount, page }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/AudiobookNotFound");
   await expect(
     component.getByRole("heading", { name: "The track could not be loaded." }),
@@ -457,7 +464,7 @@ test("renders audiobook-not-found", async ({ mount }) => {
   await expect(component.getByText("Track not found.")).toBeVisible();
   // Trying again cannot find an audiobook that does not exist.
   await expect(component.getByRole("button", { name: "Try again" })).toHaveCount(0);
-  await expect(component).toHaveScreenshot("audiobook-not-found.png");
+  await expect(page).toHaveScreenshot("audiobook-not-found.png");
 });
 
 test("renders audiobook-load-error", async ({ mount, page }) => {
@@ -465,7 +472,7 @@ test("renders audiobook-load-error", async ({ mount, page }) => {
   await expect(
     component.getByRole("heading", { name: "The track could not be loaded." }),
   ).toBeVisible();
-  await expect(component).toHaveScreenshot("audiobook-load-error.png");
+  await expect(page).toHaveScreenshot("audiobook-load-error.png");
 
   await page.route("**/api/audiobooks/*", (route) =>
     route.fulfill({
@@ -476,16 +483,16 @@ test("renders audiobook-load-error", async ({ mount, page }) => {
   await expect(component.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
 });
 
-test("shows loading skeletons with an unknown preparation phase", async ({ mount }) => {
+test("shows loading skeletons with an unknown preparation phase", async ({ mount, page }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/LoadingAudiobook");
   await expect(component.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
   await expect(
     component.getByRole("contentinfo", { name: "Player" }).getByRole("status"),
   ).toHaveText("Preparing");
-  await expect(component).toHaveScreenshot("loading-audiobook.png");
+  await expect(page).toHaveScreenshot("loading-audiobook.png");
 });
 
-test("shows preparation skeletons with a disabled player sheet", async ({ mount }) => {
+test("shows preparation skeletons with a disabled player sheet", async ({ mount, page }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/PendingConversion");
   await expect(component.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
   await expect(
@@ -494,7 +501,7 @@ test("shows preparation skeletons with a disabled player sheet", async ({ mount 
   await expect(component.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
   // The loading state looks the same apart from the menu, which only the loaded page has.
   await expect(component.getByRole("button", { name: "More", exact: true })).toBeVisible();
-  await expect(component).toHaveScreenshot("pending-conversion.png");
+  await expect(page).toHaveScreenshot("pending-conversion.png");
 });
 
 for (const [story, label] of [
@@ -511,7 +518,7 @@ for (const [story, label] of [
   });
 }
 
-test("preparation failure replaces skeletons with Retry", async ({ mount }) => {
+test("preparation failure replaces skeletons with Retry", async ({ mount, page }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/FailedConversion");
   await expect(component.getByRole("heading", { name: "example.com", exact: true })).toBeVisible();
   await expect(
@@ -522,7 +529,7 @@ test("preparation failure replaces skeletons with Retry", async ({ mount }) => {
   ).toBeVisible();
   await expect(component.getByRole("button", { name: "Retry", exact: true })).toBeEnabled();
   await expect(component.getByRole("button", { name: "More", exact: true })).toBeVisible();
-  await expect(component).toHaveScreenshot("failed-conversion.png");
+  await expect(page).toHaveScreenshot("failed-conversion.png");
 });
 
 test("a refused retry is reported with a toast and leaves the reader in place", async ({

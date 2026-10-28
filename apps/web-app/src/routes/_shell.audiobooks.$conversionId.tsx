@@ -416,9 +416,12 @@ function NarrationDocument({
       check.assert(narrationDocumentElement);
 
       const title = findTitle(narrationDocumentElement, units);
-      // Only a title above the shell's <main> is scrolled away. A large cover on a short screen can
-      // start it below the visible part, so the root reaches far below <main> and the title counts
-      // as intersecting there.
+      // The document scrolls, so the root is the screen without the sticky header on top of it:
+      // only a title under or above the header is scrolled away. A large cover on a short screen
+      // can start it below the visible part, so the root reaches far below the screen and the title
+      // counts as intersecting there.
+      const headerHeight =
+        document.querySelector<HTMLElement>("[data-shell-header]")?.offsetHeight ?? 0;
       const observer = new IntersectionObserver(
         ([entry]) => {
           if (entry) {
@@ -426,8 +429,7 @@ function NarrationDocument({
           }
         },
         {
-          root: narrationDocumentElement.closest("main"),
-          rootMargin: `0px 0px ${TITLE_OBSERVER_BOTTOM_MARGIN_PIXELS}px 0px`,
+          rootMargin: `-${headerHeight}px 0px ${TITLE_OBSERVER_BOTTOM_MARGIN_PIXELS}px 0px`,
         },
       );
       observer.observe(title);

@@ -14,7 +14,7 @@ export function ConversionShell({ children }: ConversionShellProps): React.JSX.E
         display: grid;
         align-content: center;
         max-width: var(--app-max-width);
-        height: 100dvh;
+        min-height: 100dvh;
         padding-block: var(--app-padding-block);
         padding-inline: var(--app-padding-inline);
         margin-inline: auto;

@@ -13,15 +13,19 @@ function ShellLayout() {
     <PlayerHostProvider>
       <div
         className={css`
-          /* the page scrolls within its row; the player and tab bar below it fade over its end */
+          /*
+            The document scrolls, not an element in it: iOS Safari ties a pull-to-refresh gesture to
+            the document, and an inner scroller would not move until that gesture had settled. The
+            header and the player and tab bar below stick to the screen's edges.
+          */
           display: grid;
           grid-template-areas:
             "shell-header"
             "shell-main"
             "shell-player"
             "shell-tab-bar";
-          grid-template-rows: max-content minmax(0, 1fr) auto auto;
-          height: 100dvh;
+          grid-template-rows: max-content 1fr auto auto;
+          min-height: 100dvh;
 
           /* create stacking context for <header> and <main> of the shell */
           isolation: isolate;

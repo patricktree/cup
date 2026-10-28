@@ -22,8 +22,9 @@ export function fadeFooterClearance({
  * `--fade-background`.
  */
 export const fadeFooter = css`
-  /* containing block for the fade below */
-  position: relative;
+  /* stays at the bottom of the screen while the document scrolls; also the fade's containing block */
+  position: sticky;
+  bottom: 0;
 
   /* above shell <main>, whose end scrolls under the fade */
   z-index: 1;

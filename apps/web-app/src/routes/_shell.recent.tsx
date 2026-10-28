@@ -47,13 +47,10 @@ function RecentPage(): React.ReactNode {
 
   return (
     <>
-      {/* the page's one scroll container, so the header scrolls away with the tracks */}
+      {/* the header scrolls away with the tracks, unlike other shell pages' sticky headers */}
       <div
-        // stable key under which the router's scroll restoration stores this container's position
-        data-scroll-restoration-id="main"
         className={css`
           grid-area: shell-main;
-          overflow-y: auto;
         `}
       >
         <header
