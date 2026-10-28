@@ -66,6 +66,12 @@ test("generates audio for the whole document, then plays its narration track", a
       return metadata && { title: metadata.title, artist: metadata.artist, album: metadata.album };
     }),
   ).toEqual({ title: SOURCE_TITLE, artist: "", album: "" });
+  // So does the player sheet.
+  const playerSheet = page.getByRole("contentinfo", { name: "Player" });
+  await expect(
+    playerSheet.getByRole("slider", { name: `Position in ${SOURCE_TITLE}`, exact: true }),
+  ).toBeVisible();
+  await expect(playerSheet.getByText(SOURCE_SUBTITLE)).toHaveCount(0);
 
   // A unit tap seeks the same track to the unit's start offset.
   await page.getByRole("button", { name: "Play segment 3", exact: true }).click();
