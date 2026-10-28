@@ -83,6 +83,8 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
       "Your account is restored. Your existing minutes and conversions are available again.",
     ),
   ).toBeVisible();
+  // The restored account is active again; the confirmation replaces the page's notice for that.
+  await expect(page.getByText("This account is not scheduled for deletion.")).toHaveCount(0);
   expect((await readAccount(page, origin)).balance.available).toBe(remainingAllowance);
   await page.goto(`${origin}/app/recent`);
   await expect(page.getByRole("list", { name: "Tracks" }).getByRole("link")).toHaveCount(1);

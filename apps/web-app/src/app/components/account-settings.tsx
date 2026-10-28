@@ -25,18 +25,21 @@ export function AccountSettings({
   const account = useSuspenseQuery(accountQuery(subject));
   const confirmation = useAccountConfirmation(subject);
   const { isPending: pending, error, result, begin, confirm, cancel } = confirmation;
+  const data = account.data;
+  if (account.error && !account.isFetching) {
+    throw account.error;
+  }
+
   // A deletion begun in the account dialog but not confirmed stays stored for this tab; the recovery
   // page must not offer to finish it.
   const challenge =
     purpose === "recovery" && confirmation.challenge?.action === "delete"
       ? null
       : confirmation.challenge;
+
   // Each section heading sits one level below the dialog's h2 title or the page's h1.
   const SectionHeading = purpose === "settings" ? "h3" : "h2";
-  const data = account.data;
-  if (account.error && !account.isFetching) {
-    throw account.error;
-  }
+
   return (
     <>
       <p>{email}</p>
@@ -54,9 +57,7 @@ export function AccountSettings({
             </DSButton>
           </section>
         ) : (
-          <p>
-            This account is not scheduled for deletion. <Link to="/recent">Go to Recent</Link>
-          </p>
+          <ActiveAccountNotice result={result} />
         )
       ) : (
         <section aria-label="Account recovery">
@@ -82,22 +83,60 @@ export function AccountSettings({
         </section>
       )}
       {challenge && (
-        <section aria-label="Confirm account change">
-          <p>
-            After signing in again with the same Google account, confirm{" "}
-            {challenge.action === "delete" ? "account deletion" : "account recovery"}.
-          </p>
-          <DSButton disabled={pending || challenge.subject !== subject} onClick={confirm}>
-            {challenge.action === "delete" ? "Schedule deletion" : "Confirm recovery"}
-          </DSButton>
-          <DSButton disabled={pending} onClick={cancel}>
-            Cancel
-          </DSButton>
-        </section>
+        <ConfirmAccountChange
+          action={challenge.action}
+          isForThisAccount={challenge.subject === subject}
+          isPending={pending}
+          onConfirm={confirm}
+          onCancel={cancel}
+        />
       )}
       {pending && <output>Working…</output>}
       {error && <p role="alert">{error}</p>}
-      {result && <output>{result}</output>}
+      {result && purpose === "settings" && <output>{result}</output>}
     </>
+  );
+}
+
+/**
+ * The recovery page's content for an active account. A recovery just confirmed there leaves the
+ * account active, so its result takes the place of the notice that nothing is scheduled.
+ */
+function ActiveAccountNotice({ result }: { result: string | null | undefined }): React.ReactNode {
+  return (
+    <p>
+      {result ? <output>{result}</output> : "This account is not scheduled for deletion."}{" "}
+      <Link to="/recent">Go to Recent</Link>
+    </p>
+  );
+}
+
+/** The step after signing in with Google again, which carries out the change begun before it. */
+function ConfirmAccountChange({
+  action,
+  isForThisAccount,
+  isPending,
+  onConfirm,
+  onCancel,
+}: {
+  action: "delete" | "restore";
+  isForThisAccount: boolean;
+  isPending: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}): React.ReactNode {
+  return (
+    <section aria-label="Confirm account change">
+      <p>
+        After signing in again with the same Google account, confirm{" "}
+        {action === "delete" ? "account deletion" : "account recovery"}.
+      </p>
+      <DSButton disabled={isPending || !isForThisAccount} onClick={onConfirm}>
+        {action === "delete" ? "Schedule deletion" : "Confirm recovery"}
+      </DSButton>
+      <DSButton disabled={isPending} onClick={onCancel}>
+        Cancel
+      </DSButton>
+    </section>
   );
 }

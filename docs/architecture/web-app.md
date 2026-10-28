@@ -1,6 +1,6 @@
 # Web application screens
 
-The shared web application, which the Capacitor shells also render, gives signed-in listeners Recents, with the Add and account dialogs over it, and gives every audiobook a detail view. User-facing copy calls an audiobook a track ([glossary](../GLOSSARY.md#audiobook)). This page holds what spans the screens; each screen's own behaviour is in its route, its tests and its stories, and [playback](conversion.md#playback) covers the one player behind every screen.
+The shared web application, which the Capacitor shells also render, gives signed-in listeners Recents, with the Add and account dialogs over it, gives a listener whose account deletion is scheduled an account recovery page, and gives every audiobook a detail view. User-facing copy calls an audiobook a track ([glossary](../GLOSSARY.md#audiobook)). This page holds what spans the screens; each screen's own behaviour is in its route, its tests and its stories, and [playback](conversion.md#playback) covers the one player behind every screen.
 
 ## Routes and navigation
 
