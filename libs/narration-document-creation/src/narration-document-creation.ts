@@ -58,6 +58,16 @@ const FLATTENED_INLINE_TAG_NAMES = new Set([
 
 const NARRATION_ELEMENT_SEPARATOR = "\n\n";
 
+// Groups the source title and source subtitle units; its source key differs from every
+// sanitized element, so serializeRenderedUnits never merges it with a body wrapper.
+const SOURCE_HEADING_GROUP: SafeElement = {
+  type: "element",
+  tagName: "hgroup",
+  attributes: [],
+  children: [],
+  sourceKey: -1,
+};
+
 /** Runtime schema for one independently addressable narration unit. */
 export const SYNCHRONIZATION_UNIT_SCHEMA = z
   .object({
@@ -75,9 +85,13 @@ export type NarrationDocument = {
   synchronizationUnits: readonly SynchronizationUnit[];
 };
 
-/** Supplies the source title and selected HTML used to build a narration document. */
+/**
+ * Supplies the source title, optional source subtitle and selected HTML used to build a narration
+ * document.
+ */
 export type CreateOptions = {
   sourceTitle: string;
+  sourceSubtitle?: string;
   sourceMaterialHtml: string;
 };
 
@@ -97,6 +111,7 @@ type RenderedUnit = { html: string; wrappers: readonly SafeElement[] };
 /** Creates safe display HTML and matching paragraph-oriented synchronization units. */
 export function createNarrationDocument({
   sourceTitle,
+  sourceSubtitle,
   sourceMaterialHtml,
 }: CreateOptions): NarrationDocument {
   const normalizedSourceTitle = normalizeNarrationText(sourceTitle);
@@ -104,6 +119,13 @@ export function createNarrationDocument({
 
   if (normalizedSourceTitle.length === 0) {
     throw new Error("Expected the source title to contain narration text");
+  }
+
+  const normalizedSourceSubtitle =
+    sourceSubtitle === undefined ? undefined : normalizeComparableNarrationText(sourceSubtitle);
+
+  if (normalizedSourceSubtitle?.length === 0) {
+    throw new Error("Expected the source subtitle to contain narration text");
   }
 
   const safeNodes = sanitizeChildren(parseFragment(sourceMaterialHtml), {
@@ -257,10 +279,24 @@ export function createNarrationDocument({
     flushDirectContent();
   }
 
+  const openingWrappers: SafeElement[] =
+    normalizedSourceSubtitle === undefined ? [] : [SOURCE_HEADING_GROUP];
+
   addSynchronizationUnit(
     normalizedSourceTitle,
     `<h1 id="{{SYNCHRONIZATION_UNIT_ID}}">${serializeNarrationText(normalizedSourceTitle)}</h1>`,
+    openingWrappers,
   );
+
+  if (normalizedSourceSubtitle !== undefined) {
+    // Added before any body block, so the source subtitle never absorbs a pending heading.
+    addSynchronizationUnit(
+      normalizedSourceSubtitle,
+      `<p id="{{SYNCHRONIZATION_UNIT_ID}}">${escapeHtmlText(normalizedSourceSubtitle)}</p>`,
+      openingWrappers,
+    );
+  }
+
   visitNodes(safeNodes);
 
   if (pendingHeadings.length > 0) {

@@ -371,11 +371,14 @@ function NarrationDocument({
       check.assert(narrationDocumentElement);
 
       const title = findTitle(narrationDocumentElement, units);
+      // A source subtitle shares an <hgroup> with the title, and the host goes below both.
+      const titleParent = title.parentElement;
+      const titleGroup = titleParent?.tagName === "HGROUP" ? titleParent : title;
       const host = document.createElement("p");
       host.dataset["sourceHost"] = "";
       host.className = textStyles.tagline;
       host.textContent = sourceHost;
-      title.after(host);
+      titleGroup.after(host);
 
       return () => host.remove();
     },
@@ -518,9 +521,16 @@ function NarrationDocument({
 
           /* the title and the host inserted below it open the page as drawn */
           /* the title and headings take the h2 and h4 text styles from applyHeadingTextStyles */
-          & > article > h1 {
+          & > article > h1,
+          & > article > hgroup,
+          & > article > hgroup > h1 {
             margin-block-end: var(--spacing-gutter);
             color: var(--color-ink);
+          }
+
+          /* the source subtitle, which only ever follows the title inside the <hgroup> */
+          & > article > hgroup > h1 + p {
+            color: var(--color-ink-60);
           }
 
           & > article > [data-source-host] {

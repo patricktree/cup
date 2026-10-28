@@ -66,6 +66,8 @@ With a visible headline, each load also detects the [source subtitle](../GLOSSAR
 
 Narration content selection keeps complete paragraphs of main prose, including instructional prose, and leaves out code blocks and shell snippets; it reconstructs the source material from the original HTML, so source wording and native anchors are preserved. The [live evals](../../libs/narration-content-selection/test/evals/README.md) compare the resulting synchronization units exactly against committed goldens.
 
+[Narration document creation](../../libs/narration-document-creation/src/narration-document-creation.ts) opens every narration document with the source title as its first synchronization unit. With a source subtitle, the source title and the source subtitle open it together in an `<hgroup>` as two units, so the source subtitle is narrated second, as a unit of its own that never takes in a heading or the next block, and the detail view shows it under the source title, above the host. The narration document is the only carrier of the source subtitle: the audiobook manifest and the listener API carry the source title alone, so Recents, the player sheet and the media session show only the source title ([ADR 0014](../adr/0014-cut-source-material-at-the-visible-headline-and-carry-the-source-subtitle-in-the-narration-document.md)).
+
 Preparation outcomes contain no audio duration or speech-provider usage; generated duration is recorded per segment by the owner's duration accounting. Grant outcomes additionally record narration measurements and content-selection provider usage for operator inspection.
 
 ## Cover image

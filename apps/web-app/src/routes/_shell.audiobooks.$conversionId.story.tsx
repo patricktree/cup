@@ -41,7 +41,7 @@ export const ReadyAudiobook = {
 } satisfies Story;
 
 const GATES_NOTES_CONVERSION_ID = "7b1736db-31f7-46ba-b6b5-d965770b355b";
-// The local fixture uses createNarrationDocument on the Gates Notes E2E article's subtitle and body.
+// The local fixture uses createNarrationDocument on the Gates Notes E2E article's source title, source subtitle and body.
 const gatesNotesRouter = createAppRouter(
   createMemoryHistory({ initialEntries: [`/app/audiobooks/${GATES_NOTES_CONVERSION_ID}`] }),
 );

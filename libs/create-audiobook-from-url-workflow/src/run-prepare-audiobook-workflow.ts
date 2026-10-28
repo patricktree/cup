@@ -158,6 +158,9 @@ export async function runPrepareAudiobookWorkflow({
           await execution.phaseStarted(ConversionPhase.NARRATION_DOCUMENT_CREATION);
           return createNarrationDocument({
             sourceTitle: sourceMaterial.title,
+            ...(sourceMaterial.subtitle === undefined
+              ? {}
+              : { sourceSubtitle: sourceMaterial.subtitle }),
             sourceMaterialHtml: selectedSourceMaterialHtml,
           });
         },
