@@ -299,6 +299,15 @@ export const RevisitingScreens = accountStory({
   ],
 });
 
+/**
+ * `RevisitingScreens` with the ready track's audiobook held from the start, so a test sees both its
+ * preload and its first visit wait until it releases `` `audiobook:${conversionId}` ``.
+ */
+export const FirstVisitToHeldTrack = {
+  ...RevisitingScreens,
+  beforeMount: async () => holdResponses(`audiobook:${toStoryConversionId(REVISITED_READY_INDEX)}`),
+} satisfies Story;
+
 export const AddDialog = accountStory({ path: "/recent/add" });
 
 /** The start request never answers, so the submit button keeps its loading state. */

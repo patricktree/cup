@@ -656,6 +656,78 @@ test("reopening the Add dialog shows it at once", async ({ mount, page }) => {
   expect(await readLoadingStatesSince(page, recordedBefore)).toEqual([]);
 });
 
+test("a first visit to a track holds Recents behind the progress bar, then shows the skeleton for at least 300 ms", async ({
+  mount,
+  page,
+}) => {
+  await recordLoadingStates(page);
+  await page.clock.install();
+  const component = await mount("routes/_shell.recent/FirstVisitToHeldTrack");
+  await expect(cardsOf(component)).toHaveCount(2);
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1_000));
+  const progressBar = page.getByRole("progressbar", { name: "Loading" });
+  const trackSkeleton = component.getByLabel("Loading track", { exact: true });
+
+  const recordedBefore = (await readLoadingStateRecord(page)).length;
+  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+
+  await page.clock.runFor(99);
+  await expect(cardsOf(component)).toHaveCount(2);
+  await expect(progressBar).toHaveCount(0);
+  expect(await readLoadingStatesSince(page, recordedBefore)).toEqual([]);
+
+  await page.clock.runFor(1);
+  await expect(progressBar).toBeVisible();
+  await expect(progressBar).toHaveAttribute("data-pending-signal", "");
+
+  await page.clock.runFor(399);
+  await expect(cardsOf(component)).toHaveCount(2);
+  await expect(trackSkeleton).toHaveCount(0);
+
+  await page.clock.runFor(1);
+  await expect(trackSkeleton).toBeVisible();
+
+  const audiobookResponse = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === `/api/audiobooks/${REVISITED_READY_ID}`,
+  );
+  await releaseResponses(page, `audiobook:${REVISITED_READY_ID}`);
+  await audiobookResponse;
+  // A paused clock also holds Query's notifications, so the response shows only as time passes.
+  await page.clock.runFor(299);
+  await expect(trackSkeleton).toBeVisible();
+
+  await page.clock.runFor(1);
+  await expect(component.getByText("Two.", { exact: true })).toBeVisible();
+  await expect(progressBar).toHaveCount(0);
+  expect(
+    (await readLoadingStatesSince(page, recordedBefore)).map(({ marker, name }) => ({
+      marker,
+      name,
+    })),
+  ).toEqual([
+    { marker: "data-pending-signal", name: "Loading" },
+    { marker: "data-loading-state", name: "Loading track" },
+  ]);
+});
+
+test("a card in view preloads its track, so opening it shows no loading state", async ({
+  mount,
+  page,
+}) => {
+  const requestedPaths = new Set<string>();
+  page.on("request", (request) => requestedPaths.add(new URL(request.url()).pathname));
+  await recordLoadingStates(page);
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+  await expect(cardsOf(component)).toHaveCount(2);
+
+  await expect.poll(() => requestedPaths.has(`/api/audiobooks/${REVISITED_READY_ID}`)).toBe(true);
+  const recordedBefore = (await readLoadingStateRecord(page)).length;
+  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+
+  await expect(component.getByText("Two.", { exact: true })).toBeVisible();
+  expect(await readLoadingStatesSince(page, recordedBefore)).toEqual([]);
+});
+
 test("leaving a track being prepared stops polling it, and reopening it polls again", async ({
   mount,
   page,

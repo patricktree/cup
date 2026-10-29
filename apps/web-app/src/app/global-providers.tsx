@@ -25,12 +25,19 @@ export function createAppRouter(history?: RouterHistory) {
     },
     defaultErrorComponent: RouteErrorScreen,
     /*
-     * A loader that finds its data cached still resolves a moment later, so the previous screen
-     * stays until the route's pending component is due; once shown, it stays long enough to read.
+     * A first visit keeps the previous screen, under the root layout's progress bar, until the
+     * route's data arrives or its pending component is due; once shown, that stays long enough to
+     * read. A loader that finds its data cached also resolves a moment later, so a revisit never
+     * reaches the pending component.
      */
     defaultPendingMinMs: 300,
     defaultPendingMs: 500,
-    defaultPreload: "intent",
+    /*
+     * A link preloads its route once it scrolls into view, since touch offers no hover to preload
+     * on, so opening a track from Recents is usually instant. The query cache decides whether a
+     * preload requests anything, so the router keeps no preload of its own.
+     */
+    defaultPreload: "viewport",
     defaultPreloadStaleTime: 0,
     routeTree,
     routeMasks: [addDialogMask],
