@@ -63,7 +63,10 @@ export const queryClient = new QueryClient({
       retry: false,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
-      gcTime: 0,
+      // Data stays cached for the page lifetime and is refetched whenever a screen shows it, so a
+      // revisited screen shows its cached content at once. Only queryClient.clear() on sign-out or
+      // an account switch, or an explicit removal, takes it out.
+      gcTime: Infinity,
       staleTime: 0,
     },
   },

@@ -1,5 +1,11 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { holdResponses, releaseResponses } from "#src/test-utils/held-responses.ts";
+import {
+  readLoadingStateRecord,
+  recordLoadingStates,
+} from "#src/test-utils/loading-state-recorder.ts";
+
 const ADDED_SOURCE_URL = "https://example.test/added";
 /** Cards on the first page of the `Recents` story. */
 const FIRST_PAGE_SIZE = 24;
@@ -448,6 +454,156 @@ test("the tracks still loading are marked as a loading state", async ({ mount })
   const component = await mount("routes/_shell.recent/LoadingTracks");
 
   await expect(component.getByText("Loading tracks…")).toHaveAttribute("data-loading-state", "");
+});
+
+const REVISITED_READY_TITLE =
+  "Trump sieht sich als legitimer Träger von acht Nobelpreisen und wütet gegen Norwegen";
+const REVISITED_READY_ID = "00000000-0000-4000-8000-000000000000";
+const REVISITED_PENDING_ID = "00000000-0000-4000-8000-000000000001";
+
+/** The loading states recorded after the first `skippedCount`, those of the visit under test. */
+async function readLoadingStatesSince(page: Page, skippedCount: number) {
+  return (await readLoadingStateRecord(page)).slice(skippedCount);
+}
+
+/**
+ * Stays away from a screen longer than Query keeps an unobserved query at the least (one second for
+ * a suspense query), so a cache that does not keep it for the page lifetime has dropped it. Needs
+ * `page.clock.install()` before the mount.
+ */
+async function stayAway(page: Page) {
+  await page.clock.fastForward(5_000);
+}
+
+test("going back from a detail view shows Recents' cached cards while its history is requested again", async ({
+  mount,
+  page,
+}) => {
+  await recordLoadingStates(page);
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+  await expect(cardsOf(component)).toHaveCount(2);
+  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+  await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+
+  await holdResponses(page, "account-history");
+  const recordedBefore = (await readLoadingStateRecord(page)).length;
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+
+  await expect(cardsOf(component)).toHaveCount(2);
+  expect(await readLoadingStatesSince(page, recordedBefore)).toEqual([]);
+  await releaseResponses(page, "account-history");
+});
+
+test("reopening a track shows its cached content while the audiobook is requested again", async ({
+  mount,
+  page,
+}) => {
+  await recordLoadingStates(page);
+  await page.clock.install();
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+  await expect(component.getByText("Two.", { exact: true })).toBeVisible();
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(cardsOf(component)).toHaveCount(2);
+  await stayAway(page);
+
+  await holdResponses(page, `audiobook:${REVISITED_READY_ID}`);
+  const recordedBefore = (await readLoadingStateRecord(page)).length;
+  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+
+  await expect(component.getByText("Two.", { exact: true })).toBeVisible();
+  expect(await readLoadingStatesSince(page, recordedBefore)).toEqual([]);
+  await releaseResponses(page, `audiobook:${REVISITED_READY_ID}`);
+});
+
+test("reopening a track still being prepared shows it preparing, not as a failure", async ({
+  mount,
+  page,
+}) => {
+  await recordLoadingStates(page);
+  await page.clock.install();
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+  const preparingTrack = component.getByLabel("Preparing track", { exact: true });
+  await cardsOf(component).getByRole("link", { name: "Preparing", exact: true }).click();
+  await expect(preparingTrack).toBeVisible();
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(cardsOf(component)).toHaveCount(2);
+  await stayAway(page);
+
+  await holdResponses(page, `audiobook:${REVISITED_PENDING_ID}`);
+  const recordedBefore = (await readLoadingStateRecord(page)).length;
+  await cardsOf(component).getByRole("link", { name: "Preparing", exact: true }).click();
+
+  await expect(preparingTrack).toBeVisible();
+  await expect(component.getByRole("alert")).toHaveCount(0);
+  expect(await readLoadingStatesSince(page, recordedBefore)).toEqual([]);
+  await releaseResponses(page, `audiobook:${REVISITED_PENDING_ID}`);
+});
+
+test("reopening the account dialog shows the cached account while it is requested again", async ({
+  mount,
+  page,
+}) => {
+  await recordLoadingStates(page);
+  await page.clock.install();
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+  const dialog = page.getByRole("dialog", { name: "Account settings" });
+  await component.getByRole("link", { name: "Account", exact: true }).click();
+  await expect(dialog.getByText("Delete account…", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await stayAway(page);
+
+  await holdResponses(page, "account");
+  const recordedBefore = (await readLoadingStateRecord(page)).length;
+  await component.getByRole("link", { name: "Account", exact: true }).click();
+
+  await expect(dialog.getByText("Delete account…", { exact: true })).toBeVisible();
+  expect(await readLoadingStatesSince(page, recordedBefore)).toEqual([]);
+  await releaseResponses(page, "account");
+});
+
+test("reopening the Add dialog shows it at once", async ({ mount, page }) => {
+  await recordLoadingStates(page);
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+  const dialog = page.getByRole("dialog", { name: "Add a track" });
+  await component.getByRole("link", { name: "Add", exact: true }).click();
+  await expect(dialog.getByRole("textbox", { name: "URL" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+
+  const recordedBefore = (await readLoadingStateRecord(page)).length;
+  await component.getByRole("link", { name: "Add", exact: true }).click();
+
+  await expect(dialog.getByRole("textbox", { name: "URL" })).toBeVisible();
+  expect(await readLoadingStatesSince(page, recordedBefore)).toEqual([]);
+});
+
+test("leaving a track being prepared stops polling it, and reopening it polls again", async ({
+  mount,
+  page,
+}) => {
+  let audiobookRequestCount = 0;
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === `/api/audiobooks/${REVISITED_PENDING_ID}`) {
+      audiobookRequestCount += 1;
+    }
+  });
+  await page.clock.install();
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+  await cardsOf(component).getByRole("link", { name: "Preparing", exact: true }).click();
+  await expect(component.getByLabel("Preparing track", { exact: true })).toBeVisible();
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(cardsOf(component)).toHaveCount(2);
+
+  const requestCountOnLeaving = audiobookRequestCount;
+  await page.clock.fastForward(10_000);
+  expect(audiobookRequestCount).toBe(requestCountOnLeaving);
+
+  await cardsOf(component).getByRole("link", { name: "Preparing", exact: true }).click();
+  await expect.poll(() => audiobookRequestCount).toBe(requestCountOnLeaving + 1);
+  await page.clock.fastForward(2_000);
+  await expect.poll(() => audiobookRequestCount).toBeGreaterThan(requestCountOnLeaving + 1);
 });
 
 function cardsOf(component: Locator): Locator {

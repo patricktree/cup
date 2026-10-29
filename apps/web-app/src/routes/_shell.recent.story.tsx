@@ -5,6 +5,7 @@ import { delay, http, HttpResponse } from "msw";
 import type { Audiobook } from "@cup/listener-api.routes";
 
 import { accountStory } from "#src/ui-gallery/account-fixtures.jsx";
+import { waitWhileHeld } from "#src/ui-gallery/held-responses.js";
 import {
   createStoryNarrationTrack,
   storyNarrationTrackHandler,
@@ -214,6 +215,63 @@ function coverHandler() {
     );
   });
 }
+
+const REVISITED_READY_INDEX = 0;
+const REVISITED_PENDING_INDEX = 1;
+
+/**
+ * A signed-in listener moves between Recents, its dialogs and two tracks, one ready and one still
+ * being prepared. Tests hold each refetch by name (see `src/ui-gallery/held-responses.ts`):
+ * `"account-history"`, `"account"` and `` `audiobook:${conversionId}` ``.
+ */
+export const RevisitingScreens = accountStory({
+  path: "/recent",
+  recents: {
+    items: [
+      ...createReadyItems(REVISITED_READY_INDEX, 1),
+      historyItem(REVISITED_PENDING_INDEX, { status: "pending", outcome: null }),
+    ],
+    nextCursor: null,
+  },
+  handlers: [
+    coverHandler(),
+    // Each holding handler answers nothing, so the story's default answers once it is released.
+    http.get("/api/account/conversions", () => waitWhileHeld("account-history")),
+    http.get("/api/account", () => waitWhileHeld("account")),
+    http.get(`/api/audiobooks/${toStoryConversionId(REVISITED_READY_INDEX)}`, async () => {
+      await waitWhileHeld(`audiobook:${toStoryConversionId(REVISITED_READY_INDEX)}`);
+      const title = TITLES[REVISITED_READY_INDEX] ?? "";
+      return HttpResponse.json({
+        status: "ready",
+        canGenerate: true,
+        playbackPosition: null,
+        title,
+        originalUrl: `https://${HOSTS[REVISITED_READY_INDEX]}/articles/${REVISITED_READY_INDEX}`,
+        narrationDocument: {
+          html: `<article><h1 id="unit-1">${title}</h1><p id="unit-2">Two.</p></article>`,
+          synchronizationUnits: [
+            { id: "unit-1", narrationText: title },
+            { id: "unit-2", narrationText: "Two." },
+          ],
+        },
+        segments: [
+          { sequence: 0, status: "ready" },
+          { sequence: 1, status: "ready" },
+        ],
+        narrationTrack: createStoryNarrationTrack([30_000, 30_000]),
+      } satisfies Audiobook);
+    }),
+    http.get(`/api/audiobooks/${toStoryConversionId(REVISITED_PENDING_INDEX)}`, async () => {
+      await waitWhileHeld(`audiobook:${toStoryConversionId(REVISITED_PENDING_INDEX)}`);
+      return HttpResponse.json({
+        status: "pending",
+        originalUrl: `https://${HOSTS[REVISITED_PENDING_INDEX]}/articles/${REVISITED_PENDING_INDEX}`,
+        canGenerate: true,
+      } satisfies Audiobook);
+    }),
+    storyNarrationTrackHandler,
+  ],
+});
 
 export const AddDialog = accountStory({ path: "/recent/add" });
 
