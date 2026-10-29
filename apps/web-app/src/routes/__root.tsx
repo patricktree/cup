@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import React from "react";
 
+import { NavigationProgressBar } from "#src/app/components/navigation-progress-bar.tsx";
 import { ensureAuthInitialized } from "#src/auth/account-session.js";
 
 type RouterContext = {
@@ -23,5 +24,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 });
 
 function RootLayout(): React.JSX.Element {
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      <NavigationProgressBar />
+    </>
+  );
 }
