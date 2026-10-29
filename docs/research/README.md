@@ -18,6 +18,7 @@ These investigations preserve evidence and recommendations in their original con
 | [Joining segment MP3s](join-segment-mp3s.md)                                              | Whether stored segment MP3s concatenate into one seekable narration track; [experiment archive](join-segment-mp3s.tar.xz)                                       |
 | [Recents masonry layout](recents-masonry-layout.md)                                       | Masonry techniques that keep newest-first order across browsers; adopted: measured row spans on a CSS grid; [experiment archive](recents-masonry-layout.tar.xz) |
 | [Recents cover images](recents-cover-images.md)                                           | How Recents cards get covers: stable signed URLs, a fixed crop and a card rendition; [experiment archive](recents-cover-images.tar.xz)                          |
+| [Source subtitle signals](source-subtitle-signals.md)                                     | Which page signals identify the source subtitle; adopted: proximity to the visible headline plus a metadata or attribute cross-check, no LLM                    |
 
 Keep reproduction commands and archives together. When conclusions are superseded, add a dated note or a link to the replacement evidence rather than rewriting the experiment's findings. Operational instructions belong in the guides linked from the [documentation home](../README.md).
 

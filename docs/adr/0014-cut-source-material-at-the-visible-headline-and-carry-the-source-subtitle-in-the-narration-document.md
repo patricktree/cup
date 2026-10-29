@@ -16,7 +16,7 @@ Many source pages set a [source subtitle](../GLOSSARY.md#source-subtitle) beneat
 
 - **A structured manifest or listener API field.** Rejected: only the detail view shows the source subtitle, and it is narrated, so it belongs in the narration document with its own synchronization unit. A field would add a manifest version, a listener API change and a store column to show text the narration document already carries.
 - **Markers that survive content selection.** Leaving the visible headline and source subtitle in the HTML with marker attributes for narration document creation to find was rejected: content selection reconstructs the source material and need not keep markers or the marked elements, and a kicker above the visible headline would still reach it.
-- **LLM-based detection.** Rejected: deterministic rules were right on all seven recorded source pages, cost nothing and add no latency. An LLM fallback would be a separate, later effort.
+- **LLM-based detection.** Rejected: deterministic rules were right on all seven recorded source pages, cost nothing and add no latency, while page metadata alone misleads and the selection model never sees it ([source subtitle signals](../research/source-subtitle-signals.md)). An LLM fallback would be a separate, later effort.
 
 ## Relationship to existing decisions
 
