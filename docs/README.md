@@ -57,7 +57,7 @@ Agents maintain these pages by the [wiki schema](agents/domain.md).
 | --------------------------------------------------------- | ------------------------------------------------------------------- |
 | [Wiki schema](agents/domain.md)                           | Layers, size budget, decisions and evidence, landing, health review |
 | [Documentation search](agents/documentation-search.md)    | Find every page that describes a concept before changing it         |
-| [Issue tracker](agents/issue-tracker.md)                  | GitHub Issues conventions and wayfinder maps                        |
+| [Issue tracker](agents/issue-tracker.md)                  | Linear backlog; GitHub Issues for specs, tickets and wayfinder maps |
 | [Triage labels](agents/triage-labels.md)                  | Label strings for the canonical triage roles                        |
 | [Cloudflare documentation guidance](agents/cloudflare.md) | Product references and the AI Gateway binding requirement           |
 

@@ -50,11 +50,11 @@ Worker types (`worker-configuration.d.ts`) are generated, not committed: postins
 
 ## Repository References
 
-| Need                                                              | File                                                           |
-| ----------------------------------------------------------------- | -------------------------------------------------------------- |
-| Issue tracker (GitHub Issues), specifications, and wayfinder maps | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md) |
-| Triage labels                                                     | [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md) |
-| Documentation wiki schema                                         | [`docs/agents/domain.md`](docs/agents/domain.md)               |
+| Need                                                                                                 | File                                                           |
+| ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Issue trackers: Linear for the backlog, GitHub Issues for specifications, tickets and wayfinder maps | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md) |
+| Triage labels                                                                                        | [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md) |
+| Documentation wiki schema                                                                            | [`docs/agents/domain.md`](docs/agents/domain.md)               |
 
 ## Package instructions
 
