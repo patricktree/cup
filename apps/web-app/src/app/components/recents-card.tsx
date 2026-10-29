@@ -42,6 +42,7 @@ export function RecentsCard({ item }: { item: HistoryItem }): React.JSX.Element 
       <Link
         to="/audiobooks/$conversionId"
         params={{ conversionId: item.conversionId }}
+        state={{ isOpenedFromRecents: true }}
         className={composeClassnames(
           pressableOverlay,
           css`

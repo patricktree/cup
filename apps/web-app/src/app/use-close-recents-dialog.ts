@@ -11,7 +11,7 @@ export function useCloseRecentsDialog(routeId: FileRouteTypes["id"]): () => void
   const router = useRouter();
   const navigate = useNavigate();
   const isOpenedInApp = useLocation({
-    select: (location) => location.state.isRecentsDialogOpenedInApp === true,
+    select: (location) => location.state.isOpenedFromRecents === true,
   });
   // Several events can ask to close, such as the Add dialog's Cancel and its successful start, but
   // only one may move the history.

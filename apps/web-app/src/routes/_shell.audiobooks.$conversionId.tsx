@@ -1,13 +1,19 @@
 import { css } from "@linaria/core";
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate, type ErrorComponentProps } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useLocation,
+  useNavigate,
+  useRouter,
+  type ErrorComponentProps,
+} from "@tanstack/react-router";
 import React from "react";
 
 import type { Audiobook } from "@cup/listener-api.routes";
 
 import { DetailTopBar } from "#src/app/components/detail-top-bar.js";
-import type { DetailBackTarget } from "#src/app/components/detail-top-bar.js";
+import type { DetailBack } from "#src/app/components/detail-top-bar.js";
 import { fadeFooterClearance } from "#src/app/components/fade-footer.js";
 import { ShellContent } from "#src/app/components/main.tsx";
 import { PLAYER_SHEET_HEIGHTS, PlayerSheet } from "#src/app/components/player-sheet.js";
@@ -90,12 +96,23 @@ function DetailLayout({
 
 /** The top bar before the audiobook has loaded: Back only. */
 function PlainTopBar() {
-  return <DetailTopBar backTo={useBackTarget()} compactTitle={undefined} menu={undefined} />;
+  return <DetailTopBar back={useDetailBack()} compactTitle={undefined} menu={undefined} />;
 }
 
-/** Only accounts have Recents; trial listeners return to the start. */
-function useBackTarget(): DetailBackTarget {
-  return useAccountSession() ? "/recent" : "/";
+/**
+ * Only accounts have Recents; trial listeners return to the start. Opened from Recents, Back goes
+ * back in history, so Recents returns at its scroll position; otherwise, such as after a deep link,
+ * there is no Recents entry below to return to, and Back opens Recents at the top.
+ */
+function useDetailBack(): DetailBack {
+  const isAccount = useAccountSession() !== null;
+  const isOpenedFromRecents = useLocation({
+    select: (location) => location.state.isOpenedFromRecents === true,
+  });
+
+  return isAccount
+    ? { to: "/recent", goesBackInHistory: isOpenedFromRecents }
+    : { to: "/", goesBackInHistory: false };
 }
 
 function ReaderQueryError(props: ErrorComponentProps) {
@@ -108,9 +125,9 @@ function ReaderQueryError(props: ErrorComponentProps) {
 
 function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.Element {
   const session = useAccountSession();
-  const backTo = useBackTarget();
+  const back = useDetailBack();
   const queryClient = useQueryClient();
-  const deletion = useTrackDeletion(conversionId);
+  const deletion = useTrackDeletion(conversionId, back);
   // Trial conversions cannot be deleted, even by a signed-in listener who can open one.
   const isDeletable = useIsAccountConversion(session?.user.id, conversionId);
   const audiobookQuery = createAudiobookQuery(conversionId);
@@ -126,7 +143,7 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
   const topBar = (
     <>
       <DetailTopBar
-        backTo={backTo}
+        back={back}
         compactTitle={
           "title" in audiobook
             ? {
@@ -217,9 +234,10 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
 type TrackDeletion = ReturnType<typeof useTrackDeletion>;
 
 /** The delete dialog's state and the deletion it confirms, for the signed-in listener's track. */
-function useTrackDeletion(conversionId: string) {
+function useTrackDeletion(conversionId: string, back: DetailBack) {
   const session = useAccountSession();
   const host = usePlayerHost();
+  const router = useRouter();
   const navigate = useNavigate();
   const announce = useAnnounceStatus();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -227,8 +245,11 @@ function useTrackDeletion(conversionId: string) {
     subject: session?.user.id,
     conversionId,
     onDeleted: async () => {
-      // Replaces the detail entry, so Back cannot return to the deleted track.
-      await navigate({ to: "/recent", replace: true });
+      // Either way Back cannot return to the deleted track: going back leaves it as the Forward
+      // entry, which leads to the not-found error screen, and replacing drops it.
+      await (back.goesBackInHistory
+        ? goBackInHistory(router)
+        : navigate({ to: "/recent", replace: true }));
       // Once the dialog is gone, which hides the rest of the page from screen readers while open.
       announce("Track deleted.");
     },
@@ -254,6 +275,18 @@ function useTrackDeletion(conversionId: string) {
       mutation.mutate();
     },
   };
+}
+
+/** Goes back one history entry and settles once the router has rendered the entry below. */
+async function goBackInHistory(router: ReturnType<typeof useRouter>): Promise<void> {
+  const rendered = new Promise<void>((resolve) => {
+    const unsubscribe = router.subscribe("onRendered", () => {
+      unsubscribe();
+      resolve();
+    });
+  });
+  router.history.back();
+  await rendered;
 }
 
 /** Confirms the deletion of the track; Cancel has the focus, as the safe choice. */

@@ -41,8 +41,11 @@ declare module "@tanstack/react-router" {
     router: ReturnType<typeof createAppRouter>;
   }
   interface HistoryState {
-    /** Set when the app itself opened a dialog over Recents, so closing it goes back one entry. */
-    isRecentsDialogOpenedInApp?: boolean;
+    /**
+     * Set by every in-app link on Recents, to a dialog over it or a detail view, so leaving that
+     * screen goes back one entry and Recents returns at its scroll position.
+     */
+    isOpenedFromRecents?: boolean;
   }
   // oxlint-enable typescript/consistent-type-definitions
 }

@@ -19,14 +19,23 @@ export function useMasonryRowSpans(): React.RefCallback<HTMLElement> {
     // React calls the returned cleanup instead of passing null
     check.assert(list, "A ref callback with a cleanup is never called with null.");
 
-    const resizeObserver = new ResizeObserver((entries) => {
+    const spanMeasuredHeights = (items: Iterable<Element>) => {
       const gap = Number.parseFloat(getComputedStyle(list).columnGap) || 0;
-      for (const entry of entries) {
-        if (entry.target instanceof HTMLElement) {
-          const height = entry.target.getBoundingClientRect().height;
-          entry.target.style.gridRowEnd = `span ${Math.ceil(height + gap)}`;
+      for (const item of items) {
+        if (item instanceof HTMLElement) {
+          const height = item.getBoundingClientRect().height;
+          item.style.gridRowEnd = `span ${Math.ceil(height + gap)}`;
         }
       }
+    };
+
+    // Before the 1 px rows apply, so a list rendered with its items, such as Recents shown again
+    // from the cache, has its full height when the router restores the scroll position after the
+    // render; the observer below would only measure the items a frame later.
+    spanMeasuredHeights(list.children);
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      spanMeasuredHeights(entries.map((entry) => entry.target));
     });
     for (const item of list.children) {
       resizeObserver.observe(item);
