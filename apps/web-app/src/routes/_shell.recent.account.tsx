@@ -54,6 +54,9 @@ function AccountDialogFrame({ children }: { children: React.ReactNode }): React.
   const close = useCloseRecentsDialog(Route.id);
   // Leaving while a step runs would lose the return from Google, which comes back to this URL.
   const isConfirmationPending = useIsAccountConfirmationPending();
+  // Close takes the initial focus: the first tabbable button can be a step such as "Schedule
+  // deletion", which one Enter would run.
+  const closeButtonRef = React.useRef<HTMLButtonElement>(null);
 
   return (
     <DSDialog
@@ -63,11 +66,12 @@ function AccountDialogFrame({ children }: { children: React.ReactNode }): React.
           close();
         }
       }}
-      initialFocus={undefined}
+      initialFocus={closeButtonRef}
       finalFocus={undefined}
       title={<>Account settings</>}
       cancelButtonText={<>Close</>}
       cancelButtonDisabled={isConfirmationPending}
+      cancelButtonRef={closeButtonRef}
     >
       {children}
     </DSDialog>

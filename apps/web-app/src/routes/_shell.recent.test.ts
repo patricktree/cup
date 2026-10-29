@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { holdResponses, releaseResponses } from "#src/test-utils/held-responses.ts";
+import { failResponses, holdResponses, releaseResponses } from "#src/test-utils/held-responses.ts";
 import {
   readLoadingStateRecord,
   recordLoadingStates,
@@ -571,6 +571,29 @@ test("going back from a detail view shows Recents' cached cards while its histor
   await releaseResponses(page, "account-history");
 });
 
+test("returning to Recents from a screen that does not show the history shows its cached cards", async ({
+  mount,
+  page,
+}) => {
+  await recordLoadingStates(page);
+  await page.clock.install();
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+  await expect(cardsOf(component)).toHaveCount(2);
+  // Unlike the detail view, which observes the history to offer deletion, account recovery leaves
+  // it unobserved, so only the cache lifetime keeps it while the listener is away.
+  await openPathInAccountStory(page, "/account-recovery");
+  await expect(component.getByText("This account is not scheduled for deletion.")).toBeVisible();
+  await stayAway(page);
+
+  await holdResponses(page, "account-history");
+  const recordedBefore = (await readLoadingStateRecord(page)).length;
+  await component.getByRole("link", { name: "Go to Recent" }).click();
+
+  await expect(cardsOf(component)).toHaveCount(2);
+  expect(await readLoadingStatesSince(page, recordedBefore)).toEqual([]);
+  await releaseResponses(page, "account-history");
+});
+
 test("reopening a track shows its cached content while the audiobook is requested again", async ({
   mount,
   page,
@@ -615,6 +638,95 @@ test("reopening a track still being prepared shows it preparing, not as a failur
   await expect(component.getByRole("alert")).toHaveCount(0);
   expect(await readLoadingStatesSince(page, recordedBefore)).toEqual([]);
   await releaseResponses(page, `audiobook:${REVISITED_PENDING_ID}`);
+});
+
+for (const { status, message } of [
+  { status: 404, message: "Not found." },
+  { status: 403, message: "This trial was revoked." },
+] as const) {
+  test(`reopening a track whose refetch answers ${status} replaces its cached content by the error screen`, async ({
+    mount,
+    page,
+  }) => {
+    await page.clock.install();
+    const component = await mount("routes/_shell.recent/RevisitingScreens");
+    await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+    await expect(component.getByText("Two.", { exact: true })).toBeVisible();
+    await component.getByRole("link", { name: "Back", exact: true }).click();
+    await expect(cardsOf(component)).toHaveCount(2);
+    await stayAway(page);
+
+    await failResponses(page, `audiobook:${REVISITED_READY_ID}`, status);
+    await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+
+    await expect(
+      component.getByRole("heading", { name: "The track could not be loaded." }),
+    ).toBeVisible();
+    await expect(component.getByText(message)).toBeVisible();
+    await expect(component.getByText("Two.", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(0);
+  });
+
+  test(`returning to Recents whose refetch answers ${status} replaces its cached cards by the error screen`, async ({
+    mount,
+    page,
+  }) => {
+    await page.clock.install();
+    const component = await mount("routes/_shell.recent/RevisitingScreens");
+    await expect(cardsOf(component)).toHaveCount(2);
+    await openPathInAccountStory(page, "/account-recovery");
+    await expect(component.getByText("This account is not scheduled for deletion.")).toBeVisible();
+    await stayAway(page);
+
+    await failResponses(page, "account-history", status);
+    await component.getByRole("link", { name: "Go to Recent" }).click();
+
+    await expect(component.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
+    await expect(component.getByText(message)).toBeVisible();
+    await expect(cardsOf(component)).toHaveCount(0);
+    await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(0);
+  });
+}
+
+test("reopening a track whose refetch fails on the server keeps its cached content and shows a toast", async ({
+  mount,
+  page,
+}) => {
+  await page.clock.install();
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+  await expect(component.getByText("Two.", { exact: true })).toBeVisible();
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(cardsOf(component)).toHaveCount(2);
+  await stayAway(page);
+
+  await failResponses(page, `audiobook:${REVISITED_READY_ID}`, 500);
+  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+
+  const toasts = page.getByRole("alertdialog", { includeHidden: true });
+  await expect(toasts).toContainText("The track could not be updated.");
+  await expect(toasts).toHaveCount(1);
+  await expect(component.getByText("Two.", { exact: true })).toBeVisible();
+});
+
+test("returning to Recents whose refetch fails on the server keeps its cached cards and shows a toast", async ({
+  mount,
+  page,
+}) => {
+  await page.clock.install();
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+  await expect(cardsOf(component)).toHaveCount(2);
+  await openPathInAccountStory(page, "/account-recovery");
+  await expect(component.getByText("This account is not scheduled for deletion.")).toBeVisible();
+  await stayAway(page);
+
+  await failResponses(page, "account-history", 500);
+  await component.getByRole("link", { name: "Go to Recent" }).click();
+
+  const toasts = page.getByRole("alertdialog", { includeHidden: true });
+  await expect(toasts).toContainText("Your tracks could not be updated.");
+  await expect(toasts).toHaveCount(1);
+  await expect(cardsOf(component)).toHaveCount(2);
 });
 
 test("reopening the account dialog shows the cached account while it is requested again", async ({
@@ -754,6 +866,16 @@ test("leaving a track being prepared stops polling it, and reopening it polls ag
   await page.clock.fastForward(2_000);
   await expect.poll(() => audiobookRequestCount).toBeGreaterThan(requestCountOnLeaving + 1);
 });
+
+async function openPathInAccountStory(page: Page, path: string) {
+  await page.evaluate((pathToOpen) => {
+    const openPath: unknown = Reflect.get(window, "openPathInAccountStory");
+    if (typeof openPath !== "function") {
+      throw new TypeError("The account story cannot open a path");
+    }
+    Reflect.apply(openPath, window, [pathToOpen]);
+  }, path);
+}
 
 function cardsOf(component: Locator): Locator {
   return component.getByRole("list", { name: "Tracks" }).getByRole("listitem");

@@ -1,9 +1,10 @@
 import { createFileRoute, type ErrorComponentProps } from "@tanstack/react-router";
 import React from "react";
 
-import { AccountLoadError, AccountLoading } from "#src/app/components/account-load-states.js";
+import { AccountLoadError } from "#src/app/components/account-load-states.js";
 import { AccountRecoveryFrame } from "#src/app/components/account-recovery-frame.js";
 import { AccountSettings } from "#src/app/components/account-settings.js";
+import { PageSkeleton } from "#src/app/components/page-skeleton.js";
 import { SignInButtons } from "#src/app/components/sign-in-dialog.js";
 import { settleAccountSession } from "#src/auth/account-session.js";
 import { useAccountSession, useSignInMethods } from "#src/auth/hooks.js";
@@ -26,11 +27,7 @@ export const Route = createFileRoute("/account-recovery")({
       await context.queryClient.query({ ...accountQuery(context.subject), staleTime: "static" });
     }
   },
-  pendingComponent: () => (
-    <AccountRecoveryFrame>
-      <AccountLoading />
-    </AccountRecoveryFrame>
-  ),
+  pendingComponent: () => <PageSkeleton label="Loading account" />,
   errorComponent: ({ error }: ErrorComponentProps) => (
     <AccountRecoveryFrame>
       <AccountLoadError error={error} />

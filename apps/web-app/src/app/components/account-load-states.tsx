@@ -6,14 +6,15 @@ import { useRetryRoute } from "#src/app/use-retry-route.js";
 import { RpcError } from "#src/data-fetching/api-request.js";
 import { useRateLimitCountdown } from "#src/data-fetching/rate-limit.js";
 
-/** Loading the account, the route shows in place of `AccountSettings`. */
+/** Loading the account, the account dialog shows in place of `AccountSettings`. */
 export function AccountLoading(): React.JSX.Element {
   return <output data-loading-state="">Loading account…</output>;
 }
 
 /**
- * A failure to load the account, the route shows in place of `AccountSettings`: account auth
- * failing to initialize, or the account snapshot refused, such as while account setup is pending.
+ * A failure to load the account, the account dialog and account recovery show in place of
+ * `AccountSettings`: account auth failing to initialize, or the account snapshot refused, such as
+ * while account setup is pending.
  */
 export function AccountLoadError({ error }: Pick<ErrorComponentProps, "error">): React.ReactNode {
   const retry = useRetryRoute();

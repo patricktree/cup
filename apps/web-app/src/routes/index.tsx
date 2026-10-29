@@ -11,7 +11,9 @@ import { hasPendingSharedUrl } from "#src/platform/share-intake.js";
 export const Route = createFileRoute("/")({
   component: IndexPage,
   beforeLoad: async () => {
-    // Failing auth counts as signed out here: the start form offers signing in again.
+    // Failing auth counts as signed out here, so home still offers the start form, which needs no
+    // account until it is submitted: signing in initializes auth again (`ensureAuthInitialized`)
+    // and shows that failure in place.
     const session = await settleAccountSession().catch(() => null);
     /*
      * A start from this page that is still pending (resumed after OAuth, or waiting out a rate

@@ -1,5 +1,5 @@
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
-import { queryOptions, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { queryOptions, useMutation } from "@tanstack/react-query";
 
 import {
   audiobookSchema,
@@ -12,7 +12,7 @@ import {
 import { removeFromCachedAccountHistory } from "#src/data-fetching/account-history.js";
 import { invalidateAccountQueries } from "#src/data-fetching/account.js";
 import { ERROR_CODE, requestApi, RpcError } from "#src/data-fetching/api-request.js";
-import { queryClient as appQueryClient } from "#src/data-fetching/query-client.js";
+import { queryClient } from "#src/data-fetching/query-client.js";
 import { QUERY_KEYS } from "#src/data-fetching/query-keys.js";
 import { notifyError } from "#src/notifications.js";
 
@@ -31,6 +31,7 @@ export function createAudiobookQuery(conversionId: string) {
     refetchIntervalInBackground: true,
   });
 }
+
 async function getAudiobook(conversionId: string, signal?: AbortSignal): Promise<Audiobook> {
   return audiobookSchema.parse(
     await requestApi("optional", (client) => client.getAudiobook({ conversionId }, signal)),
@@ -43,10 +44,7 @@ async function getAudiobook(conversionId: string, signal?: AbortSignal): Promise
  * player reports in place, so only other failures are reported with a toast. It bypasses the
  * audiobook query: a failed query that has data always reports with a toast.
  */
-export async function fetchAudiobookForPlayer(
-  queryClient: QueryClient,
-  conversionId: string,
-): Promise<Audiobook | null> {
+export async function fetchAudiobookForPlayer(conversionId: string): Promise<Audiobook | null> {
   let audiobook: Audiobook;
   try {
     audiobook = await getAudiobook(conversionId);
@@ -61,8 +59,9 @@ export async function fetchAudiobookForPlayer(
   queryClient.setQueryData(createAudiobookQuery(conversionId).queryKey, audiobook);
   return audiobook;
 }
+
 /** Retries preparation, or synthesis of the segments still lacking audio once prepared. */
-export function useRetryConversion(conversionId: string, queryClient: QueryClient) {
+export function useRetryConversion(conversionId: string) {
   return useMutation({
     meta: { errorTitle: "The retry could not start." },
     mutationFn: () => retryConversion(conversionId),
@@ -70,6 +69,7 @@ export function useRetryConversion(conversionId: string, queryClient: QueryClien
       queryClient.invalidateQueries({ queryKey: createAudiobookQuery(conversionId).queryKey }),
   });
 }
+
 async function retryConversion(conversionId: string) {
   return retryConversionResponseSchema.parse(
     await requestApi("optional", (client) => client.retryConversion({ conversionId })),
@@ -92,7 +92,6 @@ export function useDeleteConversion({
   conversionId: string;
   onDeleted: () => Promise<void>;
 }) {
-  const queryClient = useQueryClient();
   return useMutation({
     meta: { errorDisplay: "inline" },
     // A poll answered after the deletion would find the track gone and report a failure.
@@ -110,6 +109,7 @@ export function useDeleteConversion({
     },
   });
 }
+
 async function deleteConversion(subject: string, conversionId: string): Promise<void> {
   try {
     await requestApi({ subject }, (client) => client.deleteConversion({ conversionId }));
@@ -123,6 +123,7 @@ async function deleteConversion(subject: string, conversionId: string): Promise<
 function isNotFound(error: unknown) {
   return error instanceof RpcError && error.code === ERROR_CODE.AUDIOBOOK_NOT_FOUND;
 }
+
 export function getLocalPlaybackPosition(conversionId: string): PlaybackPosition | null {
   const value = localStorage.getItem(`cup:position:v1:${conversionId}`);
   if (!value) {
@@ -136,6 +137,7 @@ export function getLocalPlaybackPosition(conversionId: string): PlaybackPosition
     return null;
   }
 }
+
 /**
  * Saves a listening position: on the device for listeners without an account, on the server and in
  * the cached audiobook for signed-in ones, so an audiobook opened again before its refetch returns
@@ -152,12 +154,12 @@ export async function savePlaybackPosition(
   }
 
   const queryKey = QUERY_KEYS.audiobook(conversionId);
-  await appQueryClient.cancelQueries({ queryKey });
-  const cached = appQueryClient.getQueryState<Audiobook>(queryKey);
+  await queryClient.cancelQueries({ queryKey });
+  const cached = queryClient.getQueryState<Audiobook>(queryKey);
   // Only a prepared audiobook carries a listening position.
   if (cached?.data && cached.data.status !== "pending" && cached.data.status !== "failed") {
     const audiobook: Audiobook = { ...cached.data, playbackPosition: position };
-    appQueryClient.setQueryData<Audiobook>(
+    queryClient.setQueryData<Audiobook>(
       queryKey,
       audiobook,
       // The cached response keeps its arrival time, which dates its narration track URL.
@@ -170,6 +172,6 @@ export async function savePlaybackPosition(
   } finally {
     // Marks the audiobook stale without requesting it now: playback saves every few seconds, and
     // the cache already holds the position. The next page that shows it requests it again.
-    await appQueryClient.invalidateQueries({ queryKey, refetchType: "none" });
+    await queryClient.invalidateQueries({ queryKey, refetchType: "none" });
   }
 }

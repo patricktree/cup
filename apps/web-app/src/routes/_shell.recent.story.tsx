@@ -5,7 +5,11 @@ import { delay, http, HttpResponse } from "msw";
 import type { Audiobook } from "@cup/listener-api.routes";
 
 import { accountStory } from "#src/ui-gallery/account-fixtures.jsx";
-import { holdResponses, waitWhileHeld } from "#src/ui-gallery/held-responses.js";
+import {
+  holdStoryResponses,
+  readFailedStoryResponse,
+  waitWhileHeld,
+} from "#src/ui-gallery/held-responses.js";
 import {
   createStoryNarrationTrack,
   storyNarrationTrackHandler,
@@ -56,7 +60,7 @@ export const SignedInColdStartHome = {
     isColdStart: true,
     handlers: [http.get("/api/auth/config", () => waitWhileHeld("auth-config"))],
   }),
-  beforeMount: async () => holdResponses("auth-config"),
+  beforeMount: async () => holdStoryResponses("auth-config"),
 } satisfies Story;
 /** A signed-out listener follows a link to Recents or one of its dialogs. */
 export const SignedOutRecents = accountStory({ path: "/recent", isSignedOut: true });
@@ -247,7 +251,7 @@ const REVISITED_PENDING_INDEX = 1;
 
 /**
  * A signed-in listener moves between Recents, its dialogs and two tracks, one ready and one still
- * being prepared. Tests hold each refetch by name (see `src/ui-gallery/held-responses.ts`):
+ * being prepared. Tests hold or fail each refetch by name (see `src/ui-gallery/held-responses.ts`):
  * `"account-history"`, `"account"` and `` `audiobook:${conversionId}` ``.
  */
 export const RevisitingScreens = accountStory({
@@ -261,11 +265,17 @@ export const RevisitingScreens = accountStory({
   },
   handlers: [
     coverHandler(),
-    // Each holding handler answers nothing, so the story's default answers once it is released.
-    http.get("/api/account/conversions", () => waitWhileHeld("account-history")),
-    http.get("/api/account", () => waitWhileHeld("account")),
+    // Unless failed, each of these handlers answers nothing, so the story's default answers once it
+    // is released.
+    http.get("/api/account/conversions", () => answerControlledResponse("account-history")),
+    http.get("/api/account", () => answerControlledResponse("account")),
     http.get(`/api/audiobooks/${toStoryConversionId(REVISITED_READY_INDEX)}`, async () => {
-      await waitWhileHeld(`audiobook:${toStoryConversionId(REVISITED_READY_INDEX)}`);
+      const failedResponse = await answerControlledResponse(
+        `audiobook:${toStoryConversionId(REVISITED_READY_INDEX)}`,
+      );
+      if (failedResponse) {
+        return failedResponse;
+      }
       const title = TITLES[REVISITED_READY_INDEX] ?? "";
       return HttpResponse.json({
         status: "ready",
@@ -288,7 +298,12 @@ export const RevisitingScreens = accountStory({
       } satisfies Audiobook);
     }),
     http.get(`/api/audiobooks/${toStoryConversionId(REVISITED_PENDING_INDEX)}`, async () => {
-      await waitWhileHeld(`audiobook:${toStoryConversionId(REVISITED_PENDING_INDEX)}`);
+      const failedResponse = await answerControlledResponse(
+        `audiobook:${toStoryConversionId(REVISITED_PENDING_INDEX)}`,
+      );
+      if (failedResponse) {
+        return failedResponse;
+      }
       return HttpResponse.json({
         status: "pending",
         originalUrl: `https://${HOSTS[REVISITED_PENDING_INDEX]}/articles/${REVISITED_PENDING_INDEX}`,
@@ -305,7 +320,8 @@ export const RevisitingScreens = accountStory({
  */
 export const FirstVisitToHeldTrack = {
   ...RevisitingScreens,
-  beforeMount: async () => holdResponses(`audiobook:${toStoryConversionId(REVISITED_READY_INDEX)}`),
+  beforeMount: async () =>
+    holdStoryResponses(`audiobook:${toStoryConversionId(REVISITED_READY_INDEX)}`),
 } satisfies Story;
 
 export const AddDialog = accountStory({ path: "/recent/add" });
@@ -398,4 +414,10 @@ async function submitSourceUrl({ canvasElement }: Parameters<NonNullable<Story["
     }
   });
   await user.click(submit);
+}
+
+/** Holds the response while a test holds it, then answers the failure a test asked for, if any. */
+async function answerControlledResponse(name: string) {
+  await waitWhileHeld(name);
+  return readFailedStoryResponse(name);
 }

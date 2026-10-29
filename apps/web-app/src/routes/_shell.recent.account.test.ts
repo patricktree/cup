@@ -127,6 +127,17 @@ test("the account dialog stays open while a confirmation step runs", async ({ mo
   await expect(dialog).toBeVisible();
 });
 
+test("the account dialog opens with focus on Close, not on a step that changes the account", async ({
+  mount,
+  page,
+}) => {
+  await mount("routes/_shell.recent.account/ConfirmDeletion");
+  const dialog = page.getByRole("dialog", { name: "Account settings" });
+  await expect(dialog.getByRole("button", { name: "Schedule deletion" })).toBeVisible();
+
+  await expect(dialog.getByRole("button", { name: "Close", exact: true })).toBeFocused();
+});
+
 test("the account still loading is marked as a loading state", async ({ mount, page }) => {
   await mount("routes/_shell.recent.account/LoadingAccount");
 
