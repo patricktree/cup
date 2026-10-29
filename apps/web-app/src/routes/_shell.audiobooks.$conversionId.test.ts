@@ -515,12 +515,12 @@ test("Delete track… asks first, starts on Cancel, and Escape keeps the track",
   await more.click();
   await page.getByRole("menuitem", { name: "Delete track…" }).click();
 
-  const dialog = page.getByRole("alertdialog", { name: "Delete this track?" });
+  const dialog = page.getByRole("alertdialog", { name: "Delete track?" });
   await expect(dialog).toHaveAccessibleDescription(
-    `"A deterministic document about careful testing" is removed from all your devices. This can't be undone. The audio duration it used is not returned to your allowance.`,
+    "The track will be deleted permanently. The audio duration it used is not returned to your allowance.",
   );
   await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
-  await expect(dialog.getByRole("button", { name: "Delete track", exact: true })).toBeEnabled();
+  await expect(dialog.getByRole("button", { name: "Delete", exact: true })).toBeEnabled();
   await expect(page).toHaveScreenshot("delete-track-dialog.png");
 
   await page.keyboard.press("Escape");
@@ -530,19 +530,6 @@ test("Delete track… asks first, starts on Cancel, and Escape keeps the track",
     component.getByRole("heading", { name: "A deterministic document about careful testing" }),
   ).toBeVisible();
   expect(await page.evaluate(() => "deletionRequest" in window)).toBe(false);
-});
-
-test("a pending or failed track is named by its source host in the delete dialog", async ({
-  mount,
-  page,
-}) => {
-  const component = await mount("routes/_shell.audiobooks.$conversionId/AccountFailedConversion");
-  await component.getByRole("button", { name: "More", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Delete track…" }).click();
-
-  await expect(
-    page.getByRole("alertdialog", { name: "Delete this track?" }),
-  ).toHaveAccessibleDescription(/^"example\.com" is removed from all your devices\./);
 });
 
 test("deleting a track unloads the player first, then lands on Recents without it", async ({
@@ -560,8 +547,8 @@ test("deleting a track unloads the player first, then lands on Recents without i
   await component.getByRole("button", { name: "More", exact: true }).click();
   await page.getByRole("menuitem", { name: "Delete track…" }).click();
   await page
-    .getByRole("alertdialog", { name: "Delete this track?" })
-    .getByRole("button", { name: "Delete track", exact: true })
+    .getByRole("alertdialog", { name: "Delete track?" })
+    .getByRole("button", { name: "Delete", exact: true })
     .click();
 
   await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
@@ -588,7 +575,7 @@ test("a track already deleted elsewhere counts as deleted", async ({ mount, page
   const component = await mount("routes/_shell.audiobooks.$conversionId/DeleteTrackAlreadyDeleted");
   await component.getByRole("button", { name: "More", exact: true }).click();
   await page.getByRole("menuitem", { name: "Delete track…" }).click();
-  await page.getByRole("button", { name: "Delete track", exact: true }).click();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
 
   await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
   await expect(component.getByRole("status").filter({ hasText: "Track deleted." })).toHaveCount(1);
@@ -602,8 +589,8 @@ test("while the deletion runs both buttons are disabled and the dialog stays ope
   const component = await mount("routes/_shell.audiobooks.$conversionId/DeleteTrackNeverAnswers");
   await component.getByRole("button", { name: "More", exact: true }).click();
   await page.getByRole("menuitem", { name: "Delete track…" }).click();
-  const dialog = page.getByRole("alertdialog", { name: "Delete this track?" });
-  await dialog.getByRole("button", { name: "Delete track", exact: true }).click();
+  const dialog = page.getByRole("alertdialog", { name: "Delete track?" });
+  await dialog.getByRole("button", { name: "Delete", exact: true }).click();
 
   await expect(dialog.getByRole("button", { name: "Deleting…", exact: true })).toBeDisabled();
   await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
@@ -624,8 +611,8 @@ test("a failed deletion keeps the dialog open with an inline error, the player u
   await expect.poll(async () => (await readNarrationAudio(page)).src).toContain("audiobook=story");
   await component.getByRole("button", { name: "More", exact: true }).click();
   await page.getByRole("menuitem", { name: "Delete track…" }).click();
-  const dialog = page.getByRole("alertdialog", { name: "Delete this track?" });
-  await dialog.getByRole("button", { name: "Delete track", exact: true }).click();
+  const dialog = page.getByRole("alertdialog", { name: "Delete track?" });
+  await dialog.getByRole("button", { name: "Delete", exact: true }).click();
 
   await expect(dialog.getByRole("alert")).toHaveText("The track could not be deleted.");
   await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeEnabled();
@@ -633,7 +620,7 @@ test("a failed deletion keeps the dialog open with an inline error, the player u
   await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(1);
   expect((await readNarrationAudio(page)).src).toBe("");
 
-  await dialog.getByRole("button", { name: "Delete track", exact: true }).click();
+  await dialog.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
 });
 
@@ -644,7 +631,7 @@ test("a pending track is deleted without its polling showing the deletion as an 
   const component = await mount("routes/_shell.audiobooks.$conversionId/DeletePendingTrack");
   await component.getByRole("button", { name: "More", exact: true }).click();
   await page.getByRole("menuitem", { name: "Delete track…" }).click();
-  await page.getByRole("button", { name: "Delete track", exact: true }).click();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
 
   await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
   await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(0);

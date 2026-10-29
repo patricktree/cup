@@ -359,8 +359,8 @@ test("a listener deletes a track from its detail view, and the duration it used 
   await page.getByRole("button", { name: "More", exact: true }).click();
   await page.getByRole("menuitem", { name: "Delete track…" }).click();
   await page
-    .getByRole("alertdialog", { name: "Delete this track?" })
-    .getByRole("button", { name: "Delete track", exact: true })
+    .getByRole("alertdialog", { name: "Delete track?" })
+    .getByRole("button", { name: "Delete", exact: true })
     .click();
 
   await expect(page).toHaveURL(`${origin}/app/recent`);

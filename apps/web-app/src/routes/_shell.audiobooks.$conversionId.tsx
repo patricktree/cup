@@ -145,11 +145,7 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
         }}
       />
       {/* Rendered into a portal, so its place here only ties it to the page's state. */}
-      <DeleteTrackDialog
-        deletion={deletion}
-        // Pending and failed tracks have no title yet; their page heads them with the host.
-        trackName={"title" in audiobook ? audiobook.title : toSourceHost(audiobook.originalUrl)}
-      />
+      <DeleteTrackDialog deletion={deletion} />
     </>
   );
 
@@ -262,13 +258,7 @@ function useTrackDeletion(conversionId: string) {
 }
 
 /** Confirms the deletion of the track; Cancel has the focus, as the safe choice. */
-function DeleteTrackDialog({
-  deletion,
-  trackName,
-}: {
-  deletion: TrackDeletion;
-  trackName: string;
-}): React.JSX.Element {
+function DeleteTrackDialog({ deletion }: { deletion: TrackDeletion }): React.JSX.Element {
   const cancelButtonRef = React.useRef<HTMLButtonElement>(null);
   const error = deletion.error
     ? describeError(deletion.error, "The track could not be deleted.")
@@ -285,11 +275,11 @@ function DeleteTrackDialog({
       }}
       initialFocus={cancelButtonRef}
       finalFocus={true}
-      title={<>Delete this track?</>}
+      title={<>Delete track?</>}
       description={
         <>
-          &quot;{trackName}&quot; is removed from all your devices. This can&apos;t be undone. The
-          audio duration it used is not returned to your allowance.
+          The track will be deleted permanently. The audio duration it used is not returned to your
+          allowance.
         </>
       }
       cancelButtonText={<>Cancel</>}
@@ -297,7 +287,7 @@ function DeleteTrackDialog({
       cancelButtonRef={cancelButtonRef}
       buttonGroupChildren={
         <DSButton variant="contained" disabled={deletion.isPending} onClick={deletion.confirm}>
-          {deletion.isPending ? "Deleting…" : "Delete track"}
+          {deletion.isPending ? "Deleting…" : "Delete"}
         </DSButton>
       }
       errorMessage={error && [error.title, error.detail].filter(Boolean).join(" ")}
