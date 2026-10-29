@@ -212,7 +212,7 @@ function EmptyRecents(): React.JSX.Element {
       </span>
       <Link
         to="/recent/add"
-        state={{ isRecentsDialogOpenedInApp: true }}
+        state={{ isOpenedFromRecents: true }}
         className={composeClassnames(
           textStyles.h3,
           css`

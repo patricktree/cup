@@ -78,6 +78,8 @@ export function MiniPlayer(): React.ReactNode {
         <Link
           to="/audiobooks/$conversionId"
           params={{ conversionId: loaded.conversionId }}
+          // the mini player is only shown on Recents
+          state={{ isOpenedFromRecents: true }}
           className={composeClassnames(
             pressableOverlay,
             css`

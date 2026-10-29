@@ -47,11 +47,21 @@ export const RecentsWithoutName = accountStory({ path: "/recent", userMetadata: 
 /** A signed-in listener opening the home page lands on Recents. */
 export const SignedInHome = accountStory({ path: "/" });
 
-/** Two pages of ready cards, most of them with a cover; the second page loads on scrolling. */
+/**
+ * Two pages of ready cards, most of them with a cover; the second page loads on scrolling. A card
+ * opens a track that is still being prepared.
+ */
 export const Recents = accountStory({
   path: "/recent",
   handlers: [
     coverHandler(),
+    http.get("/api/audiobooks/:conversionId", ({ params }) =>
+      HttpResponse.json({
+        status: "pending",
+        originalUrl: `https://example.test/articles/${String(params["conversionId"])}`,
+        canGenerate: true,
+      } satisfies Audiobook),
+    ),
     http.get("/api/account/conversions", ({ request }) => {
       const isSecondPage = new URL(request.url).searchParams.get("cursor") === SECOND_PAGE_CURSOR;
       return HttpResponse.json(
