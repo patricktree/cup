@@ -363,7 +363,7 @@ test("once the title scrolls away the top bar shows it, and the playing segment 
   await expect(topBar.getByText(title)).toBeHidden();
 });
 
-test("the top bar's menu opens the original page and retries", async ({ mount, page }) => {
+test("the top bar's menu opens the original page", async ({ mount, page }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/AccountAudiobook");
   await expect(
     component.getByRole("heading", {
@@ -380,7 +380,16 @@ test("the top bar's menu opens the original page and retries", async ({ mount, p
   await expect(openOriginal).toHaveAttribute("target", "_blank");
   // Offered once the account history lists the track.
   await expect(page.getByRole("menuitem", { name: "Delete track…" })).toBeVisible();
+  // Every segment has audio, so there is nothing to retry.
+  await expect(page.getByRole("menuitem", { name: "Retry", exact: true })).toHaveCount(0);
   await expect(page).toHaveScreenshot("menu-open.png");
+});
+
+test("the top bar's menu retries an audiobook with a failed segment", async ({ mount, page }) => {
+  const component = await mount(
+    "routes/_shell.audiobooks.$conversionId/AudiobookWithFailedSegment",
+  );
+  await component.getByRole("button", { name: "More", exact: true }).click();
 
   const retryRequest = page.waitForRequest(
     (request) => request.method() === "POST" && request.url().endsWith("/retry"),
@@ -388,6 +397,36 @@ test("the top bar's menu opens the original page and retries", async ({ mount, p
   await page.getByRole("menuitem", { name: "Retry", exact: true }).click();
   await retryRequest;
 });
+
+test("the top bar's menu offers Retry after preparation failed", async ({ mount, page }) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/FailedConversion");
+  await component.getByRole("button", { name: "More", exact: true }).click();
+
+  await expect(page.getByRole("menuitem", { name: "Retry", exact: true })).toBeVisible();
+});
+
+test("the top bar's menu offers Retry when the duration did not suffice", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/InsufficientDuration");
+  await component.getByRole("button", { name: "More", exact: true }).click();
+
+  await expect(page.getByRole("menuitem", { name: "Retry", exact: true })).toBeVisible();
+});
+
+for (const story of ["PendingConversion", "SynthesizingAudiobook"] as const) {
+  test(`the top bar's menu offers no Retry while the conversion runs (${story})`, async ({
+    mount,
+    page,
+  }) => {
+    const component = await mount(`routes/_shell.audiobooks.$conversionId/${story}`);
+    await component.getByRole("button", { name: "More", exact: true }).click();
+
+    await expect(page.getByRole("menuitem", { name: "Open original page" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Retry", exact: true })).toHaveCount(0);
+  });
+}
 
 test("the top bar's menu offers no Retry when the audiobook cannot generate", async ({
   mount,

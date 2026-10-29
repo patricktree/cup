@@ -4,6 +4,8 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, type ErrorComponentProps } from "@tanstack/react-router";
 import React from "react";
 
+import type { Audiobook } from "@cup/listener-api.routes";
+
 import { DetailTopBar } from "#src/app/components/detail-top-bar.js";
 import type { DetailBackTarget } from "#src/app/components/detail-top-bar.js";
 import { fadeFooterClearance } from "#src/app/components/fade-footer.js";
@@ -136,7 +138,7 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
         }
         menu={{
           originalUrl: audiobook.originalUrl,
-          retry: audiobook.canGenerate
+          retry: offersRetry(audiobook)
             ? { isPending: retry.isPending, start: () => retry.mutate() }
             : undefined,
           deletion: isDeletable ? { start: deletion.openDialog } : undefined,
@@ -742,6 +744,32 @@ function ReaderNotice({ children }: { children: React.ReactNode }) {
       {children}
     </div>
   );
+}
+
+/**
+ * Retry starts nothing while the conversion runs, and has nothing to restart once every segment has
+ * audio.
+ */
+function offersRetry(audiobook: Audiobook): boolean {
+  if (!audiobook.canGenerate) {
+    return false;
+  }
+  switch (audiobook.status) {
+    case "pending":
+    case "synthesizing": {
+      return false;
+    }
+    case "failed":
+    case "insufficient-duration": {
+      return true;
+    }
+    case "ready": {
+      return audiobook.segments.some((segment) => segment.status === "failed");
+    }
+    default: {
+      return check.assertIsUnreachable(audiobook);
+    }
+  }
 }
 
 function formatSegmentCount(count: number) {
