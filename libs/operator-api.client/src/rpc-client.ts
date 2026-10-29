@@ -1,6 +1,7 @@
 import type {
   AccountParams,
   AdjustAccountAllowanceRequest,
+  ConversionParams,
   CreateGrantRequest,
   GrantParams,
   ListAccountsQuery,
@@ -77,6 +78,13 @@ export class OperatorApiClient {
   async adjustAccountAllowance(params: AccountParams, input: AdjustAccountAllowanceRequest) {
     return this.#honoClient.api.operator.accounts[":accountId"]["allowance-adjustments"].$post(
       { param: params, json: input },
+      this.#options(),
+    );
+  }
+
+  async deleteConversion(params: ConversionParams) {
+    return this.#honoClient.api.operator.conversions[":conversionId"].$delete(
+      { param: params, json: {} },
       this.#options(),
     );
   }

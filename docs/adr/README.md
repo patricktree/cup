@@ -18,5 +18,6 @@ ADRs preserve decisions, alternatives, rationale, and consequences. Read them al
 | [0012](0012-offer-a-local-test-account-instead-of-google-in-development.md)                                         | Local test account instead of Google sign-in in development                                         |
 | [0013](0013-cache-cover-images-in-the-browser-for-a-day.md)                                                         | Cache cover images in the browser for a day                                                         |
 | [0014](0014-cut-source-material-at-the-visible-headline-and-carry-the-source-subtitle-in-the-narration-document.md) | Cut source material at the visible headline and carry the source subtitle in the narration document |
+| [0015](0015-fence-conversion-deletion-with-a-durable-marker-on-the-account-conversion-row.md)                       | Fence conversion deletion with a durable marker on the account conversion row                       |
 
 Each decision's frontmatter records its status. For a substantive reversal, add a superseding ADR and link it from the previous decision while retaining the old rationale. The [wiki schema](../agents/domain.md#record-decisions-and-evidence) describes how decisions, implementation gaps, and research relate.

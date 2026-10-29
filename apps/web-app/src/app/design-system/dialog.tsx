@@ -1,4 +1,4 @@
-import { Dialog, type DialogPopupProps, type DialogRootProps } from "@base-ui/react";
+import { AlertDialog, Dialog, type DialogPopupProps, type DialogRootProps } from "@base-ui/react";
 import { css } from "@linaria/core";
 import React from "react";
 
@@ -8,6 +8,11 @@ import { textStyles } from "#src/app/design-system/text-styles.js";
 import { interTypefaceScope } from "#src/app/global-styles.js";
 
 export type DSDialogProps = {
+  /**
+   * `"alertdialog"` interrupts to confirm an action, such as a destructive one: it is announced as
+   * an alert dialog and a click outside does not close it.
+   */
+  role?: "dialog" | "alertdialog";
   open: DialogRootProps["open"];
   onOpenChange: DialogRootProps["onOpenChange"];
   initialFocus: DialogPopupProps["initialFocus"];
@@ -18,11 +23,14 @@ export type DSDialogProps = {
   children?: React.ReactNode;
   cancelButtonText: React.ReactNode;
   cancelButtonDisabled: boolean;
+  /** Lets `initialFocus` start on Cancel, the safe choice of a destructive confirmation. */
+  cancelButtonRef?: React.Ref<HTMLButtonElement>;
   buttonGroupChildren?: React.ReactNode;
   errorMessage?: React.ReactNode;
 };
 
 export const DSDialog: React.FC<DSDialogProps> = ({
+  role = "dialog",
   open,
   onOpenChange,
   initialFocus,
@@ -32,11 +40,15 @@ export const DSDialog: React.FC<DSDialogProps> = ({
   children,
   cancelButtonText,
   cancelButtonDisabled,
+  cancelButtonRef,
   buttonGroupChildren,
   errorMessage,
 }) => {
+  // Both roots share every other part.
+  const Root = role === "alertdialog" ? AlertDialog.Root : Dialog.Root;
+
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal
         className={css`
           isolation: isolate;
@@ -76,7 +88,10 @@ export const DSDialog: React.FC<DSDialogProps> = ({
 
           <DSButtonGroup>
             {buttonGroupChildren}
-            <Dialog.Close render={<DSButton disabled={cancelButtonDisabled} />}>
+            <Dialog.Close
+              ref={cancelButtonRef}
+              render={<DSButton disabled={cancelButtonDisabled} />}
+            >
               {cancelButtonText}
             </Dialog.Close>
           </DSButtonGroup>
@@ -84,6 +99,6 @@ export const DSDialog: React.FC<DSDialogProps> = ({
           {errorMessage && <p role="alert">{errorMessage}</p>}
         </Dialog.Popup>
       </Dialog.Portal>
-    </Dialog.Root>
+    </Root>
   );
 };

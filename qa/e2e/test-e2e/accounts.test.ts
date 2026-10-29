@@ -331,6 +331,52 @@ test("failed sign-in leaves anonymous trial access available", async ({
   });
 });
 
+test("a listener deletes a track from its detail view, and the duration it used stays spent", async ({
+  expectConsoleError,
+  page,
+  workerEnvironment,
+}) => {
+  const { origin } = workerEnvironment;
+  await page.goto(`${origin}/app/`);
+  await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
+  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
+  const detailUrl = page.url();
+  const conversionId = new URL(detailUrl).pathname.split("/").at(-1);
+  if (!conversionId) {
+    throw new Error("Conversion missing");
+  }
+  await waitForGeneratedAudio(page, conversionId, await readAccessToken(page));
+  const remainingAllowance = (await readAccount(page, origin)).balance.available;
+  expect(remainingAllowance).toBeLessThan(30 * 60 * 1_000);
+
+  // Opened from Recents, so the history has a Recents entry below the detail view.
+  await page.goto(`${origin}/app/recent`);
+  await page.getByRole("list", { name: "Tracks" }).getByRole("link").click();
+  await expect(page).toHaveURL(detailUrl);
+  await waitForAudiobook(page);
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete track…" }).click();
+  await page
+    .getByRole("alertdialog", { name: "Delete this track?" })
+    .getByRole("button", { name: "Delete track", exact: true })
+    .click();
+
+  await expect(page).toHaveURL(`${origin}/app/recent`);
+  await expect(page.getByRole("link", { name: "Add your first track" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Tracks" })).toHaveCount(0);
+  // The deletion replaced the detail entry, so Back leaves Recents for the page before it.
+  await page.goBack();
+  await expect(page).not.toHaveURL(/\/app\/audiobooks\//);
+
+  expectConsoleError(/^Failed to load resource: the server responded with a status of 404/);
+  expectConsoleError(/^RpcError: Track not found\./);
+  await page.goto(detailUrl);
+  await expect(page.getByText("Track not found.")).toBeVisible();
+  expect((await readAccount(page, origin)).balance.available).toBe(remainingAllowance);
+});
+
 async function readAccount(page: Page, origin: string) {
   const accessToken = await readAccessToken(page);
   const response = await page.request.get(`${origin}/api/account`, {

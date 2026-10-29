@@ -18,6 +18,8 @@ export const ERROR_CODE = {
   ACCOUNT_UNAVAILABLE: "account-unavailable",
   ADJUSTMENT_EXCEEDS_AVAILABLE_DURATION: "adjustment-exceeds-available-duration",
   ALLOWANCE_BELOW_USED_DURATION: "allowance-below-used-duration",
+  CONVERSION_NOT_ACCOUNT_OWNED: "conversion-not-account-owned",
+  CONVERSION_NOT_FOUND: "conversion-not-found",
   GRANT_NOT_FOUND: "grant-not-found",
   IDEMPOTENCY_CONFLICT: "idempotency-conflict",
   INVALID_CURSOR: "invalid-cursor",

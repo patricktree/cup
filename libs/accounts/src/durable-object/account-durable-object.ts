@@ -8,7 +8,10 @@ import {
   type SynthesisWorkflowDispatcher,
   type PlaybackPosition,
   createAccountArtifactPrefix,
+  createConversionArtifactPrefix,
+  createSegmentWorkflowId,
 } from "@cup/conversion-contracts";
+import { findRootCauseMessage } from "@cup/errors";
 
 import type {
   AccountConversionOutcome,
@@ -22,16 +25,22 @@ import { AccountSqlite } from "#src/storage/account-sqlite.ts";
 
 const USAGE_PUBLICATION_RETRY_MS = 60_000;
 
+/** Conversion deletion terminates the conversion's workflow instances. */
+type TerminableWorkflow = {
+  get(id: string): Promise<{ terminate(): Promise<void> }>;
+};
+
 type AccountEnvironment = {
   CONVERSION_OWNER_LIMIT: string;
   AUDIO_BUCKET: R2Bucket;
   REGISTRY: AccountRegistry;
-  SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW: SynthesisWorkflowDispatcher;
+  SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW: SynthesisWorkflowDispatcher & TerminableWorkflow;
   PREPARE_AUDIOBOOK_WORKFLOW: {
     create(input: { id: string; params: AccountWorkflowParams }): Promise<unknown>;
     get(id: string): Promise<{
       status(): Promise<{ status: string; error?: { message: string } }>;
       restart(): Promise<void>;
+      terminate(): Promise<void>;
     }>;
   };
 };
@@ -45,7 +54,10 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
   constructor(context: DurableObjectState, env: AccountEnvironment) {
     super(context, env);
     this.sqlite = new AccountSqlite(context.storage);
-    void context.blockConcurrencyWhile(() => this.sqlite.migrate());
+    void context.blockConcurrencyWhile(async () => {
+      await this.sqlite.migrate();
+      await this.armCleanupOfDeletedConversions();
+    });
     this.artifactWriters = new AccountArtifactWriters(context.storage, () =>
       this.sqlite.snapshot(),
     );
@@ -237,6 +249,60 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     await this.scheduleUsagePublication();
   }
 
+  /**
+   * Deletes a conversion of an `active` or `deletion_scheduled` account: marks it, which fences it
+   * like a missing row, and releases its open reservations in one transaction. A repeat while
+   * marked changes nothing. See docs/architecture/conversion-deletion.md.
+   */
+  async deleteConversion(
+    conversionId: string,
+    nowMs = Temporal.Now.instant().epochMilliseconds,
+  ): Promise<{ result: "marked" | "already-marked" | "not-found" | "account-unavailable" }> {
+    const marking = this.sqlite.markConversionDeletion(conversionId, nowMs);
+    if (marking.result !== "marked") {
+      return { result: marking.result };
+    }
+
+    // The alarm cleans up the conversion and also publishes the usage the release changed.
+    await this.ctx.storage.setAlarm(nowMs);
+    await this.terminateConversionWorkflows(conversionId, marking.segmentSequences);
+    return { result: "marked" };
+  }
+
+  /**
+   * Termination only saves cost: the marker already fences whatever still runs, and a terminated
+   * instance can still land its running step. Each instance is tried once, and a failure is only
+   * logged, neither retried nor recorded.
+   */
+  private async terminateConversionWorkflows(
+    conversionId: string,
+    segmentSequences: readonly number[],
+  ) {
+    const segmentWorkflow: TerminableWorkflow = this.env.SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW;
+    const instances = [
+      { workflow: this.env.PREPARE_AUDIOBOOK_WORKFLOW, id: conversionId },
+      ...segmentSequences.map((sequence) => ({
+        workflow: segmentWorkflow,
+        id: createSegmentWorkflowId(conversionId, sequence),
+      })),
+    ];
+
+    for (const { workflow, id } of instances) {
+      try {
+        await (await workflow.get(id)).terminate();
+      } catch (error) {
+        console.warn(
+          JSON.stringify({
+            event: "conversion-workflow-termination-failed",
+            conversionId,
+            workflowInstanceId: id,
+            error: findRootCauseMessage(error),
+          }),
+        );
+      }
+    }
+  }
+
   getPlaybackPosition(conversionId: string) {
     return this.sqlite.getPlaybackPosition(conversionId);
   }
@@ -290,14 +356,17 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
     await this.reconcileArtifactWriters();
     await this.reconcileLifecycle();
+    // Account erasure sweeps the whole account, so it subsumes any conversion cleanup still owed.
     if (this.sqlite.snapshot().state === "deleting") {
       return;
     }
+    await this.cleanUpDeletedConversions();
     await this.reconcileDispatch();
     await this.reconcileSynthesis();
     await this.publishRegistryUsage();
     if (
       this.sqlite.snapshot().state === "active" &&
+      this.sqlite.conversionDeletions().length === 0 &&
       this.lifecycle.outbox().length === 0 &&
       this.sqlite.unsettledConversions().length === 0 &&
       this.sqlite.reservedAudioSegments().length === 0 &&
@@ -305,6 +374,70 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
       !this.sqlite.hasUnconfirmedUsage()
     ) {
       await this.ctx.storage.deleteAlarm();
+    }
+  }
+
+  /**
+   * A conversion can be marked without an armed alarm, such as one marked before the alarm cleaned
+   * up conversions or one whose deletion crashed before arming it.
+   */
+  private async armCleanupOfDeletedConversions() {
+    if (
+      this.sqlite.conversionDeletions().length > 0 &&
+      (await this.ctx.storage.getAlarm()) === null
+    ) {
+      await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds);
+    }
+  }
+
+  /**
+   * Runs the idempotent cleanup steps of each marked conversion. A step that cannot finish leaves
+   * the conversion marked, and the next alarm pass retries it from the start; one conversion's
+   * failure never blocks another's. See docs/architecture/conversion-deletion.md.
+   */
+  private async cleanUpDeletedConversions() {
+    for (const { conversionId } of this.sqlite.conversionDeletions()) {
+      try {
+        await this.cleanUpDeletedConversion(conversionId);
+      } catch (error) {
+        // The marked row stays, so the alarm stays armed and retries.
+        console.warn(
+          JSON.stringify({
+            event: "conversion-deletion-cleanup-failed",
+            conversionId,
+            error: findRootCauseMessage(error),
+          }),
+        );
+      }
+    }
+  }
+
+  private async cleanUpDeletedConversion(conversionId: string) {
+    // The alarm already reconciled every writer; one still running may yet land a put.
+    if (this.artifactWriters.hasUndrainedConversionWriters(conversionId)) {
+      return;
+    }
+
+    const { accountId } = this.sqlite.snapshot();
+    await this.deleteArtifactPrefix(
+      createConversionArtifactPrefix(conversionId, { kind: "account", accountId }),
+    );
+    this.artifactWriters.removeDrainedConversionWriters(conversionId);
+
+    const registry = this.env.REGISTRY;
+    await registry.get(registry.idFromName("registry")).removeConversionOwner(conversionId);
+
+    this.sqlite.deleteMarkedConversionRows(conversionId);
+  }
+
+  /** R2 has no prefix delete and deletes at most 1,000 keys per call. */
+  private async deleteArtifactPrefix(prefix: string) {
+    for (;;) {
+      const objects = await this.env.AUDIO_BUCKET.list({ prefix, limit: 1000 });
+      if (objects.objects.length === 0) {
+        return;
+      }
+      await this.env.AUDIO_BUCKET.delete(objects.objects.map((object) => object.key));
     }
   }
 
@@ -365,9 +498,19 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
         if (!conversion) {
           throw new Error("Missing conversion dispatch target");
         }
-        await registry
-          .get(registry.idFromName("registry"))
-          .bindConversionOwner(job.conversionId, { kind: "account", accountId: account.accountId });
+        const registryStub = registry.get(registry.idFromName("registry"));
+        await registryStub.bindConversionOwner(job.conversionId, {
+          kind: "account",
+          accountId: account.accountId,
+        });
+
+        // A deletion, even its whole cleanup, can land while the bind is in flight, so the bind may
+        // have recreated an owner the cleanup already removed.
+        if (!this.sqlite.getConversion(job.conversionId)) {
+          await registryStub.removeConversionOwner(job.conversionId);
+          continue;
+        }
+
         const params: AccountWorkflowParams = {
           v: 2,
           sourceUrl: conversion.sourceUrl,
@@ -528,14 +671,7 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     if (this.artifactWriters.writers().length) {
       throw new Error("Artifact writers have not drained");
     }
-    const prefix = createAccountArtifactPrefix(attempt.accountId);
-    for (;;) {
-      const objects = await this.env.AUDIO_BUCKET.list({ prefix, limit: 1000 });
-      if (objects.objects.length === 0) {
-        break;
-      }
-      await this.env.AUDIO_BUCKET.delete(objects.objects.map((object) => object.key));
-    }
+    await this.deleteArtifactPrefix(createAccountArtifactPrefix(attempt.accountId));
     await this.env.REGISTRY.get(
       this.env.REGISTRY.idFromName("registry"),
     ).removeAccountConversionOwners(attempt.accountId);
@@ -545,6 +681,9 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
 
   inspectArtifactWriters() {
     return this.artifactWriters.writers();
+  }
+  inspectConversionDeletions() {
+    return this.sqlite.conversionDeletions();
   }
   pendingConversions() {
     return this.sqlite.pendingConversions();

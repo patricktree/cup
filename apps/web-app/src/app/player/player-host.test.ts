@@ -132,7 +132,7 @@ function createHost({
   localPositions = new Map<string, PlaybackPosition>(),
   subject = null as string | null,
   savePosition = (): Promise<void> => Promise.resolve(),
-  fetchAudiobook = (conversionId: string): Promise<Audiobook> =>
+  fetchAudiobook = (conversionId: string): Promise<Audiobook | null> =>
     Promise.reject(new Error(`Unexpected fetch of audiobook ${conversionId}.`)),
 } = {}) {
   const elements: FakeAudioElement[] = [];
@@ -709,6 +709,69 @@ test("a renewal that completes after unloading plays nothing", async () => {
   await settle();
 
   expect(element.calls.slice(-2)).toEqual(["removeAttribute:src", "load"]);
+});
+
+test("a renewal that finds the track gone unloads it and reports it as no longer available", async () => {
+  const { host, element, clock, saved } = createHost({
+    fetchAudiobook: () => Promise.resolve(null),
+  });
+  host.showConversion("first", FIRST);
+  element.loadMetadata(15);
+
+  clock.now = TWELVE_HOURS_MILLISECONDS + 1;
+  host.play();
+  await settle();
+
+  expect(element.calls.slice(-2)).toEqual(["removeAttribute:src", "load"]);
+  // A position of a track that no longer exists has nowhere to go.
+  expect(saved).toEqual([]);
+  expect(host.getSnapshot()).toMatchObject({
+    loaded: null,
+    shown: { conversionId: "first", canPlay: false },
+    unavailable: { conversionId: "first", message: "This track is no longer available." },
+  });
+
+  // The page still shows its last response, which neither loads nor plays the track again.
+  host.showConversion("first", { ...FIRST });
+  host.playShown();
+  expect(host.getSnapshot().loaded).toBeNull();
+  expect(element.calls.at(-1)).toBe("load");
+});
+
+test("loading another audiobook clears the notice of a track no longer available", async () => {
+  const { host, element, clock } = createHost({ fetchAudiobook: () => Promise.resolve(null) });
+  host.showConversion("first", FIRST);
+  clock.now = TWELVE_HOURS_MILLISECONDS + 1;
+  host.play();
+  await settle();
+
+  host.hideConversion("first");
+  host.showConversion("second", SECOND);
+
+  expect(host.getSnapshot().loaded?.conversionId).toBe("second");
+  expect(host.getSnapshot().unavailable).toBeNull();
+  expect(element.calls.at(-1)).toBe(`src:${SECOND_TRACK_URL}`);
+});
+
+test("releasing a track being deleted unloads it and keeps it unloaded until Play", async () => {
+  const { host, element, saved } = createHost();
+  host.showConversion("first", FIRST);
+
+  host.release("first");
+  await settle();
+  expect(element.calls.slice(-2)).toEqual(["removeAttribute:src", "load"]);
+  expect(host.getSnapshot().loaded).toBeNull();
+  // A save would race the deletion of the track it belongs to.
+  expect(saved).toEqual([]);
+
+  // A newer response for the page, such as a poll, does not load it again.
+  host.showConversion("first", { ...FIRST });
+  expect(host.getSnapshot().loaded).toBeNull();
+  expect(host.getSnapshot().shown?.canPlay).toBe(true);
+
+  host.playShown();
+  expect(host.getSnapshot().loaded?.conversionId).toBe("first");
+  expect(element.calls.slice(-2)).toEqual([`src:${FIRST_TRACK_URL}`, "play"]);
 });
 
 test("a refused play is shown, and Play stays available", async () => {

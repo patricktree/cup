@@ -26,6 +26,7 @@
     "@cup/operator-api.client": "workspace:*",
     "@cup/operator-api.routes": "workspace:*",
     "commander": "^15.0.0",
+    "temporal-polyfill": "^1.0.5",
     "zod": "^4.6.5"
   },
   "devDependencies": {

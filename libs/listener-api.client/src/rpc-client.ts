@@ -109,6 +109,14 @@ export class AuthenticatedRpcClient {
     );
   }
 
+  async deleteConversion(params: ConversionParams) {
+    return this.#honoClient.api.account.conversions[":conversionId"].$delete(
+      // Without a body, but the session-mutation guard still requires the JSON content type.
+      { param: params, header: browserHeaders() },
+      this.#options(),
+    );
+  }
+
   async createDeletionChallenge() {
     return this.#honoClient.api.account.deletion.challenge.$post(
       { json: {}, header: browserHeaders() },

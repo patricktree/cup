@@ -24,6 +24,8 @@ Existing columns that predate this convention keep their names until a migration
 
 Writers may target pending or ready conversions; account lifecycle and execution epochs fence their storage effects.
 
+`account_conversions.deleting_since_ms` is the conversion deletion marker; the account alarm stays armed while any row carries it and deletes the conversion's rows, the marked row last ([conversion deletion](conversion-deletion.md)).
+
 `registry_confirmed_revision` records the duration ledger revision for which the registry confirmed the account's [usage projection](#registry). The revision is the number of ledger events, so every change to the allowance, reserved duration, or spent duration advances it without a separate counter.
 
 Sources: [account-sqlite-schema.ts](../../libs/accounts/src/storage/account-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/rolling-limits/src/rate-limit-schema.ts), [duration-ledger-schema.ts](../../libs/duration-ledger/src/duration-ledger-schema.ts); [migrations](../../libs/accounts/drizzle/account/).
@@ -54,7 +56,7 @@ erDiagram
 
 `ConversionGrantDurableObject`. Each conversion grant has an isolated database for its credentials, session signing state, conversions, duration ledger, and start-rate accounting. The singleton `grant` row owns conversions through the Durable Object identity rather than a `grant_id` foreign key in the conversions table. The grant's allowance, reservations, and charges live in the same ledger tables as an account's; the allowance is the sum of its grant and adjustment events.
 
-Both owners store a conversion's outcome and its last started [preparation phase](../GLOSSARY.md#preparation-phase) in typed columns with the same names. Only grants keep `workflow_started_at_ms`, measurements, provider usage, diagnostic references, and `cleanup_state`: they serve the operator's inspection of trial conversions and the grant's own cleanup of failed artifacts, while account conversions are reconciled through dispatch jobs and artifact writers and their artifacts are removed by account erasure. Grant failure categories are limited to the conversion failure categories; account failures also record `execution-failed`.
+Both owners store a conversion's outcome and its last started [preparation phase](../GLOSSARY.md#preparation-phase) in typed columns with the same names. Only grants keep `workflow_started_at_ms`, measurements, provider usage, diagnostic references, and `cleanup_state`: they serve the operator's inspection of trial conversions and the grant's own cleanup of failed artifacts, while account conversions are reconciled through dispatch jobs and artifact writers and their artifacts are removed by [conversion deletion](conversion-deletion.md) or account erasure. Grant failure categories are limited to the conversion failure categories; account failures also record `execution-failed`.
 
 Sources: [grant-sqlite-schema.ts](../../libs/conversion-grants/src/storage/grant-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/rolling-limits/src/rate-limit-schema.ts), [duration-ledger-schema.ts](../../libs/duration-ledger/src/duration-ledger-schema.ts); [migrations](../../libs/conversion-grants/drizzle/grant/).
 

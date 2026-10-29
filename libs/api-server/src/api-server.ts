@@ -25,6 +25,7 @@ import {
 } from "@cup/listener-api.routes";
 import {
   createOperatorApi,
+  type DeleteConversionResponse,
   type InspectAccountResponse,
   type ListAccountDeletionsResponse,
   type OperatorApiHandlers,
@@ -279,6 +280,31 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
         409,
       );
     }
+  },
+  /** Acts only on the caller's own account, so another account's or a trial conversion is not found. */
+  async deleteAccountConversion(context) {
+    const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
+    if (validation.result === "invalid") {
+      return validation.response;
+    }
+    const auth = await authenticateAccountRequest(context.req.raw, context.env);
+    if (auth.result !== "authenticated") {
+      return accountAuthError(auth.result, context.get("requestId"));
+    }
+    if (auth.snapshot.state !== "active") {
+      return accountAuthError("blocked", context.get("requestId"));
+    }
+    const { result } = await auth.account.deleteConversion(context.req.valid("param").conversionId);
+    if (result === "marked" || result === "already-marked") {
+      return context.body(null, 204);
+    }
+    if (result === "not-found") {
+      return jsonError(context.get("requestId"), "audiobook-not-found", "Track not found.", 404);
+    }
+    if (result === "account-unavailable") {
+      return accountAuthError("blocked", context.get("requestId"));
+    }
+    return assertUnreachable(result);
   },
   async exchangeSession(context) {
     const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
@@ -843,9 +869,46 @@ const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
         accounting: await account.inspectAccounting(),
         history: await account.history(),
         writers: await account.inspectArtifactWriters(),
+        conversionDeletions: await account.inspectConversionDeletions(),
       } satisfies InspectAccountResponse,
       200,
     );
+  },
+  /** Deletes an account's conversion; a trial conversion is refused. */
+  async deleteConversion(context) {
+    const { conversionId } = context.req.valid("param");
+    const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
+    if (owner === undefined) {
+      return conversionNotFound(context.get("requestId"));
+    }
+    if (owner.kind === "trial") {
+      return jsonError(
+        context.get("requestId"),
+        "conversion-not-account-owned",
+        "The conversion belongs to a conversion grant, not an account.",
+        409,
+      );
+    }
+    const account = context.env.ACCOUNTS.get(context.env.ACCOUNTS.idFromName(owner.accountId));
+    const { result } = await account.deleteConversion(conversionId);
+    if (result === "marked" || result === "already-marked") {
+      return context.json(
+        { conversionId, accountId: owner.accountId } satisfies DeleteConversionResponse,
+        200,
+      );
+    }
+    if (result === "not-found") {
+      return conversionNotFound(context.get("requestId"));
+    }
+    if (result === "account-unavailable") {
+      return jsonError(
+        context.get("requestId"),
+        "account-unavailable",
+        "The account is being deleted.",
+        404,
+      );
+    }
+    return assertUnreachable(result);
   },
   async createGrant(context) {
     const { label, requestId } = context.req.valid("json");
@@ -1394,6 +1457,10 @@ function getGrantStub(env: ApiServerEnvironment, grantId: string): GrantStub {
   return env.CONVERSION_GRANTS.get(env.CONVERSION_GRANTS.idFromName(grantId));
 }
 
+function conversionNotFound(requestId: string) {
+  return jsonError(requestId, "conversion-not-found", "Conversion not found.", 404);
+}
+
 function getRegistryStub(env: ApiServerEnvironment): RegistryStub {
   return env.REGISTRY.get(env.REGISTRY.idFromName("registry"));
 }
@@ -1518,6 +1585,7 @@ function allowedMethodsForApiPath(pathname: string): string[] | undefined {
     [/^\/api\/operator\/grants\/[^/]+\/revocation$/, ["POST"]],
     [/^\/api\/operator\/grants\/[^/]+\/session-invalidations$/, ["POST"]],
     [/^\/api\/operator\/grant-migrations$/, ["POST"]],
+    [/^\/api\/operator\/conversions\/[^/]+$/, ["DELETE"]],
   ];
   return routes.find(([pattern]) => pattern.test(pathname))?.[1];
 }

@@ -1,5 +1,6 @@
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
-import { infiniteQueryOptions } from "@tanstack/react-query";
+import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
+import React from "react";
 
 import { accountHistorySchema } from "@cup/listener-api.routes";
 
@@ -25,6 +26,32 @@ export function createAccountHistoryQuery(subject?: string) {
         ? 5_000
         : false,
   });
+}
+
+/**
+ * Whether the signed-in account's history lists the conversion, which tells the account's own
+ * conversion from a trial one the listener can also open. It loads further history pages until it
+ * finds the conversion or runs out of pages, and is `false` until then. It never polls itself.
+ */
+export function useIsAccountConversion(subject: string | undefined, conversionId: string): boolean {
+  const { data, hasNextPage, isFetchingNextPage, fetchNextPage } = useInfiniteQuery({
+    ...createAccountHistoryQuery(subject),
+    refetchInterval: false,
+  });
+  const isListed =
+    data?.pages.some((page) => page.items.some((item) => item.conversionId === conversionId)) ??
+    false;
+
+  React.useEffect(
+    function loadHistoryUntilListed() {
+      if (!isListed && hasNextPage && !isFetchingNextPage) {
+        void fetchNextPage();
+      }
+    },
+    [isListed, hasNextPage, isFetchingNextPage, fetchNextPage],
+  );
+
+  return isListed;
 }
 
 export function invalidateAccountHistory(subject?: string) {

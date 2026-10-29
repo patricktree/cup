@@ -2,6 +2,7 @@ import { Command, Option } from "@commander-js/extra-typings";
 import childProcess from "node:child_process";
 import process from "node:process";
 import util from "node:util";
+import { Temporal } from "temporal-polyfill";
 import { z } from "zod";
 
 import { OperatorApiClient, parseOkResponse, RpcError } from "@cup/operator-api.client";
@@ -108,7 +109,21 @@ account
       const result = await parseOkResponse(
         client.inspectAccount({ accountId: parseUuid(accountId) }),
       );
-      output(result, () => process.stdout.write(`${JSON.stringify(result, null, 2)}\n`));
+      output(result, () => {
+        const { conversionDeletions, ...rest } = result;
+        process.stdout.write(`${JSON.stringify(rest, null, 2)}\n\nConversion deletions:\n`);
+        if (conversionDeletions.length === 0) {
+          process.stdout.write("none\n");
+        }
+        const nowMs = Temporal.Now.instant().epochMilliseconds;
+        for (const deletion of conversionDeletions) {
+          writeFields([
+            ["Conversion ID", deletion.conversionId],
+            ["Deleting since (epoch ms)", deletion.deletingSinceMs],
+            ["Age (minutes)", Math.floor((nowMs - deletion.deletingSinceMs) / 60_000)],
+          ]);
+        }
+      });
     }),
   );
 account.command("deletions").action(async (_options, command) =>
@@ -117,6 +132,27 @@ account.command("deletions").action(async (_options, command) =>
     output(result, () => process.stdout.write(`${JSON.stringify(result, null, 2)}\n`));
   }),
 );
+const conversion = program.command("conversion").description("Manage account conversions");
+conversion
+  .command("delete")
+  .argument("<conversion-id>")
+  .requiredOption("--yes", "confirm irreversible deletion without refund")
+  .action(async (conversionId, _options, command) =>
+    run(command, async (client, output) => {
+      const params = { conversionId: parseUuid(conversionId) };
+      const result = await parseOkResponse(client.deleteConversion(params));
+      output(result, () => {
+        writeFields([
+          ["Conversion ID", result.conversionId],
+          ["Account ID", result.accountId],
+        ]);
+        process.stdout.write(
+          `Cleanup continues in the background. Follow it with: pnpm operator account inspect ${result.accountId}\n`,
+        );
+      });
+    }),
+  );
+
 const grant = program.command("grant").description("Manage conversion grants");
 
 grant

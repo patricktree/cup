@@ -94,11 +94,18 @@ export class AccountArtifactWriters {
       throw new Error("Artifact writer target is invalid");
     }
     const conversion = this.database
-      .select({ status: accountConversions.status })
+      .select({
+        status: accountConversions.status,
+        deletingSinceMs: accountConversions.deletingSinceMs,
+      })
       .from(accountConversions)
       .where(eq(accountConversions.conversionId, conversionId))
       .get();
-    if (!conversion || !["pending", "ready"].includes(conversion.status)) {
+    if (
+      !conversion ||
+      conversion.deletingSinceMs !== null ||
+      !["pending", "ready"].includes(conversion.status)
+    ) {
       throw new Error("Artifact writer target is fenced");
     }
   }
@@ -122,6 +129,36 @@ export class AccountArtifactWriters {
       .from(artifactWriters)
       .where(ne(artifactWriters.state, "drained"))
       .all();
+  }
+
+  /** Writer prefixes can be nested below the conversion prefix, such as an execution's prefix. */
+  hasUndrainedConversionWriters(conversionId: string): boolean {
+    const { accountId } = this.account();
+    return this.writers().some(
+      (writer) =>
+        getAccountConversionIdFromArtifactPrefix(writer.prefix, accountId) === conversionId,
+    );
+  }
+
+  /** Conversion deletion cleanup removes the conversion's drained writers once its prefix is swept. */
+  removeDrainedConversionWriters(conversionId: string): void {
+    const { accountId } = this.account();
+    this.database.transaction(() => {
+      const writers = this.database
+        .select({ writerId: artifactWriters.writerId, prefix: artifactWriters.prefix })
+        .from(artifactWriters)
+        .where(eq(artifactWriters.state, "drained"))
+        .all();
+      // One statement per writer: a conversion can have more writers than SQLite binds parameters.
+      for (const writer of writers) {
+        if (getAccountConversionIdFromArtifactPrefix(writer.prefix, accountId) === conversionId) {
+          this.database
+            .delete(artifactWriters)
+            .where(eq(artifactWriters.writerId, writer.writerId))
+            .run();
+        }
+      }
+    });
   }
 
   private canWrite(account: AccountSnapshot, executionEpoch: number) {

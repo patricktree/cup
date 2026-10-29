@@ -147,6 +147,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -202,6 +204,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -355,6 +359,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -410,6 +416,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -558,6 +566,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -613,6 +623,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -668,6 +680,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -723,6 +737,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -1105,13 +1121,34 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "conversionDeletions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "conversionId": {
+                            "type": "string"
+                          },
+                          "deletingSinceMs": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "conversionId",
+                          "deletingSinceMs"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
                     "account",
                     "accounting",
                     "history",
-                    "writers"
+                    "writers",
+                    "conversionDeletions"
                   ],
                   "additionalProperties": false
                 }
@@ -1136,6 +1173,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -1191,6 +1230,290 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/operator/conversions/{conversionId}": {
+      "delete": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "required": true,
+            "name": "conversionId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conversion deleted, or its deletion is already under way; cleanup continues in the background.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "conversionId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                    },
+                    "accountId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "conversionId",
+                    "accountId"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Conversion not found, or its account is being deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conversion not owned by an account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
+                            "grant-not-found",
+                            "idempotency-conflict",
+                            "invalid-cursor",
+                            "invalid-input",
+                            "method-not-allowed",
+                            "not-found",
+                            "operational-error",
+                            "operator-unauthorized",
+                            "request-too-large",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Operational error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-not-active",
+                            "account-not-found",
+                            "account-unavailable",
+                            "adjustment-exceeds-available-duration",
+                            "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -1517,6 +1840,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -1572,6 +1897,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -1627,6 +1954,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -1800,6 +2129,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -1855,6 +2186,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -2367,6 +2700,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -2422,6 +2757,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -2477,6 +2814,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -2652,6 +2991,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -2707,6 +3048,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -2762,6 +3105,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -2817,6 +3162,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -2983,6 +3330,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -3038,6 +3387,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -3093,6 +3444,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -3268,6 +3621,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -3323,6 +3678,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -3378,6 +3735,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -3505,6 +3864,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",
@@ -3560,6 +3921,8 @@
                             "account-unavailable",
                             "adjustment-exceeds-available-duration",
                             "allowance-below-used-duration",
+                            "conversion-not-account-owned",
+                            "conversion-not-found",
                             "grant-not-found",
                             "idempotency-conflict",
                             "invalid-cursor",

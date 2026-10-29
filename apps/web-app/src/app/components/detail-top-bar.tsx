@@ -28,6 +28,8 @@ type DetailMenuProps = {
   originalUrl: string;
   /** Absent when the audiobook offers no retry. */
   retry: { isPending: boolean; start: () => void } | undefined;
+  /** Asks to delete the track; absent for a trial track, which cannot be deleted. */
+  deletion: { start: () => void } | undefined;
 };
 
 /** The detail view's top bar: back, the compact title once scrolled, and the "…" menu. */
@@ -121,9 +123,20 @@ export function DetailTopBar({ backTo, compactTitle, menu }: DetailTopBarProps):
   );
 }
 
-function DetailMenu({ originalUrl, retry }: DetailMenuProps) {
+function DetailMenu({ originalUrl, retry, deletion }: DetailMenuProps) {
+  const isDeletionRequested = React.useRef(false);
+
   return (
-    <Menu.Root>
+    <Menu.Root
+      onOpenChangeComplete={(isOpen) => {
+        // The deletion dialog opens once the menu has returned focus to its trigger, so the dialog
+        // can move focus to its Cancel and later return it to the trigger.
+        if (!isOpen && isDeletionRequested.current) {
+          isDeletionRequested.current = false;
+          deletion?.start();
+        }
+      }}
+    >
       <Menu.Trigger
         aria-label="More"
         className={composeClassnames(
@@ -168,6 +181,16 @@ function DetailMenu({ originalUrl, retry }: DetailMenuProps) {
                 Retry
               </Menu.Item>
             ) : null}
+            {deletion ? (
+              <Menu.Item
+                onClick={() => {
+                  isDeletionRequested.current = true;
+                }}
+                className={destructiveMenuItemStyles}
+              >
+                Delete track…
+              </Menu.Item>
+            ) : null}
           </Menu.Popup>
         </Menu.Positioner>
       </Menu.Portal>
@@ -198,5 +221,13 @@ const menuItemStyles = composeClassnames(
       color: var(--color-ink-24);
       cursor: not-allowed;
     }
+  `,
+);
+
+/** Defined after `menuItemStyles`, so its color comes later in the stylesheet and wins. */
+const destructiveMenuItemStyles = composeClassnames(
+  menuItemStyles,
+  css`
+    color: var(--color-error);
   `,
 );

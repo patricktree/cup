@@ -1,0 +1,22 @@
+# Conversion deletion
+
+[Conversion deletion](../GLOSSARY.md#conversion-deletion) removes one account conversion for good while the rest of the account keeps working. [ADR 0015](../adr/0015-fence-conversion-deletion-with-a-durable-marker-on-the-account-conversion-row.md) records why it is fenced by a durable marker; this page states the invariants that no single file shows.
+
+## Invariants
+
+- **The marker is both the fence and the record of owed cleanup.** Once the deletion marker is set on the account conversion row, every gate of the account object treats the conversion like a missing one: no execution, settlement, artifact writer, dispatch or read gets through. The same marker records that cleanup is still owed. The listener sees the conversion as unknown (404) from that moment, with no tombstone.
+- **Marking releases open holds and keeps settled charges.** The marker and the release of every still-reserved reservation commit in one transaction, so no hold outlives the marker and spent duration stays spent.
+- **Workflow termination is never relied on.** Deletion tries once to terminate the conversion's preparation and segment workflows, to save cost. Whatever keeps running fails its next authorization check.
+- **A repeat is a no-op.** Deleting a marked conversion again releases nothing and terminates nothing.
+- **Cleanup runs only from the account alarm, which stays armed while any row is marked.** Deletion arms the alarm to fire at once; the account object also arms it when it starts and finds a marked row with no alarm, which covers rows marked before cleanup existed. Each pass runs the steps below for every marked conversion and stops one conversion at the first step that cannot finish; the next pass, on the alarm's existing 60-second cadence, starts again, with no backoff or attempt counter. Every step is idempotent.
+- **Writers drain before the sweep.** The conversion's artifact writers drain through the reconciliation of [account erasure](account-deletion.md#fencing-and-cleanup), with no force option, before its R2 prefix is swept in pages of at most 1,000 keys and its writer rows are removed; a writer whose put never lands stalls only this conversion's cleanup.
+- **The registry ownership entry goes before the rows.** The registry removes the conversion's ownership entry, then one transaction deletes the audio segment rows, the listening position and any pending job row, and the marked row last, so a crash between steps resumes on the next pass. Ledger history stays.
+- **Dispatch cannot outlive the deletion.** A deletion, even its whole cleanup, can land while preparation dispatch binds the conversion's owner; dispatch then removes the owner it bound and creates no workflow.
+- **Account erasure subsumes it.** The alarm returns before cleanup once the account is `deleting`, and erasing the account sweeps the whole account, so a conversion deletion still in progress needs no handoff. A recovery from `deletion_scheduled` keeps marked rows marked, and their cleanup continues.
+
+## Where it lives
+
+- The listener route in the [listener contracts](../../libs/listener-api.routes/src/hono-app.ts) and its [handler](../../libs/api-server/src/api-server.ts) act on the caller's own `active` account only, so a trial conversion is not found.
+- The operator route in the [operator contracts](../../libs/operator-api.routes/src/hono-app.ts) and its [handler](../../libs/api-server/src/api-server.ts) resolve the owner through the registry and refuse a trial conversion. Its response names the owning account, which the [operator CLI](../../apps/operator/README.md#delete-a-conversion) prints, and operator account inspection lists the marked conversions.
+- The [account object](../../libs/accounts/src/durable-object/account-durable-object.ts) accepts a deletion while the account is `active` or `deletion_scheduled` and runs the cleanup from its alarm. The [account storage](../../libs/accounts/src/storage/account-sqlite.ts) marks, releases and deletes the rows, the [writer ledger](../../libs/accounts/src/storage/account-artifact-writers.ts) refuses and removes the conversion's writers, and the [registry object](../../libs/registry/src/durable-object/registry-durable-object.ts) removes the ownership entry.
+- The registry's [account tests](../../libs/registry/test/accounts.test.ts) cover the fence, the release, repeats and every cleanup path against real objects; the [API server tests](../../libs/api-server/test/) cover the HTTP mappings.

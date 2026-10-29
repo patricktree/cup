@@ -153,7 +153,7 @@ The one-time transition from handwritten trial schemas kept grants and discarded
 | Supabase Auth           | Identity-provider data; Cup application state remains in Durable Objects                                                                       | [Auth configuration](../../supabase/config.toml)                                                   |
 | R2 audiobook bucket     | Conversion artifacts: prepared manifests, cover images, audio segments, and unit failure details                                               | [Artifact storage](../../libs/audiobook-production/src/audio-segment-storage.ts)                   |
 
-Cloudflare Workflows owns execution state; the account or grant object owns the application-visible conversion outcome. See [R2 objects and key layout](r2-storage.md) for prefixes, object contents, and metadata, [conversion](conversion.md) for artifact production and delivery, and [account deletion](account-deletion.md) for cleanup and write fencing. Infrastructure state is covered by the [Terraform guide](../../terraform/README.md).
+Cloudflare Workflows owns execution state; the account or grant object owns the application-visible conversion outcome. See [R2 objects and key layout](r2-storage.md) for prefixes, object contents, and metadata, [conversion](conversion.md) for artifact production and delivery, [account deletion](account-deletion.md) for cleanup and write fencing, and [conversion deletion](conversion-deletion.md) for fencing and removing one conversion. Infrastructure state is covered by the [Terraform guide](../../terraform/README.md).
 
 ## External services
 

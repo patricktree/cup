@@ -1343,3 +1343,441 @@ test("one registry preserves account provisioning and both owners across grant w
   });
   expect((await registry.findIdentity(subject))?.accountId).toBe(account.accountId);
 });
+
+test("a deleted conversion is fenced, keeps its settled charge and releases only its open holds", async () => {
+  const { account, accountId } = await createAccount();
+  const started = await account.startConversion(
+    { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/deleted" },
+    nowMs,
+  );
+  const conversionId = started.conversion?.conversionId;
+  if (conversionId === undefined) {
+    throw new Error("Expected conversion");
+  }
+  const prefix = `accounts/${accountId}/conversions/${conversionId}/executions/1/`;
+  await account.settleConversion(
+    conversionId,
+    readyOutcome(accountId, conversionId),
+    nowMs,
+    1,
+    [100, 100],
+  );
+  await account.completeAudioSegment(conversionId, 0, 5_000, 1);
+  await account.savePlaybackPosition(conversionId, {
+    synchronizationUnitId: "unit-1",
+    offsetMilliseconds: 10,
+  });
+  const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
+  const entriesBefore = await storage.exec("SELECT event_id FROM credit_ledger");
+
+  expect(await account.deleteConversion(conversionId)).toEqual({ result: "marked" });
+
+  await expectWorkerRpcRejection(account.completeAudioSegment(conversionId, 1, 4_000, 1));
+  await expectWorkerRpcRejection(account.registerArtifactWriter("late", 1, prefix));
+  expect(await account.inspectArtifactWriters()).toEqual([]);
+  expect(await account.getConversion(conversionId)).toBeUndefined();
+  expect((await account.history()).items).toEqual([]);
+  expect(await account.listAudioSegments(conversionId)).toEqual([]);
+  expect(await account.getPlaybackPosition(conversionId)).toBeNull();
+  expect((await account.inspect()).balance).toEqual({
+    unit: "audio-millisecond",
+    available: 1_795_000,
+    reserved: 0,
+  });
+  const addedEntries = await storage.exec(
+    "SELECT event_kind AS eventKind, cause FROM credit_ledger WHERE event_id NOT IN (SELECT value FROM json_each(?))",
+    JSON.stringify(entriesBefore.map((entry) => entry["event_id"])),
+  );
+  expect(addedEntries).toEqual([{ eventKind: "release", cause: conversionId }]);
+  expect(await storage.exec("SELECT * FROM credit_operations WHERE state = 'reserved'")).toEqual(
+    [],
+  );
+  expect(await account.terminationsForTest()).toEqual([
+    conversionId,
+    `segment-${conversionId}-0`,
+    `segment-${conversionId}-1`,
+  ]);
+});
+
+test("the dispatch alarm binds no owner and creates no workflow for a deleted conversion", async () => {
+  const { account, accountId } = await createAccount();
+  const conversionId = crypto.randomUUID();
+  const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
+  // A conversion whose dispatch never ran, so the alarm would otherwise bind and create it.
+  await storage.exec(
+    `INSERT INTO account_conversions (conversion_id, idempotency_key, source_url, created_at_ms, status, last_started_phase)
+     VALUES (?, ?, 'https://example.com/undispatched', ?, 'pending', 'conversion-start')`,
+    conversionId,
+    crypto.randomUUID(),
+    nowMs,
+  );
+  await storage.exec(
+    "INSERT INTO pending_jobs (job_id, conversion_id, execution_epoch, state) VALUES (?, ?, 1, 'pending')",
+    `conversion:${conversionId}`,
+    conversionId,
+  );
+  expect(await account.deleteConversion(conversionId)).toEqual({ result: "marked" });
+  await account.acceptPreparationForTest();
+
+  await account.reconcileForTest();
+
+  const registry = bindings.REGISTRY.get(bindings.REGISTRY.idFromName("registry"));
+  expect(await registry.findConversionOwner(conversionId)).toBeUndefined();
+  expect(await account.preparationCreationsForTest()).toEqual([]);
+});
+
+test("a conversion deleted and cleaned up while its owner bind is in flight is left unowned and never created", async () => {
+  const { account, accountId } = await createAccount();
+  const registry = bindings.REGISTRY.get(bindings.REGISTRY.idFromName("registry"));
+  await account.acceptPreparationForTest();
+  await account.deleteAndCleanUpDuringNextOwnerBindForTest();
+
+  const started = await account.startConversion(
+    { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/raced" },
+    nowMs,
+  );
+
+  const conversionId = started.conversion?.conversionId;
+  if (conversionId === undefined) {
+    throw new Error("Expected conversion");
+  }
+  const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
+  expect(await readConversionRows(storage, conversionId)).toEqual(NO_CONVERSION_ROWS);
+  expect(await registry.findConversionOwner(conversionId)).toBeUndefined();
+  expect(await account.preparationCreationsForTest()).toEqual([]);
+});
+
+test("a repeated delete releases nothing, a failed termination does not fail it, and a missing conversion is not found", async () => {
+  const { account, accountId } = await createAccount();
+  const started = await account.startConversion(
+    { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/repeat" },
+    nowMs,
+  );
+  const conversionId = started.conversion?.conversionId;
+  if (conversionId === undefined) {
+    throw new Error("Expected conversion");
+  }
+  await account.settleConversion(
+    conversionId,
+    readyOutcome(accountId, conversionId),
+    nowMs,
+    1,
+    [100],
+  );
+  await account.failTerminationsForTest();
+
+  expect(await account.deleteConversion(conversionId)).toEqual({ result: "marked" });
+  const terminations = await account.terminationsForTest();
+  expect(terminations).toEqual([conversionId, `segment-${conversionId}-0`]);
+  const entries = (await account.inspectAccounting()).entries;
+
+  expect(await account.deleteConversion(conversionId)).toEqual({ result: "already-marked" });
+  expect(await account.terminationsForTest()).toEqual(terminations);
+  expect((await account.inspectAccounting()).entries).toBe(entries);
+  expect(await account.deleteConversion(crypto.randomUUID())).toEqual({ result: "not-found" });
+});
+
+test("a deletion-scheduled account accepts a conversion deletion and a deleting account refuses it", async () => {
+  const { account, accountId } = await createAccount();
+  const conversionIds: string[] = [];
+  for (const sourceUrl of ["https://example.com/scheduled", "https://example.com/deleting"]) {
+    const started = await account.startConversion(
+      { idempotencyKey: crypto.randomUUID(), sourceUrl },
+      nowMs,
+    );
+    conversionIds.push(started.conversion?.conversionId ?? "");
+  }
+  const [scheduledConversionId, deletingConversionId] = conversionIds;
+  if (!scheduledConversionId || !deletingConversionId) {
+    throw new Error("Expected conversions");
+  }
+  const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
+
+  await storage.exec(
+    "UPDATE account SET state = 'deletion_scheduled', recovery_deadline_ms = ? WHERE id = 1",
+    nowMs * 2,
+  );
+  expect(await account.deleteConversion(scheduledConversionId)).toEqual({ result: "marked" });
+
+  await storage.exec("UPDATE account SET state = 'deleting', execution_epoch = 2 WHERE id = 1");
+  expect(await account.deleteConversion(deletingConversionId)).toEqual({
+    result: "account-unavailable",
+  });
+  expect(await account.terminationsForTest()).toEqual([scheduledConversionId]);
+  await storage.exec("UPDATE account SET state = 'active' WHERE id = 1");
+  expect(await account.getConversion(deletingConversionId)).toBeDefined();
+});
+
+/**
+ * Provisions an account through the registry, so the alarm's usage publication can succeed, and
+ * starts a conversion whose preparation dispatch binds its owner, then reserves two segments.
+ */
+async function startPreparedConversion() {
+  const registry = bindings.REGISTRY.get(bindings.REGISTRY.idFromName("registry"));
+  const subject = crypto.randomUUID();
+  const { accountId } = await registry.provisionVerifiedIdentity(subject, nowMs);
+  const created = {
+    account: bindings.ACCOUNTS.get(bindings.ACCOUNTS.idFromName(accountId)),
+    accountId,
+    subject,
+    registry,
+  };
+  await created.account.acceptPreparationForTest();
+  const started = await created.account.startConversion(
+    { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/cleanup" },
+    nowMs,
+  );
+  const conversionId = started.conversion?.conversionId;
+  if (conversionId === undefined) {
+    throw new Error("Expected conversion");
+  }
+  await created.account.settleConversion(
+    conversionId,
+    readyOutcome(created.accountId, conversionId),
+    nowMs,
+    1,
+    [100, 100],
+  );
+  const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: created.accountId });
+  const prefix = `accounts/${created.accountId}/conversions/${conversionId}/`;
+  return { ...created, conversionId, storage, prefix };
+}
+
+async function readConversionRows(
+  storage: Awaited<ReturnType<typeof worker.getDurableObjectStorage>>,
+  conversionId: string,
+) {
+  const select = (table: string) =>
+    storage.exec(`SELECT * FROM ${table} WHERE conversion_id = ?`, conversionId);
+  return {
+    account_conversions: await select("account_conversions"),
+    audio_segments: await select("audio_segments"),
+    account_playback_positions: await select("account_playback_positions"),
+    pending_jobs: await select("pending_jobs"),
+  };
+}
+
+const NO_CONVERSION_ROWS = {
+  account_conversions: [],
+  audio_segments: [],
+  account_playback_positions: [],
+  pending_jobs: [],
+};
+
+test("a deleted conversion's cleanup drains its writers and removes its objects, owner and rows, then disarms the alarm", async () => {
+  const { account, accountId, conversionId, storage, prefix, registry } =
+    await startPreparedConversion();
+  expect(await registry.findConversionOwner(conversionId)).toEqual({ kind: "account", accountId });
+  await account.completeAudioSegment(conversionId, 0, 5_000, 1);
+  await account.savePlaybackPosition(conversionId, {
+    synchronizationUnitId: "unit-1",
+    offsetMilliseconds: 10,
+  });
+  // A writer whose put landed but whose acknowledgement was lost; cleanup drains it first.
+  const writerId = crypto.randomUUID();
+  const executionPrefix = prefix + "executions/1/";
+  const segmentKey = executionPrefix + "segment-0.mp3";
+  await account.registerArtifactWriter(writerId, 1, executionPrefix);
+  await account.beginArtifactEffect(writerId, "put:" + segmentKey);
+  await bindings.AUDIO_BUCKET.put(segmentKey, "audio", {
+    customMetadata: { "cup-writer-id": writerId },
+  });
+  await bindings.AUDIO_BUCKET.put(prefix + "cover.jpg", "cover");
+  const ledgerEntries = (await account.inspectAccounting()).entries;
+
+  expect(await account.deleteConversion(conversionId)).toEqual({ result: "marked" });
+  // The deletion arms the alarm to fire at once.
+  await expect.poll(() => account.firedAlarmsForTest()).toBeGreaterThan(0);
+
+  await account.reconcileForTest();
+
+  expect(await storage.exec("SELECT * FROM artifact_writers")).toEqual([]);
+  expect((await bindings.AUDIO_BUCKET.list({ prefix })).objects).toEqual([]);
+  expect(await registry.findConversionOwner(conversionId)).toBeUndefined();
+  expect(await readConversionRows(storage, conversionId)).toEqual(NO_CONVERSION_ROWS);
+  // The ledger keeps its history: only the release of the open hold was appended.
+  expect((await account.inspectAccounting()).entries).toBe(ledgerEntries + 1);
+  expect(await account.alarmForTest()).toBeNull();
+});
+
+test("the cleanup sweep pages past 1,000 objects and keeps a sibling conversion's objects", async () => {
+  const { account, accountId, conversionId, prefix } = await startPreparedConversion();
+  const keys = Array.from({ length: 1_001 }, (_, index) => `${prefix}executions/1/${index}.mp3`);
+  for (let start = 0; start < keys.length; start += 100) {
+    await Promise.all(
+      keys.slice(start, start + 100).map((key) => bindings.AUDIO_BUCKET.put(key, "audio")),
+    );
+  }
+  // Another conversion of the same account.
+  const siblingKey = `accounts/${accountId}/conversions/${crypto.randomUUID()}/audiobook.mp3`;
+  await bindings.AUDIO_BUCKET.put(siblingKey, "sibling");
+
+  await account.deleteConversion(conversionId);
+  await account.reconcileForTest();
+
+  expect((await bindings.AUDIO_BUCKET.list({ prefix })).objects).toEqual([]);
+  expect(await bindings.AUDIO_BUCKET.head(siblingKey)).not.toBeNull();
+});
+
+test("a failed owner removal keeps the owner and the marked row and stays armed, and the next pass completes", async () => {
+  const { account, accountId, conversionId, storage, prefix, registry } =
+    await startPreparedConversion();
+  await bindings.AUDIO_BUCKET.put(prefix + "audiobook.mp3", "audio");
+  await account.failNextOwnerRemovalForTest();
+  await account.deleteConversion(conversionId);
+
+  await account.reconcileForTest();
+
+  expect((await bindings.AUDIO_BUCKET.list({ prefix })).objects).toEqual([]);
+  expect(await registry.findConversionOwner(conversionId)).toEqual({ kind: "account", accountId });
+  expect(
+    await storage.exec(
+      "SELECT deleting_since_ms IS NOT NULL AS isMarked FROM account_conversions WHERE conversion_id = ?",
+      conversionId,
+    ),
+  ).toEqual([{ isMarked: 1 }]);
+  expect(await account.alarmForTest()).not.toBeNull();
+
+  await account.reconcileForTest();
+
+  expect(await registry.findConversionOwner(conversionId)).toBeUndefined();
+  expect(await readConversionRows(storage, conversionId)).toEqual(NO_CONVERSION_ROWS);
+  expect(await account.alarmForTest()).toBeNull();
+});
+
+test("a writer whose put never lands stalls the cleanup until the put lands", async () => {
+  const { account, accountId, conversionId, storage, prefix, registry } =
+    await startPreparedConversion();
+  const writerId = crypto.randomUUID();
+  const key = prefix + "executions/1/audiobook.mp3";
+  await account.prepareArtifactWrite(writerId, 1, prefix + "executions/1/", key);
+  const coverKey = prefix + "cover.jpg";
+  await bindings.AUDIO_BUCKET.put(coverKey, "cover");
+  await account.deleteConversion(conversionId);
+
+  await account.reconcileForTest();
+
+  expect(await bindings.AUDIO_BUCKET.head(coverKey)).not.toBeNull();
+  expect(await registry.findConversionOwner(conversionId)).toEqual({ kind: "account", accountId });
+  expect((await readConversionRows(storage, conversionId)).account_conversions).toHaveLength(1);
+  expect(await account.inspectArtifactWriters()).toHaveLength(1);
+  expect(await account.alarmForTest()).not.toBeNull();
+
+  await bindings.AUDIO_BUCKET.put(key, "audio", { customMetadata: { "cup-writer-id": writerId } });
+  await account.reconcileForTest();
+
+  expect((await bindings.AUDIO_BUCKET.list({ prefix })).objects).toEqual([]);
+  expect(await storage.exec("SELECT * FROM artifact_writers")).toEqual([]);
+  expect(await registry.findConversionOwner(conversionId)).toBeUndefined();
+  expect(await readConversionRows(storage, conversionId)).toEqual(NO_CONVERSION_ROWS);
+  expect(await account.alarmForTest()).toBeNull();
+});
+
+test("a marked conversion stays marked through a scheduled deletion and a recovery, then its cleanup finishes", async () => {
+  const { account, conversionId, storage, prefix, registry } = await startPreparedConversion();
+  await bindings.AUDIO_BUCKET.put(prefix + "audiobook.mp3", "audio");
+  await storage.exec(
+    "UPDATE account SET state = 'deletion_scheduled', recovery_deadline_ms = ? WHERE id = 1",
+    nowMs * 2,
+  );
+  await account.failNextOwnerRemovalForTest();
+  await account.deleteConversion(conversionId);
+
+  await account.reconcileForTest();
+  await storage.exec(
+    "UPDATE account SET state = 'active', recovery_deadline_ms = NULL WHERE id = 1",
+  );
+
+  expect(await account.getConversion(conversionId)).toBeUndefined();
+  expect((await readConversionRows(storage, conversionId)).account_conversions).toHaveLength(1);
+
+  await account.reconcileForTest();
+
+  expect(await registry.findConversionOwner(conversionId)).toBeUndefined();
+  expect(await readConversionRows(storage, conversionId)).toEqual(NO_CONVERSION_ROWS);
+  expect(await account.alarmForTest()).toBeNull();
+});
+
+test("account erasure overtakes a stalled conversion deletion and finishes without error", async () => {
+  const { account, accountId, subject, conversionId, storage, prefix, registry } =
+    await startPreparedConversion();
+  await bindings.AUDIO_BUCKET.put(prefix + "audiobook.mp3", "audio");
+  await account.failNextOwnerRemovalForTest();
+  await account.deleteConversion(conversionId);
+  await account.reconcileForTest();
+  expect(await registry.findConversionOwner(conversionId)).toEqual({ kind: "account", accountId });
+
+  const attemptId = crypto.randomUUID();
+  await storage.exec(
+    "INSERT INTO deletion_attempts VALUES (?, ?, 'scheduled', 1)",
+    attemptId,
+    JSON.stringify({
+      attemptId,
+      accountId,
+      subject,
+      email: "",
+      scheduledAtMs: 0,
+      deadlineMs: 0,
+      state: "scheduled",
+    }),
+  );
+  await storage.exec("UPDATE account SET state = 'deletion_scheduled', recovery_deadline_ms = 0");
+  await account.fenceDeletion(attemptId);
+  await account.eraseAccount(attemptId);
+  await account.reconcileForTest();
+
+  expect(
+    (await bindings.AUDIO_BUCKET.list({ prefix: `accounts/${accountId}/` })).objects,
+  ).toHaveLength(0);
+  expect(await registry.findConversionOwner(conversionId)).toBeUndefined();
+  expect(await storage.exec("SELECT * FROM account_conversions")).toEqual([]);
+  expect(await account.alarmForTest()).toBeNull();
+});
+
+test("a conversion marked while no alarm was armed is cleaned up once the account object starts", async () => {
+  const { account, accountId, conversionId, storage, prefix, registry } =
+    await startPreparedConversion();
+  await bindings.AUDIO_BUCKET.put(prefix + "audiobook.mp3", "audio");
+  // Marked the way a deletion did before the alarm cleaned up, which armed nothing.
+  await storage.exec(
+    "UPDATE account_conversions SET deleting_since_ms = ? WHERE conversion_id = ?",
+    nowMs,
+    conversionId,
+  );
+  await account.disarmForTest();
+  await expectWorkerRpcRejection(account.restartForTest());
+  const restarted = bindings.ACCOUNTS.get(bindings.ACCOUNTS.idFromName(accountId));
+
+  await expect.poll(() => restarted.firedAlarmsForTest()).toBeGreaterThan(0);
+  await restarted.reconcileForTest();
+
+  expect((await bindings.AUDIO_BUCKET.list({ prefix })).objects).toEqual([]);
+  expect(await registry.findConversionOwner(conversionId)).toBeUndefined();
+  expect(await readConversionRows(storage, conversionId)).toEqual(NO_CONVERSION_ROWS);
+});
+
+test("conversion deletions list each marked conversion with its marker time", async () => {
+  const { account } = await createAccount();
+  const conversionIds: string[] = [];
+  for (const sourceUrl of ["https://example.com/kept", "https://example.com/deleted"]) {
+    const started = await account.startConversion(
+      { idempotencyKey: crypto.randomUUID(), sourceUrl },
+      nowMs,
+    );
+    conversionIds.push(started.conversion?.conversionId ?? "");
+  }
+  const [keptConversionId, deletedConversionId] = conversionIds;
+  if (!keptConversionId || !deletedConversionId) {
+    throw new Error("Expected conversions");
+  }
+  expect(await account.inspectConversionDeletions()).toEqual([]);
+
+  await account.deleteConversion(deletedConversionId, nowMs + 1_000);
+
+  expect(await account.inspectConversionDeletions()).toEqual([
+    { conversionId: deletedConversionId, deletingSinceMs: nowMs + 1_000 },
+  ]);
+  expect((await account.history()).items.map((item) => item.conversionId)).toEqual([
+    keptConversionId,
+  ]);
+});

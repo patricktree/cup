@@ -13,6 +13,11 @@ export function PlaybackError({ player }: { player: Player }): React.ReactNode {
     return null;
   }
 
+  return <PlaybackErrorMessage message={message} />;
+}
+
+/** A playback failure without a loaded audiobook, such as a track that no longer exists. */
+export function PlaybackErrorMessage({ message }: { message: string }): React.JSX.Element {
   return (
     <p
       role="alert"

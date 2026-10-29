@@ -3,6 +3,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import React from "react";
 
 import { PlayerHostProvider } from "#src/app/player/player-host-provider.tsx";
+import { StatusAnnouncerProvider } from "#src/app/status-announcer.tsx";
 
 export const Route = createFileRoute("/_shell")({
   component: ShellLayout,
@@ -30,7 +31,9 @@ function ShellLayout() {
           isolation: isolate;
         `}
       >
-        <Outlet />
+        <StatusAnnouncerProvider>
+          <Outlet />
+        </StatusAnnouncerProvider>
       </div>
     </PlayerHostProvider>
   );

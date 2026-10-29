@@ -74,45 +74,88 @@ export const GatesNotesArticle = {
   ],
 } satisfies Story;
 
+const SECOND_CONVERSION_ID = "c4be3f43-4a43-4d6b-9a3f-6f0d2f6e2d51";
 const COVER_URL = `${window.location.origin}/__story/covers/detail.svg`;
 
 /** A signed-in listener opens a long audiobook with a cover. */
-export const AccountAudiobook = accountStory({
-  path: `/audiobooks/${GATES_NOTES_CONVERSION_ID}`,
+export const AccountAudiobook = createGatesNotesAccountStory({
+  items: [createRecentsItem(GATES_NOTES_CONVERSION_ID, gatesNotesAudiobook.title)],
+  nextCursor: null,
+});
+
+/**
+ * A signed-in listener opens a trial audiobook they can also open, such as one converted before
+ * signing in. Their account history does not list it.
+ */
+export const AccountOpensTrialAudiobook = createGatesNotesAccountStory({
+  items: [createRecentsItem(SECOND_CONVERSION_ID, "A second document about listening")],
+  nextCursor: null,
+});
+
+/** The audiobook is older than the first page of the account history lists. */
+export const AccountAudiobookOnLaterHistoryPage = accountStory({
+  path: `/audiobooks/${CONVERSION_ID}`,
   handlers: [
-    http.get(`/api/audiobooks/${GATES_NOTES_CONVERSION_ID}`, () =>
-      HttpResponse.json({
-        ...gatesNotesAudiobook,
-        status: "ready",
-        coverImage: { url: COVER_URL, alternativeText: "A person reading by a window" },
-        segments: gatesNotesAudiobook.narrationDocument.synchronizationUnits.map(
-          (_unit, sequence) => createReadySegment(sequence),
-        ),
-        narrationTrack: createStoryNarrationTrack(
-          gatesNotesAudiobook.narrationDocument.synchronizationUnits.map(
-            () => SEGMENT_DURATION_MILLISECONDS,
-          ),
-        ),
-      } satisfies Audiobook),
-    ),
-    http.get(
-      COVER_URL,
-      () =>
-        new HttpResponse(
-          '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect width="400" height="200" fill="#5b7f95"/><circle cx="200" cy="100" r="60" fill="#fff"/></svg>',
-          { headers: { "Content-Type": "image/svg+xml" } },
-        ),
+    http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(createAudiobook())),
+    http.get("/api/account/conversions", ({ request }) =>
+      HttpResponse.json(
+        new URL(request.url).searchParams.has("cursor")
+          ? {
+              items: [createRecentsItem(CONVERSION_ID, PREPARED_AUDIOBOOK.title)],
+              nextCursor: null,
+            }
+          : {
+              items: [createRecentsItem(SECOND_CONVERSION_ID, "A second document about listening")],
+              nextCursor: "later-page",
+            },
+      ),
     ),
     storyNarrationTrackHandler,
-    http.put(
-      `/api/audiobooks/${GATES_NOTES_CONVERSION_ID}/position`,
-      () => new HttpResponse(null, { status: 204 }),
-    ),
-    http.post(`/api/audiobooks/${GATES_NOTES_CONVERSION_ID}/retry`, () =>
-      HttpResponse.json({ result: "started" } satisfies RetryConversionResponse),
-    ),
   ],
 });
+
+function createGatesNotesAccountStory(recents: {
+  items: Record<string, unknown>[];
+  nextCursor: string | null;
+}) {
+  return accountStory({
+    path: `/audiobooks/${GATES_NOTES_CONVERSION_ID}`,
+    recents,
+    handlers: [
+      http.get(`/api/audiobooks/${GATES_NOTES_CONVERSION_ID}`, () =>
+        HttpResponse.json({
+          ...gatesNotesAudiobook,
+          status: "ready",
+          coverImage: { url: COVER_URL, alternativeText: "A person reading by a window" },
+          segments: gatesNotesAudiobook.narrationDocument.synchronizationUnits.map(
+            (_unit, sequence) => createReadySegment(sequence),
+          ),
+          narrationTrack: createStoryNarrationTrack(
+            gatesNotesAudiobook.narrationDocument.synchronizationUnits.map(
+              () => SEGMENT_DURATION_MILLISECONDS,
+            ),
+          ),
+        } satisfies Audiobook),
+      ),
+      http.get(
+        COVER_URL,
+        () =>
+          new HttpResponse(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect width="400" height="200" fill="#5b7f95"/><circle cx="200" cy="100" r="60" fill="#fff"/></svg>',
+            { headers: { "Content-Type": "image/svg+xml" } },
+          ),
+      ),
+      storyNarrationTrackHandler,
+      http.put(
+        `/api/audiobooks/${GATES_NOTES_CONVERSION_ID}/position`,
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+      http.post(`/api/audiobooks/${GATES_NOTES_CONVERSION_ID}/retry`, () =>
+        HttpResponse.json({ result: "started" } satisfies RetryConversionResponse),
+      ),
+    ],
+  });
+}
 
 /** The first response never arrives. */
 export const LoadingAudiobook = {
@@ -159,8 +202,6 @@ export const AudiobookLoadError = {
     ),
   ],
 } satisfies Story;
-
-const SECOND_CONVERSION_ID = "c4be3f43-4a43-4d6b-9a3f-6f0d2f6e2d51";
 
 /** A signed-in listener moves between an audiobook, Recents, and a second audiobook. */
 export const ListeningAcrossPages = createListeningAcrossPagesStory({
@@ -378,6 +419,166 @@ export const FailedConversion = {
     ),
   ],
 } satisfies Story;
+
+const PENDING_AUDIOBOOK = {
+  status: "pending",
+  originalUrl: "https://example.com/article",
+  canGenerate: true,
+} satisfies Audiobook;
+
+const FAILED_AUDIOBOOK = {
+  status: "failed",
+  originalUrl: "https://www.example.com/article",
+  canGenerate: true,
+  explanation: "Preparation failed. Retry to load this track.",
+} satisfies Audiobook;
+
+/** The account history of the stories below, which lists their conversion. */
+const ACCOUNT_HISTORY = {
+  items: [createRecentsItem(CONVERSION_ID, PREPARED_AUDIOBOOK.title)],
+  nextCursor: null,
+};
+
+/** A signed-in listener opens a conversion that is still preparing. */
+export const AccountPendingConversion = accountStory({
+  path: `/audiobooks/${CONVERSION_ID}`,
+  recents: ACCOUNT_HISTORY,
+  handlers: [
+    http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(PENDING_AUDIOBOOK)),
+  ],
+});
+
+/** A signed-in listener opens a conversion whose preparation failed. */
+export const AccountFailedConversion = accountStory({
+  path: `/audiobooks/${CONVERSION_ID}`,
+  recents: ACCOUNT_HISTORY,
+  handlers: [
+    http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(FAILED_AUDIOBOOK)),
+  ],
+});
+
+/** How the stories below answer the listener's request to delete the track. */
+type DeletionOutcome = "deleted" | "not-found" | "fails-once" | "never-answers";
+
+/**
+ * A signed-in listener deletes a ready track that Recents lists. Once the track is deleted, the
+ * audiobook and Recents no longer have it.
+ */
+function createDeletionStory(outcome: DeletionOutcome, audiobook: Audiobook = createAudiobook()) {
+  let isDeleted = false;
+  let deletionRequestCount = 0;
+  return accountStory({
+    path: `/audiobooks/${CONVERSION_ID}`,
+    handlers: [
+      http.get(`/api/audiobooks/${CONVERSION_ID}`, () =>
+        isDeleted ? trackNotFoundResponse() : HttpResponse.json(audiobook),
+      ),
+      http.get("/api/account/conversions", () =>
+        HttpResponse.json({
+          items: isDeleted
+            ? []
+            : [createRecentsItem(CONVERSION_ID, "A deterministic document about careful testing")],
+          nextCursor: null,
+        }),
+      ),
+      http.delete(`/api/account/conversions/${CONVERSION_ID}`, async ({ request }) => {
+        deletionRequestCount += 1;
+        // Tests that capture the player's audio element read what it held when the request was sent.
+        Object.assign(window, {
+          deletionRequest: {
+            contentType: request.headers.get("Content-Type"),
+            narrationAudioSrc:
+              "narrationAudio" in window && window.narrationAudio instanceof HTMLAudioElement
+                ? window.narrationAudio.src
+                : undefined,
+          },
+        });
+        if (outcome === "never-answers") {
+          await delay("infinite");
+        }
+        if (outcome === "fails-once" && deletionRequestCount === 1) {
+          return HttpResponse.json(
+            {
+              error: {
+                requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
+                code: "operational-error",
+                message: "The track could not be deleted.",
+              },
+            } satisfies ErrorResponse,
+            { status: 500 },
+          );
+        }
+        if (outcome === "not-found") {
+          return trackNotFoundResponse();
+        }
+        isDeleted = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+      storyNarrationTrackHandler,
+      http.put(
+        `/api/audiobooks/${CONVERSION_ID}/position`,
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    ],
+  });
+}
+
+export const DeleteTrack = createDeletionStory("deleted");
+/** The track was already deleted, for example on another device. */
+export const DeleteTrackAlreadyDeleted = createDeletionStory("not-found");
+export const DeleteTrackFailsOnce = createDeletionStory("fails-once");
+export const DeleteTrackNeverAnswers = createDeletionStory("never-answers");
+/** A pending track is deleted while the page polls it. */
+export const DeletePendingTrack = createDeletionStory("deleted", PENDING_AUDIOBOOK);
+
+/**
+ * The loaded narration track cannot be read, and requesting the audiobook again finds it gone, as
+ * after its deletion on another device.
+ */
+export const TrackGoneOnRenewal = accountStory({
+  path: `/audiobooks/${CONVERSION_ID}`,
+  handlers: (() => {
+    let requestCount = 0;
+    return [
+      http.get(`/api/audiobooks/${CONVERSION_ID}`, () => {
+        requestCount += 1;
+        if (requestCount > 1) {
+          return trackNotFoundResponse();
+        }
+        return HttpResponse.json({
+          ...PREPARED_AUDIOBOOK,
+          status: "ready",
+          segments: [0, 1, 2].map(createReadySegment),
+          narrationTrack: {
+            ...createStoryNarrationTrack([
+              SEGMENT_DURATION_MILLISECONDS,
+              SEGMENT_DURATION_MILLISECONDS,
+              SEGMENT_DURATION_MILLISECONDS,
+            ]),
+            url: `${window.location.origin}/__story/missing-narration-track.mp3`,
+          },
+        } satisfies Audiobook);
+      }),
+      http.get(
+        "/__story/missing-narration-track.mp3",
+        () => new HttpResponse(null, { status: 404 }),
+      ),
+    ];
+  })(),
+});
+
+function trackNotFoundResponse() {
+  return HttpResponse.json(
+    {
+      error: {
+        requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
+        code: "audiobook-not-found",
+        message: "Track not found.",
+      },
+    } satisfies ErrorResponse,
+    { status: 404 },
+  );
+}
 
 export const RetryRefused = {
   component: () => <GlobalProviders router={router} />,

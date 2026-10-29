@@ -43,8 +43,12 @@ export type Player = {
   replaceTrackUrl: (url: string) => void;
   /** Shows a failure that happened outside the player, until the next Play. */
   showError: (message: string) => void;
-  close: () => void;
+  /** Releases the element, saving the position unless told otherwise. */
+  close: (position?: PositionOnClose) => void;
 };
+
+/** `"discard"` skips saving the position, for a track that is deleted or no longer exists. */
+export type PositionOnClose = "save" | "discard";
 
 /** How far the −15 s and +15 s controls skip. */
 export const SKIP_MILLISECONDS = 15_000;
@@ -162,12 +166,14 @@ export class NarrationTrackPlayer implements Player {
   };
 
   /** Saves the position and releases the element, paused, for the host to reuse or empty. */
-  close = () => {
+  close = (position: PositionOnClose = "save") => {
     if (this.isClosed) {
       return;
     }
 
-    this.save("now", this.readPosition());
+    if (position === "save") {
+      this.save("now", this.readPosition());
+    }
     this.isClosed = true;
     for (const type of MEDIA_EVENT_TYPES) {
       this.element.removeEventListener(type, this.handleMediaEvent);

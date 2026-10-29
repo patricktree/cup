@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   accountAccountingInspectionSchema,
   accountArtifactWriterSchema,
+  accountConversionDeletionSchema,
   accountDurationBalanceSchema,
   accountHistoryPageSchema,
   accountSnapshotSchema,
@@ -28,6 +29,14 @@ export const uuidV4Schema = z
   .regex(LOWERCASE_UUID_V4_PATTERN, "Must be a lowercase UUIDv4");
 export const grantParamsSchema = z.object({ grantId: uuidV4Schema }).strict();
 export type GrantParams = z.infer<typeof grantParamsSchema>;
+export const conversionParamsSchema = z.object({ conversionId: uuidV4Schema }).strict();
+export type ConversionParams = z.infer<typeof conversionParamsSchema>;
+
+/** Names the account whose inspection shows the deleted conversion's cleanup. */
+export const deleteConversionResponseSchema = z
+  .object({ conversionId: uuidV4Schema, accountId: z.uuid() })
+  .strict();
+export type DeleteConversionResponse = z.infer<typeof deleteConversionResponseSchema>;
 
 export const createGrantRequestSchema = z
   .object({
@@ -130,6 +139,8 @@ export const ERROR_CODE = {
   ACCOUNT_UNAVAILABLE: "account-unavailable",
   ADJUSTMENT_EXCEEDS_AVAILABLE_DURATION: "adjustment-exceeds-available-duration",
   ALLOWANCE_BELOW_USED_DURATION: "allowance-below-used-duration",
+  CONVERSION_NOT_ACCOUNT_OWNED: "conversion-not-account-owned",
+  CONVERSION_NOT_FOUND: "conversion-not-found",
   GRANT_NOT_FOUND: "grant-not-found",
   IDEMPOTENCY_CONFLICT: "idempotency-conflict",
   INVALID_CURSOR: "invalid-cursor",
@@ -171,6 +182,7 @@ export const inspectAccountResponseSchema = z
     accounting: accountAccountingInspectionSchema,
     history: accountHistoryPageSchema,
     writers: z.array(accountArtifactWriterSchema),
+    conversionDeletions: z.array(accountConversionDeletionSchema),
   })
   .strict();
 export type InspectAccountResponse = z.infer<typeof inspectAccountResponseSchema>;

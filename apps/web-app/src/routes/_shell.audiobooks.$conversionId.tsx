@@ -1,7 +1,7 @@
 import { css } from "@linaria/core";
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, type ErrorComponentProps } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, type ErrorComponentProps } from "@tanstack/react-router";
 import React from "react";
 
 import type { Audiobook } from "@cup/listener-api.routes";
@@ -14,11 +14,13 @@ import { PLAYER_SHEET_HEIGHTS, PlayerSheet } from "#src/app/components/player-sh
 import { QueryBoundary, QueryErrorScreen } from "#src/app/components/query-boundary.js";
 import { DSButton } from "#src/app/design-system/button.js";
 import { DSCoverImage } from "#src/app/design-system/cover-image.js";
+import { DSDialog } from "#src/app/design-system/dialog.js";
 import { textStyles } from "#src/app/design-system/text-styles.js";
 import { interTypefaceScope } from "#src/app/global-styles.js";
 import { formatDuration } from "#src/app/player/playback-format.js";
 import type { PreparedAudiobook } from "#src/app/player/playback-session.js";
 import {
+  usePlayerHost,
   usePlayerState,
   useShownAudiobook,
   useShownConversion,
@@ -26,9 +28,16 @@ import {
 import type { LoadedAudiobook } from "#src/app/player/player-host.js";
 import { toPreparationPhaseLabel } from "#src/app/preparation-phase-label.js";
 import { toSourceHost } from "#src/app/source-host.js";
+import { useAnnounceStatus } from "#src/app/status-announcer.js";
 import { composeClassnames } from "#src/app/utils.ts";
 import { useAccountSession } from "#src/auth/hooks.js";
-import { createAudiobookQuery, useRetryConversion } from "#src/data-fetching/reader.js";
+import { useIsAccountConversion } from "#src/data-fetching/account-history.js";
+import {
+  createAudiobookQuery,
+  useDeleteConversion,
+  useRetryConversion,
+} from "#src/data-fetching/reader.js";
+import { describeError } from "#src/errors.js";
 
 export const Route = createFileRoute("/_shell/audiobooks/$conversionId")({
   component: AudiobookRoute,
@@ -100,31 +109,48 @@ function ReaderQueryError(props: ErrorComponentProps) {
 function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.Element {
   const session = useAccountSession();
   const backTo = useBackTarget();
-  const { data: audiobook } = useSuspenseQuery(createAudiobookQuery(conversionId));
+  const queryClient = useQueryClient();
+  const deletion = useTrackDeletion(conversionId);
+  // Trial conversions cannot be deleted, even by a signed-in listener who can open one.
+  const isDeletable = useIsAccountConversion(session?.user.id, conversionId);
+  const audiobookQuery = createAudiobookQuery(conversionId);
+  const { data: audiobook } = useSuspenseQuery(
+    // A poll during or after the deletion would find the track gone and report a failure.
+    deletion.isPollingStopped ? { ...audiobookQuery, refetchInterval: false } : audiobookQuery,
+  );
   // The top bar's "…" menu and the page's Retry buttons share one mutation, so a refused retry is
   // reported in the notices wherever it was started.
-  const retry = useRetryConversion(conversionId, useQueryClient());
+  const retry = useRetryConversion(conversionId, queryClient);
   const [isTitleScrolledAway, setIsTitleScrolledAway] = React.useState(false);
 
   const topBar = (
-    <DetailTopBar
-      backTo={backTo}
-      compactTitle={
-        "title" in audiobook
-          ? {
-              title: audiobook.title,
-              host: toSourceHost(audiobook.originalUrl),
-              isShown: isTitleScrolledAway,
-            }
-          : undefined
-      }
-      menu={{
-        originalUrl: audiobook.originalUrl,
-        retry: offersRetry(audiobook)
-          ? { isPending: retry.isPending, start: () => retry.mutate() }
-          : undefined,
-      }}
-    />
+    <>
+      <DetailTopBar
+        backTo={backTo}
+        compactTitle={
+          "title" in audiobook
+            ? {
+                title: audiobook.title,
+                host: toSourceHost(audiobook.originalUrl),
+                isShown: isTitleScrolledAway,
+              }
+            : undefined
+        }
+        menu={{
+          originalUrl: audiobook.originalUrl,
+          retry: offersRetry(audiobook)
+            ? { isPending: retry.isPending, start: () => retry.mutate() }
+            : undefined,
+          deletion: isDeletable ? { start: deletion.openDialog } : undefined,
+        }}
+      />
+      {/* Rendered into a portal, so its place here only ties it to the page's state. */}
+      <DeleteTrackDialog
+        deletion={deletion}
+        // Pending and failed tracks have no title yet; their page heads them with the host.
+        trackName={"title" in audiobook ? audiobook.title : toSourceHost(audiobook.originalUrl)}
+      />
+    </>
   );
 
   if (audiobook.status === "pending") {
@@ -188,6 +214,94 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
         onTitleScrolledAwayChange={setIsTitleScrolledAway}
       />
     </DetailLayout>
+  );
+}
+
+type TrackDeletion = ReturnType<typeof useTrackDeletion>;
+
+/** The delete dialog's state and the deletion it confirms, for the signed-in listener's track. */
+function useTrackDeletion(conversionId: string) {
+  const session = useAccountSession();
+  const host = usePlayerHost();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const announce = useAnnounceStatus();
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const mutation = useDeleteConversion({
+    subject: session?.user.id,
+    conversionId,
+    onDeleted: async () => {
+      // Replaces the detail entry, so Back cannot return to the deleted track.
+      await navigate({ to: "/recent", replace: true });
+      // Once the dialog is gone, which hides the rest of the page from screen readers while open.
+      announce("Track deleted.");
+    },
+  });
+
+  return {
+    isDialogOpen,
+    isPending: mutation.isPending,
+    error: mutation.error,
+    isPollingStopped: mutation.isPending || mutation.isSuccess,
+    openDialog: () => setIsDialogOpen(true),
+    closeDialog: () => {
+      // Escape cannot abandon a deletion that runs.
+      if (mutation.isPending) {
+        return;
+      }
+      setIsDialogOpen(false);
+      mutation.reset();
+    },
+    confirm: () => {
+      // Before the request, so no part of the app plays the track while it is deleted.
+      host.release(conversionId);
+      void queryClient.cancelQueries({ queryKey: createAudiobookQuery(conversionId).queryKey });
+      mutation.mutate();
+    },
+  };
+}
+
+/** Confirms the deletion of the track; Cancel has the focus, as the safe choice. */
+function DeleteTrackDialog({
+  deletion,
+  trackName,
+}: {
+  deletion: TrackDeletion;
+  trackName: string;
+}): React.JSX.Element {
+  const cancelButtonRef = React.useRef<HTMLButtonElement>(null);
+  const error = deletion.error
+    ? describeError(deletion.error, "The track could not be deleted.")
+    : undefined;
+
+  return (
+    <DSDialog
+      role="alertdialog"
+      open={deletion.isDialogOpen}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          deletion.closeDialog();
+        }
+      }}
+      initialFocus={cancelButtonRef}
+      finalFocus={true}
+      title={<>Delete this track?</>}
+      description={
+        <>
+          &quot;{trackName}&quot; is removed from all your devices. This can&apos;t be undone. The
+          audio duration it used is not returned to your allowance.
+        </>
+      }
+      cancelButtonText={<>Cancel</>}
+      cancelButtonDisabled={deletion.isPending}
+      cancelButtonRef={cancelButtonRef}
+      buttonGroupChildren={
+        <DSButton variant="contained" disabled={deletion.isPending} onClick={deletion.confirm}>
+          {deletion.isPending ? "Deleting…" : "Delete track"}
+        </DSButton>
+      }
+      errorMessage={error && [error.title, error.detail].filter(Boolean).join(" ")}
+    />
   );
 }
 

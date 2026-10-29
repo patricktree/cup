@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { Temporal } from "temporal-polyfill";
 import { z } from "zod";
@@ -16,6 +16,7 @@ import { RollingLimits } from "@cup/rolling-limits";
 
 import {
   ACCOUNT_USAGE_PROJECTION_SCHEMA_VERSION,
+  accountConversionDeletionSchema,
   accountIdentitySchema,
   accountOutcomeSchema,
   startAccountConversionSchema,
@@ -23,6 +24,7 @@ import {
 import type {
   AccountAccountingInspection,
   AccountConversion,
+  AccountConversionDeletion,
   AccountConversionOutcome,
   AccountHistoryPage,
   AccountIdentity,
@@ -308,6 +310,9 @@ export class AccountSqlite {
 
   getPlaybackPosition(conversionId: string): PlaybackPosition | null {
     this.requireActive();
+    if (this.isMarkedForDeletion(conversionId)) {
+      return null;
+    }
     const row = this.database
       .select()
       .from(accountPlaybackPositions)
@@ -323,6 +328,9 @@ export class AccountSqlite {
 
   savePlaybackPosition(conversionId: string, position: PlaybackPosition) {
     this.requireActive();
+    if (this.isMarkedForDeletion(conversionId)) {
+      throw new Error("Account conversion does not exist");
+    }
     const parsed = playbackPositionSchema.parse(position);
     this.database
       .insert(accountPlaybackPositions)
@@ -339,7 +347,71 @@ export class AccountSqlite {
   }
 
   listAudioSegments(conversionId: string) {
+    if (this.isMarkedForDeletion(conversionId)) {
+      return [];
+    }
     return this.duration.segments(conversionId);
+  }
+
+  /**
+   * Sets the conversion deletion marker and releases the conversion's open reservations in one
+   * transaction, so no hold outlives the marker; settled segments stay charged. Returns the segment
+   * sequences whose workflows may still run.
+   */
+  markConversionDeletion(
+    conversionId: string,
+    nowMs: number,
+  ):
+    | { result: "marked"; segmentSequences: number[] }
+    | { result: "already-marked" | "not-found" | "account-unavailable" } {
+    z.number().int().nonnegative().safe().parse(nowMs);
+    return this.database.transaction(() => {
+      if (this.snapshot().state === "deleting") {
+        return { result: "account-unavailable" };
+      }
+
+      const row = this.readDeletionMarker(conversionId);
+      if (row === undefined) {
+        return { result: "not-found" };
+      }
+      if (row.deletingSinceMs !== null) {
+        return { result: "already-marked" };
+      }
+
+      this.database
+        .update(accountConversions)
+        .set({ deletingSinceMs: nowMs })
+        .where(eq(accountConversions.conversionId, conversionId))
+        .run();
+      this.duration.releaseReservations(conversionId, nowMs);
+      return {
+        result: "marked",
+        segmentSequences: this.duration.segments(conversionId).map((segment) => segment.sequence),
+      };
+    });
+  }
+
+  /**
+   * The last cleanup step deletes a marked conversion's rows in one transaction, the marked row
+   * last because the other rows reference it. Ledger history stays: segments only reference their
+   * credit operations. An unmarked conversion is never touched.
+   */
+  deleteMarkedConversionRows(conversionId: string): void {
+    this.database.transaction(() => {
+      if (!this.isMarkedForDeletion(conversionId)) {
+        return;
+      }
+      this.database.delete(audioSegments).where(eq(audioSegments.conversionId, conversionId)).run();
+      this.database
+        .delete(accountPlaybackPositions)
+        .where(eq(accountPlaybackPositions.conversionId, conversionId))
+        .run();
+      this.database.delete(pendingJobs).where(eq(pendingJobs.conversionId, conversionId)).run();
+      this.database
+        .delete(accountConversions)
+        .where(eq(accountConversions.conversionId, conversionId))
+        .run();
+    });
   }
 
   settleConversion(
@@ -459,15 +531,18 @@ export class AccountSqlite {
       })
       .from(accountConversions)
       .where(
-        cursor
-          ? or(
-              lt(accountConversions.createdAtMs, cursor.createdAtMs),
-              and(
-                eq(accountConversions.createdAtMs, cursor.createdAtMs),
-                lt(accountConversions.conversionId, cursor.conversionId),
-              ),
-            )
-          : undefined,
+        and(
+          isNull(accountConversions.deletingSinceMs),
+          cursor
+            ? or(
+                lt(accountConversions.createdAtMs, cursor.createdAtMs),
+                and(
+                  eq(accountConversions.createdAtMs, cursor.createdAtMs),
+                  lt(accountConversions.conversionId, cursor.conversionId),
+                ),
+              )
+            : undefined,
+        ),
       )
       .orderBy(desc(accountConversions.createdAtMs), desc(accountConversions.conversionId))
       .limit(51)
@@ -489,6 +564,24 @@ export class AccountSqlite {
     };
   }
 
+  /**
+   * Every conversion carrying the deletion marker, oldest marker first. Each still owes cleanup,
+   * and the alarm stays armed while any is listed.
+   */
+  conversionDeletions(): AccountConversionDeletion[] {
+    return this.database
+      .select({
+        conversionId: accountConversions.conversionId,
+        deletingSinceMs: accountConversions.deletingSinceMs,
+      })
+      .from(accountConversions)
+      .where(isNotNull(accountConversions.deletingSinceMs))
+      .orderBy(accountConversions.deletingSinceMs, accountConversions.conversionId)
+      .all()
+      .map((row) => accountConversionDeletionSchema.parse(row));
+  }
+
+  /** A conversion marked for deletion reads as missing, which also fences its execution. */
   getConversion(conversionId: string):
     | (AccountConversion & {
         outcome: AccountConversionOutcome | null;
@@ -498,7 +591,12 @@ export class AccountSqlite {
     const row = this.database
       .select()
       .from(accountConversions)
-      .where(eq(accountConversions.conversionId, conversionId))
+      .where(
+        and(
+          eq(accountConversions.conversionId, conversionId),
+          isNull(accountConversions.deletingSinceMs),
+        ),
+      )
       .get();
     if (!row) {
       return undefined;
@@ -521,6 +619,19 @@ export class AccountSqlite {
       .set({ state: "delivered" })
       .where(eq(pendingJobs.conversionId, conversionId))
       .run();
+  }
+
+  private isMarkedForDeletion(conversionId: string): boolean {
+    return (this.readDeletionMarker(conversionId)?.deletingSinceMs ?? null) !== null;
+  }
+
+  /** The conversion's deletion marker, or `undefined` when the account has no such conversion. */
+  private readDeletionMarker(conversionId: string) {
+    return this.database
+      .select({ deletingSinceMs: accountConversions.deletingSinceMs })
+      .from(accountConversions)
+      .where(eq(accountConversions.conversionId, conversionId))
+      .get();
   }
 
   private readIdentity(): Omit<AccountSnapshot, "balance"> | undefined {

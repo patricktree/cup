@@ -56,6 +56,18 @@ export const accountArtifactWriterSchema = z
   .strict();
 export type AccountArtifactWriter = z.infer<typeof accountArtifactWriterSchema>;
 
+/**
+ * A conversion carrying the deletion marker, for operator inspection. See
+ * docs/architecture/conversion-deletion.md.
+ */
+export const accountConversionDeletionSchema = z
+  .object({
+    conversionId: z.string(),
+    deletingSinceMs: z.number().int().nonnegative().safe(),
+  })
+  .strict();
+export type AccountConversionDeletion = z.infer<typeof accountConversionDeletionSchema>;
+
 /** Increases when a projected field changes meaning, so the registry can tell older projections. */
 export const ACCOUNT_USAGE_PROJECTION_SCHEMA_VERSION = 1;
 

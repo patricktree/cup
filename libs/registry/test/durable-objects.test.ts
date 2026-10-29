@@ -455,6 +455,24 @@ describe("SQLite conversion grant Registry Durable Object", () => {
     expect(secondPage.grants).toHaveLength(1);
     expect(secondPage.grants[0]?.grantId).not.toBe(firstPage.grants[0]?.grantId);
   });
+
+  test("removing a conversion owner is idempotent and keeps every other owner", async () => {
+    const registry = registryStub("registry-owner-removal");
+    const accountOwner = { kind: "account", accountId: crypto.randomUUID() } as const;
+    const trialOwner = { kind: "trial", grantId: crypto.randomUUID() } as const;
+    const [removed, kept, trial] = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
+    await registry.bindConversionOwner(removed, accountOwner);
+    await registry.bindConversionOwner(kept, accountOwner);
+    await registry.bindConversionOwner(trial, trialOwner);
+
+    await registry.removeConversionOwner(removed);
+    await registry.removeConversionOwner(removed);
+    await registry.removeConversionOwner(trial);
+
+    expect(await registry.findConversionOwner(removed)).toBeUndefined();
+    expect(await registry.findConversionOwner(kept)).toEqual(accountOwner);
+    expect(await registry.findConversionOwner(trial)).toEqual(trialOwner);
+  });
 });
 
 function grantStub(name: string) {

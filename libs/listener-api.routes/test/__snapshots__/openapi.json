@@ -3068,6 +3068,527 @@
         }
       }
     },
+    "/api/account/conversions/{conversionId}": {
+      "delete": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "required": true,
+            "name": "conversionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            },
+            "required": true,
+            "name": "x-create-audiobook-from-url-request",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Conversion deleted, or its deletion is already under way."
+          },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account or origin blocked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not a conversion of this account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Operational error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Account setup unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "account-blocked",
+                            "account-session-required",
+                            "account-setup-pending",
+                            "account-start-conflict",
+                            "audiobook-not-found",
+                            "confirmation-unavailable",
+                            "cover-image-not-found",
+                            "credits-unavailable",
+                            "dependency-unavailable",
+                            "fresh-auth-required",
+                            "grant-exhausted",
+                            "grant-expired",
+                            "grant-revoked",
+                            "grant-session-invalid",
+                            "grant-session-required",
+                            "grant-temporarily-full",
+                            "idempotency-conflict",
+                            "ingress-unavailable",
+                            "invalid-credential",
+                            "invalid-input",
+                            "media-url-invalid",
+                            "method-not-allowed",
+                            "narration-track-not-found",
+                            "not-found",
+                            "operational-error",
+                            "origin-blocked",
+                            "origin-forbidden",
+                            "range-not-satisfiable",
+                            "rate-limited",
+                            "request-too-large",
+                            "start-rate-limited",
+                            "unsupported-media-type"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "requestId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/grants/{grantId}/sessions": {
       "post": {
         "parameters": [

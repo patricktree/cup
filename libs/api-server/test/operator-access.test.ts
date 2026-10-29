@@ -3,6 +3,7 @@ import { expect, test, vi } from "vitest";
 import type {
   AccountAccountingInspection,
   AccountArtifactWriter,
+  AccountConversionDeletion,
   AccountHistoryPage,
   AccountSnapshot,
 } from "@cup/accounts/contracts";
@@ -38,6 +39,7 @@ const inspection: {
   accounting: AccountAccountingInspection;
   history: AccountHistoryPage;
   writers: AccountArtifactWriter[];
+  conversionDeletions: AccountConversionDeletion[];
 } = {
   account: {
     accountId,
@@ -120,6 +122,9 @@ const inspection: {
       effect: "put:manifest.json",
     },
   ],
+  conversionDeletions: [
+    { conversionId: "3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f", deletingSinceMs: 1_767_225_600_000 },
+  ],
 };
 const deletions: ListAccountDeletionsResponse = {
   attempts: [
@@ -159,7 +164,18 @@ const projectedIdentity = {
   },
 } as const;
 
+type DeleteConversionResult = {
+  result: "marked" | "already-marked" | "not-found" | "account-unavailable";
+};
+type ConversionOwner = { kind: "trial"; grantId: string } | { kind: "account"; accountId: string };
+
 function fixture() {
+  const deleteConversion = vi.fn<(id: string) => Promise<DeleteConversionResult>>(async () => ({
+    result: "marked",
+  }));
+  const findConversionOwner = vi.fn<(id: string) => Promise<ConversionOwner | undefined>>(
+    async () => ({ kind: "account", accountId }),
+  );
   const readAccount = vi.fn<() => Promise<AccountSnapshot>>(async () => inspection.account);
   const adjustAllowance = vi.fn<
     (requestId: string, amount: number, cause: string) => Promise<void>
@@ -182,7 +198,9 @@ function fixture() {
         inspectAccounting: async () => inspection.accounting,
         history: async () => inspection.history,
         inspectArtifactWriters: async () => inspection.writers,
+        inspectConversionDeletions: async () => inspection.conversionDeletions,
         adjustAllowance,
+        deleteConversion,
       }),
     },
     REGISTRY: {
@@ -192,13 +210,14 @@ function fixture() {
         deletionReceipts: async () => deletions.receipts,
         listAccounts,
         findAccount,
+        findConversionOwner,
       }),
     },
   };
   if (!isFixtureEnvironment(env)) {
     throw new Error("Invalid operator fixture");
   }
-  return { env, readAccount, adjustAllowance, listAccounts };
+  return { env, readAccount, adjustAllowance, listAccounts, deleteConversion, findConversionOwner };
 }
 
 function adjustmentRequest(body: unknown, id = accountId) {
@@ -206,6 +225,14 @@ function adjustmentRequest(body: unknown, id = accountId) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+  });
+}
+
+function deleteConversionRequest(id = conversionId) {
+  return new Request(`https://cup.audio/api/operator/conversions/${id}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
   });
 }
 
@@ -400,6 +427,79 @@ test("account listing and adjustment remain behind operator authentication", asy
   ).toBe(401);
   expect(listAccounts).not.toHaveBeenCalled();
   expect(adjustAllowance).not.toHaveBeenCalled();
+});
+
+test("deletes an account-owned conversion with 200 and names the owning account, also on a repeat", async () => {
+  const { env, deleteConversion, findConversionOwner } = fixture();
+  const app = createApiServer({ validateOperatorAccess: async () => true });
+
+  const first = await app.request(deleteConversionRequest(), {}, env);
+  expect(first.status).toBe(200);
+  expect(await first.json()).toStrictEqual({ conversionId, accountId });
+
+  deleteConversion.mockResolvedValueOnce({ result: "already-marked" });
+  const repeat = await app.request(deleteConversionRequest(), {}, env);
+  expect(repeat.status).toBe(200);
+  expect(await repeat.json()).toStrictEqual({ conversionId, accountId });
+
+  expect(findConversionOwner).toHaveBeenCalledWith(conversionId);
+  expect(deleteConversion).toHaveBeenCalledTimes(2);
+  expect(deleteConversion).toHaveBeenCalledWith(conversionId);
+});
+
+test("refuses to delete a conversion without an owner or with a trial owner", async () => {
+  const { env, deleteConversion, findConversionOwner } = fixture();
+  const app = createApiServer({ validateOperatorAccess: async () => true });
+
+  findConversionOwner.mockResolvedValueOnce(undefined);
+  const unknown = await app.request(deleteConversionRequest(), {}, env);
+  expect(unknown.status).toBe(404);
+  expect(await unknown.json()).toMatchObject({ error: { code: "conversion-not-found" } });
+
+  findConversionOwner.mockResolvedValueOnce({
+    kind: "trial",
+    grantId: "0b8d3e8c-7f43-4c56-8e57-30cbb1ad7b1e",
+  });
+  const trial = await app.request(deleteConversionRequest(), {}, env);
+  expect(trial.status).toBe(409);
+  expect(await trial.json()).toMatchObject({ error: { code: "conversion-not-account-owned" } });
+
+  expect(deleteConversion).not.toHaveBeenCalled();
+});
+
+test.each([
+  ["account-unavailable", 404, "account-unavailable"],
+  ["not-found", 404, "conversion-not-found"],
+] as const)("maps the account's %s deletion result to %i %s", async (result, status, code) => {
+  const { env, deleteConversion } = fixture();
+  deleteConversion.mockResolvedValueOnce({ result });
+  const app = createApiServer({ validateOperatorAccess: async () => true });
+
+  const response = await app.request(deleteConversionRequest(), {}, env);
+
+  expect(response.status).toBe(status);
+  expect(await response.json()).toMatchObject({ error: { code } });
+});
+
+test("conversion deletion stays behind operator authentication and rejects invalid IDs and methods", async () => {
+  const { env, deleteConversion, findConversionOwner } = fixture();
+  const denied = createApiServer({ validateOperatorAccess: async () => false });
+  expect((await denied.request(deleteConversionRequest(), {}, env)).status).toBe(401);
+
+  const app = createApiServer({ validateOperatorAccess: async () => true });
+  expect((await app.request(deleteConversionRequest("not-a-uuid"), {}, env)).status).toBe(400);
+  expect(
+    (
+      await app.request(
+        `https://cup.audio/api/operator/conversions/${conversionId}`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
+        env,
+      )
+    ).status,
+  ).toBe(405);
+
+  expect(findConversionOwner).not.toHaveBeenCalled();
+  expect(deleteConversion).not.toHaveBeenCalled();
 });
 
 test("accepts the local operator token on loopback URLs", () => {

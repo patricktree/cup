@@ -378,6 +378,8 @@ test("the top bar's menu opens the original page", async ({ mount, page }) => {
     "https://www.gatesnotes.com/a-turbulent-ai-era-and-critical-choices-to-make",
   );
   await expect(openOriginal).toHaveAttribute("target", "_blank");
+  // Offered once the account history lists the track.
+  await expect(page.getByRole("menuitem", { name: "Delete track…" })).toBeVisible();
   // Every segment has audio, so there is nothing to retry.
   await expect(page.getByRole("menuitem", { name: "Retry", exact: true })).toHaveCount(0);
   await expect(page).toHaveScreenshot("menu-open.png");
@@ -435,6 +437,237 @@ test("the top bar's menu offers no Retry when the audiobook cannot generate", as
 
   await expect(page.getByRole("menuitem", { name: "Open original page" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Retry", exact: true })).toHaveCount(0);
+});
+
+for (const [status, story] of [
+  ["pending", "AccountPendingConversion"],
+  ["ready", "AccountAudiobook"],
+  ["failed", "AccountFailedConversion"],
+] as const) {
+  test(`the top bar's menu ends with a destructive Delete track… for a ${status} track`, async ({
+    mount,
+    page,
+  }) => {
+    const component = await mount(`routes/_shell.audiobooks.$conversionId/${story}`);
+    await component.getByRole("button", { name: "More", exact: true }).click();
+
+    const items = page.getByRole("menuitem");
+    await expect(items.last()).toHaveText("Delete track…");
+    const [deleteColor, errorColor] = await items.last().evaluate((item) => [
+      getComputedStyle(item).color,
+      // Resolves the error token to the same color notation as the item's computed color.
+      (() => {
+        const probe = document.createElement("span");
+        probe.style.color = "var(--color-error)";
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      })(),
+    ]);
+    expect(deleteColor).toBe(errorColor);
+  });
+}
+
+test("a trial audiobook's menu offers no Delete track…", async ({ mount, page }) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/ReadyAudiobook");
+  await component.getByRole("button", { name: "More", exact: true }).click();
+
+  await expect(page.getByRole("menuitem", { name: "Open original page" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Delete track…" })).toHaveCount(0);
+});
+
+test("a signed-in listener's menu offers no Delete track… for a trial audiobook", async ({
+  mount,
+  page,
+}) => {
+  const historyResponse = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/account/conversions",
+  );
+  const component = await mount(
+    "routes/_shell.audiobooks.$conversionId/AccountOpensTrialAudiobook",
+  );
+  await historyResponse;
+  await component.getByRole("button", { name: "More", exact: true }).click();
+
+  await expect(page.getByRole("menuitem", { name: "Open original page" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Delete track…" })).toHaveCount(0);
+});
+
+test("the top bar's menu offers Delete track… for a track on a later page of the account history", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount(
+    "routes/_shell.audiobooks.$conversionId/AccountAudiobookOnLaterHistoryPage",
+  );
+  await component.getByRole("button", { name: "More", exact: true }).click();
+
+  await expect(page.getByRole("menuitem", { name: "Delete track…" })).toBeVisible();
+});
+
+test("Delete track… asks first, starts on Cancel, and Escape keeps the track", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/DeleteTrack");
+  const more = component.getByRole("button", { name: "More", exact: true });
+  await more.click();
+  await page.getByRole("menuitem", { name: "Delete track…" }).click();
+
+  const dialog = page.getByRole("alertdialog", { name: "Delete this track?" });
+  await expect(dialog).toHaveAccessibleDescription(
+    `"A deterministic document about careful testing" is removed from all your devices. This can't be undone. The audio duration it used is not returned to your allowance.`,
+  );
+  await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
+  await expect(dialog.getByRole("button", { name: "Delete track", exact: true })).toBeEnabled();
+  await expect(page).toHaveScreenshot("delete-track-dialog.png");
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(more).toBeFocused();
+  await expect(
+    component.getByRole("heading", { name: "A deterministic document about careful testing" }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => "deletionRequest" in window)).toBe(false);
+});
+
+test("a pending or failed track is named by its source host in the delete dialog", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/AccountFailedConversion");
+  await component.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete track…" }).click();
+
+  await expect(
+    page.getByRole("alertdialog", { name: "Delete this track?" }),
+  ).toHaveAccessibleDescription(/^"example\.com" is removed from all your devices\./);
+});
+
+test("deleting a track unloads the player first, then lands on Recents without it", async ({
+  mount,
+  page,
+}) => {
+  await captureNarrationAudio(page);
+  const component = await mount("routes/_shell.audiobooks.$conversionId/DeleteTrack");
+  // The account story mounts the shell, and with it the player's audio element, once signed in.
+  await expect(
+    component.getByRole("heading", { name: "A deterministic document about careful testing" }),
+  ).toBeVisible();
+  await expect.poll(async () => (await readNarrationAudio(page)).src).toContain("audiobook=story");
+
+  await component.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete track…" }).click();
+  await page
+    .getByRole("alertdialog", { name: "Delete this track?" })
+    .getByRole("button", { name: "Delete track", exact: true })
+    .click();
+
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+  await expect(component.getByRole("status").filter({ hasText: "Track deleted." })).toHaveCount(1);
+  // Recents is empty once the deleted track is gone from it.
+  await expect(component.getByRole("link", { name: "Add your first track" })).toBeVisible();
+  expect(await page.evaluate((): unknown => Reflect.get(window, "deletionRequest"))).toEqual(
+    // The session-mutation guard of the API refuses a request without a JSON content type.
+    { contentType: "application/json", narrationAudioSrc: "" },
+  );
+  // Deleting replaced the detail entry, so Back cannot return to it.
+  await page.evaluate(() => {
+    const goBack: unknown = Reflect.get(window, "goBackInAccountStory");
+    if (typeof goBack !== "function") {
+      throw new TypeError("The account story offers no Back");
+    }
+    Reflect.apply(goBack, window, []);
+  });
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+  await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(0);
+});
+
+test("a track already deleted elsewhere counts as deleted", async ({ mount, page }) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/DeleteTrackAlreadyDeleted");
+  await component.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete track…" }).click();
+  await page.getByRole("button", { name: "Delete track", exact: true }).click();
+
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+  await expect(component.getByRole("status").filter({ hasText: "Track deleted." })).toHaveCount(1);
+  await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(0);
+});
+
+test("while the deletion runs both buttons are disabled and the dialog stays open", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/DeleteTrackNeverAnswers");
+  await component.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete track…" }).click();
+  const dialog = page.getByRole("alertdialog", { name: "Delete this track?" });
+  await dialog.getByRole("button", { name: "Delete track", exact: true }).click();
+
+  await expect(dialog.getByRole("button", { name: "Deleting…", exact: true })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeVisible();
+});
+
+test("a failed deletion keeps the dialog open with an inline error, the player unloaded, and allows a retry", async ({
+  mount,
+  page,
+}) => {
+  await captureNarrationAudio(page);
+  const component = await mount("routes/_shell.audiobooks.$conversionId/DeleteTrackFailsOnce");
+  // The account story mounts the shell, and with it the player's audio element, once signed in.
+  await expect(
+    component.getByRole("heading", { name: "A deterministic document about careful testing" }),
+  ).toBeVisible();
+  await expect.poll(async () => (await readNarrationAudio(page)).src).toContain("audiobook=story");
+  await component.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete track…" }).click();
+  const dialog = page.getByRole("alertdialog", { name: "Delete this track?" });
+  await dialog.getByRole("button", { name: "Delete track", exact: true }).click();
+
+  await expect(dialog.getByRole("alert")).toHaveText("The track could not be deleted.");
+  await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeEnabled();
+  // The failure is shown in the dialog only: no toast opens.
+  await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(1);
+  expect((await readNarrationAudio(page)).src).toBe("");
+
+  await dialog.getByRole("button", { name: "Delete track", exact: true }).click();
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+});
+
+test("a pending track is deleted without its polling showing the deletion as an error", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/DeletePendingTrack");
+  await component.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete track…" }).click();
+  await page.getByRole("button", { name: "Delete track", exact: true }).click();
+
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+  await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(0);
+});
+
+test("a track found gone when its audio is requested again is unloaded and reported", async ({
+  mount,
+  page,
+}) => {
+  await captureNarrationAudio(page);
+  const component = await mount("routes/_shell.audiobooks.$conversionId/TrackGoneOnRenewal");
+  const playerSheet = component.getByRole("contentinfo", { name: "Player" });
+  await expect(playerSheet.getByRole("alert")).toHaveText(
+    "Audio could not be played. Press Play to try again.",
+  );
+
+  await playerSheet.getByRole("button", { name: "Play", exact: true }).click();
+
+  await expect(playerSheet.getByRole("alert")).toHaveText("This track is no longer available.");
+  await expect(playerSheet.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
+  expect((await readNarrationAudio(page)).src).toBe("");
+  // The player reports it in place: no toast opens.
+  await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(0);
 });
 
 test("shows generation progress and keeps Play disabled while audio is generated", async ({
