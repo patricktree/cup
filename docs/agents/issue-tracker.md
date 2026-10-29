@@ -2,30 +2,53 @@
 
 Cup tracks work in two places, split by what an issue is:
 
-| Tracker                                                                         | Holds                                                                                                     | Access                |
-| ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------- |
-| Linear: team `CUP` in the [`cup-audio`](https://linear.app/cup-audio) workspace | The backlog: feature requests, improvements and bugs, until one is picked up as a wayfinder map or a spec | The Linear MCP server |
-| GitHub Issues in [`patricktree/cup`](https://github.com/patricktree/cup/issues) | Wayfinder maps and their decision tickets, specs, and implementation tickets                              | The `gh` CLI          |
+| Tracker                                                                         | Holds                                                                                                                               | Access                |
+| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| Linear: team `CUP` in the [`cup-audio`](https://linear.app/cup-audio) workspace | Feature requests, bugs, design changes and other product and maintenance work, with their status from backlog through production QA | The Linear MCP server |
+| GitHub Issues in [`patricktree/cup`](https://github.com/patricktree/cup/issues) | Wayfinder maps and their decision tickets, specs, and implementation tickets                                                        | The `gh` CLI          |
 
 Local `.scratch/` maps are for throwaway work only; anything a later ADR or landing needs to cite goes on GitHub.
 
 ## Which tracker
 
 - **GitHub**: everything `/wayfinder`, `/to-spec`, `/to-tickets` and `/implement-spec` create, read or close.
-- **Linear**: everything else, including `/triage`, a new feature request, improvement or bug, a follow-up noticed in passing, and the findings of the [wiki health review](domain.md#review-the-wikis-health).
+- **Linear**: everything else, including `/triage`, a new feature request, bug, design change or maintenance task, a follow-up noticed in passing, and the findings of the [wiki health review](domain.md#review-the-wikis-health).
 
 ## Linear
 
-Fetch the team's labels, projects, statuses and members when you need them (`list_issue_labels`, `list_projects` and `list_issue_statuses` with team `CUP`; `list_users`); they change, so this file names none of them. Choose from what exists, and ask before creating a label or project, except the triage labels in [triage-labels.md](triage-labels.md).
+Fetch the team's labels, projects and members when you need them (`list_issue_labels` and `list_projects` with team `CUP`; `list_users`); they change, so this file names only the structure they follow. Choose from what exists, and ask before creating a label or project, except the triage labels in [triage-labels.md](triage-labels.md).
 
-- **Create an issue**: `save_issue` with team `CUP`, a title and a Markdown description. Add the type label that fits, and a project when one fits; new issues start in the team's backlog status.
+Each issue is sorted along three dimensions:
+
+| Dimension     | Stored as                                                                                                      | The issue gets                                                                                                 |
+| ------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Type          | A label in the single-select `Type` group                                                                      | The kind of work it is, such as `Feature`, `Bug`, `UI/UX Design` or `Documentation`                            |
+| Release scope | A project per release, such as `MVP` for what must ship before the public launch and `Post-MVP` for what waits | The release it must ship in; ask when that is unclear                                                          |
+| Product area  | A label in the single-select `Product Area` group                                                              | The part of the product it serves, such as `Conversion` or `Listening`; none for work that spans the whole app |
+
+An issue moves through the team's statuses in this order:
+
+| Status             | The issue                                                    |
+| ------------------ | ------------------------------------------------------------ |
+| `Draft`            | Waits to be picked up, or for its map or spec to be written  |
+| `Ready`            | Has a finished spec, but isn't picked for a build yet        |
+| `Queued4Execution` | Is picked as one of the next builds                          |
+| `In Execution`     | Is being built                                               |
+| `Ready4Rollout`    | Has its build merged to `main` and waits for a deploy        |
+| `Ready4QA`         | Is deployed and waits for a check in production              |
+| `Done`             | Passed that check, or closed without a build                 |
+| `Canceled`         | Won't be done; `Duplicate` marks an issue another one covers |
+
+`Draft` and `Ready` belong to Linear's Backlog category, so the team's Backlog view lists both; `Queued4Execution` and the statuses after it appear in its Active view until `Done`.
+
+- **Create an issue**: `save_issue` with team `CUP`, a title and a Markdown description. Sort it by the three dimensions above; new issues start in `Draft`.
 - **Read an issue**: `get_issue` with its identifier (`CUP-<n>`), plus `list_comments` for its comments.
 - **List issues**: `list_issues` with team `CUP` and `state`, `label` or `project` filters.
 - **Comment**: `save_comment` with `issueId`.
 - **Apply / remove labels**: `save_issue` with `addLabels` / `removeLabels`.
 - **Relate or block**: `save_issue` with `relatedTo`, `blockedBy` or `blocks`.
 - **Link a GitHub issue**: `save_issue` with `links: [{url, title}]`.
-- **Close**: comment the reason, then `save_issue` with `state` set to the team's completed status, or its canceled status when the issue won't be done.
+- **Move or close**: `save_issue` with `state` set to the status name. Before `Done` without a build, `Canceled` or `Duplicate`, comment the reason.
 
 ## GitHub
 
@@ -56,8 +79,10 @@ GitHub shares one number space across issues and PRs, so a bare `#42` may be eit
 When a Linear issue is picked up as a wayfinder map or a spec:
 
 1. The GitHub issue's context names the Linear issue and links it.
-2. The Linear issue gets a link to the GitHub issue and moves to the team's started status.
-3. When the spec's build is merged, or the map closes without a build, close the Linear issue as completed, with a comment that links the outcome.
+2. The Linear issue gets a link to the GitHub issue and stays in `Draft` while the map or spec is written.
+3. When the spec is finished, the Linear issue moves to `Ready`, to `Queued4Execution` when it is picked as one of the next builds, and to `In Execution` when its build starts.
+4. When the spec's build is merged, the Linear issue moves to `Ready4Rollout`, with a comment that links the pull request. A [deploy](../production-configuration.md#deploy) moves it to `Ready4QA`, and a passed check in production moves it to `Done`.
+5. When the map closes without a build, close the Linear issue as `Done`, with a comment that links the outcome.
 
 ## When a skill says "publish to the issue tracker"
 
