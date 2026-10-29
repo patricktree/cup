@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import http from "node:http";
 import path from "node:path";
+import { Temporal } from "temporal-polyfill";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { z } from "zod";
 
@@ -15,7 +16,10 @@ const CREATED_AT = "2026-08-28T10:00:00Z";
 const EXPIRES_AT = "2026-11-26T10:00:00Z";
 const root = path.resolve(import.meta.dirname, "../../..");
 const cliPath = path.join(root, "apps/operator/src/cli.ts");
+const CONVERSION_ID = "f9cc2e59-46a3-4890-b923-bda04d03b4d0";
+const DELETED_CONVERSION_ID = "3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f";
 const adjustmentBodies: unknown[] = [];
+const conversionDeletionPaths: string[] = [];
 let server: http.Server;
 let operatorUrl: string;
 
@@ -146,6 +150,41 @@ describe("actual operator CLI process", () => {
     );
     expect(result.status).not.toBe(0);
     expect(adjustmentBodies).toEqual([]);
+  });
+
+  test("refuses to delete a conversion without --yes before contacting the API", async () => {
+    conversionDeletionPaths.length = 0;
+    const result = await runCli("conversion", "delete", CONVERSION_ID);
+    expect(result.status).not.toBe(0);
+    expect(conversionDeletionPaths).toEqual([]);
+  });
+
+  test("deletes a conversion and names it, its owning account, and where to follow cleanup", async () => {
+    conversionDeletionPaths.length = 0;
+    const result = await runCli("conversion", "delete", CONVERSION_ID, "--yes");
+    expect(result.status).toBe(0);
+    expect(conversionDeletionPaths).toEqual([`/api/operator/conversions/${CONVERSION_ID}`]);
+    expect(result.stdout).toContain(`Conversion ID: ${CONVERSION_ID}`);
+    expect(result.stdout).toContain(`Account ID: ${ACCOUNT_ID}`);
+    expect(result.stdout).toContain(`account inspect ${ACCOUNT_ID}`);
+  });
+
+  test("deletes a conversion in JSON mode", async () => {
+    const result = await runCli("--json", "conversion", "delete", CONVERSION_ID, "--yes");
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout) as unknown).toEqual({
+      conversionId: CONVERSION_ID,
+      accountId: ACCOUNT_ID,
+    });
+  });
+
+  test("shows each conversion deletion of an account with its marker time and age", async () => {
+    const result = await runCli("account", "inspect", ACCOUNT_ID);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Conversion deletions:");
+    expect(result.stdout).toContain(`Conversion ID: ${DELETED_CONVERSION_ID}`);
+    expect(result.stdout).toMatch(/deleting_since_ms: \d+/);
+    expect(result.stdout).toContain("Age (minutes): 90");
   });
 
   test("reports API refusals with the API error code and message", async () => {
@@ -282,6 +321,12 @@ function handleAccountRequest(
   if (method === "POST") {
     return handleAccountWrite(url, body, response);
   }
+  if (method === "DELETE" && url.pathname === `/api/operator/conversions/${CONVERSION_ID}`) {
+    conversionDeletionPaths.push(url.pathname);
+    response.writeHead(204, { "X-Account-Id": ACCOUNT_ID });
+    response.end();
+    return true;
+  }
   return false;
 }
 
@@ -312,6 +357,8 @@ function handleAccountRead(url: URL, response: http.ServerResponse): boolean {
     });
   } else if (url.pathname === "/api/operator/accounts/deletions") {
     send(response, 200, { attempts: [], receipts: [] });
+  } else if (url.pathname === `/api/operator/accounts/${ACCOUNT_ID}`) {
+    send(response, 200, accountInspectionFixture());
   } else if (url.pathname === `/api/operator/accounts/${GRANT_ID}`) {
     send(response, 404, {
       error: {
@@ -347,6 +394,31 @@ function grantFixture(state: "open" | "revoked") {
     state,
     duration: { availableMilliseconds: 5, reservedMilliseconds: 0, spentMilliseconds: 0 },
     conversions: [],
+  };
+}
+
+function accountInspectionFixture() {
+  const balance = { unit: "audio-millisecond", available: 1_800_000, reserved: 0 };
+  return {
+    account: {
+      accountId: ACCOUNT_ID,
+      subject: SUBJECT,
+      createdAtMs: 1,
+      state: "active",
+      executionEpoch: 1,
+      recoveryDeadlineMs: null,
+      balance,
+    },
+    accounting: { balance, reconstructed: { available: 1_800_000, reserved: 0 }, entries: 1 },
+    history: { items: [], nextCursor: null },
+    writers: [],
+    conversionDeletions: [
+      // Marked 90 minutes and a few seconds ago, so the age reads 90 minutes despite test latency.
+      {
+        conversionId: DELETED_CONVERSION_ID,
+        deletingSinceMs: Temporal.Now.instant().epochMilliseconds - 90 * 60_000 - 5_000,
+      },
+    ],
   };
 }
 

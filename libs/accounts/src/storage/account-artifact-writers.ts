@@ -135,7 +135,8 @@ export class AccountArtifactWriters {
   hasUndrainedConversionWriters(conversionId: string): boolean {
     const { accountId } = this.account();
     return this.writers().some(
-      (writer) => getAccountConversionIdFromArtifactPrefix(writer.prefix, accountId) === conversionId,
+      (writer) =>
+        getAccountConversionIdFromArtifactPrefix(writer.prefix, accountId) === conversionId,
     );
   }
 

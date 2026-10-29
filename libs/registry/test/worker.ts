@@ -62,10 +62,10 @@ export class AccountDispatchTestDurableObject extends BaseAccountDurableObject {
  * dispatch is accepted but never runs, so tests complete or release segments themselves.
  * Preparation dispatch fails until a test accepts it; accepted preparation never runs either.
  * Workflow instances report no status, so the alarm treats them as unreachable, and record each
- * termination attempt, which fails once a test asks for it.
- * An alarm the platform fires is only counted: tests run the alarm with `reconcileForTest()`, so a
- * pass never races the test. The registry passes through, except that removing a conversion owner
- * fails once when a test asks for it.
+ * termination attempt, which fails once a test asks for it. An alarm the platform fires is only
+ * counted: tests run the alarm with `reconcileForTest()`, so a pass never races the test. The
+ * registry passes through, except that removing a conversion owner fails once when a test asks for
+ * it.
  */
 export class AccountDurableObject extends BaseAccountDurableObject {
   private readonly workflows: WorkflowControl;

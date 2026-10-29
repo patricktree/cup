@@ -356,7 +356,7 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     await this.publishRegistryUsage();
     if (
       this.sqlite.snapshot().state === "active" &&
-      this.sqlite.conversionsMarkedForDeletion().length === 0 &&
+      this.sqlite.conversionDeletions().length === 0 &&
       this.lifecycle.outbox().length === 0 &&
       this.sqlite.unsettledConversions().length === 0 &&
       this.sqlite.reservedAudioSegments().length === 0 &&
@@ -373,7 +373,7 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
    */
   private async armCleanupOfDeletedConversions() {
     if (
-      this.sqlite.conversionsMarkedForDeletion().length > 0 &&
+      this.sqlite.conversionDeletions().length > 0 &&
       (await this.ctx.storage.getAlarm()) === null
     ) {
       await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds);
@@ -386,7 +386,7 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
    * failure never blocks another's. See docs/architecture/conversion-deletion.md.
    */
   private async cleanUpDeletedConversions() {
-    for (const { conversionId } of this.sqlite.conversionsMarkedForDeletion()) {
+    for (const { conversionId } of this.sqlite.conversionDeletions()) {
       try {
         await this.cleanUpDeletedConversion(conversionId);
       } catch {
@@ -654,6 +654,9 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
 
   inspectArtifactWriters() {
     return this.artifactWriters.writers();
+  }
+  inspectConversionDeletions() {
+    return this.sqlite.conversionDeletions();
   }
   pendingConversions() {
     return this.sqlite.pendingConversions();

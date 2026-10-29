@@ -1526,16 +1526,14 @@ async function readConversionRows(
   storage: Awaited<ReturnType<typeof worker.getDurableObjectStorage>>,
   conversionId: string,
 ) {
-  const rows: Record<string, unknown[]> = {};
-  for (const table of [
-    "account_conversions",
-    "audio_segments",
-    "account_playback_positions",
-    "pending_jobs",
-  ]) {
-    rows[table] = await storage.exec(`SELECT * FROM ${table} WHERE conversion_id = ?`, conversionId);
-  }
-  return rows;
+  const select = (table: string) =>
+    storage.exec(`SELECT * FROM ${table} WHERE conversion_id = ?`, conversionId);
+  return {
+    account_conversions: await select("account_conversions"),
+    audio_segments: await select("audio_segments"),
+    account_playback_positions: await select("account_playback_positions"),
+    pending_jobs: await select("pending_jobs"),
+  };
 }
 
 const NO_CONVERSION_ROWS = {
@@ -1753,4 +1751,30 @@ test("removing a conversion owner is idempotent and keeps every other owner", as
   expect(await registry.findConversionOwner(removed)).toBeUndefined();
   expect(await registry.findConversionOwner(kept)).toEqual(accountOwner);
   expect(await registry.findConversionOwner(trial)).toEqual(trialOwner);
+});
+
+test("conversion deletions list each marked conversion with its marker time", async () => {
+  const { account } = await createAccount();
+  const conversionIds: string[] = [];
+  for (const sourceUrl of ["https://example.com/kept", "https://example.com/deleted"]) {
+    const started = await account.startConversion(
+      { idempotencyKey: crypto.randomUUID(), sourceUrl },
+      nowMs,
+    );
+    conversionIds.push(started.conversion?.conversionId ?? "");
+  }
+  const [keptConversionId, deletedConversionId] = conversionIds;
+  if (!keptConversionId || !deletedConversionId) {
+    throw new Error("Expected conversions");
+  }
+  expect(await account.inspectConversionDeletions()).toEqual([]);
+
+  await account.deleteConversion(deletedConversionId, nowMs + 1_000);
+
+  expect(await account.inspectConversionDeletions()).toEqual([
+    { conversionId: deletedConversionId, deletingSinceMs: nowMs + 1_000 },
+  ]);
+  expect((await account.history()).items.map((item) => item.conversionId)).toEqual([
+    keptConversionId,
+  ]);
 });
