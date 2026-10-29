@@ -63,9 +63,14 @@ export class AccountDispatchTestDurableObject extends BaseAccountDurableObject {
  * Preparation dispatch fails until a test accepts it; accepted preparation never runs either.
  * Workflow instances report no status, so the alarm treats them as unreachable, and record each
  * termination attempt, which fails once a test asks for it.
+ * An alarm the platform fires is only counted: tests run the alarm with `reconcileForTest()`, so a
+ * pass never races the test. The registry passes through, except that removing a conversion owner
+ * fails once when a test asks for it.
  */
 export class AccountDurableObject extends BaseAccountDurableObject {
   private readonly workflows: WorkflowControl;
+  private readonly registryControl: { shouldNextOwnerRemovalFail: boolean };
+  private firedAlarms = 0;
 
   constructor(
     context: DurableObjectState,
@@ -75,6 +80,7 @@ export class AccountDurableObject extends BaseAccountDurableObject {
       AUDIO_BUCKET: R2Bucket;
     },
   ) {
+    const registryControl = { shouldNextOwnerRemovalFail: false };
     const workflows: WorkflowControl = {
       isPreparationAccepted: false,
       preparationCreations: [],
@@ -97,6 +103,28 @@ export class AccountDurableObject extends BaseAccountDurableObject {
     });
     super(context, {
       ...env,
+      REGISTRY: {
+        idFromName: (name) => env.REGISTRY.idFromName(name),
+        get: (id) => {
+          const registry = env.REGISTRY.get(id);
+          return {
+            bindConversionOwner: (conversionId, owner) =>
+              registry.bindConversionOwner(conversionId, owner),
+            acceptDeletionAttempt: (attempt) => registry.acceptDeletionAttempt(attempt),
+            removeAccountConversionOwners: (accountId) =>
+              registry.removeAccountConversionOwners(accountId),
+            applyAccountUsageProjection: (projection) =>
+              registry.applyAccountUsageProjection(projection),
+            removeConversionOwner: async (conversionId) => {
+              if (registryControl.shouldNextOwnerRemovalFail) {
+                registryControl.shouldNextOwnerRemovalFail = false;
+                throw new Error("Owner removal failed");
+              }
+              await registry.removeConversionOwner(conversionId);
+            },
+          };
+        },
+      },
       SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW: {
         create: async () => {},
         get: async (id) => controlledInstance(id),
@@ -112,6 +140,26 @@ export class AccountDurableObject extends BaseAccountDurableObject {
       },
     });
     this.workflows = workflows;
+    this.registryControl = registryControl;
+  }
+  override async alarm() {
+    this.firedAlarms += 1;
+  }
+  firedAlarmsForTest() {
+    return this.firedAlarms;
+  }
+  alarmForTest() {
+    return this.ctx.storage.getAlarm();
+  }
+  disarmForTest() {
+    return this.ctx.storage.deleteAlarm();
+  }
+  /** Resets the object; the next call constructs it again, as after an eviction. */
+  restartForTest() {
+    this.ctx.abort("Restarted by the test");
+  }
+  failNextOwnerRemovalForTest() {
+    this.registryControl.shouldNextOwnerRemovalFail = true;
   }
   acceptPreparationForTest() {
     this.workflows.isPreparationAccepted = true;
@@ -126,7 +174,7 @@ export class AccountDurableObject extends BaseAccountDurableObject {
     this.workflows.shouldTerminationFail = true;
   }
   reconcileForTest() {
-    return this.alarm();
+    return super.alarm();
   }
 }
 

@@ -56,6 +56,16 @@ export class RegistrySqlite {
       .run();
   }
 
+  /** Only account conversions are deleted one at a time, so a trial owner is never removed here. */
+  removeAccountConversionOwner(conversionId: string): void {
+    this.database
+      .delete(conversionOwners)
+      .where(
+        and(eq(conversionOwners.kind, "account"), eq(conversionOwners.conversionId, conversionId)),
+      )
+      .run();
+  }
+
   async load(): Promise<RegistryRecord> {
     const grants = this.database
       .select()

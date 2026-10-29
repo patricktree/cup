@@ -391,6 +391,47 @@ export class AccountSqlite {
     });
   }
 
+  /** Each marked conversion still owes cleanup, and the alarm stays armed while any is listed. */
+  conversionsMarkedForDeletion(): { conversionId: string; deletingSinceMs: number }[] {
+    return this.database
+      .select({
+        conversionId: accountConversions.conversionId,
+        deletingSinceMs: accountConversions.deletingSinceMs,
+      })
+      .from(accountConversions)
+      .where(isNotNull(accountConversions.deletingSinceMs))
+      .all()
+      .map(({ conversionId, deletingSinceMs }) => {
+        if (deletingSinceMs === null) {
+          throw new Error("A conversion marked for deletion has no marker");
+        }
+        return { conversionId, deletingSinceMs };
+      });
+  }
+
+  /**
+   * The last cleanup step deletes a marked conversion's rows in one transaction, the marked row
+   * last because the other rows reference it. Ledger history stays: segments only reference their
+   * credit operations. An unmarked conversion is never touched.
+   */
+  removeMarkedConversion(conversionId: string): void {
+    this.database.transaction(() => {
+      if (!this.isMarkedForDeletion(conversionId)) {
+        return;
+      }
+      this.database.delete(audioSegments).where(eq(audioSegments.conversionId, conversionId)).run();
+      this.database
+        .delete(accountPlaybackPositions)
+        .where(eq(accountPlaybackPositions.conversionId, conversionId))
+        .run();
+      this.database.delete(pendingJobs).where(eq(pendingJobs.conversionId, conversionId)).run();
+      this.database
+        .delete(accountConversions)
+        .where(eq(accountConversions.conversionId, conversionId))
+        .run();
+    });
+  }
+
   settleConversion(
     conversionId: string,
     outcome: AccountConversionOutcome,

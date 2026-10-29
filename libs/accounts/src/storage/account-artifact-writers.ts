@@ -131,6 +131,35 @@ export class AccountArtifactWriters {
       .all();
   }
 
+  /** Writer prefixes can be nested below the conversion prefix, such as an execution's prefix. */
+  hasUndrainedConversionWriters(conversionId: string): boolean {
+    const { accountId } = this.account();
+    return this.writers().some(
+      (writer) => getAccountConversionIdFromArtifactPrefix(writer.prefix, accountId) === conversionId,
+    );
+  }
+
+  /** Conversion deletion cleanup removes the conversion's drained writers once its prefix is swept. */
+  removeDrainedConversionWriters(conversionId: string): void {
+    const { accountId } = this.account();
+    this.database.transaction(() => {
+      const writers = this.database
+        .select({ writerId: artifactWriters.writerId, prefix: artifactWriters.prefix })
+        .from(artifactWriters)
+        .where(eq(artifactWriters.state, "drained"))
+        .all();
+      // One statement per writer: a conversion can have more writers than SQLite binds parameters.
+      for (const writer of writers) {
+        if (getAccountConversionIdFromArtifactPrefix(writer.prefix, accountId) === conversionId) {
+          this.database
+            .delete(artifactWriters)
+            .where(eq(artifactWriters.writerId, writer.writerId))
+            .run();
+        }
+      }
+    });
+  }
+
   private canWrite(account: AccountSnapshot, executionEpoch: number) {
     return (
       account.executionEpoch === executionEpoch &&

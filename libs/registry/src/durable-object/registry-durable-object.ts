@@ -649,6 +649,12 @@ export class RegistryDurableObject extends DurableObject<RegistryEnvironment> {
     this.sqlite.removeAccountConversionOwners(accountId);
   }
 
+  /** Conversion deletion cleanup removes one account conversion's owner; a repeat changes nothing. */
+  removeConversionOwner(conversionId: string) {
+    z.uuidv4().parse(conversionId);
+    this.sqlite.removeAccountConversionOwner(conversionId);
+  }
+
   async migrate(): Promise<number> {
     await this.sqlite.applyMigrations();
     return REGISTRY_SCHEMA_VERSION;

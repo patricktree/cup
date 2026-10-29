@@ -25,5 +25,5 @@ status: accepted
 - Workflows that outlive their termination fail their next authorization check, and their writes are fenced at writer registration.
 - Audio that reached R2 but was never settled is released, not charged; Cup absorbs its cost.
 - Deletion refunds nothing beyond releasing open holds, which follows from ADR 0003 and the [account conversion allowance](../GLOSSARY.md#account-conversion-allowance).
-- Cleanup of the conversion's writers, R2 prefix, registry ownership entry and rows runs only from the account alarm (decided in patricktree/cup#113). It is not implemented yet: until it is, marked conversions stay invisible with their bytes and rows kept.
+- Cleanup of the conversion's writers, R2 prefix, registry ownership entry and rows runs only from the account alarm (decided in patricktree/cup#113, implemented in [patricktree/cup#134](https://github.com/patricktree/cup/issues/134)); [conversion deletion](../architecture/conversion-deletion.md) states its invariants.
 - [`accounts.test.ts`](../../libs/registry/test/accounts.test.ts) covers the fence, the release and repeats; [`delete-account-conversion.test.ts`](../../libs/api-server/test/delete-account-conversion.test.ts) covers the listener route.
