@@ -4,8 +4,10 @@ import React from "react";
 import { AccountQueryBoundary } from "#src/app/components/account-query-boundary.js";
 import { AccountSettings } from "#src/app/components/account-settings.js";
 import { DSDialog } from "#src/app/design-system/dialog.js";
+import { useMarkSkeletonShown } from "#src/app/pending-prototype/pending-prototype.js";
 import { useCloseRecentsDialog } from "#src/app/use-close-recents-dialog.js";
 import { useAccountSession, useAccountAuthState } from "#src/auth/hooks.js";
+import { accountQuery } from "#src/data-fetching/account.js";
 import { useIsAccountConfirmationPending } from "#src/data-fetching/account-confirmation.js";
 
 /**
@@ -14,8 +16,34 @@ import { useIsAccountConfirmationPending } from "#src/data-fetching/account-conf
  * where the dialog has to open again to show the confirmation step.
  */
 export const Route = createFileRoute("/_shell/recent/account")({
+  // PROTOTYPE: the decided loading model (#147): an awaited loader and route-owned pending UI
+  loader: async ({ context }) => {
+    await context.queryClient.query({ ...accountQuery(context.subject), staleTime: "static" });
+  },
+  pendingComponent: AccountDialogPending,
   component: AccountDialog,
 });
+
+function AccountDialogPending(): React.ReactNode {
+  useMarkSkeletonShown();
+  const close = useCloseRecentsDialog(Route.id);
+  return (
+    <DSDialog
+      open
+      onOpenChange={(open) => {
+        if (!open) {
+          close();
+        }
+      }}
+      initialFocus={undefined}
+      finalFocus={undefined}
+      title={<>Account settings</>}
+      cancelButtonText={<>Close</>}
+    >
+      <output>Loading account…</output>
+    </DSDialog>
+  );
+}
 
 function AccountDialog(): React.ReactNode {
   const session = useAccountSession();

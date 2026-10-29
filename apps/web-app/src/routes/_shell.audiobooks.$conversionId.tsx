@@ -30,6 +30,7 @@ import { toPreparationPhaseLabel } from "#src/app/preparation-phase-label.js";
 import { toSourceHost } from "#src/app/source-host.js";
 import { useAnnounceStatus } from "#src/app/status-announcer.js";
 import { composeClassnames } from "#src/app/utils.ts";
+import { useMarkSkeletonShown } from "#src/app/pending-prototype/pending-prototype.js";
 import { useAccountSession } from "#src/auth/hooks.js";
 import { useIsAccountConversion } from "#src/data-fetching/account-history.js";
 import {
@@ -40,8 +41,26 @@ import {
 import { describeError } from "#src/errors.js";
 
 export const Route = createFileRoute("/_shell/audiobooks/$conversionId")({
+  // PROTOTYPE: the decided loading model (#147): an awaited loader and route-owned pending UI
+  loader: async ({ context, params }) => {
+    await context.queryClient.query({
+      ...createAudiobookQuery(params.conversionId),
+      staleTime: "static",
+    });
+  },
+  pendingComponent: AudiobookPending,
+  errorComponent: ReaderQueryError,
   component: AudiobookRoute,
 });
+
+function AudiobookPending() {
+  useMarkSkeletonShown();
+  return (
+    <DetailLayout topBar={<PlainTopBar />} statusLine={toPreparationPhaseLabel(undefined)}>
+      <PreparationView />
+    </DetailLayout>
+  );
+}
 
 type RetryMutation = ReturnType<typeof useRetryConversion>;
 

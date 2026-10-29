@@ -2,6 +2,7 @@ import { css } from "@linaria/core";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import React from "react";
 
+import { PendingSignal } from "#src/app/pending-prototype/pending-prototype.js";
 import { PlayerHostProvider } from "#src/app/player/player-host-provider.tsx";
 import { StatusAnnouncerProvider } from "#src/app/status-announcer.tsx";
 
@@ -33,6 +34,7 @@ function ShellLayout() {
       >
         <StatusAnnouncerProvider>
           <Outlet />
+          <PendingSignal />
         </StatusAnnouncerProvider>
       </div>
     </PlayerHostProvider>

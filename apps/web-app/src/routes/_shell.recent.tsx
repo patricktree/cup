@@ -1,6 +1,6 @@
 import { css } from "@linaria/core";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, Navigate, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate, Outlet, redirect } from "@tanstack/react-router";
 import React from "react";
 
 import { AccountAvatar } from "#src/app/components/account-avatar.js";
@@ -14,13 +14,54 @@ import { interTypefaceScope } from "#src/app/global-styles.js";
 import { useIsInScrollReach } from "#src/app/use-is-in-scroll-reach.js";
 import { useMasonryRowSpans } from "#src/app/use-masonry-row-spans.js";
 import { composeClassnames } from "#src/app/utils.js";
+import { useMarkSkeletonShown } from "#src/app/pending-prototype/pending-prototype.js";
+import { ensureAuthInitialized, sessionSnapshot } from "#src/auth/account-session.js";
 import { useAccountSession, useAccountAuthState } from "#src/auth/hooks.js";
 import { createAccountHistoryQuery } from "#src/data-fetching/account-history.js";
 import { describeError } from "#src/errors.js";
 
 export const Route = createFileRoute("/_shell/recent")({
+  // PROTOTYPE: the decided loading model (#147): auth in beforeLoad, an awaited loader, a pending
+  // component owned by the route
+  beforeLoad: async () => {
+    await ensureAuthInitialized();
+    const session = sessionSnapshot();
+    if (!session) {
+      throw redirect({ to: "/", replace: true });
+    }
+    return { subject: session.user.id };
+  },
+  loader: async ({ context }) => {
+    await context.queryClient.infiniteQuery({
+      ...createAccountHistoryQuery(context.subject),
+      staleTime: "static",
+    });
+  },
+  pendingComponent: RecentsPending,
   component: RecentPage,
 });
+
+function RecentsPending(): React.ReactNode {
+  useMarkSkeletonShown();
+  // PROTOTYPE: inline styles, as Linaria did not pick up new css blocks here in the dev server
+  return (
+    <>
+      <div style={{ gridArea: "shell-main" }} {...interTypefaceScope}>
+        <header className={pageWidth} style={{ display: "flex", alignItems: "center", minHeight: 44, paddingBlockStart: "var(--spacing-gutter)" }}>
+          <h1 className={textStyles.h1} style={{ margin: 0, paddingBlockEnd: 8, paddingInlineStart: "var(--spacing-gutter)" }}>
+            Recent
+          </h1>
+        </header>
+        <main className={pageWidth} style={{ paddingBlock: 24 }}>
+          <output>Loading tracks…</output>
+        </main>
+      </div>
+      <div style={{ position: "sticky", bottom: 0, zIndex: 1, display: "grid", gridArea: "shell-footer" }}>
+        <AccountTabBar />
+      </div>
+    </>
+  );
+}
 
 function RecentPage(): React.ReactNode {
   const session = useAccountSession();

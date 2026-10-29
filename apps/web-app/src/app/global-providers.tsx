@@ -4,6 +4,7 @@ import { createRouteMask, createRouter, RouterProvider } from "@tanstack/react-r
 import type { RouterHistory } from "@tanstack/react-router";
 import React from "react";
 
+import { prototypeRouterOptions } from "#src/app/pending-prototype/pending-prototype.js";
 import { RouteErrorScreen } from "#src/app/components/error-message.js";
 import { DSToastViewport } from "#src/app/design-system/toast.js";
 import { queryClient } from "#src/data-fetching/query-client.js";
@@ -24,9 +25,8 @@ export function createAppRouter(history?: RouterHistory) {
       queryClient,
     },
     defaultErrorComponent: RouteErrorScreen,
-    defaultPendingMinMs: 0,
-    defaultPendingMs: 0,
-    defaultPreload: "intent",
+    // PROTOTYPE: pending timings and preloading come from the prototype panel
+    ...prototypeRouterOptions(),
     defaultPreloadStaleTime: 0,
     routeTree,
     routeMasks: [addDialogMask],

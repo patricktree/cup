@@ -51,7 +51,8 @@ export const queryClient = new QueryClient({
       retry: false,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
-      gcTime: 0,
+      // PROTOTYPE: the decided cache lifetime policy (#146)
+      gcTime: Infinity,
       staleTime: 0,
     },
   },
