@@ -157,7 +157,7 @@ export const cssBase = css`
       --background-fade-tab-bar: linear-gradient(to bottom, transparent, var(--color-surface));
       --background-fade-player-sheet: linear-gradient(to bottom, transparent, var(--color-surface));
 
-      --background-dialog-backdrop: rgb(var(--color-ink-rgb) / 35%);
+      --background-dialog-backdrop: rgb(var(--color-ink-rgb) / 40%);
 
       /* the focus ring, also drawn by containers whose focused element shows none */
       --focus-ring: 2px solid var(--color-ink);

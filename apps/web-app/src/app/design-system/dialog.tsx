@@ -6,6 +6,7 @@ import { DSButtonGroup } from "#src/app/design-system/button-group.js";
 import { DSButton } from "#src/app/design-system/button.js";
 import { textStyles } from "#src/app/design-system/text-styles.js";
 import { interTypefaceScope } from "#src/app/global-styles.js";
+import { composeClassnames } from "#src/app/utils.js";
 
 export type DSDialogProps = {
   /**
@@ -25,6 +26,7 @@ export type DSDialogProps = {
   cancelButtonDisabled: boolean;
   /** Lets `initialFocus` start on Cancel, the safe choice of a destructive confirmation. */
   cancelButtonRef?: React.Ref<HTMLButtonElement>;
+  /** Actions after Cancel, which is a text button; the primary action comes last. */
   buttonGroupChildren?: React.ReactNode;
   errorMessage?: React.ReactNode;
 };
@@ -72,28 +74,47 @@ export const DSDialog: React.FC<DSDialogProps> = ({
 
             display: grid;
             gap: calc(2 * var(--spacing-base));
-            min-width: min(400px, calc(100vw - 2 * var(--app-padding-inline)));
-            padding-block: calc(3 * var(--spacing-base));
-            padding-inline: calc(3 * var(--spacing-base));
+            min-width: min(400px, calc(100vw - 2 * var(--spacing-gutter)));
+            padding: var(--spacing-gutter);
 
             overflow: auto;
             background: var(--color-surface);
+            border: 1px solid var(--color-ink-4);
             border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-card);
             transform: translate(-50%, -50%);
           `}
         >
-          <Dialog.Title className={textStyles.h4}>{title}</Dialog.Title>
-          {description && <Dialog.Description>{description}</Dialog.Description>}
+          {/* keeps the description out of the popup gap, closer to the title */}
+          <div>
+            <Dialog.Title className={textStyles.h2}>{title}</Dialog.Title>
+            {description && (
+              <Dialog.Description
+                className={composeClassnames(
+                  textStyles.paragraph,
+                  css`
+                    padding-block-start: var(--spacing-base);
+                  `,
+                )}
+              >
+                {description}
+              </Dialog.Description>
+            )}
+          </div>
           {children}
 
-          <DSButtonGroup>
-            {buttonGroupChildren}
+          <DSButtonGroup
+            className={css`
+              padding-block-start: var(--spacing-base);
+            `}
+          >
             <Dialog.Close
               ref={cancelButtonRef}
-              render={<DSButton disabled={cancelButtonDisabled} />}
+              render={<DSButton variant="text" disabled={cancelButtonDisabled} />}
             >
               {cancelButtonText}
             </Dialog.Close>
+            {buttonGroupChildren}
           </DSButtonGroup>
 
           {errorMessage && <p role="alert">{errorMessage}</p>}
