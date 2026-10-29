@@ -30,11 +30,9 @@ export function createAccountHistoryQuery(subject: string) {
  * conversion from a trial one the listener can also open. It loads further history pages until it
  * finds the conversion or runs out of pages, and is `false` until then. It never polls itself.
  */
-export function useIsAccountConversion(subject: string | undefined, conversionId: string): boolean {
+export function useIsAccountConversion(subject: string, conversionId: string): boolean {
   const { data, hasNextPage, isFetchingNextPage, fetchNextPage } = useInfiniteQuery({
-    // Without an account there is no history to look in, and the query never runs.
-    ...createAccountHistoryQuery(subject ?? ""),
-    enabled: subject !== undefined,
+    ...createAccountHistoryQuery(subject),
     refetchInterval: false,
   });
   const isListed =

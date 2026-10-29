@@ -1,13 +1,7 @@
 import { css } from "@linaria/core";
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import {
-  createFileRoute,
-  useLocation,
-  useNavigate,
-  useRouter,
-  type ErrorComponentProps,
-} from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute, type ErrorComponentProps } from "@tanstack/react-router";
 import React from "react";
 
 import type { Audiobook } from "@cup/listener-api.routes";
@@ -34,6 +28,7 @@ import {
 } from "#src/app/player/player-host-provider.js";
 import type { LoadedAudiobook } from "#src/app/player/player-host.js";
 import { toPreparationPhaseLabel } from "#src/app/preparation-phase-label.js";
+import { useIsOpenedFromRecents, useReturnToRecents } from "#src/app/return-to-recents.js";
 import { toSourceHost } from "#src/app/source-host.js";
 import { useAnnounceStatus } from "#src/app/status-announcer.js";
 import { useRetryRoute } from "#src/app/use-retry-route.js";
@@ -69,9 +64,31 @@ type RetryMutation = ReturnType<typeof useRetryConversion>;
 
 function AudiobookRoute() {
   const { conversionId } = Route.useParams();
+  const session = useAccountSession();
 
   // Another audiobook starts with a fresh retry outcome and its title in view.
-  return <AudiobookPage key={conversionId} conversionId={conversionId} />;
+  return session ? (
+    <AccountAudiobookPage
+      key={conversionId}
+      subject={session.user.id}
+      conversionId={conversionId}
+    />
+  ) : (
+    <AudiobookPage key={conversionId} conversionId={conversionId} isDeletable={false} />
+  );
+}
+
+/** Trial conversions cannot be deleted, even by a signed-in listener who can open one. */
+function AccountAudiobookPage({
+  subject,
+  conversionId,
+}: {
+  subject: string;
+  conversionId: string;
+}): React.JSX.Element {
+  const isDeletable = useIsAccountConversion(subject, conversionId);
+
+  return <AudiobookPage conversionId={conversionId} isDeletable={isDeletable} />;
 }
 
 /**
@@ -114,13 +131,11 @@ function PlainTopBar() {
  */
 function useDetailBack(): DetailBack {
   const isAccount = useAccountSession() !== null;
-  const isOpenedFromRecents = useLocation({
-    select: (location) => location.state.isOpenedFromRecents === true,
-  });
+  const isOpenedFromRecents = useIsOpenedFromRecents();
 
   return isAccount
-    ? { to: "/recent", goesBackInHistory: isOpenedFromRecents }
-    : { to: "/", goesBackInHistory: false };
+    ? { to: "/recent", shouldGoBackInHistory: isOpenedFromRecents }
+    : { to: "/", shouldGoBackInHistory: false };
 }
 
 function ReaderQueryError({ error }: ErrorComponentProps) {
@@ -133,13 +148,16 @@ function ReaderQueryError({ error }: ErrorComponentProps) {
   );
 }
 
-function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.Element {
+function AudiobookPage({
+  conversionId,
+  isDeletable,
+}: {
+  conversionId: string;
+  isDeletable: boolean;
+}): React.JSX.Element {
   const session = useAccountSession();
   const back = useDetailBack();
-  const queryClient = useQueryClient();
-  const deletion = useTrackDeletion(conversionId, back);
-  // Trial conversions cannot be deleted, even by a signed-in listener who can open one.
-  const isDeletable = useIsAccountConversion(session?.user.id, conversionId);
+  const deletion = useTrackDeletion(conversionId);
   const audiobookQuery = createAudiobookQuery(conversionId);
   const { data: audiobook, dataUpdatedAt: audiobookReceivedAt } = useSuspenseQuery(
     // A poll during or after the deletion would find the track gone and report a failure.
@@ -147,7 +165,7 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
   );
   // The top bar's "…" menu and the page's Retry buttons share one mutation, so a refused retry is
   // reported in the notices wherever it was started.
-  const retry = useRetryConversion(conversionId, queryClient);
+  const retry = useRetryConversion(conversionId);
   const [isTitleScrolledAway, setIsTitleScrolledAway] = React.useState(false);
 
   const topBar = (
@@ -244,11 +262,10 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
 type TrackDeletion = ReturnType<typeof useTrackDeletion>;
 
 /** The delete dialog's state and the deletion it confirms, for the signed-in listener's track. */
-function useTrackDeletion(conversionId: string, back: DetailBack) {
+function useTrackDeletion(conversionId: string) {
   const session = useAccountSession();
   const host = usePlayerHost();
-  const router = useRouter();
-  const navigate = useNavigate();
+  const returnToRecents = useReturnToRecents();
   const announce = useAnnounceStatus();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const mutation = useDeleteConversion({
@@ -257,9 +274,7 @@ function useTrackDeletion(conversionId: string, back: DetailBack) {
     onDeleted: async () => {
       // Either way Back cannot return to the deleted track: going back leaves it as the Forward
       // entry, which leads to the not-found error screen, and replacing drops it.
-      await (back.goesBackInHistory
-        ? goBackInHistory(router)
-        : navigate({ to: "/recent", replace: true }));
+      await returnToRecents();
       // Once the dialog is gone, which hides the rest of the page from screen readers while open.
       announce("Track deleted.");
     },
@@ -285,18 +300,6 @@ function useTrackDeletion(conversionId: string, back: DetailBack) {
       mutation.mutate();
     },
   };
-}
-
-/** Goes back one history entry and settles once the router has rendered the entry below. */
-async function goBackInHistory(router: ReturnType<typeof useRouter>): Promise<void> {
-  const rendered = new Promise<void>((resolve) => {
-    const unsubscribe = router.subscribe("onRendered", () => {
-      unsubscribe();
-      resolve();
-    });
-  });
-  router.history.back();
-  await rendered;
 }
 
 /** Confirms the deletion of the track; Cancel has the focus, as the safe choice. */

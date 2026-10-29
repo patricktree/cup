@@ -14,7 +14,7 @@ import { composeClassnames } from "#src/app/utils.js";
  * Where Back leads. Only accounts have Recents; trial listeners return to the start. A detail view
  * opened from Recents goes back in history instead, so Recents returns at its scroll position.
  */
-export type DetailBack = { to: "/recent" | "/"; goesBackInHistory: boolean };
+export type DetailBack = { to: "/recent" | "/"; shouldGoBackInHistory: boolean };
 
 type DetailTopBarProps = {
   back: DetailBack;
@@ -55,7 +55,7 @@ export function DetailTopBar({ back, compactTitle, menu }: DetailTopBarProps): R
       <Link
         to={back.to}
         onClick={(event) => {
-          if (back.goesBackInHistory) {
+          if (back.shouldGoBackInHistory) {
             event.preventDefault();
             router.history.back();
           }

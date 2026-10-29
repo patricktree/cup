@@ -19,13 +19,13 @@ const MENU: DetailTopBarStoryProps["menu"] = {
 };
 
 export const Plain = createTopBarStory({
-  back: { to: "/recent", goesBackInHistory: false },
+  back: { to: "/recent", shouldGoBackInHistory: false },
   compactTitle: undefined,
   menu: MENU,
 });
 
 export const Compact = createTopBarStory({
-  back: { to: "/recent", goesBackInHistory: false },
+  back: { to: "/recent", shouldGoBackInHistory: false },
   compactTitle: {
     title: "A deterministic document about careful testing that runs long enough to be cut off",
     host: "source.example.test",

@@ -1,5 +1,4 @@
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
-import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
 
 import {
@@ -26,7 +25,6 @@ const PlayerHostContext = React.createContext<PlayerHost | null>(null);
  * stops playback.
  */
 export function PlayerHostProvider({ children }: { children: React.ReactNode }) {
-  const queryClient = useQueryClient();
   const [host] = React.useState(
     () =>
       new PlayerHost({
@@ -35,7 +33,7 @@ export function PlayerHostProvider({ children }: { children: React.ReactNode }) 
         publishMediaMetadata,
         getAccount: readPlayerHostAccount,
         getLocalPosition: getLocalPlaybackPosition,
-        fetchAudiobook: (conversionId) => fetchAudiobookForPlayer(queryClient, conversionId),
+        fetchAudiobook: (conversionId) => fetchAudiobookForPlayer(conversionId),
         now: () => Date.now(),
       }),
   );
