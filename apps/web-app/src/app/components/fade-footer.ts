@@ -4,8 +4,6 @@ import { css } from "@linaria/core";
 type FadeFooterHeights = {
   /** Height of the drawn fade, from its transparent top down to the footer's top edge. */
   fadeHeightPixels: number;
-  /** The footer's own row, below the fade. */
-  footerHeightPixels: number;
 };
 
 /**
@@ -15,6 +13,12 @@ type FadeFooterHeights = {
 export function fadeFooterClearance({ fadeHeightPixels }: FadeFooterHeights): string {
   return `${fadeHeightPixels}px`;
 }
+
+/**
+ * Bottom padding of every fade footer, so their controls end at the same distance from the screen's
+ * bottom edge.
+ */
+export const FADE_FOOTER_PADDING_BLOCK_END_PIXELS = 24;
 
 /**
  * A bar fixed at the bottom of a shell page on the drawn transparent-to-white fade, which reaches

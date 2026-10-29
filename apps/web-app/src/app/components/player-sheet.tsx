@@ -2,7 +2,10 @@ import { Slider } from "@base-ui/react/slider";
 import { css } from "@linaria/core";
 import React from "react";
 
-import { fadeFooter } from "#src/app/components/fade-footer.js";
+import {
+  FADE_FOOTER_PADDING_BLOCK_END_PIXELS,
+  fadeFooter,
+} from "#src/app/components/fade-footer.js";
 import { PlaybackError } from "#src/app/components/playback-error.js";
 import { DSIconButton } from "#src/app/design-system/icon-button.js";
 import {
@@ -25,13 +28,11 @@ import type { LoadedAudiobook } from "#src/app/player/player-host.js";
 import { composeClassnames } from "#src/app/utils.js";
 
 /**
- * The player sheet's fade and own row, without a playback error. The page above leaves
- * `fadeFooterClearance(PLAYER_SHEET_HEIGHTS)` free at its end; a playback error makes the sheet
- * taller, which only moves the page further up.
+ * The player sheet's fade. The page above leaves `fadeFooterClearance(PLAYER_SHEET_HEIGHTS)` free
+ * at its end; the sheet takes its own row below the page, however tall a playback error makes it.
  */
 export const PLAYER_SHEET_HEIGHTS = {
   fadeHeightPixels: 70,
-  footerHeightPixels: 200,
 } as const;
 
 type SheetPlayback =
@@ -95,9 +96,9 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
           --fade-background: var(--background-fade-player-sheet);
 
           display: grid;
-          grid-area: shell-player;
+          grid-area: shell-footer;
           align-content: end;
-          padding-block: 0 24px;
+          padding-block: 0 ${FADE_FOOTER_PADDING_BLOCK_END_PIXELS}px;
           padding-inline: 24px;
           background-color: var(--color-surface);
         `,

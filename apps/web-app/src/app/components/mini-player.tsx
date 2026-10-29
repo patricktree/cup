@@ -2,10 +2,7 @@ import { css } from "@linaria/core";
 import { Link } from "@tanstack/react-router";
 import React from "react";
 
-import {
-  TAB_BAR_HEIGHTS,
-  TAB_BAR_ICONS_OFFSET_PIXELS,
-} from "#src/app/components/account-tab-bar.js";
+import { TAB_BAR_ICONS_OFFSET_PIXELS } from "#src/app/components/account-tab-bar.js";
 import { PlaybackError } from "#src/app/components/playback-error.js";
 import { DSCoverImage } from "#src/app/design-system/cover-image.js";
 import { DSIconButton } from "#src/app/design-system/icon-button.js";
@@ -46,18 +43,10 @@ export function MiniPlayer(): React.ReactNode {
       {...interTypefaceScope}
       aria-label="Player"
       className={css`
-        /* stays above the tab bar, which sticks to the screen's bottom edge, while the document scrolls */
-        position: sticky;
-        bottom: ${
-          TAB_BAR_HEIGHTS.footerHeightPixels +
-          GAP_ABOVE_TAB_ICONS_PIXELS -
-          TAB_BAR_ICONS_OFFSET_PIXELS
-        }px;
-
-        /* above shell <main> and the tab bar's fade (see account-tab-bar.tsx), which it overlaps */
+        /* above the tab bar and its fade (see account-tab-bar.tsx), which it overlaps */
+        position: relative;
         z-index: 2;
         display: grid;
-        grid-area: shell-player;
         width: 100%;
         max-width: var(--app-max-width);
         padding-inline: var(--spacing-gutter);
