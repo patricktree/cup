@@ -26,9 +26,15 @@ _Avoid_: source page URL
 
 ## source title
 
-The headline the source page gives the source content.
+The headline the source page gives the source content, taken from its visible headline when it has one.
 
-_Avoid_: page title, headline
+_Avoid_: page title, bare "headline" for the source title
+
+## visible headline
+
+The first top-level heading of a source page that renders visibly, unlike a hidden or screen-reader-only heading such as a consent wall's. Its text is the source title, and audiobook source material begins after it. A source page may have none.
+
+_Avoid_: headline alone, first heading
 
 ## source subtitle
 

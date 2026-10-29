@@ -1,0 +1,496 @@
+<html>
+  <head>
+    <title>Maintaining software with the GPT-6 family</title>
+  </head>
+  <body>
+    <div data-docs-agent-page="" class="min-h-dvh">
+      <div class="flex" style="padding-top: var(--docs-header-offset)">
+        <main class="min-w-0 flex-1 lg:pl-[240px]">
+          <div class="page-container md:max-w-6xl pb-12 pt-0" data-content-page-container="">
+            <div
+              class="mx-auto md:w-full grid grid-cols-1 gap-12 max-w-7xl xl:grid-cols-[minmax(0,1fr)_200px]"
+            >
+              <div class="relative flex flex-col xl:col-start-1 xl:row-start-1">
+                <div class="flex flex-col gap-10">
+                  <header class="flex flex-col not-prose gap-1 pt-20 items-center text-center">
+                    <div class="w-full flex justify-center">
+                      <div class="flex w-full flex-wrap items-center gap-3 justify-center">
+                        <p class="text-sm text-secondary">
+                          <span class="font-medium text-default">Author:</span> Rodrigo Roim
+                        </p>
+                      </div>
+                    </div>
+                  </header>
+                  <div
+                    class="flex justify-center h-[300px] bg-gradient-to-b from-black/70 to-black/20 rounded-lg"
+                    style="height: auto; aspect-ratio: 2048 / 768"
+                  >
+                    <picture class="block h-full w-full">
+                      <img
+                        src="/images/blog/maintaining-software-with-the-gpt-6-family/cover.webp"
+                        alt="Maintaining software with the GPT-6 family"
+                        width="2048"
+                        height="768"
+                        class="block w-full h-full object-cover rounded-lg"
+                      />
+                    </picture>
+                  </div>
+                </div>
+                <article
+                  id="mainContent"
+                  class="prose prose-content blog-prose-content dark:prose-invert max-w-none pt-4 pb-0"
+                >
+                  <p>
+                    Every growing codebase needs maintenance: unused code to remove, completed
+                    experiments to clean up, and tests to fix. At OpenAI, coding agents have helped
+                    us build faster, which has also increased our maintenance needs.
+                  </p>
+                  <p>
+                    I work on OpenAI’s Core Experimentation team, where we build and maintain the
+                    software that supports experiments across the company, from front-end updates to
+                    improvements in model-serving efficiency.
+                  </p>
+                  <p>
+                    The release of GPT-6 Astra helped us build and maintain software faster, and
+                    GPT-6.1 Sol delivered similar results at a lower cost. In this post, I’ll share
+                    how we use these models to find cleanup opportunities, gather evidence, and
+                    prepare changes for review.
+                  </p>
+                  <h2 id="removing-unused-code">Removing unused code</h2>
+                  <p>
+                    Before agentic coding, many software engineering teams relied on complex static
+                    analysis systems integrated with runtime logging to detect and remove unused
+                    code. Even with these systems and careful code reviews, mistakes happen. I
+                    recall several incidents due to mistaken code removal. There are too many edge
+                    cases to consider, like reflection throwing off static analysis or an unused
+                    code path that can be activated to mitigate future incidents.
+                  </p>
+                  <p>
+                    With GPT-5.6 Sol in Codex, I could specify an area to investigate and clear
+                    validation criteria, then let the model write static analysis and remove dead
+                    code. These targeted prompts were easier to develop and maintain than our
+                    existing static analysis systems, with similar reliability.
+                  </p>
+                  <p>
+                    When we got access to GPT-6 Astra, we wanted to see whether it could work from a
+                    broader request, figuring out where to look and what evidence it needed to
+                    justify each removal. We started with a short Codex prompt that was too
+                    ambiguous for GPT-5.6 Sol to handle completely. Here it is, typos and all:
+                  </p>
+                  <div class="not-prose my-6" data-astro-cid-gablthhq="">
+                    <div
+                      class="relative overflow-hidden rounded-[28px] border border-primary-surface bg-surface shadow-[0_10px_28px_rgba(15,23,42,0.05)] dark:shadow-[0_16px_36px_rgba(0,0,0,0.28)]"
+                      data-astro-cid-gablthhq=""
+                    >
+                      <div class="prompt-scroll-frame" data-astro-cid-gablthhq="">
+                        <div
+                          class="prompt-scroll prompt-scroll--header-actions max-h-50 overflow-y-auto"
+                          data-astro-cid-gablthhq=""
+                        >
+                          <div
+                            class="prompt-scroll__content overflow-x-auto whitespace-pre-wrap leading-7 text-default/90 my-4"
+                            data-astro-cid-gablthhq=""
+                          >
+                            Can you help identify and clean up dead code in the repo please, feel
+                            free to check slack, statsig [a feature flag and experimentation
+                            platform we use], or any other source you need to confirm that things
+                            are indeed no longer being used and can be cleaned up or simplified
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        class="prompt-actions flex min-w-0 items-center justify-end gap-2 px-3 pb-3"
+                        data-astro-cid-gablthhq=""
+                      >
+                        <span
+                          data-prompt-model="true"
+                          class="flex min-w-0 flex-wrap items-baseline gap-x-2 text-base font-normal [overflow-wrap:anywhere]"
+                          ><span class="text-default">GPT-6 Astra</span></span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <p>
+                    Astra handled the ambiguity well. It looked at past PRs, gathered context from
+                    Slack threads, and inspected internal project trackers. It read production
+                    performance profiling tables to confirm the deleted lines were never reached.
+                    Astra also explained its rationale for each deletion, which accelerated our
+                    reviews.
+                  </p>
+                  <p>
+                    Once we saw how well Astra was doing, five engineers collaborated to run
+                    variations of that prompt across repositories, and we merged more than 1,400
+                    pull requests, deleting over 800k lines of code. We did the bulk of this
+                    part-time over two weeks while primarily working on other projects. Code reviews
+                    were fanned out to various teams with context on each affected project. These
+                    deletions resulted in measurable benefits. For example, one service’s container
+                    image shrank from 3.31GB to 1.72GB, a 48% reduction, and another set of cleanups
+                    removed about 400 visual snapshot variants from our test suite.
+                  </p>
+                  <h2 id="tracking-down-stale-experiments">Tracking down stale experiments</h2>
+                  <p>
+                    A harder problem in software maintenance is cleaning up
+                    <em>stale</em> experiments. These experiments aren’t necessarily unused: their
+                    code might still run in production or depend on eligibility evaluations that
+                    could change at any time, making static analysis much harder. Historically, our
+                    team cleaned up stale experiments through deterministic static analysis
+                    augmented with database queries and used our most powerful model (then GPT-5.6
+                    Sol) to build and improve the associated scripts. We knew this resulted in many
+                    false negatives where our analysis couldn’t identify truly stale experiments.
+                  </p>
+                  <p>
+                    Given our success with dead code cleanup using GPT-6 Astra, I decided to try
+                    another short prompt for stale experiments. I wasn’t sure how to get started, so
+                    I brainstormed with Astra and asked it to write a short prompt to try in a new
+                    thread:
+                  </p>
+                  <div class="not-prose my-6" data-astro-cid-gablthhq="">
+                    <div
+                      class="relative overflow-hidden rounded-[28px] border border-primary-surface bg-surface shadow-[0_10px_28px_rgba(15,23,42,0.05)] dark:shadow-[0_16px_36px_rgba(0,0,0,0.28)]"
+                      data-astro-cid-gablthhq=""
+                    >
+                      <div class="prompt-scroll-frame" data-astro-cid-gablthhq="">
+                        <div
+                          class="prompt-scroll prompt-scroll--header-actions max-h-50 overflow-y-auto"
+                          data-astro-cid-gablthhq=""
+                        >
+                          <div
+                            class="prompt-scroll__content overflow-x-auto whitespace-pre-wrap leading-7 text-default/90 my-4"
+                            data-astro-cid-gablthhq=""
+                          >
+                            Find and remove substantial dead code associated with stale, constant
+                            Statsig gates/configs or abandoned experiments in projects {A} and {B}.
+                            Verify live Statsig configuration and check git history and overlapping
+                            PRs. Preserve production behavior, operational safeguards and
+                            gates/configs intended as killswitches or similar. Ignore SDK fallbacks
+                            and local overrides. Create one small draft PR per cleanup, linking its
+                            Statsig configuration console link in the summary.
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        class="prompt-actions flex min-w-0 items-center justify-end gap-2 px-3 pb-3"
+                        data-astro-cid-gablthhq=""
+                      >
+                        <span
+                          data-prompt-model="true"
+                          class="flex min-w-0 flex-wrap items-baseline gap-x-2 text-base font-normal [overflow-wrap:anywhere]"
+                          ><span class="text-default">GPT-6 Astra</span></span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <p>
+                    Astra followed the safeguards in the prompt and prepared changes with evidence
+                    our team could review. I commented on its pull requests, then asked Astra to
+                    look at my comments, incorporate my feedback, and develop a new prompt to scan
+                    our entire codebase. I was afraid of having too many things to clean up and no
+                    way to prioritize them, so I also asked Astra to help me with that. Astra
+                    suggested this prompt:
+                  </p>
+                  <div class="not-prose my-6" data-astro-cid-gablthhq="">
+                    <div
+                      class="relative overflow-hidden rounded-[28px] border border-primary-surface bg-surface shadow-[0_10px_28px_rgba(15,23,42,0.05)] dark:shadow-[0_16px_36px_rgba(0,0,0,0.28)]"
+                      data-astro-cid-gablthhq=""
+                    >
+                      <div class="prompt-scroll-frame" data-astro-cid-gablthhq="">
+                        <div
+                          class="prompt-scroll prompt-scroll--header-actions max-h-50 overflow-y-auto"
+                          data-astro-cid-gablthhq=""
+                        >
+                          <div
+                            class="prompt-scroll__content overflow-x-auto whitespace-pre-wrap leading-7 text-default/90 my-4"
+                            data-astro-cid-gablthhq=""
+                          >
+                            /goal Find every stale, constant, abandoned, or fully shipped Statsig
+                            gate, config, experiment, and layer present in this entire repository
+                            that can safely be removed with no production changes. Audit all Statsig
+                            projects and inventories, not just objects labeled stale. Find indirect
+                            usages through enums, constants, wrappers, aliases, schemas, dynamically
+                            assembled names, and cross-service consumers. Reconcile every
+                            production-referenced constant; do not stop after producing a
+                            conservative shortlist. Consider each object's cloud resource usage,
+                            including CPU. Use production telemetry and profiles where available to
+                            identify expensive dead checks. [Omitted for brevity: detailed
+                            instructions, generated by Astra, on verifying production behavior,
+                            prioritizing older objects, preserving intentional safeguards, and
+                            interpreting SDK fallbacks.] Produce a markdown report grouping all
+                            verified candidates into parallelizable ownership/file workstreams,
+                            including production values, evidence, owners, callsites, and observed
+                            evaluation or CPU costs if available. Do not modify live configurations
+                            or services.
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        class="prompt-actions flex min-w-0 items-center justify-end gap-2 px-3 pb-3"
+                        data-astro-cid-gablthhq=""
+                      >
+                        <span
+                          data-prompt-model="true"
+                          class="flex min-w-0 flex-wrap items-baseline gap-x-2 text-base font-normal [overflow-wrap:anywhere]"
+                          ><span class="text-default">GPT-6 Astra</span></span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <p>
+                    The resulting report was promising. Using our instrumentation, Astra
+                    investigated the CPU costs of each stale experiment, and the top few results
+                    were large efficiency wins associated with experiments that no one had
+                    identified as stale for years. I carefully validated those larger results and
+                    proceeded with the full cleanup, which removed hundreds of experiments and
+                    feature flags.
+                  </p>
+                  <p>
+                    One example shows Astra’s judgment: several years ago, one of our engineers
+                    created a
+                    <a href="https://www.statsig.com/" target="_blank" rel="noopener noreferrer"
+                      >Statsig</a
+                    >
+                    feature flag that allowed internal developers to override all our other feature
+                    flags related to new features, for testing purposes. This configuration was
+                    implemented through a single line of Python code that mapped the flag to all
+                    other features. That line lived alongside hundreds of similar feature flag
+                    mappings and looked inconspicuous.
+                  </p>
+                  <p>
+                    Astra found that the line above caused significant CPU fan-out because it mapped
+                    the flag to <em>all</em> features. It investigated the CPU cost, but raised the
+                    finding for human review because the flag had been explicitly marked as
+                    “Permanent” in our feature flag management console and could still serve an
+                    operational purpose. After review, we removed the flag, with an estimated 0.42%
+                    CPU saving in the main affected service.
+                  </p>
+                  <h2 id="improving-cost-effectiveness-with-gpt-61-sol">
+                    Improving cost effectiveness with GPT-6.1 Sol
+                  </h2>
+                  <p>
+                    More recently, we tested GPT-6.1 Sol on the same workflows to see whether it
+                    could match GPT-6 Astra’s effectiveness while being more efficient.
+                  </p>
+                  <p>
+                    To compare the models on stale experiment cleanup, I ran the same prompt above
+                    on different model/effort combinations, asking Codex to audit specific
+                    subdirectories in one of our repositories to find stale experiments. These
+                    subdirectories cover over 6,000 files and 1 million lines of code in Python,
+                    TypeScript, Go and Rust. I reviewed the findings to validate them. The graph
+                    below shows the results for 3 model/effort combinations:
+                  </p>
+
+                  <p>
+                    In this comparison, GPT-6.1 Sol Ultra produced 92% as many findings as GPT-6
+                    Astra Ultra at 14% of the API cost. GPT-6.1 Sol Medium produced fewer accepted
+                    findings at a lower cost.
+                  </p>
+                  <p>
+                    I reviewed the discrepancies across model/effort combinations, and a few
+                    patterns emerged. For instance, most of the discrepancies between models on
+                    Ultra were due to constant feature flags used as dependencies in other feature
+                    flags. GPT-6 Astra identified those, but GPT-6.1 Sol missed them.
+                  </p>
+                  <p>
+                    Finding error patterns like this helps us develop prompts that correct for them,
+                    so the more cost-effective model can achieve results similar to those of the
+                    more expensive one. At the same time, future model releases can make these
+                    corrections obsolete, so it’s important to revisit prompts when new models are
+                    released.
+                  </p>
+                  <h2 id="other-ideas-to-try">Other ideas to try</h2>
+                  <p>
+                    Some of my favorite Codex discoveries started with short prompts like these. Try
+                    them with GPT-6.1 Sol Medium, and consider increasing effort for broader audits
+                    if the results are promising.
+                  </p>
+                  <p>Fixing flaky tests:</p>
+                  <div class="not-prose my-6" data-astro-cid-gablthhq="">
+                    <div
+                      class="relative overflow-hidden rounded-[28px] border border-primary-surface bg-surface shadow-[0_10px_28px_rgba(15,23,42,0.05)] dark:shadow-[0_16px_36px_rgba(0,0,0,0.28)]"
+                      data-astro-cid-gablthhq=""
+                    >
+                      <div class="prompt-scroll-frame" data-astro-cid-gablthhq="">
+                        <div
+                          class="prompt-scroll prompt-scroll--header-actions max-h-50 overflow-y-auto"
+                          data-astro-cid-gablthhq=""
+                        >
+                          <div
+                            class="prompt-scroll__content overflow-x-auto whitespace-pre-wrap leading-7 text-default/90 my-4"
+                            data-astro-cid-gablthhq=""
+                          >
+                            /goal Look at all recent CI runs to find flaky tests. For each flaky
+                            test, try a fix and if successful put up a PR. Your job is to find clear
+                            fixes to simple issues, not to exhaustively fix every flaky test.
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        class="prompt-actions flex min-w-0 items-center justify-end gap-2 px-3 pb-3"
+                        data-astro-cid-gablthhq=""
+                      >
+                        <span
+                          data-prompt-model="true"
+                          class="flex min-w-0 flex-wrap items-baseline gap-x-2 text-base font-normal [overflow-wrap:anywhere]"
+                          ><span class="text-default">GPT-6.1 Sol</span
+                          ><span class="text-secondary">Medium</span></span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <p>Improving agentic context:</p>
+                  <div class="not-prose my-6" data-astro-cid-gablthhq="">
+                    <div
+                      class="relative overflow-hidden rounded-[28px] border border-primary-surface bg-surface shadow-[0_10px_28px_rgba(15,23,42,0.05)] dark:shadow-[0_16px_36px_rgba(0,0,0,0.28)]"
+                      data-astro-cid-gablthhq=""
+                    >
+                      <div class="prompt-scroll-frame" data-astro-cid-gablthhq="">
+                        <div
+                          class="prompt-scroll prompt-scroll--header-actions max-h-50 overflow-y-auto"
+                          data-astro-cid-gablthhq=""
+                        >
+                          <div
+                            class="prompt-scroll__content overflow-x-auto whitespace-pre-wrap leading-7 text-default/90 my-4"
+                            data-astro-cid-gablthhq=""
+                          >
+                            Look through my recent Codex sessions and find one AGENTS.md instruction
+                            that appears to have misdirected an agent or caused unnecessary work.
+                            Choose the original session prompt where that happened. Replay that same
+                            prompt twice from the same repository snapshot and model: 1. With the
+                            current AGENTS.md instruction unchanged. 2. With only that one
+                            instruction removed or fixed. Compare task quality, agent behavior, tool
+                            calls, token usage, runtime, and cost. Show the instruction and whether
+                            updating it helped.
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        class="prompt-actions flex min-w-0 items-center justify-end gap-2 px-3 pb-3"
+                        data-astro-cid-gablthhq=""
+                      >
+                        <span
+                          data-prompt-model="true"
+                          class="flex min-w-0 flex-wrap items-baseline gap-x-2 text-base font-normal [overflow-wrap:anywhere]"
+                          ><span class="text-default">GPT-6.1 Sol</span
+                          ><span class="text-secondary">Medium</span></span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <p>Reducing cost and runtime of continuous integration:</p>
+                  <div class="not-prose my-6" data-astro-cid-gablthhq="">
+                    <div
+                      class="relative overflow-hidden rounded-[28px] border border-primary-surface bg-surface shadow-[0_10px_28px_rgba(15,23,42,0.05)] dark:shadow-[0_16px_36px_rgba(0,0,0,0.28)]"
+                      data-astro-cid-gablthhq=""
+                    >
+                      <div class="prompt-scroll-frame" data-astro-cid-gablthhq="">
+                        <div
+                          class="prompt-scroll prompt-scroll--header-actions max-h-50 overflow-y-auto"
+                          data-astro-cid-gablthhq=""
+                        >
+                          <div
+                            class="prompt-scroll__content overflow-x-auto whitespace-pre-wrap leading-7 text-default/90 my-4"
+                            data-astro-cid-gablthhq=""
+                          >
+                            What ideas do you have to relieve CI load in this repository? List your
+                            ideas in a table and rank all of them by estimated CI minutes saved per
+                            day based on this repo's CI run history
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        class="prompt-actions flex min-w-0 items-center justify-end gap-2 px-3 pb-3"
+                        data-astro-cid-gablthhq=""
+                      >
+                        <span
+                          data-prompt-model="true"
+                          class="flex min-w-0 flex-wrap items-baseline gap-x-2 text-base font-normal [overflow-wrap:anywhere]"
+                          ><span class="text-default">GPT-6.1 Sol</span
+                          ><span class="text-secondary">Medium</span></span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <p>
+                    This last idea helped us reduce CI time. After running it and following up on
+                    the suggestions, we landed about 30 CI optimization PRs. We saw median CI
+                    completion time fall from roughly 10 minutes to 4.5 minutes, while the 90th
+                    percentile fell from 12.5 minutes to 6 minutes. In a later fix, adding a missing
+                    mock cut a 63-test resolver suite’s runtime from 592.6 seconds to 29.8 seconds—a
+                    95% reduction, with all 63 tests retained.
+                  </p>
+                  <h2 id="start-small-review-and-expand">Start small, review, and expand</h2>
+                  <p>
+                    The GPT-6 series has improved how our Core Experimentation team maintains
+                    software at scale and unlocked several efficiency wins.
+                  </p>
+                  <p>
+                    So far, my team has merged more than 1,400 maintenance pull requests that
+                    started from GPT-6 proposals. This resulted in faster test execution, smaller
+                    images, lower CPU utilization, and many other benefits. However, some proposals
+                    added more complexity than their expected benefit justified, so prioritization
+                    and measurement remained an important part of our workflow.
+                  </p>
+                  <p>
+                    In larger codebases, we’ve found it easy to be overwhelmed by the number of
+                    optimizations GPT-6 models can find. With instrumentation and the prompt
+                    techniques shared above, Codex has helped us prioritize those improvements.
+                  </p>
+                  <p>
+                    If you want to try this in your own codebase, I’d start with one small
+                    maintenance task: some unused code, a stale feature flag, or a flaky test. Ask
+                    Codex to find an instance, gather evidence, and propose a small draft PR.
+                    Compare different models and efforts for that small task, since a cheaper
+                    configuration may be enough.
+                  </p>
+                  <p>
+                    Once a small pass works well, scale it up to a subdirectory or well-scoped
+                    project. At each step, ask Codex to incorporate your code review feedback into
+                    the next prompt. When you’re confident in the model’s performance, expand to
+                    your whole codebase.
+                  </p>
+                  <hr />
+                  <p>
+                    Our Core Experimentation team is hiring in Engineering, Data Science, and
+                    Product Management. If this post excites you, please apply through our
+                    <a href="https://openai.com/careers/" target="_blank" rel="noopener noreferrer"
+                      >careers page</a
+                    >!
+                  </p>
+                </article>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+    <div
+      data-astro-transition-persist="docs-agent-launcher"
+      data-docs-agent-root=""
+      data-chatkit-api-url="/api/docs-agent/chatkit"
+      data-chatkit-domain-key="domain_pk_69f4ea0d87748194b9ad4d8ba39fc5710f6f8241026056cb"
+      data-docs-agent-site-domain="developers"
+      data-chatkit-greeting="What can I help you with?"
+      data-chatkit-start-prompts-by-route='{"home":[{"label":"Tell me about DevDay launches","prompt":"Tell me about DevDay launches","icon":"circle-question"},{"label":"Find a page","prompt":"Show me OpenAI models","icon":"search"},{"label":"Build a custom guide","prompt":"I want to build an interactive webapp that has a huge microphone in the center allowing to chat in Realtime","icon":"square-code"}],"api":[{"label":"Ask a question","prompt":"What are the recommended prompting best practices for building with the latest model?","icon":"circle-question"},{"label":"Find a page","prompt":"show me a page to compare models","icon":"search"},{"label":"Build a custom guide","prompt":"I want to build a customer support app with realtime voice","icon":"square-code"}],"codex":[{"label":"Ask a question","prompt":"What&apos;s the latest model to use with ChatGPT?","icon":"circle-question"},{"label":"Find a page","prompt":"Do you have guidance on prompting?","icon":"search"},{"label":"Build a custom guide","prompt":"I want to build an internal dashboard that gets updated with data from slack and spreadsheets and which allows to visualize weekly progress","icon":"square-code"}],"chatgpt":[{"label":"Ask a question","prompt":"What are best practices for building a plugin?","icon":"circle-question"},{"label":"Find a page","prompt":"Show me the optional UI guidelines for plugins","icon":"search"},{"label":"Build a custom guide","prompt":"Help me build a plugin that proposes a quiz to find the best match from my list of products","icon":"square-code"}],"resources":[{"label":"Ask a question","prompt":"What is the Docs MCP server?","icon":"circle-question"},{"label":"Find a page","prompt":"Show me the Codex meetups page","icon":"search"},{"label":"Build a custom guide","prompt":"I want to build an interactive webapp that has a huge microphone in the center allowing to chat in Realtime","icon":"square-code"}]}'
+      class="docs-agent-root"
+    >
+      <div
+        id="docs-agent-panel"
+        data-docs-agent-panel=""
+        role="dialog"
+        aria-labelledby="docs-agent-title"
+        class="fixed inset-x-0 bottom-0 z-[80] flex h-[var(--docs-agent-drawer-height)] flex-col overflow-hidden rounded-t-2xl border border-subtle bg-surface transition-transform duration-300 ease-out md:inset-y-0 md:left-auto md:right-0 md:h-auto md:w-[var(--docs-agent-panel-width)] md:rounded-none md:border-y-0 md:border-r-0"
+      >
+        <header class="flex h-16 shrink-0 items-center justify-between border-b border-subtle px-4">
+          <h2 id="docs-agent-title" class="text-sm font-semibold text-default">Docs agent</h2>
+        </header>
+        <div class="relative min-h-0 flex-1">
+          <p
+            data-docs-agent-status=""
+            class="absolute inset-x-4 top-4 rounded-lg border border-subtle bg-surface-secondary p-3 text-sm text-secondary"
+          >
+            Loading docs agent...
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

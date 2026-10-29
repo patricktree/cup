@@ -4,7 +4,7 @@ import { createControlledSourceMaterialPreparer } from "#src/source-material-pre
 
 const CONTROLLED_URL = "https://source.example.test/fixture";
 
-test("prepares controlled HTML with production cleanup and title selection", async () => {
+test("prepares controlled HTML with production cleanup, its first headline as the source title, and the cut", async () => {
   const prepareSourceMaterial = createControlledSourceMaterialPreparer({
     url: CONTROLLED_URL,
     html: `
@@ -24,6 +24,7 @@ test("prepares controlled HTML with production cleanup and title selection", asy
   });
 
   const { html } = await prepareSourceMaterial(CONTROLLED_URL);
+  expect(html).not.toContain("<h1");
   expect(html).not.toContain("<nav");
   expect(html).not.toContain("<script");
   expect(html).not.toContain("<footer");

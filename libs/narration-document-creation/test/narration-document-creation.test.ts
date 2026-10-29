@@ -211,3 +211,53 @@ test("ignores HTML formatting whitespace while preserving explicit breaks", () =
     "During my life I played a role in developing software.\nAfter the break.",
   );
 });
+
+test("opens with the source title and source subtitle as two units inside an hgroup", () => {
+  const narrationDocument = createNarrationDocument({
+    sourceTitle: "A Source Title",
+    sourceSubtitle: "  A short summary beneath the title.  ",
+    sourceMaterialHtml: "<p>The first paragraph.</p><p>The second paragraph.</p>",
+  });
+
+  expect(narrationDocument).toEqual({
+    html: '<article><hgroup><h1 id="narration-unit-0001">A Source Title</h1><p id="narration-unit-0002">A short summary beneath the title.</p></hgroup><p id="narration-unit-0003">The first paragraph.</p><p id="narration-unit-0004">The second paragraph.</p></article>',
+    synchronizationUnits: [
+      { id: "narration-unit-0001", narrationText: "A Source Title" },
+      { id: "narration-unit-0002", narrationText: "A short summary beneath the title." },
+      { id: "narration-unit-0003", narrationText: "The first paragraph." },
+      { id: "narration-unit-0004", narrationText: "The second paragraph." },
+    ],
+  });
+});
+
+test("keeps a heading right after the cut out of the source subtitle unit", () => {
+  const narrationDocument = createNarrationDocument({
+    sourceTitle: "A Source Title",
+    sourceSubtitle: "A short summary.",
+    sourceMaterialHtml: "<h2>Introduction</h2><p>The first paragraph.</p>",
+  });
+
+  expect(narrationDocument).toEqual({
+    html: '<article><hgroup><h1 id="narration-unit-0001">A Source Title</h1><p id="narration-unit-0002">A short summary.</p></hgroup><section id="narration-unit-0003"><h2>Introduction</h2><p>The first paragraph.</p></section></article>',
+    synchronizationUnits: [
+      { id: "narration-unit-0001", narrationText: "A Source Title" },
+      { id: "narration-unit-0002", narrationText: "A short summary." },
+      { id: "narration-unit-0003", narrationText: "Introduction\n\nThe first paragraph." },
+    ],
+  });
+});
+
+test("opens with the source title alone and no hgroup without a source subtitle", () => {
+  const narrationDocument = createNarrationDocument({
+    sourceTitle: "A Source Title",
+    sourceMaterialHtml: "<h2>Introduction</h2><p>The first paragraph.</p>",
+  });
+
+  expect(narrationDocument).toEqual({
+    html: '<article><h1 id="narration-unit-0001">A Source Title</h1><section id="narration-unit-0002"><h2>Introduction</h2><p>The first paragraph.</p></section></article>',
+    synchronizationUnits: [
+      { id: "narration-unit-0001", narrationText: "A Source Title" },
+      { id: "narration-unit-0002", narrationText: "Introduction\n\nThe first paragraph." },
+    ],
+  });
+});

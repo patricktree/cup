@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 /**
  * Keeps the player host's audio element reachable, which is never attached to the document. The
@@ -27,6 +27,16 @@ async function readNarrationAudio(page: Page) {
     }
     return { src: audio.src, currentTime: audio.currentTime, paused: audio.paused };
   });
+}
+
+/** The texts of the first three blocks of the narration document, inside an `<hgroup>` or not. */
+async function readOpeningTexts(article: Locator) {
+  return article.evaluate((element) =>
+    [...element.querySelectorAll(":scope > *, :scope > hgroup > *")]
+      .filter((block) => block.tagName !== "HGROUP")
+      .slice(0, 3)
+      .map((block) => block.textContent.trim()),
+  );
 }
 
 /** Waits until the element plays within a unit of five seconds that starts at `startSeconds`. */
@@ -92,6 +102,17 @@ test("tapping narration seeks the narration track to that unit, including nested
       name: "The turbulent AI era is here. The choices we make now are critical.",
     }),
   ).toBeVisible();
+});
+
+test("without a source subtitle the host follows the title directly", async ({ mount }) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/ReadyAudiobook");
+
+  expect(await readOpeningTexts(component.getByRole("article"))).toEqual([
+    "A deterministic document about careful testing",
+    "source.example.test",
+    "Keep the important boundaries real.",
+  ]);
+  await expect(component.locator("hgroup")).toHaveCount(0);
 });
 
 test("the position bar seeks the narration track", async ({ mount, page }) => {
@@ -292,6 +313,11 @@ test("an account audiobook opens with its cover, title and host below a plain to
   await expect(
     component.getByRole("article").getByText("gatesnotes.com", { exact: true }),
   ).toBeVisible();
+  expect(await readOpeningTexts(component.getByRole("article"))).toEqual([
+    title,
+    "We need a plan to ensure that the good outweighs the bad.",
+    "gatesnotes.com",
+  ]);
   const topBar = component.getByRole("banner");
   await expect(topBar.getByRole("link", { name: "Back", exact: true })).toHaveAttribute(
     "href",

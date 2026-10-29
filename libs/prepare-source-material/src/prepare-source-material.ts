@@ -1,6 +1,21 @@
 import { parseFragment, serialize } from "parse5";
 import type { DefaultTreeAdapterMap } from "parse5";
 
+import {
+  collectMetadata,
+  extractNodeText,
+  findAllElements,
+  findFirstElement,
+  getAttribute,
+  isTemplateElement,
+  NARRATION_TEXT_ELEMENT_TAG_NAMES,
+  normalizeWhitespace,
+  type HtmlElement,
+  type HtmlParentNode,
+  type Metadata,
+} from "#src/html-tree.ts";
+import { extractMetadataDescriptions, findSourceSubtitleElement } from "#src/source-subtitle.ts";
+
 /** A cookie installed before source-page navigation. */
 export type SourcePageCookie = {
   name: string;
@@ -36,21 +51,8 @@ const IRRELEVANT_ELEMENT_TAG_NAMES = new Set<string>([
   "style",
   "svg",
 ]);
-const NARRATION_TEXT_ELEMENT_TAG_NAMES = new Set<string>([
-  "blockquote",
-  "figcaption",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  "li",
-  "p",
-  "pre",
-  "td",
-  "th",
-]);
+// The loader marks the visible headline in the source page; `prepareLoadedSourcePage` reads it.
+export const VISIBLE_HEADLINE_ATTRIBUTE = "data-cup-visible-headline";
 // Keep equivalent static pages; rendering often adds small dynamic counters and page chrome.
 const BETTER_SOURCE_MATERIAL_TEXT_FACTOR = 1.1;
 const SOURCE_PAGE_JAVASCRIPT_MODES = [false, true] as const;
@@ -99,6 +101,7 @@ type SourcePage = {
     argument: RenderedSourcePageReadinessOptions,
     options: { timeout: number },
   ): Promise<unknown>;
+  evaluate(pageFunction: (attributeName: string) => void, attributeName: string): Promise<unknown>;
   locator(selector: "body" | "head"): { innerHTML(): Promise<string> };
   title(): Promise<string>;
   close(): Promise<void>;
@@ -120,10 +123,14 @@ export type CoverImageDeclaration = {
   alternativeText?: string;
 };
 
-/** Cleaned source HTML, the title used to begin narration, and the declared cover image. */
+/**
+ * Cleaned source HTML, the title used to begin narration, the source subtitle when the page has
+ * one, and the declared cover image.
+ */
 export type SourceMaterial = {
   html: string;
   title: string;
+  subtitle?: string;
   coverImage?: CoverImageDeclaration;
 };
 
@@ -142,6 +149,11 @@ export type LoadSourcePageOptions = {
 export type LoadedSourcePage = {
   bodyHtml: string;
   documentTitle: string;
+  /**
+   * Descriptions the page declares in metadata; a source subtitle candidate whose
+   * whitespace-normalized text equals one of them is accepted.
+   */
+  metadataDescriptions?: readonly string[];
   coverImage?: CoverImageDeclaration;
   responseStatus: number;
 };
@@ -171,13 +183,19 @@ export async function prepareSourceMaterial({
   );
 
   if (sourceMaterials.length > 0) {
-    const { html, title } = selectBetterSourceMaterial(sourceMaterials);
+    // Each load detects its own source subtitle, so it always belongs to the selected HTML.
+    const { html, title, subtitle } = selectBetterSourceMaterial(sourceMaterials);
     // Independent of which load has more text: `SOURCE_PAGE_JAVASCRIPT_MODES` puts the rendered
     // load last, and its metadata is the fuller declaration because a static shell often carries
     // none or only a site-wide image.
     const coverImage = sourceMaterials.at(-1)?.coverImage ?? sourceMaterials[0]?.coverImage;
 
-    return { html, title, ...(coverImage === undefined ? {} : { coverImage }) };
+    return {
+      html,
+      title,
+      ...(subtitle === undefined ? {} : { subtitle }),
+      ...(coverImage === undefined ? {} : { coverImage }),
+    };
   }
 
   const failures = results.flatMap((result) =>
@@ -200,11 +218,53 @@ export function prepareLoadedSourcePage(sourcePage: LoadedSourcePage): SourceMat
     throw new Error(`Source page responded with HTTP ${sourcePage.responseStatus}`);
   }
 
+  const documentFragment = parseFragment(sourcePage.bodyHtml);
+  const visibleHeadline = findFirstElement(
+    documentFragment,
+    (element) => getAttribute(element, VISIBLE_HEADLINE_ATTRIBUTE) !== undefined,
+  );
+  const title = normalizeWhitespace(
+    visibleHeadline ? extractNodeText(visibleHeadline) : sourcePage.documentTitle,
+  );
+
+  if (title.length === 0) {
+    throw new Error("Expected the source page to have a title");
+  }
+
+  if (visibleHeadline) {
+    cutBeforeAndIncluding(visibleHeadline);
+  }
+  removeAttribute(documentFragment, VISIBLE_HEADLINE_ATTRIBUTE);
+  removeIrrelevantAndEmptyElements(documentFragment);
+
+  // After the cut, the first block in document order is the first block after the visible headline.
+  const subtitleElement = visibleHeadline
+    ? findSourceSubtitleElement(documentFragment, title, sourcePage.metadataDescriptions ?? [])
+    : undefined;
+  const subtitle = subtitleElement && normalizeWhitespace(extractNodeText(subtitleElement));
+
+  if (subtitleElement) {
+    removeElement(subtitleElement);
+    // The source subtitle's wrapper can be left empty.
+    removeIrrelevantAndEmptyElements(documentFragment);
+  }
+
   return {
-    html: cleanAudiobookSourceMaterialHtml(sourcePage.bodyHtml),
-    title: extractSourceTitle(sourcePage.bodyHtml, sourcePage.documentTitle),
+    html: serialize(documentFragment),
+    title,
+    ...(subtitle === undefined ? {} : { subtitle }),
     ...(sourcePage.coverImage === undefined ? {} : { coverImage: sourcePage.coverImage }),
   };
+}
+
+function removeElement(element: HtmlElement): void {
+  const { parentNode } = element;
+
+  if (!parentNode) {
+    throw new Error("Expected the source subtitle element to have a parent node");
+  }
+
+  parentNode.childNodes.splice(parentNode.childNodes.indexOf(element), 1);
 }
 
 /** Loads a public source page while blocking scripts and non-public subresources. */
@@ -274,17 +334,44 @@ export async function loadPublicSourcePage({
       );
     }
 
-    const coverImage = extractCoverImageDeclaration(await page.locator("head").innerHTML(), url);
+    const headHtml = await page.locator("head").innerHTML();
+    const coverImage = extractCoverImageDeclaration(headHtml, url);
+    // The mark must be in the DOM before the body is serialized below.
+    await page.evaluate(markVisibleHeadline, VISIBLE_HEADLINE_ATTRIBUTE);
+    const bodyHtml = await page.locator("body").innerHTML();
 
     return {
-      bodyHtml: await page.locator("body").innerHTML(),
+      bodyHtml,
       documentTitle: await page.title(),
+      // `bodyHtml` lacks the head, and cleanup in `prepareLoadedSourcePage` drops body scripts.
+      metadataDescriptions: extractMetadataDescriptions(`${headHtml}${bodyHtml}`),
       ...(coverImage === undefined ? {} : { coverImage }),
       responseStatus: response.status(),
     };
   } finally {
     await page.close();
   }
+}
+
+/**
+ * Marks the first `<h1>` that renders visibly with {@link VISIBLE_HEADLINE_ATTRIBUTE}, so the
+ * source title never comes from a hidden heading such as a consent wall's. The browser serializes
+ * this function into the source page, so it must stay self-contained.
+ */
+function markVisibleHeadline(attributeName: string): void {
+  const visibleHeadline = Array.from(document.querySelectorAll("h1")).find((heading) => {
+    const boundingRectangle = heading.getBoundingClientRect();
+
+    return (
+      (heading.textContent?.trim() ?? "").length > 0 &&
+      heading.checkVisibility({ opacityProperty: true, visibilityProperty: true }) &&
+      // Visually hidden headings, such as `.sr-only`, keep a one-pixel box.
+      boundingRectangle.width > 1 &&
+      boundingRectangle.height > 1
+    );
+  });
+
+  visibleHeadline?.setAttribute(attributeName, "");
 }
 
 /** Reads the publisher-declared cover image from page metadata; body images are never considered. */
@@ -339,37 +426,13 @@ function resolveCoverImageUrl(
     : undefined;
 }
 
-type Metadata = { property: string; content: string };
-
-function collectMetadata(parentNode: DefaultTreeAdapterMap["parentNode"]): Metadata[] {
-  return parentNode.childNodes.flatMap((childNode) => {
-    if (!("tagName" in childNode)) {
-      return [];
-    }
-
-    if (childNode.tagName !== "meta") {
-      return collectMetadata(childNode);
-    }
-
-    const getAttribute = (name: string) =>
-      childNode.attrs.find((attribute) => attribute.name === name)?.value;
-    // Open Graph uses `property`; Twitter cards and many publishers use `name` for either.
-    const property = (getAttribute("property") ?? getAttribute("name"))?.trim().toLowerCase();
-    const content = normalizeWhitespace(getAttribute("content") ?? "");
-
-    return property && content.length > 0 ? [{ property, content }] : [];
-  });
-}
-
 /**
  * Open Graph attaches structured properties such as `og:image:secure_url` and `og:image:alt` to the
  * `og:image` they accompany. A page can declare several images; only the first one's properties are
  * returned, so a later image's properties never describe the first.
  */
 function selectFirstOpenGraphImage(metadata: readonly Metadata[]): Metadata[] {
-  const isImageProperty = (item: Metadata) =>
-    item.property === "og:image" || item.property.startsWith("og:image:");
-  const firstIndex = metadata.findIndex(isImageProperty);
+  const firstIndex = metadata.findIndex(isOpenGraphImageProperty);
 
   if (firstIndex === -1) {
     return [];
@@ -386,43 +449,38 @@ function selectFirstOpenGraphImage(metadata: readonly Metadata[]): Metadata[] {
   return metadata.slice(firstIndex, nextImageIndex === -1 ? undefined : nextImageIndex);
 }
 
+function isOpenGraphImageProperty(item: Metadata): boolean {
+  return item.property === "og:image" || item.property.startsWith("og:image:");
+}
+
 function findMetadataContent(metadata: readonly Metadata[], property: string): string | undefined {
   return metadata.find((item) => item.property === property)?.content;
 }
 
-function extractSourceTitle(bodyHtml: string, documentTitle: string): string {
-  const documentFragment = parseFragment(bodyHtml);
-  const heading = findFirstElement(documentFragment, "h1");
-  const title = normalizeWhitespace(heading ? extractNodeText(heading) : documentTitle);
+/** Removes the element and everything before it in document order; its ancestors stay. */
+function cutBeforeAndIncluding(element: HtmlElement): void {
+  let node: DefaultTreeAdapterMap["childNode"] = element;
+  let parentNode = element.parentNode;
+  let shouldRemoveNode = true;
 
-  if (title.length === 0) {
-    throw new Error("Expected the source page to have a title");
+  while (parentNode) {
+    const nodeIndex = parentNode.childNodes.indexOf(node);
+    parentNode.childNodes.splice(0, shouldRemoveNode ? nodeIndex + 1 : nodeIndex);
+
+    if (!("tagName" in parentNode)) {
+      break;
+    }
+
+    node = parentNode;
+    parentNode = parentNode.parentNode;
+    shouldRemoveNode = false;
   }
-
-  return title;
 }
 
-function findFirstElement(
-  parentNode: DefaultTreeAdapterMap["parentNode"],
-  tagName: string,
-): DefaultTreeAdapterMap["element"] | undefined {
-  for (const childNode of parentNode.childNodes) {
-    if (!("tagName" in childNode)) {
-      continue;
-    }
-
-    if (childNode.tagName === tagName) {
-      return childNode;
-    }
-
-    const descendant = findFirstElement(childNode, tagName);
-
-    if (descendant) {
-      return descendant;
-    }
+function removeAttribute(parentNode: HtmlParentNode, attributeName: string): void {
+  for (const element of findAllElements(parentNode, () => true)) {
+    element.attrs = element.attrs.filter((attribute) => attribute.name !== attributeName);
   }
-
-  return undefined;
 }
 
 function selectBetterSourceMaterial(sourceMaterials: readonly SourceMaterial[]): SourceMaterial {
@@ -444,13 +502,15 @@ function selectBetterSourceMaterial(sourceMaterials: readonly SourceMaterial[]):
 
 function getSourceMaterialTextLength(sourceMaterial: SourceMaterial): number {
   const documentFragment = parseFragment(sourceMaterial.html);
-  const contentRoot = findFirstElement(documentFragment, "article") ?? documentFragment;
+  const contentRoot =
+    findFirstElement(documentFragment, (element) => element.tagName === "article") ??
+    documentFragment;
   const narrationText = extractNarrationText(contentRoot);
 
   return normalizeWhitespace(narrationText || extractNodeText(contentRoot)).length;
 }
 
-function extractNarrationText(parentNode: DefaultTreeAdapterMap["parentNode"]): string {
+function extractNarrationText(parentNode: HtmlParentNode): string {
   return parentNode.childNodes
     .map((childNode) => {
       if (!("tagName" in childNode)) {
@@ -462,22 +522,6 @@ function extractNarrationText(parentNode: DefaultTreeAdapterMap["parentNode"]): 
         : extractNarrationText(childNode);
     })
     .join("");
-}
-
-function extractNodeText(parentNode: DefaultTreeAdapterMap["parentNode"]): string {
-  return parentNode.childNodes
-    .map((childNode) => {
-      if ("value" in childNode) {
-        return childNode.value;
-      }
-
-      return "tagName" in childNode ? extractNodeText(childNode) : "";
-    })
-    .join("");
-}
-
-function normalizeWhitespace(text: string): string {
-  return text.replace(/\s+/gu, " ").trim();
 }
 
 function describeError(error: unknown): string {
@@ -544,7 +588,7 @@ function isPrivateIpv6(hostname: string): boolean {
   return mapped !== undefined && isPrivateIpv4(mapped);
 }
 
-function removeIrrelevantAndEmptyElements(parentNode: DefaultTreeAdapterMap["parentNode"]): void {
+function removeIrrelevantAndEmptyElements(parentNode: HtmlParentNode): void {
   for (let childIndex = parentNode.childNodes.length - 1; childIndex >= 0; childIndex -= 1) {
     const childNode = parentNode.childNodes[childIndex];
 
@@ -557,7 +601,7 @@ function removeIrrelevantAndEmptyElements(parentNode: DefaultTreeAdapterMap["par
       continue;
     }
 
-    const role = childNode.attrs.find((attribute) => attribute.name === "role")?.value;
+    const role = getAttribute(childNode, "role");
     if (
       IRRELEVANT_ELEMENT_TAG_NAMES.has(childNode.tagName) ||
       role === "navigation" ||
@@ -583,10 +627,4 @@ function removeIrrelevantAndEmptyElements(parentNode: DefaultTreeAdapterMap["par
 
     parentNode.childNodes.splice(childIndex, 1);
   }
-}
-
-function isTemplateElement(
-  element: DefaultTreeAdapterMap["element"],
-): element is DefaultTreeAdapterMap["template"] {
-  return element.tagName === "template" && "content" in element;
 }

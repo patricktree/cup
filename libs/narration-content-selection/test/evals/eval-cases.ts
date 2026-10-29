@@ -28,6 +28,7 @@ export type ExpectedSynchronizationUnits = z.infer<typeof EXPECTED_SYNCHRONIZATI
 export type EvalCase = {
   id: string;
   sourceTitle: string;
+  sourceSubtitle?: string;
   inputHtml: string;
   expectedSynchronizationUnits: ExpectedSynchronizationUnits;
   expectedSynchronizationUnitsPath: string;
@@ -60,6 +61,7 @@ export async function loadEvalCases(casesDirectory: string): Promise<EvalCase[]>
 async function loadEvalCase(casesDirectory: string, caseId: string): Promise<EvalCase> {
   const caseDirectory = path.join(casesDirectory, caseId);
   const sourceTitlePath = path.join(caseDirectory, "source-title.txt");
+  const sourceSubtitlePath = path.join(caseDirectory, "source-subtitle.txt");
   const inputHtmlPath = path.join(caseDirectory, "input.html");
   const expectedSynchronizationUnitsPath = path.join(caseDirectory, "expected.json");
   const metadataPath = path.join(caseDirectory, "case.json");
@@ -68,12 +70,14 @@ async function loadEvalCase(casesDirectory: string, caseId: string): Promise<Eva
   await requireFile(inputHtmlPath);
   await requireFile(expectedSynchronizationUnitsPath);
 
-  const [sourceTitle, inputHtml, expectedSynchronizationUnitsJson, metadata] = await Promise.all([
-    fs.readFile(sourceTitlePath, "utf8"),
-    fs.readFile(inputHtmlPath, "utf8"),
-    fs.readFile(expectedSynchronizationUnitsPath, "utf8"),
-    loadMetadata(metadataPath, caseId),
-  ]);
+  const [sourceTitle, sourceSubtitle, inputHtml, expectedSynchronizationUnitsJson, metadata] =
+    await Promise.all([
+      fs.readFile(sourceTitlePath, "utf8"),
+      loadSourceSubtitle(sourceSubtitlePath),
+      fs.readFile(inputHtmlPath, "utf8"),
+      fs.readFile(expectedSynchronizationUnitsPath, "utf8"),
+      loadMetadata(metadataPath, caseId),
+    ]);
 
   const normalizedSourceTitle = sourceTitle.trim();
 
@@ -84,6 +88,7 @@ async function loadEvalCase(casesDirectory: string, caseId: string): Promise<Eva
   return {
     id: caseId,
     sourceTitle: normalizedSourceTitle,
+    ...(sourceSubtitle === undefined ? {} : { sourceSubtitle }),
     inputHtml,
     expectedSynchronizationUnits: parseExpectedSynchronizationUnits(
       expectedSynchronizationUnitsJson,
@@ -124,6 +129,30 @@ async function requireFile(filePath: string): Promise<void> {
 
     throw error;
   }
+}
+
+async function loadSourceSubtitle(sourceSubtitlePath: string): Promise<string | undefined> {
+  let sourceSubtitle: string;
+
+  try {
+    sourceSubtitle = await fs.readFile(sourceSubtitlePath, "utf8");
+  } catch (error) {
+    if (isMissingFileError(error)) {
+      return undefined;
+    }
+
+    throw error;
+  }
+
+  const normalizedSourceSubtitle = sourceSubtitle.trim();
+
+  if (normalizedSourceSubtitle.length === 0) {
+    throw new Error(
+      `Expected ${sourceSubtitlePath} to contain a source subtitle; remove the file when the case has none`,
+    );
+  }
+
+  return normalizedSourceSubtitle;
 }
 
 async function loadMetadata(

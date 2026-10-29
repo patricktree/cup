@@ -6,6 +6,8 @@ status: superseded
 
 Superseded by [ADR 0005](0005-prepare-narration-before-player-controlled-synthesis.md). The original rationale follows; current playback uses prepared text and independent audio segments, and exports have been removed.
 
+[ADR 0014](0014-cut-source-material-at-the-visible-headline-and-carry-the-source-subtitle-in-the-narration-document.md) amends "speaks the source title as its first unit" (2026-10-28): the source title is still the first unit, and a source subtitle, when the source page has one, is the second.
+
 A conversion produces a canonical audiobook comprising a simple narration document, one MP3 playback track, and synchronization cues that map existing narration chunks to intervals in that track. The controlled reader consumes this model directly; a standalone MP3 and an EPUB 3 publication with Media Overlays are derived representations. This separates the guaranteed reading experience from uneven third-party reader behavior and allows export failures to remain independent of audiobook readiness.
 
 ## Considered Options

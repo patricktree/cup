@@ -60,7 +60,19 @@ Both owners record each conversion's [preparation phase](../GLOSSARY.md#preparat
 
 Active accounts and open, unexpired conversion grants may prepare audiobooks without available duration; such an audiobook stays readable without audio. Per-owner admission limits still apply. A failed preparation shows an error and a Retry, which restarts preparation for the same conversion.
 
+[Source preparation](../../libs/prepare-source-material/src/prepare-source-material.ts) loads each source page twice, without and with JavaScript, and keeps the better load. In each load the browser marks the [visible headline](../GLOSSARY.md#visible-headline), whose text becomes the [source title](../GLOSSARY.md#source-title), and the source material is cut there: the visible headline and everything before it in document order are left out, so content selection never sees kickers, hub links or dates above the title. Without a visible headline the document title is the source title, nothing is cut, and there is no source subtitle.
+
+Each load then detects the [source subtitle](../GLOSSARY.md#source-subtitle) by [deterministic rules](../../libs/prepare-source-material/src/source-subtitle.ts), without an LLM call:
+
+- Detection runs after the cleanup that removes irrelevant elements such as navigation, figures, buttons and forms, so none of them is ever a candidate.
+- There is one candidate, the first prose block after the visible headline that is not a date or byline. If its signals do not accept it, there is no source subtitle and no further block is tried: precision beats recall, and a missing source subtitle never fails or delays a conversion.
+- The accepted element is removed from the source material by identity, not by matching its text, and the source subtitle travels beside the source title of the same load, so it always belongs to the narrated HTML.
+
+The [recorded source pages](../../libs/prepare-source-material/test-e2e/fixtures/README.md) and the [unit tests](../../libs/prepare-source-material/test/prepare-source-material.test.ts) cover each acceptance and rejection rule.
+
 Narration content selection keeps complete paragraphs of main prose, including instructional prose, and leaves out code blocks and shell snippets; it reconstructs the source material from the original HTML, so source wording and native anchors are preserved. The [live evals](../../libs/narration-content-selection/test/evals/README.md) compare the resulting synchronization units exactly against committed goldens.
+
+[Narration document creation](../../libs/narration-document-creation/src/narration-document-creation.ts) opens every narration document with the source title as its first synchronization unit. With a source subtitle, the source title and the source subtitle open it together in an `<hgroup>` as two units, so the source subtitle is narrated second, as a unit of its own that never takes in a heading or the next block, and the detail view shows it under the source title, above the host. The narration document is the only carrier of the source subtitle: the audiobook manifest and the listener API carry the source title alone, so Recents, the player sheet and the media session show only the source title ([ADR 0014](../adr/0014-cut-source-material-at-the-visible-headline-and-carry-the-source-subtitle-in-the-narration-document.md)).
 
 Preparation outcomes contain no audio duration or speech-provider usage; generated duration is recorded per segment by the owner's duration accounting. Grant outcomes additionally record narration measurements and content-selection provider usage for operator inspection.
 

@@ -287,6 +287,10 @@ test("root auth handles signup and session restoration without account navigatio
   });
   await expect(titledTracks).toHaveCount(2, { timeout: 90_000 });
   await expect(tracks.getByText("source.example.test", { exact: true })).toHaveCount(2);
+  // A card shows the source title only, never the source page's source subtitle.
+  await expect(
+    tracks.getByText("Real boundaries and fake providers make every run the same."),
+  ).toHaveCount(0);
   // Its audio is generated without the detail view being open, so the newest track plays at once.
   await titledTracks.first().click();
   await expect(page).not.toHaveURL(privateUrl);
