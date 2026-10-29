@@ -166,8 +166,22 @@ function RecentPage(): React.ReactNode {
           )}
         </main>
       </div>
-      <MiniPlayer />
-      <AccountTabBar />
+      {/* the mini player stacks on the tab bar, so it needs no offset from the tab bar's height */}
+      <div
+        className={css`
+          /* stays at the bottom of the screen while the document scrolls */
+          position: sticky;
+          bottom: 0;
+
+          /* above shell <main>, whose end scrolls under the tab bar's fade */
+          z-index: 1;
+          display: grid;
+          grid-area: shell-footer;
+        `}
+      >
+        <MiniPlayer />
+        <AccountTabBar />
+      </div>
       {/* the Add and account dialogs (`_shell.recent.add.tsx`, `_shell.recent.account.tsx`) open
           over Recents */}
       <Outlet />
