@@ -9,8 +9,11 @@ import {
   type PlaybackPosition,
 } from "@cup/listener-api.routes";
 
-import { invalidateAccountHistory } from "#src/data-fetching/account-history.js";
+import { removeFromCachedAccountHistory } from "#src/data-fetching/account-history.js";
+import { invalidateAccountQueries } from "#src/data-fetching/account.js";
 import { ERROR_CODE, requestApi, RpcError } from "#src/data-fetching/api-request.js";
+import { queryClient as appQueryClient } from "#src/data-fetching/query-client.js";
+import { QUERY_KEYS } from "#src/data-fetching/query-keys.js";
 import { notifyError } from "#src/notifications.js";
 
 const POLL_INTERVAL_MS = 1_000;
@@ -18,7 +21,7 @@ const AUDIOBOOK_UPDATE_ERROR_TITLE = "The track could not be updated.";
 
 export function createAudiobookQuery(conversionId: string) {
   return queryOptions({
-    queryKey: ["audiobook", conversionId],
+    queryKey: QUERY_KEYS.audiobook(conversionId),
     queryFn: ({ signal }) => getAudiobook(conversionId, signal),
     meta: { errorTitle: AUDIOBOOK_UPDATE_ERROR_TITLE },
     refetchInterval: (query) => {
@@ -75,7 +78,8 @@ async function retryConversion(conversionId: string) {
 
 /**
  * Deletes an account conversion. A conversion already gone counts as deleted, and the dialog that
- * starts the deletion shows a failure in place of a toast. Its page is left before its audiobook
+ * starts the deletion shows a failure in place of a toast. The cached history drops the conversion
+ * before its page is left, so Recents never shows it, and its page is left before its audiobook
  * query is dropped, so the page cannot request the deleted audiobook again.
  */
 export function useDeleteConversion({
@@ -91,14 +95,18 @@ export function useDeleteConversion({
   const queryClient = useQueryClient();
   return useMutation({
     meta: { errorDisplay: "inline" },
-    mutationFn: () => {
+    // A poll answered after the deletion would find the track gone and report a failure.
+    onMutate: () => queryClient.cancelQueries({ queryKey: QUERY_KEYS.audiobook(conversionId) }),
+    mutationFn: async () => {
       check.assert(subject, "Only a signed-in account deletes a conversion.");
-      return deleteConversion(subject, conversionId);
+      await deleteConversion(subject, conversionId);
+      return { subject };
     },
-    onSuccess: async () => {
+    onSuccess: async ({ subject: deletingSubject }) => {
+      await removeFromCachedAccountHistory(deletingSubject, conversionId);
       await onDeleted();
-      queryClient.removeQueries({ queryKey: createAudiobookQuery(conversionId).queryKey });
-      await invalidateAccountHistory(subject);
+      queryClient.removeQueries({ queryKey: QUERY_KEYS.audiobook(conversionId) });
+      await invalidateAccountQueries(deletingSubject);
     },
   });
 }
@@ -128,6 +136,11 @@ export function getLocalPlaybackPosition(conversionId: string): PlaybackPosition
     return null;
   }
 }
+/**
+ * Saves a listening position: on the device for listeners without an account, on the server and in
+ * the cached audiobook for signed-in ones, so an audiobook opened again before its refetch returns
+ * loads at this position.
+ */
 export async function savePlaybackPosition(
   conversionId: string,
   position: PlaybackPosition,
@@ -137,5 +150,26 @@ export async function savePlaybackPosition(
     localStorage.setItem(`cup:position:v1:${conversionId}`, JSON.stringify(position));
     return;
   }
-  await requestApi({ subject }, (client) => client.savePosition({ conversionId }, position));
+
+  const queryKey = QUERY_KEYS.audiobook(conversionId);
+  await appQueryClient.cancelQueries({ queryKey });
+  const cached = appQueryClient.getQueryState<Audiobook>(queryKey);
+  // Only a prepared audiobook carries a listening position.
+  if (cached?.data && cached.data.status !== "pending" && cached.data.status !== "failed") {
+    const audiobook: Audiobook = { ...cached.data, playbackPosition: position };
+    appQueryClient.setQueryData<Audiobook>(
+      queryKey,
+      audiobook,
+      // The cached response keeps its arrival time, which dates its narration track URL.
+      { updatedAt: cached.dataUpdatedAt },
+    );
+  }
+
+  try {
+    await requestApi({ subject }, (client) => client.savePosition({ conversionId }, position));
+  } finally {
+    // Marks the audiobook stale without requesting it now: playback saves every few seconds, and
+    // the cache already holds the position. The next page that shows it requests it again.
+    await appQueryClient.invalidateQueries({ queryKey, refetchType: "none" });
+  }
 }

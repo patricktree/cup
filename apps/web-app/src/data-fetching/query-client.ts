@@ -1,5 +1,8 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 
+// Not from api-request.ts, whose session imports need this module: a cycle.
+import { RpcError } from "@cup/listener-api.client";
+
 import { notifyError, toastManager } from "#src/notifications.js";
 
 /**
@@ -24,6 +27,15 @@ declare module "@tanstack/react-query" {
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error, query) => {
+      // A refetch answered "not found" or "access denied": what the screen shows was deleted or is
+      // no longer the listener's, for example on another device. Dropping the data makes the
+      // screen's suspense query throw to its error screen, as on a first load, and keeps a later
+      // visit from showing it.
+      if (query.state.data !== undefined && isAccessLost(error)) {
+        query.setState({ data: undefined, dataUpdatedAt: 0 });
+        return;
+      }
+
       // Without data, the page has nothing to show and reports the failure in place of its content.
       if (query.state.data === undefined || query.meta?.errorDisplay === "inline") {
         return;
@@ -56,6 +68,10 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+function isAccessLost(error: unknown): boolean {
+  return error instanceof RpcError && (error.status === 403 || error.status === 404);
+}
 
 function toastIdOfQuery(queryHash: string) {
   return `query:${queryHash}`;

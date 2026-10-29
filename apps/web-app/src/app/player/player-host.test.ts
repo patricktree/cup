@@ -579,6 +579,21 @@ test("the age of a shown audiobook's track URL counts from when the page receive
   ]);
 });
 
+test("a track URL received more than 12 hours ago is renewed on Play, however recently the page showed it", async () => {
+  const { host, element, fetchedConversionIds, clock } = createHost({
+    fetchAudiobook: () => Promise.resolve(withTrackUrl(FIRST, RENEWED_TRACK_URL)),
+  });
+  // The page shows an audiobook its cache received at 0, as when it is opened again later.
+  clock.now = TWELVE_HOURS_MILLISECONDS + 1;
+  host.showConversion("first", FIRST, 0);
+
+  host.playShown();
+  await settle();
+
+  expect(fetchedConversionIds).toEqual(["first"]);
+  expect(element.calls.slice(-2)).toEqual([`src:${RENEWED_TRACK_URL}`, "play"]);
+});
+
 test("a unit tap that renews the track URL seeks to the unit once the renewed track is loaded", async () => {
   const { host, element, clock } = createHost({
     fetchAudiobook: () => Promise.resolve(withTrackUrl(FIRST, RENEWED_TRACK_URL)),

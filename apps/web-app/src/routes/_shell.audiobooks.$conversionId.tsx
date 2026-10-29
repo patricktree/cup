@@ -114,7 +114,7 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
   // Trial conversions cannot be deleted, even by a signed-in listener who can open one.
   const isDeletable = useIsAccountConversion(session?.user.id, conversionId);
   const audiobookQuery = createAudiobookQuery(conversionId);
-  const { data: audiobook } = useSuspenseQuery(
+  const { data: audiobook, dataUpdatedAt: audiobookReceivedAt } = useSuspenseQuery(
     // A poll during or after the deletion would find the track gone and report a failure.
     deletion.isPollingStopped ? { ...audiobookQuery, refetchInterval: false } : audiobookQuery,
   );
@@ -206,6 +206,7 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
         key={session?.user.id ?? "anonymous"}
         conversionId={conversionId}
         audiobook={audiobook}
+        audiobookReceivedAt={audiobookReceivedAt}
         retry={retry}
         onTitleScrolledAwayChange={setIsTitleScrolledAway}
       />
@@ -219,7 +220,6 @@ type TrackDeletion = ReturnType<typeof useTrackDeletion>;
 function useTrackDeletion(conversionId: string) {
   const session = useAccountSession();
   const host = usePlayerHost();
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const announce = useAnnounceStatus();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -251,7 +251,6 @@ function useTrackDeletion(conversionId: string) {
     confirm: () => {
       // Before the request, so no part of the app plays the track while it is deleted.
       host.release(conversionId);
-      void queryClient.cancelQueries({ queryKey: createAudiobookQuery(conversionId).queryKey });
       mutation.mutate();
     },
   };
@@ -302,15 +301,18 @@ function DeleteTrackDialog({ deletion }: { deletion: TrackDeletion }): React.JSX
 function PreparedReader({
   conversionId,
   audiobook,
+  audiobookReceivedAt,
   retry,
   onTitleScrolledAwayChange,
 }: {
   conversionId: string;
   audiobook: PreparedAudiobook;
+  /** When the audiobook's response arrived, which can lie long before this page showed it. */
+  audiobookReceivedAt: number;
   retry: RetryMutation;
   onTitleScrolledAwayChange: (isScrolledAway: boolean) => void;
 }) {
-  const playback = useShownAudiobook(conversionId, audiobook);
+  const playback = useShownAudiobook(conversionId, audiobook, audiobookReceivedAt);
   const { loaded, canPlay } = playback;
   const narrationDocumentRef = React.useRef<HTMLDivElement>(null);
   const failedUnitIndexes = React.useMemo(

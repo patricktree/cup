@@ -14,8 +14,7 @@ import {
   storeAccountChallenge,
   clearAccountChallenge,
 } from "#src/data-fetching/account-confirmation-storage.js";
-import { invalidateAccountHistory } from "#src/data-fetching/account-history.js";
-import { invalidateAccountQueries } from "#src/data-fetching/account.js";
+import { invalidateAccountQueries, invalidateAccountSnapshot } from "#src/data-fetching/account.js";
 import { requestApi } from "#src/data-fetching/api-request.js";
 import { summarizeError, UserFacingError } from "#src/errors.js";
 
@@ -79,7 +78,12 @@ export function useAccountConfirmation(subject: string) {
         clearAccountChallenge();
         setChallenge(null);
       }
-      await invalidateAccountQueries(subject);
+      // A scheduled deletion blocks the account, so only its snapshot is requested again before the
+      // sign-out below clears the cache. A restore also lets Recents behind the account dialog list
+      // the history it failed to list for the blocked account.
+      await (pending.action === "delete"
+        ? invalidateAccountSnapshot(subject)
+        : invalidateAccountQueries(subject));
       if (!isSignedInAs(subject)) {
         return null;
       }
@@ -88,8 +92,6 @@ export function useAccountConfirmation(subject: string) {
         await signOut();
         return null;
       }
-      // Recents behind the account dialog failed to list the blocked account's history.
-      await invalidateAccountHistory(subject);
       return "Your account is restored. Your existing minutes and conversions are available again.";
     },
   });

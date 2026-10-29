@@ -15,10 +15,12 @@ import { queryClient } from "#src/data-fetching/query-client.js";
 import { createAudiobookQuery } from "#src/data-fetching/reader.js";
 import { accountStory } from "#src/ui-gallery/account-fixtures.jsx";
 import gatesNotesAudiobook from "#src/ui-gallery/gates-notes-audiobook.json" with { type: "json" };
+import { waitWhileHeld } from "#src/ui-gallery/held-responses.js";
 import {
   createStoryNarrationTrack,
   storyNarrationTrackHandler,
 } from "#src/ui-gallery/narration-track.js";
+import { withPageLifetimeCache } from "#src/ui-gallery/page-lifetime-cache.js";
 import type { Story } from "#src/ui-gallery/story.js";
 
 const CONVERSION_ID = "693af4c4-9fa8-430d-9dc5-c00e88fb38a7";
@@ -229,6 +231,14 @@ export const ResumingAcrossPages = createListeningAcrossPagesStory({
   secondPlaybackPosition: { synchronizationUnitId: "unit-2", offsetMilliseconds: 2_000 },
 });
 
+/** Like `ListeningAcrossPages`, with a cache that keeps every audiobook the listener opened. */
+export const ListeningAcrossPagesWithPageLifetimeCache = withPageLifetimeCache(
+  createListeningAcrossPagesStory({
+    secondUnitDurationMilliseconds: SEGMENT_DURATION_MILLISECONDS,
+    secondPlaybackPosition: null,
+  }),
+);
+
 function createListeningAcrossPagesStory({
   secondUnitDurationMilliseconds,
   secondPlaybackPosition,
@@ -246,7 +256,10 @@ function createListeningAcrossPagesStory({
       nextCursor: null,
     },
     handlers: [
-      http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(createAudiobook())),
+      http.get(`/api/audiobooks/${CONVERSION_ID}`, async () => {
+        await waitWhileHeld(`audiobook:${CONVERSION_ID}`);
+        return HttpResponse.json(createAudiobook());
+      }),
       http.get(`/api/audiobooks/${SECOND_CONVERSION_ID}`, () =>
         HttpResponse.json({
           ...PREPARED_AUDIOBOOK,
@@ -484,14 +497,15 @@ function createDeletionStory(outcome: DeletionOutcome, audiobook: Audiobook = cr
       http.get(`/api/audiobooks/${CONVERSION_ID}`, () =>
         isDeleted ? trackNotFoundResponse() : HttpResponse.json(audiobook),
       ),
-      http.get("/api/account/conversions", () =>
-        HttpResponse.json({
+      http.get("/api/account/conversions", async () => {
+        await waitWhileHeld("account-history");
+        return HttpResponse.json({
           items: isDeleted
             ? []
             : [createRecentsItem(CONVERSION_ID, "A deterministic document about careful testing")],
           nextCursor: null,
-        }),
-      ),
+        });
+      }),
       http.delete(`/api/account/conversions/${CONVERSION_ID}`, async ({ request }) => {
         deletionRequestCount += 1;
         // Tests that capture the player's audio element read what it held when the request was sent.
@@ -539,6 +553,10 @@ export const DeleteTrack = createDeletionStory("deleted");
 export const DeleteTrackAlreadyDeleted = createDeletionStory("not-found");
 export const DeleteTrackFailsOnce = createDeletionStory("fails-once");
 export const DeleteTrackNeverAnswers = createDeletionStory("never-answers");
+/** Like `DeleteTrack`, with a cache that keeps Recents' history after the listener left it. */
+export const DeleteTrackWithPageLifetimeCache = withPageLifetimeCache(
+  createDeletionStory("deleted"),
+);
 /** A pending track is deleted while the page polls it. */
 export const DeletePendingTrack = createDeletionStory("deleted", PENDING_AUDIOBOOK);
 
@@ -656,3 +674,45 @@ export const PollingInterrupted = {
     ];
   })(),
 } satisfies Story;
+
+/**
+ * Polling an audiobook whose audio is generated finds it gone or no longer accessible, as after its
+ * deletion on another device or a revoked trial.
+ */
+function createAccessLostWhilePollingStory(failure: "not-found" | "access-denied") {
+  let requestCount = 0;
+  return {
+    component: () => <GlobalProviders router={router} />,
+    handlers: [
+      http.get(`/api/audiobooks/${CONVERSION_ID}`, () => {
+        requestCount += 1;
+        if (requestCount === 1) {
+          return HttpResponse.json({
+            ...PREPARED_AUDIOBOOK,
+            status: "synthesizing",
+            segments: [
+              createReadySegment(0),
+              { sequence: 1, status: "generating" },
+              { sequence: 2, status: "generating" },
+            ],
+          } satisfies Audiobook);
+        }
+        return failure === "not-found"
+          ? trackNotFoundResponse()
+          : HttpResponse.json(
+              {
+                error: {
+                  requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
+                  code: "grant-revoked",
+                  message: "This trial was revoked.",
+                },
+              } satisfies ErrorResponse,
+              { status: 403 },
+            );
+      }),
+    ],
+  } satisfies Story;
+}
+
+export const TrackGoneWhilePolling = createAccessLostWhilePollingStory("not-found");
+export const TrackAccessDeniedWhilePolling = createAccessLostWhilePollingStory("access-denied");

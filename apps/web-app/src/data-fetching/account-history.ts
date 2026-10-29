@@ -1,15 +1,16 @@
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
-import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
+import { infiniteQueryOptions, useInfiniteQuery, type InfiniteData } from "@tanstack/react-query";
 import React from "react";
 
-import { accountHistorySchema } from "@cup/listener-api.routes";
+import { accountHistorySchema, type AccountHistory } from "@cup/listener-api.routes";
 
 import { requestApi } from "#src/data-fetching/api-request.js";
 import { queryClient } from "#src/data-fetching/query-client.js";
+import { QUERY_KEYS } from "#src/data-fetching/query-keys.js";
 
 export function createAccountHistoryQuery(subject?: string) {
   return infiniteQueryOptions({
-    queryKey: ["account-history", subject],
+    queryKey: QUERY_KEYS.accountHistory(subject),
     enabled: !!subject,
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam }) => {
@@ -54,6 +55,23 @@ export function useIsAccountConversion(subject: string | undefined, conversionId
   return isListed;
 }
 
-export function invalidateAccountHistory(subject?: string) {
-  return queryClient.invalidateQueries({ queryKey: createAccountHistoryQuery(subject).queryKey });
+/**
+ * Removes a deleted conversion from the cached history pages, so Recents never lists it while its
+ * history is requested again. Cancels history requests in flight first, because one sent before the
+ * deletion would put the conversion back. The caller invalidates the history afterwards.
+ */
+export async function removeFromCachedAccountHistory(subject: string, conversionId: string) {
+  const queryKey = QUERY_KEYS.accountHistory(subject);
+  await queryClient.cancelQueries({ queryKey });
+  queryClient.setQueryData<InfiniteData<AccountHistory, string | null>>(queryKey, (history) =>
+    history
+      ? {
+          ...history,
+          pages: history.pages.map((page) => ({
+            ...page,
+            items: page.items.filter((item) => item.conversionId !== conversionId),
+          })),
+        }
+      : undefined,
+  );
 }
