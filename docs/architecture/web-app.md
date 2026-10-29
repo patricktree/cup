@@ -22,6 +22,21 @@ A ready history item carries its cover's own [signed media URL](authentication.m
 
 The avatar's initials come from the Supabase session's `user_metadata.name`, else `full_name`, which Supabase fills from the Google sign-in and refreshes on each sign-in. Cup stores no name, so account erasure has none to remove.
 
+## Query cache
+
+Every screen reads server data through the TanStack Query cache, whose keys the [key factories](../../apps/web-app/src/data-fetching/query-keys.ts) group by owner: everything of the signed-in account sits under `["account", subject]`, next to each audiobook and each grant. The cache must never show the listener something false, including on a screen they return to, so every API write follows one rule:
+
+- **The write owns its cache effects.** It lives in `src/data-fetching/` and, once it succeeds, invalidates by key prefix every query whose server data it may change.
+- **A direct edit only where stale data would mislead.** A write edits the cache itself only when the listener would see or act on stale data before the refetch returns. It cancels that query's requests in flight first, so an earlier response cannot undo the edit, and still invalidates afterwards.
+
+The direct edits:
+
+- **Deleting a conversion** removes it from the cached history pages before leaving its detail view, so Recents never shows the deleted card, then drops its audiobook and invalidates the account.
+- **Saving a signed-in listener's listening position** writes it into the cached audiobook, so an audiobook opened again loads at that position. The invalidation after the save requests nothing at once, because playback saves every few seconds; the next screen to show the audiobook requests it.
+- **Exchanging a trial link's credential** caches the grant it answers with.
+
+Starting an account or trial conversion and confirming an account deletion or recovery only invalidate. A cached audiobook keeps the time its response arrived, which dates its narration track URL for [renewal](authentication.md#signed-media-url), so a direct edit preserves it. A refetch of shown data answered with _not found_ or _access denied_ drops the cached data, so the screen shows its error screen ([`query-client.ts`](../../apps/web-app/src/data-fetching/query-client.ts)); other failures keep the content and report a toast. The [detail view tests](../../apps/web-app/src/routes/_shell.audiobooks.$conversionId.test.ts) check the direct edits against a cache that keeps data for the page lifetime, while the refetch is held.
+
 ## Unknowns
 
 - The masonry's `ResizeObserver` spans have no automated WebKit coverage: Playwright runs Chromium only, and iOS Safari is checked by hand.

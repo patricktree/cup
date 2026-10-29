@@ -15,11 +15,7 @@ import { StartConversionForm } from "#src/app/components/start-conversion-form.j
 import { getResourceAccountSession } from "#src/auth/account-session.js";
 import { useAccountSession } from "#src/auth/hooks.js";
 import { ERROR_CODE, type RpcError } from "#src/data-fetching/api-request.js";
-import {
-  createGrantQuery,
-  createGrantQueryKey,
-  exchangeCredential,
-} from "#src/data-fetching/conversion-grant.js";
+import { createGrantQuery, exchangeCredential } from "#src/data-fetching/conversion-grant.js";
 import { UserFacingError, type ErrorCopy } from "#src/errors.js";
 import { trialBrowserState } from "#src/trial-browser-state.js";
 
@@ -39,7 +35,7 @@ const TRIAL_SESSION_LOST = {
 
 export const Route = createFileRoute("/trials/$grantId")({
   component: TrialPage,
-  beforeLoad: async ({ context, location, params }) => {
+  beforeLoad: async ({ location, params }) => {
     if (
       new URLSearchParams(location.searchStr).has("code") ||
       (await getResourceAccountSession())
@@ -54,8 +50,7 @@ export const Route = createFileRoute("/trials/$grantId")({
     }
 
     if (access.kind === "credential") {
-      const snapshot = await exchangeCredential(params.grantId, access.credential);
-      context.queryClient.setQueryData(createGrantQueryKey(params.grantId), snapshot);
+      await exchangeCredential(params.grantId, access.credential);
       trialBrowserState.setLastGrantId(params.grantId);
       throw redirect({ to: ".", hash: "" });
     }

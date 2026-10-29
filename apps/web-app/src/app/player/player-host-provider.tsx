@@ -103,20 +103,22 @@ type ShownAudiobookPlayback = {
 
 /**
  * Reports the prepared audiobook a page shows, below `useShownConversion`, and describes its
- * playback. Segment taps load the audiobook first when another one is loaded.
+ * playback. Segment taps load the audiobook first when another one is loaded. `receivedAt` is when
+ * the audiobook's response arrived, the query's `dataUpdatedAt`, which dates its track URL.
  */
 export function useShownAudiobook(
   conversionId: string,
   audiobook: PreparedAudiobook,
+  receivedAt: number,
 ): ShownAudiobookPlayback {
   const host = usePlayerHost();
   const { loaded, shown } = usePlayerHostSnapshot();
 
   React.useLayoutEffect(
     function showLatestVersion() {
-      host.showConversion(conversionId, audiobook);
+      host.showConversion(conversionId, audiobook, receivedAt);
     },
-    [host, conversionId, audiobook],
+    [host, conversionId, audiobook, receivedAt],
   );
 
   return {

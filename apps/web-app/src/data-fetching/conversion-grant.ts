@@ -9,12 +9,12 @@ import {
 } from "@cup/listener-api.routes";
 
 import { requestApi } from "#src/data-fetching/api-request.js";
-
-export const createGrantQueryKey = (grantId: string) => ["conversion-grant", grantId] as const;
+import { queryClient } from "#src/data-fetching/query-client.js";
+import { QUERY_KEYS } from "#src/data-fetching/query-keys.js";
 
 export function createGrantQuery(grantId: string) {
   return queryOptions({
-    queryKey: createGrantQueryKey(grantId),
+    queryKey: QUERY_KEYS.grant(grantId),
     queryFn: ({ signal }) => getGrant(grantId, signal),
     meta: { errorTitle: "The trial could not be updated." },
   });
@@ -38,17 +38,24 @@ export function useStartTrialConversionMutation(
       }
       return startTrialConversion(grantId, sourceUrl, pending.current.idempotencyKey);
     },
-    onSuccess: (result) => onStarted(result.conversion.conversionId),
+    onSuccess: async (result) => {
+      // The start reserved duration and added a conversion, which the trial page shows.
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.grant(grantId) });
+      await onStarted(result.conversion.conversionId);
+    },
   });
 }
 
-export async function exchangeCredential(
-  grantId: string,
-  credential: string,
-): Promise<GrantSnapshot> {
-  return grantSnapshotSchema.parse(
+/** Exchanges a trial link's credential for a grant session, and caches the grant it answers with. */
+export async function exchangeCredential(grantId: string, credential: string): Promise<void> {
+  const snapshot = grantSnapshotSchema.parse(
     await requestApi("none", (client) => client.exchangeCredential({ grantId }, { credential })),
   );
+
+  const queryKey = QUERY_KEYS.grant(grantId);
+  await queryClient.cancelQueries({ queryKey });
+  queryClient.setQueryData(queryKey, snapshot);
+  await queryClient.invalidateQueries({ queryKey });
 }
 
 async function startTrialConversion(
