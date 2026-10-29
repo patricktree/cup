@@ -41,6 +41,26 @@ export async function waitForAudiobook(page: Page): Promise<void> {
   ).toBeVisible({ timeout: 90_000 });
 }
 
+/** The signed-in account's access token, for API requests the test makes itself. */
+export async function readAccessToken(page: Page) {
+  return page.evaluate(() => {
+    const stored = window.localStorage.getItem("cup_supabase_session");
+    if (!stored) {
+      throw new Error("Expected an authenticated browser session");
+    }
+    const session: unknown = JSON.parse(stored);
+    if (
+      !session ||
+      typeof session !== "object" ||
+      !("access_token" in session) ||
+      typeof session.access_token !== "string"
+    ) {
+      throw new Error("Expected an access token");
+    }
+    return session.access_token;
+  });
+}
+
 /** Forwards the browser's trial sessions to a request context that does not share its cookies. */
 export async function getTrialSessionHeaders(page: Page): Promise<{ Cookie: string }> {
   const cookies = await page.context().cookies();
