@@ -7,7 +7,6 @@ import { z } from "zod";
 
 import { OperatorApiClient, parseOkResponse, RpcError } from "@cup/operator-api.client";
 import {
-  ACCOUNT_ID_HEADER,
   accountPhases,
   adjustAccountAllowanceRequestSchema,
   isDevelopmentOperatorUrl,
@@ -141,16 +140,14 @@ conversion
   .action(async (conversionId, _options, command) =>
     run(command, async (client, output) => {
       const params = { conversionId: parseUuid(conversionId) };
-      const response = await client.deleteConversion(params);
-      await parseOkResponse(response);
-      const accountId = z.uuid().parse(response.headers.get(ACCOUNT_ID_HEADER));
-      output({ conversionId: params.conversionId, accountId }, () => {
+      const result = await parseOkResponse(client.deleteConversion(params));
+      output(result, () => {
         writeFields([
-          ["Conversion ID", params.conversionId],
-          ["Account ID", accountId],
+          ["Conversion ID", result.conversionId],
+          ["Account ID", result.accountId],
         ]);
         process.stdout.write(
-          `Cleanup continues in the background. Follow it with: pnpm operator account inspect ${accountId}\n`,
+          `Cleanup continues in the background. Follow it with: pnpm operator account inspect ${result.accountId}\n`,
         );
       });
     }),

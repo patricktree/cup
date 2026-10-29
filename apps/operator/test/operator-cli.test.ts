@@ -324,8 +324,7 @@ function handleAccountRequest(
   }
   if (method === "DELETE" && url.pathname === `/api/operator/conversions/${CONVERSION_ID}`) {
     conversionDeletionPaths.push(url.pathname);
-    response.writeHead(204, { "X-Account-Id": ACCOUNT_ID });
-    response.end();
+    send(response, 200, { conversionId: CONVERSION_ID, accountId: ACCOUNT_ID });
     return true;
   }
   return false;

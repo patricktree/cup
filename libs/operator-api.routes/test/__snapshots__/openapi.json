@@ -1298,15 +1298,28 @@
           }
         },
         "responses": {
-          "204": {
+          "200": {
             "description": "Conversion deleted, or its deletion is already under way; cleanup continues in the background.",
-            "headers": {
-              "X-Account-Id": {
+            "content": {
+              "application/json": {
                 "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "required": true
+                  "type": "object",
+                  "properties": {
+                    "conversionId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                    },
+                    "accountId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "conversionId",
+                    "accountId"
+                  ],
+                  "additionalProperties": false
+                }
               }
             }
           },

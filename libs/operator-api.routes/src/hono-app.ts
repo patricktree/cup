@@ -2,9 +2,9 @@ import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import type { RouteHandler } from "@hono/zod-openapi";
 
 import {
-  ACCOUNT_ID_HEADER,
   accountParamsSchema,
   conversionParamsSchema,
+  deleteConversionResponseSchema,
   adjustAccountAllowanceRequestSchema,
   adjustAccountAllowanceResponseSchema,
   inspectAccountResponseSchema,
@@ -232,11 +232,10 @@ const deleteConversionRoute = createRoute({
     body: { required: true, content: { "application/json": { schema: z.object({}).strict() } } },
   },
   responses: {
-    204: {
+    200: {
+      content: { "application/json": { schema: deleteConversionResponseSchema } },
       description:
         "Conversion deleted, or its deletion is already under way; cleanup continues in the background.",
-      // A 204 has no body, so the header names the account whose inspection shows the cleanup.
-      headers: z.object({ [ACCOUNT_ID_HEADER]: z.uuid() }),
     },
     400: errorResponse("Invalid request."),
     // `account-unavailable` for an account being deleted, as account inspection answers.

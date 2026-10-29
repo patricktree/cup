@@ -32,8 +32,11 @@ export type GrantParams = z.infer<typeof grantParamsSchema>;
 export const conversionParamsSchema = z.object({ conversionId: uuidV4Schema }).strict();
 export type ConversionParams = z.infer<typeof conversionParamsSchema>;
 
-/** The header of a conversion deletion's 204 response that names the conversion's account. */
-export const ACCOUNT_ID_HEADER = "X-Account-Id";
+/** Names the account whose inspection shows the deleted conversion's cleanup. */
+export const deleteConversionResponseSchema = z
+  .object({ conversionId: uuidV4Schema, accountId: z.uuid() })
+  .strict();
+export type DeleteConversionResponse = z.infer<typeof deleteConversionResponseSchema>;
 
 export const createGrantRequestSchema = z
   .object({

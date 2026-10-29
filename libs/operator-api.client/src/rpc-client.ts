@@ -82,7 +82,6 @@ export class OperatorApiClient {
     );
   }
 
-  /** Its 204 response names the conversion's account in the `ACCOUNT_ID_HEADER` header. */
   async deleteConversion(params: ConversionParams) {
     return this.#honoClient.api.operator.conversions[":conversionId"].$delete(
       { param: params, json: {} },

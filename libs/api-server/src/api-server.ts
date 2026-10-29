@@ -24,8 +24,8 @@ import {
   type StartConversionResponse,
 } from "@cup/listener-api.routes";
 import {
-  ACCOUNT_ID_HEADER,
   createOperatorApi,
+  type DeleteConversionResponse,
   type InspectAccountResponse,
   type ListAccountDeletionsResponse,
   type OperatorApiHandlers,
@@ -892,8 +892,10 @@ const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
     const account = context.env.ACCOUNTS.get(context.env.ACCOUNTS.idFromName(owner.accountId));
     const { result } = await account.deleteConversion(conversionId);
     if (result === "marked" || result === "already-marked") {
-      context.header(ACCOUNT_ID_HEADER, owner.accountId);
-      return context.body(null, 204);
+      return context.json(
+        { conversionId, accountId: owner.accountId } satisfies DeleteConversionResponse,
+        200,
+      );
     }
     if (result === "not-found") {
       return conversionNotFound(context.get("requestId"));

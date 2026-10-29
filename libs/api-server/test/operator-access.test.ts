@@ -429,18 +429,18 @@ test("account listing and adjustment remain behind operator authentication", asy
   expect(adjustAllowance).not.toHaveBeenCalled();
 });
 
-test("deletes an account-owned conversion with 204 and names the owning account, also on a repeat", async () => {
+test("deletes an account-owned conversion with 200 and names the owning account, also on a repeat", async () => {
   const { env, deleteConversion, findConversionOwner } = fixture();
   const app = createApiServer({ validateOperatorAccess: async () => true });
 
   const first = await app.request(deleteConversionRequest(), {}, env);
-  expect(first.status).toBe(204);
-  expect(first.headers.get("X-Account-Id")).toBe(accountId);
+  expect(first.status).toBe(200);
+  expect(await first.json()).toStrictEqual({ conversionId, accountId });
 
   deleteConversion.mockResolvedValueOnce({ result: "already-marked" });
   const repeat = await app.request(deleteConversionRequest(), {}, env);
-  expect(repeat.status).toBe(204);
-  expect(repeat.headers.get("X-Account-Id")).toBe(accountId);
+  expect(repeat.status).toBe(200);
+  expect(await repeat.json()).toStrictEqual({ conversionId, accountId });
 
   expect(findConversionOwner).toHaveBeenCalledWith(conversionId);
   expect(deleteConversion).toHaveBeenCalledTimes(2);
