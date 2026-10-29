@@ -22,8 +22,8 @@ type SourcePageFixture = {
   title: string;
   // Text the page sets above its visible headline, which the cut removes.
   textBeforeHeadline: readonly string[];
-  // Requests the recording does not answer: unavailable at capture time, or with query values that
-  // change on every load. The page loads without them.
+  // Requests the recording does not answer: unavailable at capture time, with query values that
+  // change on every load, or made only on randomly sampled loads. The page loads without them.
   unrecordedRequests?: readonly RegExp[];
   url: string;
 };
@@ -118,6 +118,8 @@ const SOURCE_PAGES: readonly SourcePageFixture[] = [
     unrecordedRequests: [
       /^https:\/\/www\.washingtonpost\.com\/subscribe\/user\/auth-status\?/u,
       /^https:\/\/www\.washingtonpost\.com\/red-static\/services\/dat\/\?/u,
+      // Datadog session replay samples one load in five at random and only then loads its recorder.
+      /^https:\/\/www\.washingtonpost\.com\/_next\/static\/chunks\/datadogRecorder\.[\da-f]+\.js$/u,
     ],
     url: "https://www.washingtonpost.com/politics/2026/10/28/these-seven-races-will-determine-which-party-controls-senate/",
   },
