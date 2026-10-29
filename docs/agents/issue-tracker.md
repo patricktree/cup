@@ -1,8 +1,33 @@
-# Issue tracker: GitHub
+# Issue tracker: Linear and GitHub Issues
 
-Issues and specs for this repo live as GitHub issues in [`patricktree/cup`](https://github.com/patricktree/cup/issues). Use the `gh` CLI for all operations. Local `.scratch/` maps are for throwaway work only; anything a later ADR or landing needs to cite goes on GitHub.
+Cup tracks work in two places, split by what an issue is:
 
-## Conventions
+| Tracker                                                                         | Holds                                                                                                     | Access                |
+| ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------- |
+| Linear: team `CUP` in the [`cup-audio`](https://linear.app/cup-audio) workspace | The backlog: feature requests, improvements and bugs, until one is picked up as a wayfinder map or a spec | The Linear MCP server |
+| GitHub Issues in [`patricktree/cup`](https://github.com/patricktree/cup/issues) | Wayfinder maps and their decision tickets, specs, and implementation tickets                              | The `gh` CLI          |
+
+Local `.scratch/` maps are for throwaway work only; anything a later ADR or landing needs to cite goes on GitHub.
+
+## Which tracker
+
+- **GitHub**: everything `/wayfinder`, `/to-spec`, `/to-tickets` and `/implement-spec` create, read or close.
+- **Linear**: everything else, including `/triage`, a new feature request, improvement or bug, a follow-up noticed in passing, and the findings of the [wiki health review](domain.md#review-the-wikis-health).
+
+## Linear
+
+Fetch the team's labels, projects, statuses and members when you need them (`list_issue_labels`, `list_projects` and `list_issue_statuses` with team `CUP`; `list_users`); they change, so this file names none of them. Choose from what exists, and ask before creating a label or project, except the triage labels in [triage-labels.md](triage-labels.md).
+
+- **Create an issue**: `save_issue` with team `CUP`, a title and a Markdown description. Add the type label that fits, and a project when one fits; new issues start in the team's backlog status.
+- **Read an issue**: `get_issue` with its identifier (`CUP-<n>`), plus `list_comments` for its comments.
+- **List issues**: `list_issues` with team `CUP` and `state`, `label` or `project` filters.
+- **Comment**: `save_comment` with `issueId`.
+- **Apply / remove labels**: `save_issue` with `addLabels` / `removeLabels`.
+- **Relate or block**: `save_issue` with `relatedTo`, `blockedBy` or `blocks`.
+- **Link a GitHub issue**: `save_issue` with `links: [{url, title}]`.
+- **Close**: comment the reason, then `save_issue` with `state` set to the team's completed status, or its canceled status when the issue won't be done.
+
+## GitHub
 
 - **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
 - **Read an issue**: `gh issue view <number> --json number,title,body,labels,comments`.
@@ -26,13 +51,21 @@ When set to `yes`, PRs run through the same labels and states as issues, using t
 
 GitHub shares one number space across issues and PRs, so a bare `#42` may be either: resolve with `gh pr view 42` and fall back to `gh issue view 42`.
 
+## From backlog to map or spec
+
+When a Linear issue is picked up as a wayfinder map or a spec:
+
+1. The GitHub issue's context names the Linear issue and links it.
+2. The Linear issue gets a link to the GitHub issue and moves to the team's started status.
+3. When the spec's build is merged, or the map closes without a build, close the Linear issue as completed, with a comment that links the outcome.
+
 ## When a skill says "publish to the issue tracker"
 
-Create a GitHub issue.
+Pick the tracker by **Which tracker** above.
 
 ## When a skill says "fetch the relevant ticket"
 
-Read it as in **Read an issue** above.
+`CUP-<n>` or a `linear.app` URL is a Linear issue: read it as in **Linear**. `#<n>` or a `github.com` URL is a GitHub issue or PR: read it as in **GitHub**. The numbers overlap, so never resolve a bare number without its prefix.
 
 ## Wayfinding operations
 
