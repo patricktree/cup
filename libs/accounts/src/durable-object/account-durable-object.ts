@@ -597,6 +597,9 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
   inspectArtifactWriters() {
     return this.artifactWriters.writers();
   }
+  inspectConversionDeletions() {
+    return this.sqlite.conversionDeletions();
+  }
   pendingConversions() {
     return this.sqlite.pendingConversions();
   }

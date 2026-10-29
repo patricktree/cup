@@ -16,6 +16,7 @@ import { RollingLimits } from "@cup/rolling-limits";
 
 import {
   ACCOUNT_USAGE_PROJECTION_SCHEMA_VERSION,
+  accountConversionDeletionSchema,
   accountIdentitySchema,
   accountOutcomeSchema,
   startAccountConversionSchema,
@@ -23,6 +24,7 @@ import {
 import type {
   AccountAccountingInspection,
   AccountConversion,
+  AccountConversionDeletion,
   AccountConversionOutcome,
   AccountHistoryPage,
   AccountIdentity,
@@ -539,6 +541,20 @@ export class AccountSqlite {
       items,
       nextCursor: rows.length > 50 && last ? `${last.createdAtMs}:${last.conversionId}` : null,
     };
+  }
+
+  /** Every conversion carrying the deletion marker, oldest marker first. */
+  conversionDeletions(): AccountConversionDeletion[] {
+    return this.database
+      .select({
+        conversionId: accountConversions.conversionId,
+        deletingSinceMs: accountConversions.deletingSinceMs,
+      })
+      .from(accountConversions)
+      .where(isNotNull(accountConversions.deletingSinceMs))
+      .orderBy(accountConversions.deletingSinceMs, accountConversions.conversionId)
+      .all()
+      .map((row) => accountConversionDeletionSchema.parse(row));
   }
 
   /** A conversion marked for deletion reads as missing, which also fences its execution. */

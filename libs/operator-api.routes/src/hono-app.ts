@@ -2,7 +2,9 @@ import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import type { RouteHandler } from "@hono/zod-openapi";
 
 import {
+  ACCOUNT_ID_HEADER,
   accountParamsSchema,
+  conversionParamsSchema,
   adjustAccountAllowanceRequestSchema,
   adjustAccountAllowanceResponseSchema,
   inspectAccountResponseSchema,
@@ -220,6 +222,29 @@ const listAccountDeletionsRoute = createRoute({
   },
 });
 
+const deleteConversionRoute = createRoute({
+  method: "delete",
+  path: "/api/operator/conversions/{conversionId}",
+  request: {
+    params: conversionParamsSchema,
+    // Empty like the other bodyless operator mutations, because every operator mutation must carry
+    // `Content-Type: application/json` (the `/api/operator/*` middleware in `@cup/api-server`).
+    body: { required: true, content: { "application/json": { schema: z.object({}).strict() } } },
+  },
+  responses: {
+    204: {
+      description:
+        "Conversion deleted, or its deletion is already under way; cleanup continues in the background.",
+      // A 204 has no body, so the header names the account whose inspection shows the cleanup.
+      headers: z.object({ [ACCOUNT_ID_HEADER]: z.uuid() }),
+    },
+    400: errorResponse("Invalid request."),
+    404: errorResponse("Conversion not found."),
+    409: errorResponse("Conversion not owned by an account, or the account is being deleted."),
+    500: errorResponse("Operational error."),
+  },
+});
+
 type OperatorApiEnvironment<Bindings extends object> = {
   Bindings: Bindings;
   Variables: { requestId: string };
@@ -238,6 +263,7 @@ export type OperatorApiHandlers<Bindings extends object> = {
   adjustAccountAllowance: OperatorApiRouteHandler<typeof adjustAccountAllowanceRoute, Bindings>;
   inspectAccount: OperatorApiRouteHandler<typeof inspectAccountRoute, Bindings>;
   listAccountDeletions: OperatorApiRouteHandler<typeof listAccountDeletionsRoute, Bindings>;
+  deleteConversion: OperatorApiRouteHandler<typeof deleteConversionRoute, Bindings>;
   createGrant: OperatorApiRouteHandler<typeof createGrantRoute, Bindings>;
   listGrants: OperatorApiRouteHandler<typeof listGrantsRoute, Bindings>;
   inspectGrant: OperatorApiRouteHandler<typeof inspectGrantRoute, Bindings>;
@@ -270,6 +296,7 @@ export function createOperatorApi<Bindings extends object>(
       }
       return undefined;
     })
+    .openapi(deleteConversionRoute, handlers.deleteConversion)
     .openapi(createGrantRoute, handlers.createGrant)
     .openapi(listGrantsRoute, handlers.listGrants)
     .openapi(inspectGrantRoute, handlers.inspectGrant)
@@ -290,6 +317,7 @@ function createOperatorContractApp() {
     adjustAccountAllowance: unavailable,
     inspectAccount: unavailable,
     listAccountDeletions: unavailable,
+    deleteConversion: unavailable,
     createGrant: unavailable,
     listGrants: unavailable,
     inspectGrant: unavailable,

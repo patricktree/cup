@@ -1486,3 +1486,29 @@ test("a deletion-scheduled account accepts a conversion deletion and a deleting 
   await storage.exec("UPDATE account SET state = 'active' WHERE id = 1");
   expect(await account.getConversion(deletingConversionId)).toBeDefined();
 });
+
+test("conversion deletions list each marked conversion with its marker time", async () => {
+  const { account } = await createAccount();
+  const conversionIds: string[] = [];
+  for (const sourceUrl of ["https://example.com/kept", "https://example.com/deleted"]) {
+    const started = await account.startConversion(
+      { idempotencyKey: crypto.randomUUID(), sourceUrl },
+      nowMs,
+    );
+    conversionIds.push(started.conversion?.conversionId ?? "");
+  }
+  const [keptConversionId, deletedConversionId] = conversionIds;
+  if (!keptConversionId || !deletedConversionId) {
+    throw new Error("Expected conversions");
+  }
+  expect(await account.inspectConversionDeletions()).toEqual([]);
+
+  await account.deleteConversion(deletedConversionId, nowMs + 1_000);
+
+  expect(await account.inspectConversionDeletions()).toEqual([
+    { conversionId: deletedConversionId, deletingSinceMs: nowMs + 1_000 },
+  ]);
+  expect((await account.history()).items.map((item) => item.conversionId)).toEqual([
+    keptConversionId,
+  ]);
+});
