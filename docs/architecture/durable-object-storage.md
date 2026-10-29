@@ -24,6 +24,8 @@ Existing columns that predate this convention keep their names until a migration
 
 Writers may target pending or ready conversions; account lifecycle and execution epochs fence their storage effects.
 
+`account_conversions.deleting_since_ms` is the conversion deletion marker; the account alarm stays armed while any row carries it and deletes the conversion's rows, the marked row last ([conversion deletion](conversion-deletion.md)).
+
 `registry_confirmed_revision` records the duration ledger revision for which the registry confirmed the account's [usage projection](#registry). The revision is the number of ledger events, so every change to the allowance, reserved duration, or spent duration advances it without a separate counter.
 
 Sources: [account-sqlite-schema.ts](../../libs/accounts/src/storage/account-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/rolling-limits/src/rate-limit-schema.ts), [duration-ledger-schema.ts](../../libs/duration-ledger/src/duration-ledger-schema.ts); [migrations](../../libs/accounts/drizzle/account/).

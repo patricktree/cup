@@ -189,13 +189,31 @@ Use the returned opaque cursor with `--cursor` to fetch the next page. Usage com
 
 ### Inspect an account
 
-Read the account's lifecycle state, balance, ledger totals, first history page, and unresolved artifact writers:
+Read the account's lifecycle state, balance, ledger totals, first history page, unresolved artifact writers, and conversion deletions still cleaning up:
 
 ```sh
 pnpm operator account inspect "ACCOUNT_ID"
 ```
 
-The history reports each conversion's status as account history does: a prepared conversion shows the [state of its audio](../../docs/architecture/conversion.md#whole-document-synthesis-and-accounting) next to its stored outcome. The account defines the shapes of this response in its [contracts](../../libs/accounts/src/domain/account-contracts.ts).
+The history reports each conversion's status as account history does: a prepared conversion shows the [state of its audio](../../docs/architecture/conversion.md#whole-document-synthesis-and-accounting) next to its stored outcome. The history leaves out conversions that are being deleted. The account defines the shapes of this response in its [contracts](../../libs/accounts/src/domain/account-contracts.ts).
+
+#### Conversion deletions
+
+The "Conversion deletions" section after the JSON lists each conversion whose [deletion](#delete-a-conversion) is still cleaning up, with its `deleting_since_ms` and its age in minutes; `none` means no cleanup is owed. With `--json`, the same entries are in `conversionDeletions`. Cleanup normally finishes within a few minutes, after which the conversion leaves the list.
+
+An entry that stays for long has stalled. If the `writers` list holds an unresolved writer whose prefix contains that conversion's ID, the writer never resolved, and the cleanup waits for it. Otherwise the registry or R2 is failing, and the account's 60-second alarm keeps retrying; check the Worker logs. See [conversion deletion](../../docs/architecture/conversion-deletion.md) for the order of the cleanup steps.
+
+### Delete a conversion
+
+Delete one conversion of an account, with its audiobook, artifacts, and listening position, while the rest of the account keeps working:
+
+```sh
+pnpm operator conversion delete "CONVERSION_ID" --yes
+```
+
+The deletion is irreversible and refunds nothing: spent duration stays spent, and only still-reserved duration is released. The command refuses to run without `--yes`. It prints the conversion ID and the owning account ID; cleanup continues in the background, and `pnpm operator account inspect "ACCOUNT_ID"` shows its progress under "Conversion deletions".
+
+A repeat while the cleanup is still running succeeds again and changes nothing. Once the cleanup has finished, a repeat fails with `conversion-not-found`, which confirms the deletion. A trial conversion is refused with `conversion-not-account-owned`, and a conversion of an account that is itself being deleted with `account-unavailable`; account erasure removes that conversion anyway.
 
 ### Adjust an account allowance
 
@@ -232,7 +250,7 @@ Provider acceptance of a notification is not proof of inbox delivery. For recove
 
 ## Use machine-readable output
 
-Place `--json` before the grant or account command to write one JSON value to standard output:
+Place `--json` before the grant, account, or conversion command to write one JSON value to standard output:
 
 ```sh
 pnpm operator --json grant list

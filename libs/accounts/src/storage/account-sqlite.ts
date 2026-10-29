@@ -16,6 +16,7 @@ import { RollingLimits } from "@cup/rolling-limits";
 
 import {
   ACCOUNT_USAGE_PROJECTION_SCHEMA_VERSION,
+  accountConversionDeletionSchema,
   accountIdentitySchema,
   accountOutcomeSchema,
   startAccountConversionSchema,
@@ -23,6 +24,7 @@ import {
 import type {
   AccountAccountingInspection,
   AccountConversion,
+  AccountConversionDeletion,
   AccountConversionOutcome,
   AccountHistoryPage,
   AccountIdentity,
@@ -391,6 +393,29 @@ export class AccountSqlite {
     });
   }
 
+  /**
+   * The last cleanup step deletes a marked conversion's rows in one transaction, the marked row
+   * last because the other rows reference it. Ledger history stays: segments only reference their
+   * credit operations. An unmarked conversion is never touched.
+   */
+  removeMarkedConversion(conversionId: string): void {
+    this.database.transaction(() => {
+      if (!this.isMarkedForDeletion(conversionId)) {
+        return;
+      }
+      this.database.delete(audioSegments).where(eq(audioSegments.conversionId, conversionId)).run();
+      this.database
+        .delete(accountPlaybackPositions)
+        .where(eq(accountPlaybackPositions.conversionId, conversionId))
+        .run();
+      this.database.delete(pendingJobs).where(eq(pendingJobs.conversionId, conversionId)).run();
+      this.database
+        .delete(accountConversions)
+        .where(eq(accountConversions.conversionId, conversionId))
+        .run();
+    });
+  }
+
   settleConversion(
     conversionId: string,
     outcome: AccountConversionOutcome,
@@ -539,6 +564,23 @@ export class AccountSqlite {
       items,
       nextCursor: rows.length > 50 && last ? `${last.createdAtMs}:${last.conversionId}` : null,
     };
+  }
+
+  /**
+   * Every conversion carrying the deletion marker, oldest marker first. Each still owes cleanup,
+   * and the alarm stays armed while any is listed.
+   */
+  conversionDeletions(): AccountConversionDeletion[] {
+    return this.database
+      .select({
+        conversionId: accountConversions.conversionId,
+        deletingSinceMs: accountConversions.deletingSinceMs,
+      })
+      .from(accountConversions)
+      .where(isNotNull(accountConversions.deletingSinceMs))
+      .orderBy(accountConversions.deletingSinceMs, accountConversions.conversionId)
+      .all()
+      .map((row) => accountConversionDeletionSchema.parse(row));
   }
 
   /** A conversion marked for deletion reads as missing, which also fences its execution. */

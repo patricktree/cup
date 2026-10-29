@@ -10,6 +10,7 @@ export type AccountRegistry = {
     bindConversionOwner(conversionId: string, owner: ConversionOwner): Promise<void>;
     acceptDeletionAttempt(attempt: DeletionAttempt): Promise<void>;
     removeAccountConversionOwners(accountId: string): Promise<void>;
+    removeConversionOwner(conversionId: string): Promise<void>;
     applyAccountUsageProjection(
       projection: AccountUsageProjection,
     ): Promise<"applied" | "replayed" | "stale">;

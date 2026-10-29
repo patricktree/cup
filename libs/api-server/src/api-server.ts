@@ -24,6 +24,7 @@ import {
   type StartConversionResponse,
 } from "@cup/listener-api.routes";
 import {
+  ACCOUNT_ID_HEADER,
   createOperatorApi,
   type InspectAccountResponse,
   type ListAccountDeletionsResponse,
@@ -868,9 +869,44 @@ const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
         accounting: await account.inspectAccounting(),
         history: await account.history(),
         writers: await account.inspectArtifactWriters(),
+        conversionDeletions: await account.inspectConversionDeletions(),
       } satisfies InspectAccountResponse,
       200,
     );
+  },
+  /** Deletes an account's conversion; a trial conversion is refused. */
+  async deleteConversion(context) {
+    const { conversionId } = context.req.valid("param");
+    const owner = await getRegistryStub(context.env).findConversionOwner(conversionId);
+    if (owner === undefined) {
+      return conversionNotFound(context.get("requestId"));
+    }
+    if (owner.kind === "trial") {
+      return jsonError(
+        context.get("requestId"),
+        "conversion-not-account-owned",
+        "The conversion belongs to a conversion grant, not an account.",
+        409,
+      );
+    }
+    const account = context.env.ACCOUNTS.get(context.env.ACCOUNTS.idFromName(owner.accountId));
+    const { result } = await account.deleteConversion(conversionId);
+    if (result === "marked" || result === "already-marked") {
+      context.header(ACCOUNT_ID_HEADER, owner.accountId);
+      return context.body(null, 204);
+    }
+    if (result === "not-found") {
+      return conversionNotFound(context.get("requestId"));
+    }
+    if (result === "account-unavailable") {
+      return jsonError(
+        context.get("requestId"),
+        "account-unavailable",
+        "The account is being deleted.",
+        409,
+      );
+    }
+    return assertUnreachable(result);
   },
   async createGrant(context) {
     const { label, requestId } = context.req.valid("json");
@@ -1419,6 +1455,10 @@ function getGrantStub(env: ApiServerEnvironment, grantId: string): GrantStub {
   return env.CONVERSION_GRANTS.get(env.CONVERSION_GRANTS.idFromName(grantId));
 }
 
+function conversionNotFound(requestId: string) {
+  return jsonError(requestId, "conversion-not-found", "Conversion not found.", 404);
+}
+
 function getRegistryStub(env: ApiServerEnvironment): RegistryStub {
   return env.REGISTRY.get(env.REGISTRY.idFromName("registry"));
 }
@@ -1543,6 +1583,7 @@ function allowedMethodsForApiPath(pathname: string): string[] | undefined {
     [/^\/api\/operator\/grants\/[^/]+\/revocation$/, ["POST"]],
     [/^\/api\/operator\/grants\/[^/]+\/session-invalidations$/, ["POST"]],
     [/^\/api\/operator\/grant-migrations$/, ["POST"]],
+    [/^\/api\/operator\/conversions\/[^/]+$/, ["DELETE"]],
   ];
   return routes.find(([pattern]) => pattern.test(pathname))?.[1];
 }

@@ -627,6 +627,9 @@ importers:
       commander:
         specifier: ^15.0.0
         version: 15.0.0
+      temporal-polyfill:
+        specifier: ^1.0.5
+        version: 1.0.5
       zod:
         specifier: ^4.6.5
         version: 4.6.5
