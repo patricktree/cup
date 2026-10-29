@@ -50,6 +50,8 @@ The shared bundle includes a CSP nonce placeholder. The API server replaces it w
 
 Route stories in `src/routes/*.story.tsx` render the application with deterministic MSW responses, and the component tests screenshot them on desktop and mobile. The [E2E suite](../../qa/e2e/README.md#update-screenshots) keeps only one screenshot assertion.
 
+MSW's service worker answers the stories' requests, so `page.route` never sees them; a story holds a response with its own handler, such as `delay("infinite")`. A test that guards against a loading flash calls [`recordLoadingStates`](src/test-utils/loading-state-recorder.ts) before mounting and asserts on the record ([loading states](../../docs/architecture/web-app.md#loading-states)).
+
 Run the component tests from the repository root:
 
 ```sh

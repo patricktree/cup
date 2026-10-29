@@ -36,6 +36,11 @@ const HOSTS = ["derstandard.at", "www.theverge.com", "nytimes.com"];
 const COVER_COLORS = ["#5b7f95", "#c4733d", "#7a8f4e", "#8a5a83"];
 
 export const EmptyRecents = accountStory({ path: "/recent" });
+/** The history never answers, so Recents keeps loading its tracks. */
+export const LoadingTracks = accountStory({
+  path: "/recent",
+  handlers: [http.get("/api/account/conversions", () => delay("infinite"))],
+});
 /** The session carries no name, so the avatar shows its glyph. */
 export const RecentsWithoutName = accountStory({ path: "/recent", userMetadata: {} });
 /** A signed-in listener opening the home page lands on Recents. */

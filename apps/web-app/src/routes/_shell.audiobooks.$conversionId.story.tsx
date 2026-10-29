@@ -185,20 +185,31 @@ export const AudiobookNotFound = {
   ],
 } satisfies Story;
 
+/** The first response fails; trying again finds the conversion still being prepared. */
 export const AudiobookLoadError = {
   component: () => <GlobalProviders router={router} />,
   handlers: [
+    http.get(
+      `/api/audiobooks/${CONVERSION_ID}`,
+      () =>
+        HttpResponse.json(
+          {
+            error: {
+              requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
+              code: "operational-error",
+              message: "The audiobook could not be loaded.",
+            },
+          } satisfies ErrorResponse,
+          { status: 500 },
+        ),
+      { once: true },
+    ),
     http.get(`/api/audiobooks/${CONVERSION_ID}`, () =>
-      HttpResponse.json(
-        {
-          error: {
-            requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
-            code: "operational-error",
-            message: "The audiobook could not be loaded.",
-          },
-        } satisfies ErrorResponse,
-        { status: 500 },
-      ),
+      HttpResponse.json({
+        status: "pending",
+        originalUrl: "https://example.com/article",
+        canGenerate: true,
+      } satisfies Audiobook),
     ),
   ],
 } satisfies Story;

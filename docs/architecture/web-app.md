@@ -22,6 +22,10 @@ A ready history item carries its cover's own [signed media URL](authentication.m
 
 The avatar's initials come from the Supabase session's `user_metadata.name`, else `full_name`, which Supabase fills from the Google sign-in and refreshes on each sign-in. Cup stores no name, so account erasure has none to remove.
 
+## Loading states
+
+Every loading state a screen shows in place of its content carries `data-loading-state`: "Loading tracks…" on Recents, "Loading account…" while auth or the account snapshot loads, and the detail view's loading skeleton, named "Loading track". The detail view shows the same skeleton shape as "Preparing track" for a conversion still being prepared, which is content the server sent and carries no marker. A cover fading in keeps its own `data-loading` and is not a loading state. Tests detect a loading flash with [`recordLoadingStates`](../../apps/web-app/src/test-utils/loading-state-recorder.ts), which records every inserted element carrying `data-loading-state` or `data-pending-signal`, however briefly it stays; the gallery component tests import it through `#src/test-utils/` and `qa/e2e` through `@cup/web-app/test-utils/loading-state-recorder`.
+
 ## Unknowns
 
 - The masonry's `ResizeObserver` spans have no automated WebKit coverage: Playwright runs Chromium only, and iOS Safari is checked by hand.

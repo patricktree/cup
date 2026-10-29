@@ -1,4 +1,12 @@
+import { delay, http } from "msw";
+
 import { accountStory } from "#src/ui-gallery/account-fixtures.jsx";
+
+/** The account snapshot never answers, so the page keeps loading the account. */
+export const LoadingAccount = accountStory({
+  path: "/account-recovery",
+  handlers: [http.get("/api/account", () => delay("infinite"))],
+});
 
 export const SignedOut = accountStory({ path: "/account-recovery", isSignedOut: true });
 export const DeletionScheduled = accountStory({
