@@ -468,7 +468,7 @@ test("refuses to delete a conversion without an owner or with a trial owner", as
 });
 
 test.each([
-  ["account-unavailable", 409, "account-unavailable"],
+  ["account-unavailable", 404, "account-unavailable"],
   ["not-found", 404, "conversion-not-found"],
 ] as const)("maps the account's %s deletion result to %i %s", async (result, status, code) => {
   const { env, deleteConversion } = fixture();

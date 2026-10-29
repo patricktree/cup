@@ -74,45 +74,88 @@ export const GatesNotesArticle = {
   ],
 } satisfies Story;
 
+const SECOND_CONVERSION_ID = "c4be3f43-4a43-4d6b-9a3f-6f0d2f6e2d51";
 const COVER_URL = `${window.location.origin}/__story/covers/detail.svg`;
 
 /** A signed-in listener opens a long audiobook with a cover. */
-export const AccountAudiobook = accountStory({
-  path: `/audiobooks/${GATES_NOTES_CONVERSION_ID}`,
+export const AccountAudiobook = createGatesNotesAccountStory({
+  items: [createRecentsItem(GATES_NOTES_CONVERSION_ID, gatesNotesAudiobook.title)],
+  nextCursor: null,
+});
+
+/**
+ * A signed-in listener opens a trial audiobook they can also open, such as one converted before
+ * signing in. Their account history does not list it.
+ */
+export const AccountOpensTrialAudiobook = createGatesNotesAccountStory({
+  items: [createRecentsItem(SECOND_CONVERSION_ID, "A second document about listening")],
+  nextCursor: null,
+});
+
+/** The audiobook is older than the first page of the account history lists. */
+export const AccountAudiobookOnLaterHistoryPage = accountStory({
+  path: `/audiobooks/${CONVERSION_ID}`,
   handlers: [
-    http.get(`/api/audiobooks/${GATES_NOTES_CONVERSION_ID}`, () =>
-      HttpResponse.json({
-        ...gatesNotesAudiobook,
-        status: "ready",
-        coverImage: { url: COVER_URL, alternativeText: "A person reading by a window" },
-        segments: gatesNotesAudiobook.narrationDocument.synchronizationUnits.map(
-          (_unit, sequence) => createReadySegment(sequence),
-        ),
-        narrationTrack: createStoryNarrationTrack(
-          gatesNotesAudiobook.narrationDocument.synchronizationUnits.map(
-            () => SEGMENT_DURATION_MILLISECONDS,
-          ),
-        ),
-      } satisfies Audiobook),
-    ),
-    http.get(
-      COVER_URL,
-      () =>
-        new HttpResponse(
-          '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect width="400" height="200" fill="#5b7f95"/><circle cx="200" cy="100" r="60" fill="#fff"/></svg>',
-          { headers: { "Content-Type": "image/svg+xml" } },
-        ),
+    http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(createAudiobook())),
+    http.get("/api/account/conversions", ({ request }) =>
+      HttpResponse.json(
+        new URL(request.url).searchParams.has("cursor")
+          ? {
+              items: [createRecentsItem(CONVERSION_ID, PREPARED_AUDIOBOOK.title)],
+              nextCursor: null,
+            }
+          : {
+              items: [createRecentsItem(SECOND_CONVERSION_ID, "A second document about listening")],
+              nextCursor: "later-page",
+            },
+      ),
     ),
     storyNarrationTrackHandler,
-    http.put(
-      `/api/audiobooks/${GATES_NOTES_CONVERSION_ID}/position`,
-      () => new HttpResponse(null, { status: 204 }),
-    ),
-    http.post(`/api/audiobooks/${GATES_NOTES_CONVERSION_ID}/retry`, () =>
-      HttpResponse.json({ result: "started" } satisfies RetryConversionResponse),
-    ),
   ],
 });
+
+function createGatesNotesAccountStory(recents: {
+  items: Record<string, unknown>[];
+  nextCursor: string | null;
+}) {
+  return accountStory({
+    path: `/audiobooks/${GATES_NOTES_CONVERSION_ID}`,
+    recents,
+    handlers: [
+      http.get(`/api/audiobooks/${GATES_NOTES_CONVERSION_ID}`, () =>
+        HttpResponse.json({
+          ...gatesNotesAudiobook,
+          status: "ready",
+          coverImage: { url: COVER_URL, alternativeText: "A person reading by a window" },
+          segments: gatesNotesAudiobook.narrationDocument.synchronizationUnits.map(
+            (_unit, sequence) => createReadySegment(sequence),
+          ),
+          narrationTrack: createStoryNarrationTrack(
+            gatesNotesAudiobook.narrationDocument.synchronizationUnits.map(
+              () => SEGMENT_DURATION_MILLISECONDS,
+            ),
+          ),
+        } satisfies Audiobook),
+      ),
+      http.get(
+        COVER_URL,
+        () =>
+          new HttpResponse(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect width="400" height="200" fill="#5b7f95"/><circle cx="200" cy="100" r="60" fill="#fff"/></svg>',
+            { headers: { "Content-Type": "image/svg+xml" } },
+          ),
+      ),
+      storyNarrationTrackHandler,
+      http.put(
+        `/api/audiobooks/${GATES_NOTES_CONVERSION_ID}/position`,
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+      http.post(`/api/audiobooks/${GATES_NOTES_CONVERSION_ID}/retry`, () =>
+        HttpResponse.json({ result: "started" } satisfies RetryConversionResponse),
+      ),
+    ],
+  });
+}
 
 /** The first response never arrives. */
 export const LoadingAudiobook = {
@@ -159,8 +202,6 @@ export const AudiobookLoadError = {
     ),
   ],
 } satisfies Story;
-
-const SECOND_CONVERSION_ID = "c4be3f43-4a43-4d6b-9a3f-6f0d2f6e2d51";
 
 /** A signed-in listener moves between an audiobook, Recents, and a second audiobook. */
 export const ListeningAcrossPages = createListeningAcrossPagesStory({
@@ -392,9 +433,16 @@ const FAILED_AUDIOBOOK = {
   explanation: "Preparation failed. Retry to load this track.",
 } satisfies Audiobook;
 
+/** The account history of the stories below, which lists their conversion. */
+const ACCOUNT_HISTORY = {
+  items: [createRecentsItem(CONVERSION_ID, PREPARED_AUDIOBOOK.title)],
+  nextCursor: null,
+};
+
 /** A signed-in listener opens a conversion that is still preparing. */
 export const AccountPendingConversion = accountStory({
   path: `/audiobooks/${CONVERSION_ID}`,
+  recents: ACCOUNT_HISTORY,
   handlers: [
     http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(PENDING_AUDIOBOOK)),
   ],
@@ -403,6 +451,7 @@ export const AccountPendingConversion = accountStory({
 /** A signed-in listener opens a conversion whose preparation failed. */
 export const AccountFailedConversion = accountStory({
   path: `/audiobooks/${CONVERSION_ID}`,
+  recents: ACCOUNT_HISTORY,
   handlers: [
     http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(FAILED_AUDIOBOOK)),
   ],

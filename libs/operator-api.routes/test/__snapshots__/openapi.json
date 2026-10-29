@@ -1368,7 +1368,7 @@
             }
           },
           "404": {
-            "description": "Conversion not found.",
+            "description": "Conversion not found, or its account is being deleted.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1425,7 +1425,7 @@
             }
           },
           "409": {
-            "description": "Conversion not owned by an account, or the account is being deleted.",
+            "description": "Conversion not owned by an account.",
             "content": {
               "application/json": {
                 "schema": {

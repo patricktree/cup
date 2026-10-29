@@ -815,6 +815,9 @@ importers:
       '@cup/duration-ledger':
         specifier: workspace:*
         version: link:../duration-ledger
+      '@cup/errors':
+        specifier: workspace:*
+        version: link:../errors
       '@cup/rolling-limits':
         specifier: workspace:*
         version: link:../rolling-limits

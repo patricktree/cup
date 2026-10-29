@@ -156,6 +156,7 @@ describe("actual operator CLI process", () => {
     conversionDeletionPaths.length = 0;
     const result = await runCli("conversion", "delete", CONVERSION_ID);
     expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("required option '--yes' not specified");
     expect(conversionDeletionPaths).toEqual([]);
   });
 
@@ -183,7 +184,7 @@ describe("actual operator CLI process", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("Conversion deletions:");
     expect(result.stdout).toContain(`Conversion ID: ${DELETED_CONVERSION_ID}`);
-    expect(result.stdout).toMatch(/deleting_since_ms: \d+/);
+    expect(result.stdout).toMatch(/Deleting since \(epoch ms\): \d+/);
     expect(result.stdout).toContain("Age (minutes): 90");
   });
 

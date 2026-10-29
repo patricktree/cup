@@ -29,6 +29,7 @@ import { toSourceHost } from "#src/app/source-host.js";
 import { useAnnounceStatus } from "#src/app/status-announcer.js";
 import { composeClassnames } from "#src/app/utils.ts";
 import { useAccountSession } from "#src/auth/hooks.js";
+import { useIsAccountConversion } from "#src/data-fetching/account-history.js";
 import {
   createAudiobookQuery,
   useDeleteConversion,
@@ -108,6 +109,8 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
   const backTo = useBackTarget();
   const queryClient = useQueryClient();
   const deletion = useTrackDeletion(conversionId);
+  // Trial conversions cannot be deleted, even by a signed-in listener who can open one.
+  const isDeletable = useIsAccountConversion(session?.user.id, conversionId);
   const audiobookQuery = createAudiobookQuery(conversionId);
   const { data: audiobook } = useSuspenseQuery(
     // A poll during or after the deletion would find the track gone and report a failure.
@@ -136,8 +139,7 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
           retry: audiobook.canGenerate
             ? { isPending: retry.isPending, start: () => retry.mutate() }
             : undefined,
-          // Trial conversions cannot be deleted.
-          remove: session ? { start: deletion.openDialog } : undefined,
+          deletion: isDeletable ? { start: deletion.openDialog } : undefined,
         }}
       />
       {/* Rendered into a portal, so its place here only ties it to the page's state. */}

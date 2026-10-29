@@ -239,8 +239,9 @@ const deleteConversionRoute = createRoute({
       headers: z.object({ [ACCOUNT_ID_HEADER]: z.uuid() }),
     },
     400: errorResponse("Invalid request."),
-    404: errorResponse("Conversion not found."),
-    409: errorResponse("Conversion not owned by an account, or the account is being deleted."),
+    // `account-unavailable` for an account being deleted, as account inspection answers.
+    404: errorResponse("Conversion not found, or its account is being deleted."),
+    409: errorResponse("Conversion not owned by an account."),
     500: errorResponse("Operational error."),
   },
 });

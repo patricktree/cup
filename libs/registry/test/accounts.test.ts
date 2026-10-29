@@ -1426,6 +1426,27 @@ test("the dispatch alarm binds no owner and creates no workflow for a deleted co
   expect(await account.preparationCreationsForTest()).toEqual([]);
 });
 
+test("a conversion deleted and cleaned up while its owner bind is in flight is left unowned and never created", async () => {
+  const { account, accountId } = await createAccount();
+  const registry = bindings.REGISTRY.get(bindings.REGISTRY.idFromName("registry"));
+  await account.acceptPreparationForTest();
+  await account.deleteAndCleanUpDuringNextOwnerBindForTest();
+
+  const started = await account.startConversion(
+    { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/raced" },
+    nowMs,
+  );
+
+  const conversionId = started.conversion?.conversionId;
+  if (conversionId === undefined) {
+    throw new Error("Expected conversion");
+  }
+  const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
+  expect(await readConversionRows(storage, conversionId)).toEqual(NO_CONVERSION_ROWS);
+  expect(await registry.findConversionOwner(conversionId)).toBeUndefined();
+  expect(await account.preparationCreationsForTest()).toEqual([]);
+});
+
 test("a repeated delete releases nothing, a failed termination does not fail it, and a missing conversion is not found", async () => {
   const { account, accountId } = await createAccount();
   const started = await account.startConversion(
@@ -1733,24 +1754,6 @@ test("a conversion marked while no alarm was armed is cleaned up once the accoun
   expect((await bindings.AUDIO_BUCKET.list({ prefix })).objects).toEqual([]);
   expect(await registry.findConversionOwner(conversionId)).toBeUndefined();
   expect(await readConversionRows(storage, conversionId)).toEqual(NO_CONVERSION_ROWS);
-});
-
-test("removing a conversion owner is idempotent and keeps every other owner", async () => {
-  const registry = bindings.REGISTRY.get(bindings.REGISTRY.idFromName(crypto.randomUUID()));
-  const accountOwner = { kind: "account", accountId: crypto.randomUUID() } as const;
-  const trialOwner = { kind: "trial", grantId: crypto.randomUUID() } as const;
-  const [removed, kept, trial] = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
-  await registry.bindConversionOwner(removed, accountOwner);
-  await registry.bindConversionOwner(kept, accountOwner);
-  await registry.bindConversionOwner(trial, trialOwner);
-
-  await registry.removeConversionOwner(removed);
-  await registry.removeConversionOwner(removed);
-  await registry.removeConversionOwner(trial);
-
-  expect(await registry.findConversionOwner(removed)).toBeUndefined();
-  expect(await registry.findConversionOwner(kept)).toEqual(accountOwner);
-  expect(await registry.findConversionOwner(trial)).toEqual(trialOwner);
 });
 
 test("conversion deletions list each marked conversion with its marker time", async () => {

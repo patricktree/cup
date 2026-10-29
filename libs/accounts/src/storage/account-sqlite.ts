@@ -369,17 +369,15 @@ export class AccountSqlite {
       if (this.snapshot().state === "deleting") {
         return { result: "account-unavailable" };
       }
-      const row = this.database
-        .select({ deletingSinceMs: accountConversions.deletingSinceMs })
-        .from(accountConversions)
-        .where(eq(accountConversions.conversionId, conversionId))
-        .get();
+
+      const row = this.readDeletionMarker(conversionId);
       if (row === undefined) {
         return { result: "not-found" };
       }
       if (row.deletingSinceMs !== null) {
         return { result: "already-marked" };
       }
+
       this.database
         .update(accountConversions)
         .set({ deletingSinceMs: nowMs })
@@ -398,7 +396,7 @@ export class AccountSqlite {
    * last because the other rows reference it. Ledger history stays: segments only reference their
    * credit operations. An unmarked conversion is never touched.
    */
-  removeMarkedConversion(conversionId: string): void {
+  deleteMarkedConversionRows(conversionId: string): void {
     this.database.transaction(() => {
       if (!this.isMarkedForDeletion(conversionId)) {
         return;
@@ -624,18 +622,16 @@ export class AccountSqlite {
   }
 
   private isMarkedForDeletion(conversionId: string): boolean {
-    return (
-      this.database
-        .select({ conversionId: accountConversions.conversionId })
-        .from(accountConversions)
-        .where(
-          and(
-            eq(accountConversions.conversionId, conversionId),
-            isNotNull(accountConversions.deletingSinceMs),
-          ),
-        )
-        .get() !== undefined
-    );
+    return (this.readDeletionMarker(conversionId)?.deletingSinceMs ?? null) !== null;
+  }
+
+  /** The conversion's deletion marker, or `undefined` when the account has no such conversion. */
+  private readDeletionMarker(conversionId: string) {
+    return this.database
+      .select({ deletingSinceMs: accountConversions.deletingSinceMs })
+      .from(accountConversions)
+      .where(eq(accountConversions.conversionId, conversionId))
+      .get();
   }
 
   private readIdentity(): Omit<AccountSnapshot, "balance"> | undefined {

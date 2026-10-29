@@ -45,6 +45,7 @@
   "dependencies": {
     "@cup/conversion-contracts": "workspace:*",
     "@cup/duration-ledger": "workspace:*",
+    "@cup/errors": "workspace:*",
     "@cup/rolling-limits": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "temporal-polyfill": "^1.0.5",

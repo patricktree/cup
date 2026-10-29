@@ -11,6 +11,7 @@ import {
   createConversionArtifactPrefix,
   createSegmentWorkflowId,
 } from "@cup/conversion-contracts";
+import { findRootCauseMessage } from "@cup/errors";
 
 import type {
   AccountConversionOutcome,
@@ -261,16 +262,17 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     if (marking.result !== "marked") {
       return { result: marking.result };
     }
+
     // The alarm cleans up the conversion and also publishes the usage the release changed.
-    await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds);
+    await this.ctx.storage.setAlarm(nowMs);
     await this.terminateConversionWorkflows(conversionId, marking.segmentSequences);
     return { result: "marked" };
   }
 
   /**
    * Termination only saves cost: the marker already fences whatever still runs, and a terminated
-   * instance can still land its running step. Each instance is tried once, and a failure is neither
-   * retried nor recorded.
+   * instance can still land its running step. Each instance is tried once, and a failure is only
+   * logged, neither retried nor recorded.
    */
   private async terminateConversionWorkflows(
     conversionId: string,
@@ -284,11 +286,19 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
         id: createSegmentWorkflowId(conversionId, sequence),
       })),
     ];
+
     for (const { workflow, id } of instances) {
       try {
         await (await workflow.get(id)).terminate();
-      } catch {
-        /* Best effort, as explained above. */
+      } catch (error) {
+        console.warn(
+          JSON.stringify({
+            event: "conversion-workflow-termination-failed",
+            conversionId,
+            workflowInstanceId: id,
+            error: findRootCauseMessage(error),
+          }),
+        );
       }
     }
   }
@@ -389,8 +399,15 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     for (const { conversionId } of this.sqlite.conversionDeletions()) {
       try {
         await this.cleanUpDeletedConversion(conversionId);
-      } catch {
-        /* The marked row stays, so the alarm stays armed and retries. */
+      } catch (error) {
+        // The marked row stays, so the alarm stays armed and retries.
+        console.warn(
+          JSON.stringify({
+            event: "conversion-deletion-cleanup-failed",
+            conversionId,
+            error: findRootCauseMessage(error),
+          }),
+        );
       }
     }
   }
@@ -410,7 +427,7 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     const registry = this.env.REGISTRY;
     await registry.get(registry.idFromName("registry")).removeConversionOwner(conversionId);
 
-    this.sqlite.removeMarkedConversion(conversionId);
+    this.sqlite.deleteMarkedConversionRows(conversionId);
   }
 
   /** R2 has no prefix delete and deletes at most 1,000 keys per call. */
@@ -481,9 +498,19 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
         if (!conversion) {
           throw new Error("Missing conversion dispatch target");
         }
-        await registry
-          .get(registry.idFromName("registry"))
-          .bindConversionOwner(job.conversionId, { kind: "account", accountId: account.accountId });
+        const registryStub = registry.get(registry.idFromName("registry"));
+        await registryStub.bindConversionOwner(job.conversionId, {
+          kind: "account",
+          accountId: account.accountId,
+        });
+
+        // A deletion, even its whole cleanup, can land while the bind is in flight, so the bind may
+        // have recreated an owner the cleanup already removed.
+        if (!this.sqlite.getConversion(job.conversionId)) {
+          await registryStub.removeConversionOwner(job.conversionId);
+          continue;
+        }
+
         const params: AccountWorkflowParams = {
           v: 2,
           sourceUrl: conversion.sourceUrl,

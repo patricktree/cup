@@ -4,6 +4,7 @@ import {
   NarrationTrackPlayer,
   type NarrationAudioElement,
   type Player,
+  type PositionOnClose,
 } from "#src/app/player/narration-track-player.ts";
 import {
   isPlayableAudiobook,
@@ -351,7 +352,7 @@ export class PlayerHost {
     this.load(shown);
   }
 
-  private emptyElement(position: "save" | "discard") {
+  private emptyElement(position: PositionOnClose) {
     if (!this.snapshot.loaded) {
       return;
     }
@@ -362,7 +363,7 @@ export class PlayerHost {
     this.update({ loaded: null });
   }
 
-  private closeLoadedPlayer(position: "save" | "discard" = "save") {
+  private closeLoadedPlayer(position: PositionOnClose = "save") {
     this.pendingRenewal = null;
     this.snapshot.loaded?.player.close(position);
     this.clearMediaMetadata?.();

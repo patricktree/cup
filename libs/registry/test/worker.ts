@@ -69,7 +69,7 @@ export class AccountDispatchTestDurableObject extends BaseAccountDurableObject {
  */
 export class AccountDurableObject extends BaseAccountDurableObject {
   private readonly workflows: WorkflowControl;
-  private readonly registryControl: { shouldNextOwnerRemovalFail: boolean };
+  private readonly registryControl: RegistryControl;
   private firedAlarms = 0;
 
   constructor(
@@ -80,7 +80,10 @@ export class AccountDurableObject extends BaseAccountDurableObject {
       AUDIO_BUCKET: R2Bucket;
     },
   ) {
-    const registryControl = { shouldNextOwnerRemovalFail: false };
+    const registryControl: RegistryControl = {
+      shouldNextOwnerRemovalFail: false,
+      beforeNextOwnerBind: undefined,
+    };
     const workflows: WorkflowControl = {
       isPreparationAccepted: false,
       preparationCreations: [],
@@ -108,8 +111,12 @@ export class AccountDurableObject extends BaseAccountDurableObject {
         get: (id) => {
           const registry = env.REGISTRY.get(id);
           return {
-            bindConversionOwner: (conversionId, owner) =>
-              registry.bindConversionOwner(conversionId, owner),
+            bindConversionOwner: async (conversionId, owner) => {
+              const beforeNextOwnerBind = registryControl.beforeNextOwnerBind;
+              registryControl.beforeNextOwnerBind = undefined;
+              await beforeNextOwnerBind?.(conversionId);
+              await registry.bindConversionOwner(conversionId, owner);
+            },
             acceptDeletionAttempt: (attempt) => registry.acceptDeletionAttempt(attempt),
             removeAccountConversionOwners: (accountId) =>
               registry.removeAccountConversionOwners(accountId),
@@ -161,6 +168,13 @@ export class AccountDurableObject extends BaseAccountDurableObject {
   failNextOwnerRemovalForTest() {
     this.registryControl.shouldNextOwnerRemovalFail = true;
   }
+  /** Deletes the conversion and runs its whole cleanup while the next owner bind is in flight. */
+  deleteAndCleanUpDuringNextOwnerBindForTest() {
+    this.registryControl.beforeNextOwnerBind = async (conversionId) => {
+      await this.deleteConversion(conversionId);
+      await super.alarm();
+    };
+  }
   acceptPreparationForTest() {
     this.workflows.isPreparationAccepted = true;
   }
@@ -177,6 +191,11 @@ export class AccountDurableObject extends BaseAccountDurableObject {
     return super.alarm();
   }
 }
+
+type RegistryControl = {
+  shouldNextOwnerRemovalFail: boolean;
+  beforeNextOwnerBind: ((conversionId: string) => Promise<void>) | undefined;
+};
 
 type WorkflowControl = {
   isPreparationAccepted: boolean;

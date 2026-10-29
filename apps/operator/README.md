@@ -199,7 +199,7 @@ The history reports each conversion's status as account history does: a prepared
 
 #### Conversion deletions
 
-The "Conversion deletions" section after the JSON lists each conversion whose [deletion](#delete-a-conversion) is still cleaning up, with its `deleting_since_ms` and its age in minutes; `none` means no cleanup is owed. With `--json`, the same entries are in `conversionDeletions`. Cleanup normally finishes within a few minutes, after which the conversion leaves the list.
+The "Conversion deletions" section after the JSON lists each conversion whose [deletion](#delete-a-conversion) is still cleaning up, with the epoch milliseconds since which it is deleting (`deleting_since_ms`) and its age in minutes; `none` means no cleanup is owed. With `--json`, the same entries are in `conversionDeletions`. Cleanup normally finishes within a few minutes, after which the conversion leaves the list.
 
 An entry that stays for long has stalled. If the `writers` list holds an unresolved writer whose prefix contains that conversion's ID, the writer never resolved, and the cleanup waits for it. Otherwise the registry or R2 is failing, and the account's 60-second alarm keeps retrying; check the Worker logs. See [conversion deletion](../../docs/architecture/conversion-deletion.md) for the order of the cleanup steps.
 

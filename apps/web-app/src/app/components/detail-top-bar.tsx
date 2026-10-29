@@ -28,8 +28,8 @@ type DetailMenuProps = {
   originalUrl: string;
   /** Absent when the audiobook offers no retry. */
   retry: { isPending: boolean; start: () => void } | undefined;
-  /** Asks to delete the track; absent for trial listeners, who cannot delete one. */
-  remove: { start: () => void } | undefined;
+  /** Asks to delete the track; absent for a trial track, which cannot be deleted. */
+  deletion: { start: () => void } | undefined;
 };
 
 /** The detail view's top bar: back, the compact title once scrolled, and the "…" menu. */
@@ -123,17 +123,17 @@ export function DetailTopBar({ backTo, compactTitle, menu }: DetailTopBarProps):
   );
 }
 
-function DetailMenu({ originalUrl, retry, remove }: DetailMenuProps) {
-  const isRemoveRequested = React.useRef(false);
+function DetailMenu({ originalUrl, retry, deletion }: DetailMenuProps) {
+  const isDeletionRequested = React.useRef(false);
 
   return (
     <Menu.Root
       onOpenChangeComplete={(isOpen) => {
         // The deletion dialog opens once the menu has returned focus to its trigger, so the dialog
         // can move focus to its Cancel and later return it to the trigger.
-        if (!isOpen && isRemoveRequested.current) {
-          isRemoveRequested.current = false;
-          remove?.start();
+        if (!isOpen && isDeletionRequested.current) {
+          isDeletionRequested.current = false;
+          deletion?.start();
         }
       }}
     >
@@ -181,10 +181,10 @@ function DetailMenu({ originalUrl, retry, remove }: DetailMenuProps) {
                 Retry
               </Menu.Item>
             ) : null}
-            {remove ? (
+            {deletion ? (
               <Menu.Item
                 onClick={() => {
-                  isRemoveRequested.current = true;
+                  isDeletionRequested.current = true;
                 }}
                 className={destructiveMenuItemStyles}
               >

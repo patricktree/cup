@@ -120,7 +120,7 @@ account
         for (const deletion of conversionDeletions) {
           writeFields([
             ["Conversion ID", deletion.conversionId],
-            ["deleting_since_ms", deletion.deletingSinceMs],
+            ["Deleting since (epoch ms)", deletion.deletingSinceMs],
             ["Age (minutes)", Math.floor((nowMs - deletion.deletingSinceMs) / 60_000)],
           ]);
         }

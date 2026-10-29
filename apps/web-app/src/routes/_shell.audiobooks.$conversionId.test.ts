@@ -378,6 +378,8 @@ test("the top bar's menu opens the original page and retries", async ({ mount, p
     "https://www.gatesnotes.com/a-turbulent-ai-era-and-critical-choices-to-make",
   );
   await expect(openOriginal).toHaveAttribute("target", "_blank");
+  // Offered once the account history lists the track.
+  await expect(page.getByRole("menuitem", { name: "Delete track…" })).toBeVisible();
   await expect(page).toHaveScreenshot("menu-open.png");
 
   const retryRequest = page.waitForRequest(
@@ -434,6 +436,35 @@ test("a trial audiobook's menu offers no Delete track…", async ({ mount, page 
 
   await expect(page.getByRole("menuitem", { name: "Open original page" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Delete track…" })).toHaveCount(0);
+});
+
+test("a signed-in listener's menu offers no Delete track… for a trial audiobook", async ({
+  mount,
+  page,
+}) => {
+  const historyResponse = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/account/conversions",
+  );
+  const component = await mount(
+    "routes/_shell.audiobooks.$conversionId/AccountOpensTrialAudiobook",
+  );
+  await historyResponse;
+  await component.getByRole("button", { name: "More", exact: true }).click();
+
+  await expect(page.getByRole("menuitem", { name: "Open original page" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Delete track…" })).toHaveCount(0);
+});
+
+test("the top bar's menu offers Delete track… for a track on a later page of the account history", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount(
+    "routes/_shell.audiobooks.$conversionId/AccountAudiobookOnLaterHistoryPage",
+  );
+  await component.getByRole("button", { name: "More", exact: true }).click();
+
+  await expect(page.getByRole("menuitem", { name: "Delete track…" })).toBeVisible();
 });
 
 test("Delete track… asks first, starts on Cancel, and Escape keeps the track", async ({

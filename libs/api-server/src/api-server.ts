@@ -903,7 +903,7 @@ const operatorApiHandlers: OperatorApiHandlers<ApiServerEnvironment> = {
         context.get("requestId"),
         "account-unavailable",
         "The account is being deleted.",
-        409,
+        404,
       );
     }
     return assertUnreachable(result);
