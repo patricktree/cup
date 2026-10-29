@@ -280,6 +280,31 @@ const listenerApiHandlers: ListenerApiHandlers<ApiServerEnvironment> = {
       );
     }
   },
+  /** Acts only on the caller's own account, so another account's or a trial conversion is not found. */
+  async deleteAccountConversion(context) {
+    const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
+    if (validation.result === "invalid") {
+      return validation.response;
+    }
+    const auth = await authenticateAccountRequest(context.req.raw, context.env);
+    if (auth.result !== "authenticated") {
+      return accountAuthError(auth.result, context.get("requestId"));
+    }
+    if (auth.snapshot.state !== "active") {
+      return accountAuthError("blocked", context.get("requestId"));
+    }
+    const { result } = await auth.account.deleteConversion(context.req.valid("param").conversionId);
+    if (result === "marked" || result === "already-marked") {
+      return context.body(null, 204);
+    }
+    if (result === "not-found") {
+      return jsonError(context.get("requestId"), "audiobook-not-found", "Track not found.", 404);
+    }
+    if (result === "account-unavailable") {
+      return accountAuthError("blocked", context.get("requestId"));
+    }
+    return assertUnreachable(result);
+  },
   async exchangeSession(context) {
     const validation = validateSessionMutationRequest(context.req.raw, context.get("requestId"));
     if (validation.result === "invalid") {

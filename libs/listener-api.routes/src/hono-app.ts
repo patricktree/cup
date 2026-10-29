@@ -192,6 +192,21 @@ const startAccountConversionRoute = createRoute({
     503: errorResponse("Account unavailable."),
   },
 });
+const deleteAccountConversionRoute = createRoute({
+  method: "delete",
+  path: "/api/account/conversions/{conversionId}",
+  request: { params: conversionParamsSchema, headers: routeBrowserMutationHeadersSchema },
+  responses: {
+    204: { description: "Conversion deleted, or its deletion is already under way." },
+    400: errorResponse("Invalid request."),
+    401: errorResponse("Sign in required."),
+    403: errorResponse("Account or origin blocked."),
+    404: errorResponse("Not a conversion of this account."),
+    429: errorResponse("Rate limited."),
+    500: errorResponse("Operational error."),
+    503: errorResponse("Account setup unavailable."),
+  },
+});
 
 const exchangeSessionRoute = createRoute({
   method: "post",
@@ -380,6 +395,7 @@ export type ListenerApiHandlers<Bindings extends object> = {
   getHistory: ListenerApiRouteHandler<typeof historyRoute, Bindings>;
   getAccount: ListenerApiRouteHandler<typeof getAccountRoute, Bindings>;
   startAccountConversion: ListenerApiRouteHandler<typeof startAccountConversionRoute, Bindings>;
+  deleteAccountConversion: ListenerApiRouteHandler<typeof deleteAccountConversionRoute, Bindings>;
   exchangeSession: ListenerApiRouteHandler<typeof exchangeSessionRoute, Bindings>;
   getGrant: ListenerApiRouteHandler<typeof getGrantRoute, Bindings>;
   startTrialConversion: ListenerApiRouteHandler<typeof startTrialConversionRoute, Bindings>;
@@ -404,6 +420,7 @@ export function createListenerApi<Bindings extends object>(
     .openapi(historyRoute, handlers.getHistory)
     .openapi(getAccountRoute, handlers.getAccount)
     .openapi(startAccountConversionRoute, handlers.startAccountConversion)
+    .openapi(deleteAccountConversionRoute, handlers.deleteAccountConversion)
     .openapi(exchangeSessionRoute, handlers.exchangeSession)
     .openapi(getGrantRoute, handlers.getGrant)
     .openapi(startTrialConversionRoute, handlers.startTrialConversion)
@@ -430,6 +447,7 @@ export function createListenerContractApp() {
     getHistory: unavailable,
     getAccount: unavailable,
     startAccountConversion: unavailable,
+    deleteAccountConversion: unavailable,
     exchangeSession: unavailable,
     getGrant: unavailable,
     startTrialConversion: unavailable,

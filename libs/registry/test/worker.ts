@@ -41,6 +41,9 @@ export class AccountDispatchTestDurableObject extends BaseAccountDurableObject {
           restart: async () => {
             throw new Error("Restart is outside this dispatch test");
           },
+          terminate: async () => {
+            throw new Error("Termination is outside this dispatch test");
+          },
         }),
       },
     });
@@ -58,9 +61,11 @@ export class AccountDispatchTestDurableObject extends BaseAccountDurableObject {
  * Ledger and lifecycle tests settle conversions directly without running preparation. Synthesis
  * dispatch is accepted but never runs, so tests complete or release segments themselves.
  * Preparation dispatch fails until a test accepts it; accepted preparation never runs either.
+ * Workflow instances report no status, so the alarm treats them as unreachable, and record each
+ * termination attempt, which fails once a test asks for it.
  */
 export class AccountDurableObject extends BaseAccountDurableObject {
-  private readonly preparation: { accepted: boolean };
+  private readonly workflows: WorkflowControl;
 
   constructor(
     context: DurableObjectState,
@@ -70,32 +75,67 @@ export class AccountDurableObject extends BaseAccountDurableObject {
       AUDIO_BUCKET: R2Bucket;
     },
   ) {
-    const preparation = { accepted: false };
+    const workflows: WorkflowControl = {
+      isPreparationAccepted: false,
+      preparationCreations: [],
+      terminations: [],
+      shouldTerminationFail: false,
+    };
+    const controlledInstance = (id: string) => ({
+      status: async (): Promise<{ status: string }> => {
+        throw new Error("Workflows are controlled by the test");
+      },
+      restart: async () => {
+        throw new Error("Workflows are controlled by the test");
+      },
+      terminate: async () => {
+        workflows.terminations.push(id);
+        if (workflows.shouldTerminationFail) {
+          throw new Error("Termination failed");
+        }
+      },
+    });
     super(context, {
       ...env,
       SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW: {
         create: async () => {},
-        get: async () => {
-          throw new Error("Synthesis is controlled by the test");
-        },
+        get: async (id) => controlledInstance(id),
       },
       PREPARE_AUDIOBOOK_WORKFLOW: {
-        create: async () => {
-          if (!preparation.accepted) {
+        create: async ({ id }) => {
+          if (!workflows.isPreparationAccepted) {
             throw new Error("Preparation is controlled by the test");
           }
+          workflows.preparationCreations.push(id);
         },
-        get: async () => {
-          throw new Error("Preparation is controlled by the test");
-        },
+        get: async (id) => controlledInstance(id),
       },
     });
-    this.preparation = preparation;
+    this.workflows = workflows;
   }
   acceptPreparationForTest() {
-    this.preparation.accepted = true;
+    this.workflows.isPreparationAccepted = true;
+  }
+  preparationCreationsForTest() {
+    return this.workflows.preparationCreations;
+  }
+  terminationsForTest() {
+    return this.workflows.terminations;
+  }
+  failTerminationsForTest() {
+    this.workflows.shouldTerminationFail = true;
+  }
+  reconcileForTest() {
+    return this.alarm();
   }
 }
+
+type WorkflowControl = {
+  isPreparationAccepted: boolean;
+  preparationCreations: string[];
+  terminations: string[];
+  shouldTerminationFail: boolean;
+};
 /** Simulates accounts that predate usage projections, so the alarm's backfill can be observed. */
 export class RegistryDurableObject extends BaseRegistryDurableObject {
   forgetAccountUsageForTest(accountId: string) {

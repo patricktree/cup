@@ -1343,3 +1343,146 @@ test("one registry preserves account provisioning and both owners across grant w
   });
   expect((await registry.findIdentity(subject))?.accountId).toBe(account.accountId);
 });
+
+test("a deleted conversion is fenced, keeps its settled charge and releases only its open holds", async () => {
+  const { account, accountId } = await createAccount();
+  const started = await account.startConversion(
+    { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/deleted" },
+    nowMs,
+  );
+  const conversionId = started.conversion?.conversionId;
+  if (conversionId === undefined) {
+    throw new Error("Expected conversion");
+  }
+  const prefix = `accounts/${accountId}/conversions/${conversionId}/executions/1/`;
+  await account.settleConversion(
+    conversionId,
+    readyOutcome(accountId, conversionId),
+    nowMs,
+    1,
+    [100, 100],
+  );
+  await account.completeAudioSegment(conversionId, 0, 5_000, 1);
+  await account.savePlaybackPosition(conversionId, {
+    synchronizationUnitId: "unit-1",
+    offsetMilliseconds: 10,
+  });
+  const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
+  const entriesBefore = await storage.exec("SELECT event_id FROM credit_ledger");
+
+  expect(await account.deleteConversion(conversionId)).toEqual({ result: "marked" });
+
+  await expectWorkerRpcRejection(account.completeAudioSegment(conversionId, 1, 4_000, 1));
+  await expectWorkerRpcRejection(account.registerArtifactWriter("late", 1, prefix));
+  expect(await account.inspectArtifactWriters()).toEqual([]);
+  expect(await account.getConversion(conversionId)).toBeUndefined();
+  expect((await account.history()).items).toEqual([]);
+  expect(await account.listAudioSegments(conversionId)).toEqual([]);
+  expect(await account.getPlaybackPosition(conversionId)).toBeNull();
+  expect((await account.inspect()).balance).toEqual({
+    unit: "audio-millisecond",
+    available: 1_795_000,
+    reserved: 0,
+  });
+  const addedEntries = await storage.exec(
+    "SELECT event_kind AS eventKind, cause FROM credit_ledger WHERE event_id NOT IN (SELECT value FROM json_each(?))",
+    JSON.stringify(entriesBefore.map((entry) => entry["event_id"])),
+  );
+  expect(addedEntries).toEqual([{ eventKind: "release", cause: conversionId }]);
+  expect(await storage.exec("SELECT * FROM credit_operations WHERE state = 'reserved'")).toEqual(
+    [],
+  );
+  expect(await account.terminationsForTest()).toEqual([
+    conversionId,
+    `segment-${conversionId}-0`,
+    `segment-${conversionId}-1`,
+  ]);
+});
+
+test("the dispatch alarm binds no owner and creates no workflow for a deleted conversion", async () => {
+  const { account, accountId } = await createAccount();
+  const conversionId = crypto.randomUUID();
+  const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
+  // A conversion whose dispatch never ran, so the alarm would otherwise bind and create it.
+  await storage.exec(
+    `INSERT INTO account_conversions (conversion_id, idempotency_key, source_url, created_at_ms, status, last_started_phase)
+     VALUES (?, ?, 'https://example.com/undispatched', ?, 'pending', 'conversion-start')`,
+    conversionId,
+    crypto.randomUUID(),
+    nowMs,
+  );
+  await storage.exec(
+    "INSERT INTO pending_jobs (job_id, conversion_id, execution_epoch, state) VALUES (?, ?, 1, 'pending')",
+    `conversion:${conversionId}`,
+    conversionId,
+  );
+  expect(await account.deleteConversion(conversionId)).toEqual({ result: "marked" });
+  await account.acceptPreparationForTest();
+
+  await account.reconcileForTest();
+
+  const registry = bindings.REGISTRY.get(bindings.REGISTRY.idFromName("registry"));
+  expect(await registry.findConversionOwner(conversionId)).toBeUndefined();
+  expect(await account.preparationCreationsForTest()).toEqual([]);
+});
+
+test("a repeated delete releases nothing, a failed termination does not fail it, and a missing conversion is not found", async () => {
+  const { account, accountId } = await createAccount();
+  const started = await account.startConversion(
+    { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/repeat" },
+    nowMs,
+  );
+  const conversionId = started.conversion?.conversionId;
+  if (conversionId === undefined) {
+    throw new Error("Expected conversion");
+  }
+  await account.settleConversion(
+    conversionId,
+    readyOutcome(accountId, conversionId),
+    nowMs,
+    1,
+    [100],
+  );
+  await account.failTerminationsForTest();
+
+  expect(await account.deleteConversion(conversionId)).toEqual({ result: "marked" });
+  const terminations = await account.terminationsForTest();
+  expect(terminations).toEqual([conversionId, `segment-${conversionId}-0`]);
+  const entries = (await account.inspectAccounting()).entries;
+
+  expect(await account.deleteConversion(conversionId)).toEqual({ result: "already-marked" });
+  expect(await account.terminationsForTest()).toEqual(terminations);
+  expect((await account.inspectAccounting()).entries).toBe(entries);
+  expect(await account.deleteConversion(crypto.randomUUID())).toEqual({ result: "not-found" });
+});
+
+test("a deletion-scheduled account accepts a conversion deletion and a deleting account refuses it", async () => {
+  const { account, accountId } = await createAccount();
+  const conversionIds: string[] = [];
+  for (const sourceUrl of ["https://example.com/scheduled", "https://example.com/deleting"]) {
+    const started = await account.startConversion(
+      { idempotencyKey: crypto.randomUUID(), sourceUrl },
+      nowMs,
+    );
+    conversionIds.push(started.conversion?.conversionId ?? "");
+  }
+  const [scheduledConversionId, deletingConversionId] = conversionIds;
+  if (!scheduledConversionId || !deletingConversionId) {
+    throw new Error("Expected conversions");
+  }
+  const storage = await worker.getDurableObjectStorage("ACCOUNTS", { name: accountId });
+
+  await storage.exec(
+    "UPDATE account SET state = 'deletion_scheduled', recovery_deadline_ms = ? WHERE id = 1",
+    nowMs * 2,
+  );
+  expect(await account.deleteConversion(scheduledConversionId)).toEqual({ result: "marked" });
+
+  await storage.exec("UPDATE account SET state = 'deleting', execution_epoch = 2 WHERE id = 1");
+  expect(await account.deleteConversion(deletingConversionId)).toEqual({
+    result: "account-unavailable",
+  });
+  expect(await account.terminationsForTest()).toEqual([scheduledConversionId]);
+  await storage.exec("UPDATE account SET state = 'active' WHERE id = 1");
+  expect(await account.getConversion(deletingConversionId)).toBeDefined();
+});

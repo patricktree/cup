@@ -1,0 +1,1 @@
+ALTER TABLE `account_conversions` ADD `deleting_since_ms` integer;

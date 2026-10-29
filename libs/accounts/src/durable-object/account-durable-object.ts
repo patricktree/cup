@@ -8,6 +8,7 @@ import {
   type SynthesisWorkflowDispatcher,
   type PlaybackPosition,
   createAccountArtifactPrefix,
+  createSegmentWorkflowId,
 } from "@cup/conversion-contracts";
 
 import type {
@@ -22,16 +23,22 @@ import { AccountSqlite } from "#src/storage/account-sqlite.ts";
 
 const USAGE_PUBLICATION_RETRY_MS = 60_000;
 
+/** Conversion deletion terminates the conversion's workflow instances. */
+type TerminableWorkflow = {
+  get(id: string): Promise<{ terminate(): Promise<void> }>;
+};
+
 type AccountEnvironment = {
   CONVERSION_OWNER_LIMIT: string;
   AUDIO_BUCKET: R2Bucket;
   REGISTRY: AccountRegistry;
-  SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW: SynthesisWorkflowDispatcher;
+  SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW: SynthesisWorkflowDispatcher & TerminableWorkflow;
   PREPARE_AUDIOBOOK_WORKFLOW: {
     create(input: { id: string; params: AccountWorkflowParams }): Promise<unknown>;
     get(id: string): Promise<{
       status(): Promise<{ status: string; error?: { message: string } }>;
       restart(): Promise<void>;
+      terminate(): Promise<void>;
     }>;
   };
 };
@@ -235,6 +242,50 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     this.assertExecution(conversionId, executionEpoch);
     this.sqlite.releaseAudioSegment(conversionId, sequence);
     await this.scheduleUsagePublication();
+  }
+
+  /**
+   * Deletes a conversion of an `active` or `deletion_scheduled` account: marks it, which fences it
+   * like a missing row, and releases its open reservations in one transaction. A repeat while
+   * marked changes nothing. See docs/architecture/conversion-deletion.md.
+   */
+  async deleteConversion(
+    conversionId: string,
+    nowMs = Temporal.Now.instant().epochMilliseconds,
+  ): Promise<{ result: "marked" | "already-marked" | "not-found" | "account-unavailable" }> {
+    const marking = this.sqlite.markConversionDeletion(conversionId, nowMs);
+    if (marking.result !== "marked") {
+      return { result: marking.result };
+    }
+    await this.scheduleUsagePublication();
+    await this.terminateConversionWorkflows(conversionId, marking.segmentSequences);
+    return { result: "marked" };
+  }
+
+  /**
+   * Termination only saves cost: the marker already fences whatever still runs, and a terminated
+   * instance can still land its running step. Each instance is tried once, and a failure is neither
+   * retried nor recorded.
+   */
+  private async terminateConversionWorkflows(
+    conversionId: string,
+    segmentSequences: readonly number[],
+  ) {
+    const segmentWorkflow: TerminableWorkflow = this.env.SYNTHESIZE_AUDIO_SEGMENT_WORKFLOW;
+    const instances = [
+      { workflow: this.env.PREPARE_AUDIOBOOK_WORKFLOW, id: conversionId },
+      ...segmentSequences.map((sequence) => ({
+        workflow: segmentWorkflow,
+        id: createSegmentWorkflowId(conversionId, sequence),
+      })),
+    ];
+    for (const { workflow, id } of instances) {
+      try {
+        await (await workflow.get(id)).terminate();
+      } catch {
+        /* Best effort, as explained above. */
+      }
+    }
   }
 
   getPlaybackPosition(conversionId: string) {

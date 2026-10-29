@@ -66,9 +66,15 @@ The internal cleanup step within account deletion that removes the account’s C
 
 _Avoid_: account deletion for the cleanup step alone
 
+## conversion deletion
+
+Permanently removing one of an account's conversions, together with its audiobook and listening position, at the account holder's or an operator's request. It cannot be undone, and the duration the conversion spent stays spent. Afterwards the conversion is unknown everywhere. Trial conversions cannot be deleted.
+
+_Avoid_: conversion erasure, archiving, removal
+
 ## account conversion allowance
 
-The duration allowance issued to an account. Its spent duration remains spent; deleting a conversion, once supported, will not refund it.
+The duration allowance issued to an account. Its spent duration remains spent; [conversion deletion](#conversion-deletion) does not refund it.
 
 _Avoid_: conversion grant, trial allowance
 

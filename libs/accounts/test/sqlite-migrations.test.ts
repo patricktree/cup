@@ -397,6 +397,33 @@ test("recording the last started phase backfills conversions with the start and 
   }
 });
 
+test("adding the conversion deletion marker keeps conversions unmarked", () => {
+  const database = new sqlite.DatabaseSync(":memory:");
+  try {
+    const { key, earlierKeys } = findMigration("conversion_deletion_marker");
+    applyMigrations(database, earlierKeys);
+    database.exec(`INSERT INTO account_conversions
+      (conversion_id, idempotency_key, source_url, created_at_ms, status, last_started_phase)
+      VALUES ('pending', 'key-pending', 'https://example.com/p', 1, 'pending', 'conversion-start')`);
+    database.exec("INSERT INTO pending_jobs VALUES ('job', 'pending', 1, 'pending')");
+    const conversions = database.prepare("SELECT * FROM account_conversions").all();
+    const jobs = database.prepare("SELECT * FROM pending_jobs").all();
+
+    applyMigrations(database, [key]);
+
+    expect(database.prepare("SELECT * FROM account_conversions").all()).toEqual(
+      conversions.map((row) => ({ ...row, deleting_since_ms: null })),
+    );
+    expect(database.prepare("SELECT * FROM pending_jobs").all()).toEqual(jobs);
+    database.exec("UPDATE account_conversions SET deleting_since_ms = 5");
+    expect(database.prepare("SELECT deleting_since_ms FROM account_conversions").all()).toEqual([
+      { deleting_since_ms: 5 },
+    ]);
+  } finally {
+    database.close();
+  }
+});
+
 /**
  * Finds a migration by its journal tag without its number prefix, so renumbering it after a rebase
  * keeps the test valid; also returns the keys of all migrations that run before it.

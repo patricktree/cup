@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { drizzle, type DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { Temporal } from "temporal-polyfill";
 import { z } from "zod";
@@ -308,6 +308,9 @@ export class AccountSqlite {
 
   getPlaybackPosition(conversionId: string): PlaybackPosition | null {
     this.requireActive();
+    if (this.isMarkedForDeletion(conversionId)) {
+      return null;
+    }
     const row = this.database
       .select()
       .from(accountPlaybackPositions)
@@ -323,6 +326,9 @@ export class AccountSqlite {
 
   savePlaybackPosition(conversionId: string, position: PlaybackPosition) {
     this.requireActive();
+    if (this.isMarkedForDeletion(conversionId)) {
+      throw new Error("Account conversion does not exist");
+    }
     const parsed = playbackPositionSchema.parse(position);
     this.database
       .insert(accountPlaybackPositions)
@@ -339,7 +345,50 @@ export class AccountSqlite {
   }
 
   listAudioSegments(conversionId: string) {
+    if (this.isMarkedForDeletion(conversionId)) {
+      return [];
+    }
     return this.duration.segments(conversionId);
+  }
+
+  /**
+   * Sets the conversion deletion marker and releases the conversion's open reservations in one
+   * transaction, so no hold outlives the marker; settled segments stay charged. Returns the segment
+   * sequences whose workflows may still run.
+   */
+  markConversionDeletion(
+    conversionId: string,
+    nowMs: number,
+  ):
+    | { result: "marked"; segmentSequences: number[] }
+    | { result: "already-marked" | "not-found" | "account-unavailable" } {
+    z.number().int().nonnegative().safe().parse(nowMs);
+    return this.database.transaction(() => {
+      if (this.snapshot().state === "deleting") {
+        return { result: "account-unavailable" };
+      }
+      const row = this.database
+        .select({ deletingSinceMs: accountConversions.deletingSinceMs })
+        .from(accountConversions)
+        .where(eq(accountConversions.conversionId, conversionId))
+        .get();
+      if (row === undefined) {
+        return { result: "not-found" };
+      }
+      if (row.deletingSinceMs !== null) {
+        return { result: "already-marked" };
+      }
+      this.database
+        .update(accountConversions)
+        .set({ deletingSinceMs: nowMs })
+        .where(eq(accountConversions.conversionId, conversionId))
+        .run();
+      this.duration.releaseReservations(conversionId, nowMs);
+      return {
+        result: "marked",
+        segmentSequences: this.duration.segments(conversionId).map((segment) => segment.sequence),
+      };
+    });
   }
 
   settleConversion(
@@ -459,15 +508,18 @@ export class AccountSqlite {
       })
       .from(accountConversions)
       .where(
-        cursor
-          ? or(
-              lt(accountConversions.createdAtMs, cursor.createdAtMs),
-              and(
-                eq(accountConversions.createdAtMs, cursor.createdAtMs),
-                lt(accountConversions.conversionId, cursor.conversionId),
-              ),
-            )
-          : undefined,
+        and(
+          isNull(accountConversions.deletingSinceMs),
+          cursor
+            ? or(
+                lt(accountConversions.createdAtMs, cursor.createdAtMs),
+                and(
+                  eq(accountConversions.createdAtMs, cursor.createdAtMs),
+                  lt(accountConversions.conversionId, cursor.conversionId),
+                ),
+              )
+            : undefined,
+        ),
       )
       .orderBy(desc(accountConversions.createdAtMs), desc(accountConversions.conversionId))
       .limit(51)
@@ -489,6 +541,7 @@ export class AccountSqlite {
     };
   }
 
+  /** A conversion marked for deletion reads as missing, which also fences its execution. */
   getConversion(conversionId: string):
     | (AccountConversion & {
         outcome: AccountConversionOutcome | null;
@@ -498,7 +551,12 @@ export class AccountSqlite {
     const row = this.database
       .select()
       .from(accountConversions)
-      .where(eq(accountConversions.conversionId, conversionId))
+      .where(
+        and(
+          eq(accountConversions.conversionId, conversionId),
+          isNull(accountConversions.deletingSinceMs),
+        ),
+      )
       .get();
     if (!row) {
       return undefined;
@@ -521,6 +579,21 @@ export class AccountSqlite {
       .set({ state: "delivered" })
       .where(eq(pendingJobs.conversionId, conversionId))
       .run();
+  }
+
+  private isMarkedForDeletion(conversionId: string): boolean {
+    return (
+      this.database
+        .select({ conversionId: accountConversions.conversionId })
+        .from(accountConversions)
+        .where(
+          and(
+            eq(accountConversions.conversionId, conversionId),
+            isNotNull(accountConversions.deletingSinceMs),
+          ),
+        )
+        .get() !== undefined
+    );
   }
 
   private readIdentity(): Omit<AccountSnapshot, "balance"> | undefined {

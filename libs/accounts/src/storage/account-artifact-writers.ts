@@ -94,11 +94,18 @@ export class AccountArtifactWriters {
       throw new Error("Artifact writer target is invalid");
     }
     const conversion = this.database
-      .select({ status: accountConversions.status })
+      .select({
+        status: accountConversions.status,
+        deletingSinceMs: accountConversions.deletingSinceMs,
+      })
       .from(accountConversions)
       .where(eq(accountConversions.conversionId, conversionId))
       .get();
-    if (!conversion || !["pending", "ready"].includes(conversion.status)) {
+    if (
+      !conversion ||
+      conversion.deletingSinceMs !== null ||
+      !["pending", "ready"].includes(conversion.status)
+    ) {
       throw new Error("Artifact writer target is fenced");
     }
   }
