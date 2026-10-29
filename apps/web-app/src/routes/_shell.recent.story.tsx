@@ -63,11 +63,21 @@ export const SignedOutRecents = accountStory({ path: "/recent", isSignedOut: tru
 export const SignedOutAddDialog = accountStory({ path: "/recent/add", isSignedOut: true });
 export const SignedOutAccountDialog = accountStory({ path: "/recent/account", isSignedOut: true });
 
-/** Two pages of ready cards, most of them with a cover; the second page loads on scrolling. */
+/**
+ * Two pages of ready cards, most of them with a cover; the second page loads on scrolling. A card
+ * opens a track that is still being prepared.
+ */
 export const Recents = accountStory({
   path: "/recent",
   handlers: [
     coverHandler(),
+    http.get("/api/audiobooks/:conversionId", ({ params }) =>
+      HttpResponse.json({
+        status: "pending",
+        originalUrl: `https://example.test/articles/${String(params["conversionId"])}`,
+        canGenerate: true,
+      } satisfies Audiobook),
+    ),
     http.get("/api/account/conversions", ({ request }) => {
       const isSecondPage = new URL(request.url).searchParams.get("cursor") === SECOND_PAGE_CURSOR;
       return HttpResponse.json(

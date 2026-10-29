@@ -115,6 +115,27 @@ test("scrolling to the end loads the next page without moving existing cards", a
   expect((await readCardBoxes(component)).slice(0, FIRST_PAGE_SIZE)).toEqual(firstPageBoxes);
 });
 
+test("Back from a track opened on a scrolled Recents returns to the same card", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount("routes/_shell.recent/Recents");
+  await expect(cardsOf(component)).toHaveCount(FIRST_PAGE_SIZE);
+  await expectCoversLoaded(page);
+  // a card far enough down that Recents opening at the top would not show it
+  const card = cardsOf(component).nth(FIRST_PAGE_SIZE - 4);
+  await card.scrollIntoViewIfNeeded();
+  const scrollPosition = await page.evaluate(() => window.scrollY);
+  expect(scrollPosition).toBeGreaterThan(0);
+
+  await card.getByRole("link").click();
+  await expect(component.getByRole("region", { name: "Preparing track" })).toBeVisible();
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+
+  await expect(cardsOf(component).nth(FIRST_PAGE_SIZE - 4)).toBeInViewport();
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrollPosition);
+});
+
 for (const state of [
   { story: "RecentsWithMiniPlayer", name: "mini-player" },
   { story: "RecentsWithMiniPlayerWithoutCover", name: "mini-player-without-cover" },

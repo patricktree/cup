@@ -471,15 +471,40 @@ export const AccountFailedConversion = accountStory({
 /** How the stories below answer the listener's request to delete the track. */
 type DeletionOutcome = "deleted" | "not-found" | "fails-once" | "never-answers";
 
+/** Tracks Recents lists above the deletable one when the story starts on Recents. */
+const TRACKS_ABOVE_DELETABLE_COUNT = 30;
+/** Tracks Recents lists below the deletable one when the story starts on Recents. */
+const TRACKS_BELOW_DELETABLE_COUNT = 4;
+
 /**
  * A signed-in listener deletes a ready track that Recents lists. Once the track is deleted, the
- * audiobook and Recents no longer have it.
+ * audiobook and Recents no longer have it. Opened from Recents, Recents lists enough other tracks
+ * to scroll, the deletable one far down; otherwise the story starts on the detail view, as a deep
+ * link does, and Recents lists only that track.
  */
-function createDeletionStory(outcome: DeletionOutcome, audiobook: Audiobook = createAudiobook()) {
+function createDeletionStory(
+  outcome: DeletionOutcome,
+  audiobook: Audiobook = createAudiobook(),
+  openedFrom: "deep-link" | "recents" = "deep-link",
+) {
   let isDeleted = false;
   let deletionRequestCount = 0;
+  const deletableItem = createRecentsItem(
+    CONVERSION_ID,
+    "A deterministic document about careful testing",
+  );
+  const otherItems = (count: number, firstNumber: number) =>
+    Array.from({ length: openedFrom === "recents" ? count : 0 }, (_, offset) => {
+      const number = firstNumber + offset;
+      return createRecentsItem(
+        `00000000-0000-4000-8000-${String(number).padStart(12, "0")}`,
+        `Another track ${number}`,
+      );
+    });
+  const itemsAbove = otherItems(TRACKS_ABOVE_DELETABLE_COUNT, 1);
+  const itemsBelow = otherItems(TRACKS_BELOW_DELETABLE_COUNT, TRACKS_ABOVE_DELETABLE_COUNT + 1);
   return accountStory({
-    path: `/audiobooks/${CONVERSION_ID}`,
+    path: openedFrom === "recents" ? "/recent" : `/audiobooks/${CONVERSION_ID}`,
     handlers: [
       http.get(`/api/audiobooks/${CONVERSION_ID}`, () =>
         isDeleted ? trackNotFoundResponse() : HttpResponse.json(audiobook),
@@ -487,9 +512,7 @@ function createDeletionStory(outcome: DeletionOutcome, audiobook: Audiobook = cr
       http.get("/api/account/conversions", async () => {
         await waitWhileHeld("account-history");
         return HttpResponse.json({
-          items: isDeleted
-            ? []
-            : [createRecentsItem(CONVERSION_ID, "A deterministic document about careful testing")],
+          items: [...itemsAbove, ...(isDeleted ? [] : [deletableItem]), ...itemsBelow],
           nextCursor: null,
         });
       }),
@@ -536,6 +559,12 @@ function createDeletionStory(outcome: DeletionOutcome, audiobook: Audiobook = cr
 }
 
 export const DeleteTrack = createDeletionStory("deleted");
+/** The listener scrolls Recents down to the track and opens it there. */
+export const DeleteTrackOpenedFromRecents = createDeletionStory(
+  "deleted",
+  createAudiobook(),
+  "recents",
+);
 /** The track was already deleted, for example on another device. */
 export const DeleteTrackAlreadyDeleted = createDeletionStory("not-found");
 export const DeleteTrackFailsOnce = createDeletionStory("fails-once");

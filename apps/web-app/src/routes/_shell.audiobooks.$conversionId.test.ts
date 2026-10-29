@@ -35,6 +35,17 @@ async function readNarrationAudio(page: Page) {
   });
 }
 
+/** Goes back in history as the system Back gesture does, which no element of the page sees. */
+async function goBackAsTheSystemDoes(page: Page) {
+  await page.evaluate(() => {
+    const goBack: unknown = Reflect.get(window, "goBackInAccountStory");
+    if (typeof goBack !== "function") {
+      throw new TypeError("The account story offers no Back");
+    }
+    Reflect.apply(goBack, window, []);
+  });
+}
+
 /** The texts of the first three blocks of the narration document, inside an `<hgroup>` or not. */
 async function readOpeningTexts(article: Locator) {
   return article.evaluate((element) =>
@@ -289,6 +300,24 @@ test("a trial audiobook renders without a loading state and leads back home", as
   ).toHaveText("");
   expect(await readLoadingStateRecord(page)).toEqual([]);
   await expect(page).toHaveScreenshot("trial-audiobook.png");
+});
+
+test("Back after a deep link opens Recents as a new entry above the track", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/AccountAudiobook");
+  const title = component.getByRole("heading", {
+    name: "The turbulent AI era is here. The choices we make now are critical.",
+  });
+  await expect(title).toBeVisible();
+
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+
+  // Back pushed Recents, so the system Back returns to the track below it.
+  await goBackAsTheSystemDoes(page);
+  await expect(title).toBeVisible();
 });
 
 test("an account audiobook opens with its cover, title and host below a plain top bar", async ({
@@ -625,6 +654,40 @@ test("a pending track is deleted without its polling showing the deletion as an 
 
   await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
   await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(0);
+});
+
+test("deleting a track opened from Recents returns to Recents where it was, without the track", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount(
+    "routes/_shell.audiobooks.$conversionId/DeleteTrackOpenedFromRecents",
+  );
+  const deletableCard = component.getByRole("link", {
+    name: "A deterministic document about careful testing",
+  });
+  await deletableCard.scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await deletableCard.click();
+  await component.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete track…" }).click();
+  await page
+    .getByRole("alertdialog", { name: "Delete track?" })
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
+
+  await expect(component.getByRole("status").filter({ hasText: "Track deleted." })).toHaveCount(1);
+  await expect(deletableCard).toHaveCount(0);
+  // The track listed just above the deleted one is still in view.
+  await expect(
+    component.getByRole("link", { name: "Another track 30", exact: true }),
+  ).toBeInViewport();
+
+  await goBackAsTheSystemDoes(page);
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+  await expect(
+    component.getByRole("heading", { name: "A deterministic document about careful testing" }),
+  ).toHaveCount(0);
 });
 
 test("after a deletion, Recents' cached history lacks the track while its refetch is held", async ({
