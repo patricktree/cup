@@ -98,6 +98,16 @@ export async function ensureAuthInitialized(): Promise<AccountAuthClient> {
   return snapshot.context.connection.client;
 }
 
+/**
+ * The signed-in session once account auth has initialized, or `null` when signed out; route
+ * `beforeLoad`s await it, so a screen never renders before auth settles. Rejects when auth fails to
+ * initialize.
+ */
+export async function settleAccountSession(): Promise<Session | null> {
+  await ensureAuthInitialized();
+  return sessionSnapshot();
+}
+
 /** Resolves to `null` when the session scope ends before the read finishes, e.g. on sign-out. */
 export async function getFreshAccountSession(): Promise<Session | null> {
   await ensureAuthInitialized();

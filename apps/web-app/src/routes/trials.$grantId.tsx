@@ -11,6 +11,7 @@ import React from "react";
 
 import { ConversionShell } from "#src/app/components/conversion-shell.jsx";
 import { ErrorScreen } from "#src/app/components/error-message.js";
+import { PageSkeleton } from "#src/app/components/page-skeleton.js";
 import { StartConversionForm } from "#src/app/components/start-conversion-form.js";
 import { getResourceAccountSession } from "#src/auth/account-session.js";
 import { useAccountSession } from "#src/auth/hooks.js";
@@ -62,8 +63,9 @@ export const Route = createFileRoute("/trials/$grantId")({
     check.assertIsUnreachable(access);
   },
   loader: async ({ context, params }) => {
-    await context.queryClient.ensureQueryData(createGrantQuery(params.grantId));
+    await context.queryClient.query({ ...createGrantQuery(params.grantId), staleTime: "static" });
   },
+  pendingComponent: () => <PageSkeleton label="Loading trial" />,
   errorComponent: RouteErrorComponent,
 });
 

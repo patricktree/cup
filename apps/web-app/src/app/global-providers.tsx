@@ -24,8 +24,12 @@ export function createAppRouter(history?: RouterHistory) {
       queryClient,
     },
     defaultErrorComponent: RouteErrorScreen,
-    defaultPendingMinMs: 0,
-    defaultPendingMs: 0,
+    /*
+     * A loader that finds its data cached still resolves a moment later, so the previous screen
+     * stays until the route's pending component is due; once shown, it stays long enough to read.
+     */
+    defaultPendingMinMs: 300,
+    defaultPendingMs: 500,
     defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
     routeTree,

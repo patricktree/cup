@@ -8,7 +8,7 @@ import { check } from "@patricktree-stack/utils-ecma/assert.utils";
  */
 const holds = new Map<string, { promise: Promise<void>; release: () => void }>();
 
-function holdResponses(name: string): void {
+export function holdResponses(name: string): void {
   if (holds.has(name)) {
     return;
   }

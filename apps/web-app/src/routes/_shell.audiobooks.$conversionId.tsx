@@ -14,10 +14,11 @@ import type { Audiobook } from "@cup/listener-api.routes";
 
 import { DetailTopBar } from "#src/app/components/detail-top-bar.js";
 import type { DetailBack } from "#src/app/components/detail-top-bar.js";
+import { ErrorScreen } from "#src/app/components/error-message.js";
 import { fadeFooterClearance } from "#src/app/components/fade-footer.js";
 import { ShellContent } from "#src/app/components/main.tsx";
 import { PLAYER_SHEET_HEIGHTS, PlayerSheet } from "#src/app/components/player-sheet.js";
-import { QueryBoundary, QueryErrorScreen } from "#src/app/components/query-boundary.js";
+import { TrackSkeleton } from "#src/app/components/track-skeleton.js";
 import { DSButton } from "#src/app/design-system/button.js";
 import { DSCoverImage } from "#src/app/design-system/cover-image.js";
 import { DSDialog } from "#src/app/design-system/dialog.js";
@@ -35,6 +36,7 @@ import type { LoadedAudiobook } from "#src/app/player/player-host.js";
 import { toPreparationPhaseLabel } from "#src/app/preparation-phase-label.js";
 import { toSourceHost } from "#src/app/source-host.js";
 import { useAnnounceStatus } from "#src/app/status-announcer.js";
+import { useRetryRoute } from "#src/app/use-retry-route.js";
 import { composeClassnames } from "#src/app/utils.ts";
 import { useAccountSession } from "#src/auth/hooks.js";
 import { useIsAccountConversion } from "#src/data-fetching/account-history.js";
@@ -45,33 +47,37 @@ import {
 } from "#src/data-fetching/reader.js";
 import { describeError } from "#src/errors.js";
 
+// The audiobook request waits for any session itself (`requestApi("optional")`), so the detail view
+// needs no `beforeLoad`.
 export const Route = createFileRoute("/_shell/audiobooks/$conversionId")({
   component: AudiobookRoute,
+  loader: async ({ context, params }) => {
+    await context.queryClient.query({
+      ...createAudiobookQuery(params.conversionId),
+      staleTime: "static",
+    });
+  },
+  pendingComponent: () => (
+    <DetailLayout topBar={<PlainTopBar />} statusLine={toPreparationPhaseLabel(undefined)}>
+      <TrackSkeleton label="Loading track" isLoadingState />
+    </DetailLayout>
+  ),
+  errorComponent: ReaderQueryError,
 });
 
 type RetryMutation = ReturnType<typeof useRetryConversion>;
 
 function AudiobookRoute() {
   const { conversionId } = Route.useParams();
-  // Outside the boundary, so the page counts as shown while it loads, fails, or is still preparing.
-  useShownConversion(conversionId);
 
-  return (
-    <QueryBoundary
-      pending={
-        <DetailLayout topBar={<PlainTopBar />} statusLine={toPreparationPhaseLabel(undefined)}>
-          <TrackSkeleton label="Loading track" isLoadingState />
-        </DetailLayout>
-      }
-      errorComponent={ReaderQueryError}
-    >
-      {/* Another audiobook starts with a fresh retry outcome and its title in view. */}
-      <AudiobookPage key={conversionId} conversionId={conversionId} />
-    </QueryBoundary>
-  );
+  // Another audiobook starts with a fresh retry outcome and its title in view.
+  return <AudiobookPage key={conversionId} conversionId={conversionId} />;
 }
 
-/** Every detail view has the player sheet, disabled until the shown audiobook can play. */
+/**
+ * Every detail view has the player sheet, disabled until the shown audiobook can play. The page
+ * counts as shown while it loads, fails, or is still preparing.
+ */
 function DetailLayout({
   topBar,
   statusLine = "",
@@ -82,6 +88,8 @@ function DetailLayout({
   statusLine?: string;
   children: React.ReactNode;
 }): React.JSX.Element {
+  useShownConversion(Route.useParams().conversionId);
+
   return (
     <>
       <ShellContent
@@ -115,10 +123,12 @@ function useDetailBack(): DetailBack {
     : { to: "/", goesBackInHistory: false };
 }
 
-function ReaderQueryError(props: ErrorComponentProps) {
+function ReaderQueryError({ error }: ErrorComponentProps) {
+  const retry = useRetryRoute();
+
   return (
     <DetailLayout topBar={<PlainTopBar />}>
-      <QueryErrorScreen {...props} fallbackTitle="The track could not be loaded." />
+      <ErrorScreen error={error} fallbackTitle="The track could not be loaded." onRetry={retry} />
     </DetailLayout>
   );
 }
@@ -799,51 +809,4 @@ function offersRetry(audiobook: Audiobook): boolean {
 
 function formatSegmentCount(count: number) {
   return `${count} ${count === 1 ? "segment" : "segments"}`;
-}
-
-/**
- * Shown while the audiobook loads, and in the same shape while its conversion is still preparing.
- * Only loading is a loading state: a conversion being prepared is the content the server sent.
- */
-function TrackSkeleton({
-  label,
-  isLoadingState,
-}: {
-  label: "Loading track" | "Preparing track";
-  isLoadingState: boolean;
-}): React.JSX.Element {
-  return (
-    <section
-      aria-busy="true"
-      aria-label={label}
-      data-loading-state={isLoadingState ? "" : undefined}
-    >
-      <div
-        aria-hidden="true"
-        className={css`
-          display: grid;
-          gap: var(--spacing-gutter);
-
-          & > div {
-            height: 24px;
-            background-color: var(--color-placeholder);
-            border-radius: var(--border-radius-full);
-          }
-
-          & > div:first-child {
-            height: auto;
-            aspect-ratio: 5 / 3;
-            margin-block-end: calc(2 * var(--spacing-gutter));
-            border-radius: var(--border-radius-lg);
-          }
-        `}
-      >
-        <div />
-        <div />
-        <div />
-        <div />
-        <div />
-      </div>
-    </section>
-  );
 }

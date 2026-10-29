@@ -230,6 +230,62 @@ test("a signed-in home redirects to Recents", async ({ mount }) => {
   await expect(component.getByRole("textbox", { name: "URL" })).toHaveCount(0);
 });
 
+test("a signed-in cold start on home never shows the start form before Recents", async ({
+  mount,
+  page,
+}) => {
+  // Records every text field the page inserts, however briefly; Recents itself has none.
+  await page.addInitScript(() => {
+    const insertedFields: string[] = [];
+    Object.assign(window, { insertedFields });
+    new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (node instanceof Element && (node.matches("input") || node.querySelector("input"))) {
+            insertedFields.push(node.outerHTML);
+          }
+        }
+      }
+    }).observe(document, { childList: true, subtree: true });
+  });
+  const authConfigRequest = page.waitForRequest(
+    (request) => new URL(request.url()).pathname === "/api/auth/config",
+  );
+  const component = await mount("routes/_shell.recent/SignedInColdStartHome");
+  await authConfigRequest;
+  // Gives the page a few frames to render what it shows while auth is held.
+  await page.evaluate(async () => {
+    for (let frame = 0; frame < 3; frame++) {
+      await new Promise(requestAnimationFrame);
+    }
+  });
+  await releaseResponses(page, "auth-config");
+
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => Reflect.get(window, "insertedFields"))).toEqual([]);
+});
+
+for (const path of ["SignedOutRecents", "SignedOutAddDialog", "SignedOutAccountDialog"]) {
+  test(`a signed-out listener opening ${path} is sent home in place of that history entry`, async ({
+    mount,
+    page,
+  }) => {
+    const component = await mount(`routes/_shell.recent/${path}`);
+
+    await expect(component.getByRole("heading", { name: "Just listen." })).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    expect(
+      await page.evaluate(() => {
+        const readLength: unknown = Reflect.get(window, "readAccountStoryHistoryLength");
+        if (typeof readLength !== "function") {
+          throw new TypeError("The account story offers no readAccountStoryHistoryLength");
+        }
+        return Reflect.apply(readLength, window, []);
+      }),
+    ).toBe(1);
+  });
+}
+
 test("a URL shared while signed in opens the Add dialog with it filled in and submits nothing", async ({
   mount,
   page,

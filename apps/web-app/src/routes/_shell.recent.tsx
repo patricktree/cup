@@ -1,31 +1,90 @@
 import { css } from "@linaria/core";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, Navigate, Outlet } from "@tanstack/react-router";
+import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
+import {
+  createFileRoute,
+  Link,
+  Navigate,
+  Outlet,
+  redirect,
+  type ErrorComponentProps,
+} from "@tanstack/react-router";
 import React from "react";
 
-import { AccountAvatar } from "#src/app/components/account-avatar.js";
-import { AccountTabBar, TAB_BAR_HEIGHTS } from "#src/app/components/account-tab-bar.js";
-import { fadeFooterClearance } from "#src/app/components/fade-footer.js";
-import { MiniPlayer } from "#src/app/components/mini-player.js";
 import { RecentsCard } from "#src/app/components/recents-card.js";
+import { RecentsLayout } from "#src/app/components/recents-layout.js";
 import { DSButton } from "#src/app/design-system/button.js";
 import { textStyles } from "#src/app/design-system/text-styles.js";
-import { interTypefaceScope } from "#src/app/global-styles.js";
 import { useIsInScrollReach } from "#src/app/use-is-in-scroll-reach.js";
 import { useMasonryRowSpans } from "#src/app/use-masonry-row-spans.js";
+import { useRetryRoute } from "#src/app/use-retry-route.js";
 import { composeClassnames } from "#src/app/utils.js";
-import { useAccountSession, useAccountAuthState } from "#src/auth/hooks.js";
+import { settleAccountSession } from "#src/auth/account-session.js";
+import { useAccountSession } from "#src/auth/hooks.js";
 import { createAccountHistoryQuery } from "#src/data-fetching/account-history.js";
 import { describeError } from "#src/errors.js";
 
 export const Route = createFileRoute("/_shell/recent")({
   component: RecentPage,
+  beforeLoad: async () => {
+    // Only accounts have Recents; signed-out listeners, including on its dialogs, start at home.
+    const session = await settleAccountSession();
+    if (!session) {
+      throw redirect({ to: "/", replace: true });
+    }
+    // Only the subject: query options built here would outlive an account switch.
+    return { subject: session.user.id };
+  },
+  loader: async ({ context }) => {
+    await context.queryClient.infiniteQuery({
+      ...createAccountHistoryQuery(context.subject),
+      staleTime: "static",
+    });
+  },
+  pendingComponent: RecentsPending,
+  errorComponent: RecentsError,
 });
 
 function RecentPage(): React.ReactNode {
   const session = useAccountSession();
-  const authState = useAccountAuthState();
-  const recents = useInfiniteQuery(createAccountHistoryQuery(session?.user.id));
+
+  // Signing out while Recents is shown leaves it; the route sends a signed-out visit home itself.
+  if (!session) {
+    return <Navigate to="/" replace />;
+  }
+
+  return (
+    <>
+      <RecentsLayout>
+        <RecentTracks subject={session.user.id} />
+      </RecentsLayout>
+      {/* the Add and account dialogs (`_shell.recent.add.tsx`, `_shell.recent.account.tsx`) open
+          over Recents */}
+      <Outlet />
+    </>
+  );
+}
+
+function RecentsPending(): React.JSX.Element {
+  return (
+    <RecentsLayout>
+      <output data-loading-state="">Loading tracks…</output>
+    </RecentsLayout>
+  );
+}
+
+function RecentsError({ error }: ErrorComponentProps): React.JSX.Element {
+  const retry = useRetryRoute();
+
+  return (
+    <RecentsLayout>
+      <RecentsLoadError error={error} />
+      <DSButton onClick={retry}>Retry</DSButton>
+    </RecentsLayout>
+  );
+}
+
+function RecentTracks({ subject }: { subject: string }): React.ReactNode {
+  const recents = useSuspenseInfiniteQuery(createAccountHistoryQuery(subject));
   const masonryRef = useMasonryRowSpans();
   const [sentinelRef, isSentinelInReach] = useIsInScrollReach();
 
@@ -38,156 +97,61 @@ function RecentPage(): React.ReactNode {
     }
   }, [isSentinelInReach, hasNextPage, isFetching, isFetchNextPageError, fetchNextPage]);
 
-  // Only accounts have Recents; signed-out listeners, including on the Add dialog, start at home.
-  if (authState.status === "signed-out") {
-    return <Navigate to="/" replace />;
+  // Once tracks are listed, a failed refresh or next page is reported with a toast.
+  const items = recents.data.pages.flatMap((page) => page.items);
+
+  if (items.length === 0) {
+    return <EmptyRecents />;
   }
 
-  const items = recents.data?.pages.flatMap((page) => page.items);
-
   return (
-    <>
-      {/* the header scrolls away with the tracks, unlike other shell pages' sticky headers */}
-      <div
+    // the container for the column count's container queries below
+    <div
+      className={css`
+        container-type: inline-size;
+      `}
+    >
+      <ul
+        ref={masonryRef}
+        aria-label="Tracks"
         className={css`
-          grid-area: shell-main;
-        `}
-      >
-        <header
-          {...interTypefaceScope}
-          className={composeClassnames(
-            pageWidth,
-            css`
-              /* put above shell <main> */
-              z-index: 1;
-              display: flex;
-              grid-area: shell-header;
-              gap: var(--spacing-gutter);
-              align-items: center;
-              justify-content: space-between;
-              min-height: 44px;
-              padding-block-start: var(--spacing-gutter);
-            `,
-          )}
-        >
-          <h1
-            className={composeClassnames(
-              textStyles.h1,
-              css`
-                padding-block-end: 8px;
-                padding-inline-start: var(--spacing-gutter);
-                margin: 0;
-              `,
-            )}
-          >
-            Recent
-          </h1>
-          {session && <AccountAvatar userMetadata={session.user.user_metadata} />}
-        </header>
-        <main
-          {...interTypefaceScope}
-          className={composeClassnames(
-            pageWidth,
-            css`
-              display: flex;
-              flex-direction: column;
-              grid-area: shell-main;
-              padding-block: 24px;
+          --columns: 2;
 
-              /* the tab bar's fade reaches this far over the end of <main> */
-              padding-block-end: ${fadeFooterClearance(TAB_BAR_HEIGHTS)};
-            `,
-          )}
-        >
-          {authState.status === "loading" && (
-            <output data-loading-state="">Loading account…</output>
-          )}
-          {authState.status === "error" && <p role="alert">{authState.error.message}</p>}
-          {recents.isLoading && <output data-loading-state="">Loading tracks…</output>}
-          {/* Once tracks are listed, a failed refresh or next page is reported with a toast. */}
-          {recents.error && !recents.data && (
-            <>
-              <RecentsLoadError error={recents.error} />
-              <DSButton disabled={recents.isFetching} onClick={() => void recents.refetch()}>
-                Retry
-              </DSButton>
-            </>
-          )}
-          {items?.length === 0 && <EmptyRecents />}
-          {items !== undefined && items.length > 0 && (
-            // the container for the column count's container queries below
-            <div
-              className={css`
-                container-type: inline-size;
-              `}
-            >
-              <ul
-                ref={masonryRef}
-                aria-label="Tracks"
-                className={css`
-                  --columns: 2;
-
-                  display: grid;
-                  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
-                  gap: var(--spacing-gutter);
-                  padding: 0;
-                  margin: 0;
-                  list-style: none;
-
-                  /* each item spans its height in 1 px rows plus the gap, see useMasonryRowSpans */
-                  &[data-masonry] {
-                    grid-auto-rows: 1px;
-                    row-gap: 0;
-                  }
-
-                  /* another column once it fits at the drawn card width of 183 px */
-                  @container (width >= 573px) {
-                    --columns: 3;
-                  }
-
-                  @container (width >= 768px) {
-                    --columns: 4;
-                  }
-                `}
-              >
-                {items.map((item) => (
-                  <RecentsCard key={item.conversionId} item={item} />
-                ))}
-              </ul>
-              {/* loads the next page once the end of the list comes within about one screen */}
-              {recents.hasNextPage && <div ref={sentinelRef} />}
-              {recents.isFetchNextPageError && (
-                <DSButton
-                  disabled={recents.isFetching}
-                  onClick={() => void recents.fetchNextPage()}
-                >
-                  Retry
-                </DSButton>
-              )}
-            </div>
-          )}
-        </main>
-      </div>
-      {/* the mini player stacks on the tab bar, so it needs no offset from the tab bar's height */}
-      <div
-        className={css`
-          /* stays at the bottom of the screen while the document scrolls */
-          position: sticky;
-          bottom: 0;
-
-          /* above shell <main>, whose end scrolls under the tab bar's fade */
-          z-index: 1;
           display: grid;
-          grid-area: shell-footer;
+          grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+          gap: var(--spacing-gutter);
+          padding: 0;
+          margin: 0;
+          list-style: none;
+
+          /* each item spans its height in 1 px rows plus the gap, see useMasonryRowSpans */
+          &[data-masonry] {
+            grid-auto-rows: 1px;
+            row-gap: 0;
+          }
+
+          /* another column once it fits at the drawn card width of 183 px */
+          @container (width >= 573px) {
+            --columns: 3;
+          }
+
+          @container (width >= 768px) {
+            --columns: 4;
+          }
         `}
       >
-        <MiniPlayer />
-        <AccountTabBar />
-      </div>
-      {/* the Add and account dialogs (`_shell.recent.add.tsx`, `_shell.recent.account.tsx`) open
-          over Recents */}
-      <Outlet />
-    </>
+        {items.map((item) => (
+          <RecentsCard key={item.conversionId} item={item} />
+        ))}
+      </ul>
+      {/* loads the next page once the end of the list comes within about one screen */}
+      {recents.hasNextPage && <div ref={sentinelRef} />}
+      {recents.isFetchNextPageError && (
+        <DSButton disabled={recents.isFetching} onClick={() => void recents.fetchNextPage()}>
+          Retry
+        </DSButton>
+      )}
+    </div>
   );
 }
 
@@ -236,11 +200,3 @@ function RecentsLoadError({ error }: { error: unknown }): React.ReactNode {
     </p>
   );
 }
-
-/** The header and the list share the page's width and the drawn 12 px inline padding. */
-const pageWidth = css`
-  width: 100%;
-  max-width: var(--app-max-width);
-  padding-inline: var(--spacing-gutter);
-  margin-inline: auto;
-`;

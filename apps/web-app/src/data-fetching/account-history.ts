@@ -1,4 +1,3 @@
-import { check } from "@patricktree-stack/utils-ecma/assert.utils";
 import { infiniteQueryOptions, useInfiniteQuery, type InfiniteData } from "@tanstack/react-query";
 import React from "react";
 
@@ -8,17 +7,14 @@ import { requestApi } from "#src/data-fetching/api-request.js";
 import { queryClient } from "#src/data-fetching/query-client.js";
 import { QUERY_KEYS } from "#src/data-fetching/query-keys.js";
 
-export function createAccountHistoryQuery(subject?: string) {
+export function createAccountHistoryQuery(subject: string) {
   return infiniteQueryOptions({
     queryKey: QUERY_KEYS.accountHistory(subject),
-    enabled: !!subject,
     initialPageParam: null as string | null,
-    queryFn: async ({ pageParam }) => {
-      check.assert(subject, "The history query runs only for a signed-in account.");
-      return accountHistorySchema.parse(
+    queryFn: async ({ pageParam }) =>
+      accountHistorySchema.parse(
         await requestApi({ subject }, (client) => client.getHistory(pageParam ?? undefined)),
-      );
-    },
+      ),
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     meta: { errorTitle: "Your tracks could not be updated." },
     refetchInterval: (query) =>
@@ -36,7 +32,9 @@ export function createAccountHistoryQuery(subject?: string) {
  */
 export function useIsAccountConversion(subject: string | undefined, conversionId: string): boolean {
   const { data, hasNextPage, isFetchingNextPage, fetchNextPage } = useInfiniteQuery({
-    ...createAccountHistoryQuery(subject),
+    // Without an account there is no history to look in, and the query never runs.
+    ...createAccountHistoryQuery(subject ?? ""),
+    enabled: subject !== undefined,
     refetchInterval: false,
   });
   const isListed =

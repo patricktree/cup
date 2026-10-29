@@ -1,4 +1,3 @@
-import { check } from "@patricktree-stack/utils-ecma/assert.utils";
 import { queryOptions } from "@tanstack/react-query";
 import { useMutation } from "@tanstack/react-query";
 
@@ -15,14 +14,10 @@ import { requestApi, RpcError } from "#src/data-fetching/api-request.js";
 import { queryClient } from "#src/data-fetching/query-client.js";
 import { QUERY_KEYS } from "#src/data-fetching/query-keys.js";
 
-export const accountQuery = (subject?: string) =>
+export const accountQuery = (subject: string) =>
   queryOptions({
     queryKey: QUERY_KEYS.accountSnapshot(subject),
-    enabled: !!subject,
-    queryFn: async () => {
-      check.assert(subject, "The account query runs only for a signed-in account.");
-      return requestApi({ subject }, (client) => client.getAccount());
-    },
+    queryFn: () => requestApi({ subject }, (client) => client.getAccount()),
     retry: false,
     // The account settings replace themselves with the setup error, which explains rate limiting.
     meta: { errorDisplay: "inline" },
