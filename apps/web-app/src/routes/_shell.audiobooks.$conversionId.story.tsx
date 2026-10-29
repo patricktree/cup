@@ -20,7 +20,6 @@ import {
   createStoryNarrationTrack,
   storyNarrationTrackHandler,
 } from "#src/ui-gallery/narration-track.js";
-import { withPageLifetimeCache } from "#src/ui-gallery/page-lifetime-cache.js";
 import type { Story } from "#src/ui-gallery/story.js";
 
 const CONVERSION_ID = "693af4c4-9fa8-430d-9dc5-c00e88fb38a7";
@@ -31,8 +30,7 @@ const router = createAppRouter(memoryHistory);
 
 export const ReadyAudiobook = {
   beforeMount: async () => {
-    // Keep preloaded data until the story mounts; the app normally collects unused queries immediately.
-    await queryClient.fetchQuery({ ...createAudiobookQuery(CONVERSION_ID), gcTime: Infinity });
+    await queryClient.fetchQuery(createAudiobookQuery(CONVERSION_ID));
     await router.load();
   },
   component: () => <GlobalProviders router={router} />,
@@ -50,10 +48,7 @@ const gatesNotesRouter = createAppRouter(
 
 export const GatesNotesArticle = {
   beforeMount: async () => {
-    await queryClient.fetchQuery({
-      ...createAudiobookQuery(GATES_NOTES_CONVERSION_ID),
-      gcTime: Infinity,
-    });
+    await queryClient.fetchQuery(createAudiobookQuery(GATES_NOTES_CONVERSION_ID));
     await gatesNotesRouter.load();
   },
   component: () => <GlobalProviders router={gatesNotesRouter} />,
@@ -230,14 +225,6 @@ export const ResumingAcrossPages = createListeningAcrossPagesStory({
   secondUnitDurationMilliseconds: 10_000,
   secondPlaybackPosition: { synchronizationUnitId: "unit-2", offsetMilliseconds: 2_000 },
 });
-
-/** Like `ListeningAcrossPages`, with a cache that keeps every audiobook the listener opened. */
-export const ListeningAcrossPagesWithPageLifetimeCache = withPageLifetimeCache(
-  createListeningAcrossPagesStory({
-    secondUnitDurationMilliseconds: SEGMENT_DURATION_MILLISECONDS,
-    secondPlaybackPosition: null,
-  }),
-);
 
 function createListeningAcrossPagesStory({
   secondUnitDurationMilliseconds,
@@ -553,10 +540,6 @@ export const DeleteTrack = createDeletionStory("deleted");
 export const DeleteTrackAlreadyDeleted = createDeletionStory("not-found");
 export const DeleteTrackFailsOnce = createDeletionStory("fails-once");
 export const DeleteTrackNeverAnswers = createDeletionStory("never-answers");
-/** Like `DeleteTrack`, with a cache that keeps Recents' history after the listener left it. */
-export const DeleteTrackWithPageLifetimeCache = withPageLifetimeCache(
-  createDeletionStory("deleted"),
-);
 /** A pending track is deleted while the page polls it. */
 export const DeletePendingTrack = createDeletionStory("deleted", PENDING_AUDIOBOOK);
 

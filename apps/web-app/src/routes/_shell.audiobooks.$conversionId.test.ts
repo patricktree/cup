@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { holdResponses, releaseResponses } from "#src/test-utils/held-responses.ts";
 import {
   readLoadingStateRecord,
   recordLoadingStates,
@@ -32,28 +33,6 @@ async function readNarrationAudio(page: Page) {
     }
     return { src: audio.src, currentTime: audio.currentTime, paused: audio.paused };
   });
-}
-
-/** Holds the story's responses of that name; see `src/ui-gallery/held-responses.ts`. */
-async function holdResponses(page: Page, name: string) {
-  await callStoryFunction(page, "holdResponses", name);
-}
-
-async function releaseResponses(page: Page, name: string) {
-  await callStoryFunction(page, "releaseResponses", name);
-}
-
-async function callStoryFunction(page: Page, functionName: string, argument: string) {
-  await page.evaluate(
-    ([storyFunctionName, storyArgument]) => {
-      const storyFunction: unknown = Reflect.get(window, storyFunctionName);
-      if (typeof storyFunction !== "function") {
-        throw new TypeError(`The story offers no ${storyFunctionName}`);
-      }
-      Reflect.apply(storyFunction, window, [storyArgument]);
-    },
-    [functionName, argument] as const,
-  );
 }
 
 /** The texts of the first three blocks of the narration document, inside an `<hgroup>` or not. */
@@ -652,9 +631,7 @@ test("after a deletion, Recents' cached history lacks the track while its refetc
   mount,
   page,
 }) => {
-  const component = await mount(
-    "routes/_shell.audiobooks.$conversionId/DeleteTrackWithPageLifetimeCache",
-  );
+  const component = await mount("routes/_shell.audiobooks.$conversionId/DeleteTrack");
   await expect(
     component.getByRole("heading", { name: "A deterministic document about careful testing" }),
   ).toBeVisible();
@@ -678,9 +655,8 @@ test("an audiobook opened again loads at the position saved meanwhile, while its
   page,
 }) => {
   await captureNarrationAudio(page);
-  const component = await mount(
-    "routes/_shell.audiobooks.$conversionId/ListeningAcrossPagesWithPageLifetimeCache",
-  );
+  await page.clock.install();
+  const component = await mount("routes/_shell.audiobooks.$conversionId/ListeningAcrossPages");
   const playerSheet = component.getByRole("contentinfo", { name: "Player" });
   const openFromRecents = async (title: string) => {
     await component.getByRole("link", { name: "Back", exact: true }).click();
@@ -693,6 +669,8 @@ test("an audiobook opened again loads at the position saved meanwhile, while its
   await openFromRecents("A second document about listening");
   await playerSheet.getByRole("button", { name: "Play", exact: true }).click();
   await expect.poll(async () => (await readNarrationAudio(page)).src).toContain("audiobook=second");
+  // Longer than Query keeps an unobserved suspense query at the least, one second.
+  await page.clock.fastForward(5_000);
 
   await holdResponses(page, "audiobook:693af4c4-9fa8-430d-9dc5-c00e88fb38a7");
   await openFromRecents("A deterministic document about careful testing");
