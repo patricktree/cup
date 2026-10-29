@@ -444,6 +444,12 @@ function readNarrationAudioTime(page: Page) {
   });
 }
 
+test("the tracks still loading are marked as a loading state", async ({ mount }) => {
+  const component = await mount("routes/_shell.recent/LoadingTracks");
+
+  await expect(component.getByText("Loading tracks…")).toHaveAttribute("data-loading-state", "");
+});
+
 function cardsOf(component: Locator): Locator {
   return component.getByRole("list", { name: "Tracks" }).getByRole("listitem");
 }

@@ -53,7 +53,7 @@ function AccountRecoveryPage(): React.ReactNode {
         Restore your account
       </h1>
       {authState.status === "loading" ? (
-        <output>Loading account…</output>
+        <output data-loading-state="">Loading account…</output>
       ) : authState.status === "error" ? (
         <p role="alert">{authState.error.message}</p>
       ) : session ? (

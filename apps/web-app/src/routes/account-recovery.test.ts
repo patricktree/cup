@@ -45,3 +45,9 @@ test("a deletion left unconfirmed in the account dialog is not offered for confi
   await expect(component.getByRole("button", { name: "Schedule deletion" })).toHaveCount(0);
   await expect(component.getByRole("region", { name: "Confirm account change" })).toHaveCount(0);
 });
+
+test("the account still loading is marked as a loading state", async ({ mount }) => {
+  const component = await mount("routes/account-recovery/LoadingAccount");
+
+  await expect(component.getByText("Loading account…")).toHaveAttribute("data-loading-state", "");
+});

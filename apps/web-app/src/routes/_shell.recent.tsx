@@ -99,9 +99,11 @@ function RecentPage(): React.ReactNode {
             `,
           )}
         >
-          {authState.status === "loading" && <output>Loading account…</output>}
+          {authState.status === "loading" && (
+            <output data-loading-state="">Loading account…</output>
+          )}
           {authState.status === "error" && <p role="alert">{authState.error.message}</p>}
-          {recents.isLoading && <output>Loading tracks…</output>}
+          {recents.isLoading && <output data-loading-state="">Loading tracks…</output>}
           {/* Once tracks are listed, a failed refresh or next page is reported with a toast. */}
           {recents.error && !recents.data && (
             <>
