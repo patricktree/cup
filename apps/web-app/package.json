@@ -9,6 +9,7 @@
   },
   "exports": {
     "./package.json": "./package.json",
+    "./test-utils/loading-state-recorder": "./src/test-utils/loading-state-recorder.ts",
     "./vite": "./vite.shared.ts"
   },
   "scripts": {

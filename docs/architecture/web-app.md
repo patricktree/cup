@@ -37,6 +37,10 @@ The direct edits:
 
 Starting an account or trial conversion and confirming an account deletion or recovery only invalidate. A cached audiobook keeps the time its response arrived, which dates its narration track URL for [renewal](authentication.md#signed-media-url), so a direct edit preserves it. A refetch of shown data answered with _not found_ or _access denied_ drops the cached data, so the screen shows its error screen ([`query-client.ts`](../../apps/web-app/src/data-fetching/query-client.ts)); other failures keep the content and report a toast. The [detail view tests](../../apps/web-app/src/routes/_shell.audiobooks.$conversionId.test.ts) check the direct edits against a cache that keeps data for the page lifetime, while the refetch is held.
 
+## Loading states
+
+Every loading state a screen shows in place of its content carries `data-loading-state`: "Loading tracks…" on Recents, "Loading account…" while auth or the account snapshot loads, and the detail view's loading skeleton, named "Loading track". The detail view shows the same skeleton shape as "Preparing track" for a conversion still being prepared, which is content the server sent and carries no marker. A cover fading in keeps its own `data-loading` and is not a loading state. Tests detect a loading flash with [`recordLoadingStates`](../../apps/web-app/src/test-utils/loading-state-recorder.ts), which records every inserted element carrying `data-loading-state` or `data-pending-signal`, however briefly it stays; the gallery component tests import it through `#src/test-utils/` and `qa/e2e` through `@cup/web-app/test-utils/loading-state-recorder`.
+
 ## Unknowns
 
 - The masonry's `ResizeObserver` spans have no automated WebKit coverage: Playwright runs Chromium only, and iOS Safari is checked by hand.

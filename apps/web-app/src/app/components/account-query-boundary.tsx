@@ -9,7 +9,10 @@ import { useRateLimitCountdown } from "#src/data-fetching/rate-limit.js";
 
 export function AccountQueryBoundary({ children }: { children: React.ReactNode }): React.ReactNode {
   return (
-    <QueryBoundary pending={<output>Loading account…</output>} errorComponent={AccountSetupError}>
+    <QueryBoundary
+      pending={<output data-loading-state="">Loading account…</output>}
+      errorComponent={AccountSetupError}
+    >
       {children}
     </QueryBoundary>
   );

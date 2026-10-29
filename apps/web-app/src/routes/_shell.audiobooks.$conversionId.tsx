@@ -54,7 +54,7 @@ function AudiobookRoute() {
     <QueryBoundary
       pending={
         <DetailLayout topBar={<PlainTopBar />} statusLine={toPreparationPhaseLabel(undefined)}>
-          <PreparationView />
+          <TrackSkeleton label="Loading track" isLoadingState />
         </DetailLayout>
       }
       errorComponent={ReaderQueryError}
@@ -155,7 +155,7 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
         topBar={topBar}
         statusLine={toPreparationPhaseLabel(audiobook.preparationPhase)}
       >
-        <PreparationView />
+        <TrackSkeleton label="Preparing track" isLoadingState={false} />
       </DetailLayout>
     );
   }
@@ -768,10 +768,23 @@ function formatSegmentCount(count: number) {
   return `${count} ${count === 1 ? "segment" : "segments"}`;
 }
 
-/** Shown while the audiobook loads or its conversion is still preparing. */
-function PreparationView(): React.JSX.Element {
+/**
+ * Shown while the audiobook loads, and in the same shape while its conversion is still preparing.
+ * Only loading is a loading state: a conversion being prepared is the content the server sent.
+ */
+function TrackSkeleton({
+  label,
+  isLoadingState,
+}: {
+  label: "Loading track" | "Preparing track";
+  isLoadingState: boolean;
+}): React.JSX.Element {
   return (
-    <section aria-busy="true" aria-label="Preparing track">
+    <section
+      aria-busy="true"
+      aria-label={label}
+      data-loading-state={isLoadingState ? "" : undefined}
+    >
       <div
         aria-hidden="true"
         className={css`

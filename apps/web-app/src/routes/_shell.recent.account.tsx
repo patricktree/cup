@@ -40,7 +40,7 @@ function AccountDialog(): React.ReactNode {
     >
       {/* Signed out, Recents behind the dialog redirects home. */}
       {authState.status === "loading" ? (
-        <output>Loading account…</output>
+        <output data-loading-state="">Loading account…</output>
       ) : authState.status === "error" ? (
         <p role="alert">{authState.error.message}</p>
       ) : session ? (

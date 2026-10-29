@@ -1,5 +1,10 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import {
+  readLoadingStateRecord,
+  recordLoadingStates,
+} from "#src/test-utils/loading-state-recorder.ts";
+
 /**
  * Keeps the player host's audio element reachable, which is never attached to the document. The
  * first one created is the host's: development mode runs state initializers twice and keeps the
@@ -279,25 +284,11 @@ test("the player sheet is disabled until the audiobook has a narration track", a
   await expect(disabledSheet).toHaveScreenshot("player-sheet-disabled.png");
 });
 
-test("a trial audiobook renders without preparation skeletons and leads back home", async ({
+test("a trial audiobook renders without a loading state and leads back home", async ({
   mount,
   page,
 }) => {
-  await page.addInitScript(() => {
-    const skeletonSelector = '[aria-label="Preparing track"]';
-    new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of mutation.addedNodes) {
-          if (
-            node instanceof Element &&
-            (node.matches(skeletonSelector) || node.querySelector(skeletonSelector))
-          ) {
-            document.documentElement.dataset["sawReaderSkeleton"] = "true";
-          }
-        }
-      }
-    }).observe(document, { childList: true, subtree: true });
-  });
+  await recordLoadingStates(page);
 
   const component = await mount("routes/_shell.audiobooks.$conversionId/ReadyAudiobook");
   await expect(
@@ -317,9 +308,7 @@ test("a trial audiobook renders without preparation skeletons and leads back hom
   await expect(
     component.getByRole("contentinfo", { name: "Player" }).getByRole("status"),
   ).toHaveText("");
-  expect(
-    await page.evaluate(() => document.documentElement.dataset["sawReaderSkeleton"]),
-  ).toBeUndefined();
+  expect(await readLoadingStateRecord(page)).toEqual([]);
   await expect(page).toHaveScreenshot("trial-audiobook.png");
 });
 
@@ -836,18 +825,17 @@ test("renders audiobook-load-error", async ({ mount, page }) => {
   ).toBeVisible();
   await expect(page).toHaveScreenshot("audiobook-load-error.png");
 
-  await page.route("**/api/audiobooks/*", (route) =>
-    route.fulfill({
-      json: { status: "pending", originalUrl: "https://example.com/article", canGenerate: true },
-    }),
-  );
+  // The story answers the next request with a conversion still being prepared.
   await component.getByRole("button", { name: "Try again" }).click();
   await expect(component.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
 });
 
 test("shows loading skeletons with an unknown preparation phase", async ({ mount, page }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/LoadingAudiobook");
-  await expect(component.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
+  const skeleton = component.getByLabel("Loading track");
+  await expect(skeleton).toHaveAttribute("aria-busy", "true");
+  await expect(skeleton).toHaveAttribute("data-loading-state", "");
+  await expect(component.getByLabel("Preparing track")).toHaveCount(0);
   await expect(
     component.getByRole("contentinfo", { name: "Player" }).getByRole("status"),
   ).toHaveText("Preparing");
@@ -856,7 +844,10 @@ test("shows loading skeletons with an unknown preparation phase", async ({ mount
 
 test("shows preparation skeletons with a disabled player sheet", async ({ mount, page }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/PendingConversion");
-  await expect(component.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
+  const skeleton = component.getByLabel("Preparing track");
+  await expect(skeleton).toHaveAttribute("aria-busy", "true");
+  // A conversion still being prepared is content, not a loading state.
+  await expect(skeleton).not.toHaveAttribute("data-loading-state");
   await expect(
     component.getByRole("contentinfo", { name: "Player" }).getByRole("status"),
   ).toHaveText("Preparing");

@@ -110,3 +110,10 @@ test("the account dialog stays open while a confirmation step runs", async ({ mo
   await page.keyboard.press("Escape");
   await expect(dialog).toBeVisible();
 });
+
+test("the account still loading is marked as a loading state", async ({ mount, page }) => {
+  await mount("routes/_shell.recent.account/LoadingAccount");
+
+  const dialog = page.getByRole("dialog", { name: "Account settings" });
+  await expect(dialog.getByText("Loading account…")).toHaveAttribute("data-loading-state", "");
+});
