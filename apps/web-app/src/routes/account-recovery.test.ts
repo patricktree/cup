@@ -46,8 +46,12 @@ test("a deletion left unconfirmed in the account dialog is not offered for confi
   await expect(component.getByRole("region", { name: "Confirm account change" })).toHaveCount(0);
 });
 
-test("the account still loading is marked as a loading state", async ({ mount }) => {
+test("the account still loading shows the page skeleton, marked as a loading state", async ({
+  mount,
+}) => {
   const component = await mount("routes/account-recovery/LoadingAccount");
 
-  await expect(component.getByText("Loading account…")).toHaveAttribute("data-loading-state", "");
+  const skeleton = component.getByRole("main", { name: "Loading account", exact: true });
+  await expect(skeleton).toHaveAttribute("data-loading-state", "");
+  await expect(skeleton).toHaveAttribute("aria-busy", "true");
 });

@@ -55,6 +55,8 @@ export function accountStory({
       Object.assign(window, {
         // Lets tests go back as the system Back gesture does, which no element of the page sees.
         goBackInAccountStory: () => router.history.back(),
+        // Lets tests open a screen that no element of the current one links to, as a typed URL does.
+        openPathInAccountStory: (pathToOpen: string) => router.history.push(`/app${pathToOpen}`),
         // Lets tests tell a replaced history entry from a pushed one.
         readAccountStoryHistoryLength: () => router.history.length,
       });
