@@ -17,11 +17,15 @@ test("the compact top bar shows the title and host, cut off when too long", asyn
   await expect(topBar).toHaveScreenshot("detail-top-bar-compact.png");
 });
 
-test("the top bar's menu offers the original page and Retry", async ({ mount, page }) => {
+test("the top bar's menu offers the original page, Retry and Delete track…", async ({
+  mount,
+  page,
+}) => {
   const component = await mount("app/components/detail-top-bar/Plain");
   await component.getByRole("button", { name: "More", exact: true }).click();
 
   await expect(page.getByRole("menuitem", { name: "Open original page" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Retry", exact: true })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Delete track…" })).toBeVisible();
   await expect(page).toHaveScreenshot("detail-top-bar-menu-open.png");
 });

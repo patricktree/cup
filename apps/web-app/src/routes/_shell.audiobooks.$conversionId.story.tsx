@@ -379,6 +379,158 @@ export const FailedConversion = {
   ],
 } satisfies Story;
 
+const PENDING_AUDIOBOOK = {
+  status: "pending",
+  originalUrl: "https://example.com/article",
+  canGenerate: true,
+} satisfies Audiobook;
+
+const FAILED_AUDIOBOOK = {
+  status: "failed",
+  originalUrl: "https://www.example.com/article",
+  canGenerate: true,
+  explanation: "Preparation failed. Retry to load this track.",
+} satisfies Audiobook;
+
+/** A signed-in listener opens a conversion that is still preparing. */
+export const AccountPendingConversion = accountStory({
+  path: `/audiobooks/${CONVERSION_ID}`,
+  handlers: [
+    http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(PENDING_AUDIOBOOK)),
+  ],
+});
+
+/** A signed-in listener opens a conversion whose preparation failed. */
+export const AccountFailedConversion = accountStory({
+  path: `/audiobooks/${CONVERSION_ID}`,
+  handlers: [
+    http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(FAILED_AUDIOBOOK)),
+  ],
+});
+
+/** How the stories below answer the listener's request to delete the track. */
+type DeletionOutcome = "deleted" | "not-found" | "fails-once" | "never-answers";
+
+/**
+ * A signed-in listener deletes a ready track that Recents lists. Once the track is deleted, the
+ * audiobook and Recents no longer have it.
+ */
+function createDeletionStory(outcome: DeletionOutcome, audiobook: Audiobook = createAudiobook()) {
+  let isDeleted = false;
+  let deletionRequestCount = 0;
+  return accountStory({
+    path: `/audiobooks/${CONVERSION_ID}`,
+    handlers: [
+      http.get(`/api/audiobooks/${CONVERSION_ID}`, () =>
+        isDeleted ? trackNotFoundResponse() : HttpResponse.json(audiobook),
+      ),
+      http.get("/api/account/conversions", () =>
+        HttpResponse.json({
+          items: isDeleted
+            ? []
+            : [createRecentsItem(CONVERSION_ID, "A deterministic document about careful testing")],
+          nextCursor: null,
+        }),
+      ),
+      http.delete(`/api/account/conversions/${CONVERSION_ID}`, async ({ request }) => {
+        deletionRequestCount += 1;
+        // Tests that capture the player's audio element read what it held when the request was sent.
+        Object.assign(window, {
+          deletionRequest: {
+            contentType: request.headers.get("Content-Type"),
+            narrationAudioSrc:
+              "narrationAudio" in window && window.narrationAudio instanceof HTMLAudioElement
+                ? window.narrationAudio.src
+                : undefined,
+          },
+        });
+        if (outcome === "never-answers") {
+          await delay("infinite");
+        }
+        if (outcome === "fails-once" && deletionRequestCount === 1) {
+          return HttpResponse.json(
+            {
+              error: {
+                requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
+                code: "operational-error",
+                message: "The track could not be deleted.",
+              },
+            } satisfies ErrorResponse,
+            { status: 500 },
+          );
+        }
+        if (outcome === "not-found") {
+          return trackNotFoundResponse();
+        }
+        isDeleted = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+      storyNarrationTrackHandler,
+      http.put(
+        `/api/audiobooks/${CONVERSION_ID}/position`,
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    ],
+  });
+}
+
+export const DeleteTrack = createDeletionStory("deleted");
+/** The track was already deleted, for example on another device. */
+export const DeleteTrackAlreadyDeleted = createDeletionStory("not-found");
+export const DeleteTrackFailsOnce = createDeletionStory("fails-once");
+export const DeleteTrackNeverAnswers = createDeletionStory("never-answers");
+/** A pending track is deleted while the page polls it. */
+export const DeletePendingTrack = createDeletionStory("deleted", PENDING_AUDIOBOOK);
+
+/**
+ * The loaded narration track cannot be read, and requesting the audiobook again finds it gone, as
+ * after its deletion on another device.
+ */
+export const TrackGoneOnRenewal = accountStory({
+  path: `/audiobooks/${CONVERSION_ID}`,
+  handlers: (() => {
+    let requestCount = 0;
+    return [
+      http.get(`/api/audiobooks/${CONVERSION_ID}`, () => {
+        requestCount += 1;
+        if (requestCount > 1) {
+          return trackNotFoundResponse();
+        }
+        return HttpResponse.json({
+          ...PREPARED_AUDIOBOOK,
+          status: "ready",
+          segments: [0, 1, 2].map(createReadySegment),
+          narrationTrack: {
+            ...createStoryNarrationTrack([
+              SEGMENT_DURATION_MILLISECONDS,
+              SEGMENT_DURATION_MILLISECONDS,
+              SEGMENT_DURATION_MILLISECONDS,
+            ]),
+            url: `${window.location.origin}/__story/missing-narration-track.mp3`,
+          },
+        } satisfies Audiobook);
+      }),
+      http.get(
+        "/__story/missing-narration-track.mp3",
+        () => new HttpResponse(null, { status: 404 }),
+      ),
+    ];
+  })(),
+});
+
+function trackNotFoundResponse() {
+  return HttpResponse.json(
+    {
+      error: {
+        requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
+        code: "audiobook-not-found",
+        message: "Track not found.",
+      },
+    } satisfies ErrorResponse,
+    { status: 404 },
+  );
+}
+
 export const RetryRefused = {
   component: () => <GlobalProviders router={router} />,
   handlers: [

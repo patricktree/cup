@@ -15,6 +15,7 @@ type DetailTopBarStoryProps = React.ComponentProps<typeof DetailTopBar>;
 const MENU: DetailTopBarStoryProps["menu"] = {
   originalUrl: "https://www.example.com/article",
   retry: { isPending: false, start: () => undefined },
+  remove: { start: () => undefined },
 };
 
 export const Plain = createTopBarStory({ backTo: "/recent", compactTitle: undefined, menu: MENU });

@@ -32,9 +32,14 @@ export type ShownConversion = {
   canPlay: boolean;
 };
 
+/** A track that was loaded and no longer exists, such as one deleted on another device. */
+type UnavailableTrack = { conversionId: string; message: string };
+
 export type PlayerHostSnapshot = {
   loaded: LoadedAudiobook | null;
   shown: ShownConversion | null;
+  /** The last loaded track found gone, until another audiobook is loaded. */
+  unavailable: UnavailableTrack | null;
 };
 
 /** The listener's account as far as playback is concerned. */
@@ -54,8 +59,11 @@ export type PlayerHostServices = {
   getAccount(): PlayerHostAccount;
   /** The listening position stored on this device, used for listeners without an account. */
   getLocalPosition(conversionId: string): PlaybackPosition | null;
-  /** Requests the audiobook again, for a newly signed narration track URL. */
-  fetchAudiobook(conversionId: string): Promise<Audiobook>;
+  /**
+   * Requests the audiobook again, for a newly signed narration track URL; resolves to `null` when
+   * the conversion no longer exists.
+   */
+  fetchAudiobook(conversionId: string): Promise<Audiobook | null>;
   /** The client clock, in milliseconds. */
   now(): number;
 };
@@ -67,6 +75,7 @@ export type PlayerHostServices = {
  */
 const TRACK_URL_RENEWAL_AGE_MILLISECONDS = 12 * 60 * 60 * 1_000;
 const RENEWAL_ERROR_MESSAGE = "The audio could not be loaded again. Press Play to try again.";
+const UNAVAILABLE_TRACK_MESSAGE = "This track is no longer available.";
 
 /**
  * Holds the app's one `<audio>` element and the audiobook loaded into it, so playback continues
@@ -82,7 +91,7 @@ export class PlayerHost {
   private readonly services: PlayerHostServices;
   private readonly element: NarrationAudioElement;
   private readonly listeners = new Set<() => void>();
-  private snapshot: PlayerHostSnapshot = { loaded: null, shown: null };
+  private snapshot: PlayerHostSnapshot = { loaded: null, shown: null, unavailable: null };
   private clearMediaMetadata: (() => void) | undefined;
   /** When the client received the shown audiobook, whose track URL a load uses. */
   private shownAudiobookReceivedAt = 0;
@@ -90,6 +99,8 @@ export class PlayerHost {
   private trackUrlReceivedAt = 0;
   /** The renewal Play is waiting for; Pause and unloading cancel it. */
   private pendingRenewal: symbol | null = null;
+  /** The conversion being deleted, which only Play loads again; see `release`. */
+  private releasedConversionId: string | null = null;
 
   constructor(services: PlayerHostServices) {
     this.services = services;
@@ -136,7 +147,10 @@ export class PlayerHost {
       shown: {
         conversionId,
         audiobook: shownAudiobook,
-        canPlay: shownAudiobook !== null && isPlayableAudiobook(shownAudiobook),
+        canPlay:
+          shownAudiobook !== null &&
+          isPlayableAudiobook(shownAudiobook) &&
+          this.snapshot.unavailable?.conversionId !== conversionId,
       },
     });
 
@@ -225,14 +239,19 @@ export class PlayerHost {
 
   /** Saves the position and empties the element: pause, remove its source, and load nothing. */
   unload = () => {
-    if (!this.snapshot.loaded) {
-      return;
-    }
+    this.emptyElement("save");
+  };
 
-    this.closeLoadedPlayer();
-    this.element.removeAttribute("src");
-    this.element.load();
-    this.update({ loaded: null });
+  /**
+   * Unloads the conversion, which the listener is deleting, and keeps it unloaded while its page
+   * stays shown, also when the deletion fails; only Play on the page loads it again. Its position
+   * is not saved, since that save would race the deletion.
+   */
+  release = (conversionId: string) => {
+    this.releasedConversionId = conversionId;
+    if (this.snapshot.loaded?.conversionId === conversionId) {
+      this.emptyElement("discard");
+    }
   };
 
   private isShownLoaded() {
@@ -246,6 +265,7 @@ export class PlayerHost {
     }
 
     this.closeLoadedPlayer();
+    this.releasedConversionId = null;
 
     const account = this.services.getAccount();
     const subject = account.status === "known" ? account.subject : null;
@@ -265,19 +285,22 @@ export class PlayerHost {
       title: audiobook.title,
       artworkUrl: audiobook.coverImage?.url,
     });
-    this.update({ loaded: { conversionId, audiobook, subject, player } });
+    this.update({ loaded: { conversionId, audiobook, subject, player }, unavailable: null });
   }
 
   private async renewTrackUrlAndPlay(loaded: LoadedAudiobook) {
     const renewal = Symbol("renewal");
     this.pendingRenewal = renewal;
 
-    let audiobook: Audiobook | null;
+    let response: { result: "received"; audiobook: Audiobook | null } | { result: "failed" };
     try {
-      audiobook = await this.services.fetchAudiobook(loaded.conversionId);
+      response = {
+        result: "received",
+        audiobook: await this.services.fetchAudiobook(loaded.conversionId),
+      };
     } catch {
       // The request layer reports the failure itself; the player shows that Play did not start.
-      audiobook = null;
+      response = { result: "failed" };
     }
     // Pause, unloading or loading another audiobook during the request cancelled the renewal.
     if (this.pendingRenewal !== renewal) {
@@ -285,6 +308,12 @@ export class PlayerHost {
     }
     this.pendingRenewal = null;
 
+    if (response.result === "received" && response.audiobook === null) {
+      this.reportUnavailable(loaded.conversionId);
+      return;
+    }
+
+    const audiobook = response.result === "received" ? response.audiobook : null;
     // Without a narration track the audiobook is no longer playable, e.g. after a retry.
     if (audiobook?.status !== "ready" || !audiobook.narrationTrack) {
       loaded.player.showError(RENEWAL_ERROR_MESSAGE);
@@ -296,19 +325,46 @@ export class PlayerHost {
     loaded.player.play();
   }
 
+  /** Unloads a track that no longer exists and keeps its page from playing it. */
+  private reportUnavailable(conversionId: string) {
+    // The position of a track that no longer exists has nowhere to go.
+    this.emptyElement("discard");
+    const { shown } = this.snapshot;
+    this.update({
+      unavailable: { conversionId, message: UNAVAILABLE_TRACK_MESSAGE },
+      shown: shown?.conversionId === conversionId ? { ...shown, canPlay: false } : shown,
+    });
+  }
+
   private loadShownIntoEmptyPlayer() {
     const { shown, loaded } = this.snapshot;
     // Waits for the account, whose listening position the player restores.
-    if (loaded || !shown?.canPlay || this.services.getAccount().status === "restoring") {
+    if (
+      loaded ||
+      !shown?.canPlay ||
+      shown.conversionId === this.releasedConversionId ||
+      this.services.getAccount().status === "restoring"
+    ) {
       return;
     }
 
     this.load(shown);
   }
 
-  private closeLoadedPlayer() {
+  private emptyElement(position: "save" | "discard") {
+    if (!this.snapshot.loaded) {
+      return;
+    }
+
+    this.closeLoadedPlayer(position);
+    this.element.removeAttribute("src");
+    this.element.load();
+    this.update({ loaded: null });
+  }
+
+  private closeLoadedPlayer(position: "save" | "discard" = "save") {
     this.pendingRenewal = null;
-    this.snapshot.loaded?.player.close();
+    this.snapshot.loaded?.player.close(position);
     this.clearMediaMetadata?.();
     this.clearMediaMetadata = undefined;
   }

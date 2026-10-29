@@ -6,7 +6,7 @@ import {
   TAB_BAR_HEIGHTS,
   TAB_BAR_ICONS_OFFSET_PIXELS,
 } from "#src/app/components/account-tab-bar.js";
-import { PlaybackError } from "#src/app/components/playback-error.js";
+import { PlaybackError, PlaybackErrorMessage } from "#src/app/components/playback-error.js";
 import { DSCoverImage } from "#src/app/design-system/cover-image.js";
 import { DSIconButton } from "#src/app/design-system/icon-button.js";
 import { PauseMiniIcon, PlayIcon, SkipBack15Icon } from "#src/app/design-system/icons.js";
@@ -28,45 +28,46 @@ const PLAY_ICON_SIZE = 32;
 /** The drawn gap between the pill and the tab icons below it. */
 const GAP_ABOVE_TAB_ICONS_PIXELS = 18;
 
+const miniPlayerStyles = css`
+  /* stays above the tab bar, which sticks to the screen's bottom edge, while the document scrolls */
+  position: sticky;
+  bottom: ${
+    TAB_BAR_HEIGHTS.footerHeightPixels + GAP_ABOVE_TAB_ICONS_PIXELS - TAB_BAR_ICONS_OFFSET_PIXELS
+  }px;
+
+  /* above shell <main> and the tab bar's fade (see account-tab-bar.tsx), which it overlaps */
+  z-index: 2;
+  display: grid;
+  grid-area: shell-player;
+  width: 100%;
+  max-width: var(--app-max-width);
+  padding-inline: var(--spacing-gutter);
+
+  /* the pill reaches into the tab bar's top padding, ending the drawn gap above its icons */
+  margin-block-end: ${GAP_ABOVE_TAB_ICONS_PIXELS - TAB_BAR_ICONS_OFFSET_PIXELS}px;
+  margin-inline: auto;
+`;
+
 /**
  * A floating pill above the tab bar of Recents that controls the loaded audiobook: −15 s and
  * play/pause. Pressing its cover or title opens the audiobook's detail view. Shows nothing while no
- * audiobook is loaded.
+ * audiobook is loaded, except that a loaded track was found gone.
  */
 export function MiniPlayer(): React.ReactNode {
-  const { loaded } = usePlayerHostSnapshot();
+  const { loaded, unavailable } = usePlayerHostSnapshot();
   if (!loaded) {
-    return null;
+    // The track it played was found gone, so the pill leaves only that notice behind.
+    return unavailable ? (
+      <section {...interTypefaceScope} aria-label="Player" className={miniPlayerStyles}>
+        <PlaybackErrorMessage message={unavailable.message} />
+      </section>
+    ) : null;
   }
 
   const { audiobook, player } = loaded;
 
   return (
-    <section
-      {...interTypefaceScope}
-      aria-label="Player"
-      className={css`
-        /* stays above the tab bar, which sticks to the screen's bottom edge, while the document scrolls */
-        position: sticky;
-        bottom: ${
-          TAB_BAR_HEIGHTS.footerHeightPixels +
-          GAP_ABOVE_TAB_ICONS_PIXELS -
-          TAB_BAR_ICONS_OFFSET_PIXELS
-        }px;
-
-        /* above shell <main> and the tab bar's fade (see account-tab-bar.tsx), which it overlaps */
-        z-index: 2;
-        display: grid;
-        grid-area: shell-player;
-        width: 100%;
-        max-width: var(--app-max-width);
-        padding-inline: var(--spacing-gutter);
-
-        /* the pill reaches into the tab bar's top padding, ending the drawn gap above its icons */
-        margin-block-end: ${GAP_ABOVE_TAB_ICONS_PIXELS - TAB_BAR_ICONS_OFFSET_PIXELS}px;
-        margin-inline: auto;
-      `}
-    >
+    <section {...interTypefaceScope} aria-label="Player" className={miniPlayerStyles}>
       <PlaybackError player={player} />
       <div
         className={css`

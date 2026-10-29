@@ -3,7 +3,7 @@ import { css } from "@linaria/core";
 import React from "react";
 
 import { fadeFooter } from "#src/app/components/fade-footer.js";
-import { PlaybackError } from "#src/app/components/playback-error.js";
+import { PlaybackError, PlaybackErrorMessage } from "#src/app/components/playback-error.js";
 import { DSIconButton } from "#src/app/design-system/icon-button.js";
 import {
   PauseIcon,
@@ -56,9 +56,11 @@ type SheetPlayback =
  */
 export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.Element {
   const host = usePlayerHost();
-  const { loaded, shown } = usePlayerHostSnapshot();
+  const { loaded, shown, unavailable } = usePlayerHostSnapshot();
   const audiobook =
-    shown?.audiobook && isPlayableAudiobook(shown.audiobook) ? shown.audiobook : null;
+    shown?.canPlay && shown.audiobook && isPlayableAudiobook(shown.audiobook)
+      ? shown.audiobook
+      : null;
   const shownLoaded = loaded && loaded.conversionId === shown?.conversionId ? loaded : null;
 
   let controls: React.ReactNode;
@@ -113,7 +115,11 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
           margin-inline: auto;
         `}
       >
-        {shownLoaded ? <PlaybackError player={shownLoaded.player} /> : null}
+        {shownLoaded ? (
+          <PlaybackError player={shownLoaded.player} />
+        ) : unavailable && unavailable.conversionId === shown?.conversionId ? (
+          <PlaybackErrorMessage message={unavailable.message} />
+        ) : null}
         <output className={textStyles.h5}>{statusLine}</output>
         {controls}
       </div>
