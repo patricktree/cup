@@ -5,7 +5,7 @@ import { delay, http, HttpResponse } from "msw";
 import type { Audiobook } from "@cup/listener-api.routes";
 
 import { accountStory } from "#src/ui-gallery/account-fixtures.jsx";
-import { waitWhileHeld } from "#src/ui-gallery/held-responses.js";
+import { holdResponses, waitWhileHeld } from "#src/ui-gallery/held-responses.js";
 import {
   createStoryNarrationTrack,
   storyNarrationTrackHandler,
@@ -46,6 +46,22 @@ export const LoadingTracks = accountStory({
 export const RecentsWithoutName = accountStory({ path: "/recent", userMetadata: {} });
 /** A signed-in listener opening the home page lands on Recents. */
 export const SignedInHome = accountStory({ path: "/" });
+/**
+ * The app starts on the home page while auth restores the stored session. The auth configuration is
+ * held as `"auth-config"` from the start, so a test sees what the page shows meanwhile.
+ */
+export const SignedInColdStartHome = {
+  ...accountStory({
+    path: "/",
+    isColdStart: true,
+    handlers: [http.get("/api/auth/config", () => waitWhileHeld("auth-config"))],
+  }),
+  beforeMount: async () => holdResponses("auth-config"),
+} satisfies Story;
+/** A signed-out listener follows a link to Recents or one of its dialogs. */
+export const SignedOutRecents = accountStory({ path: "/recent", isSignedOut: true });
+export const SignedOutAddDialog = accountStory({ path: "/recent/add", isSignedOut: true });
+export const SignedOutAccountDialog = accountStory({ path: "/recent/account", isSignedOut: true });
 
 /** Two pages of ready cards, most of them with a cover; the second page loads on scrolling. */
 export const Recents = accountStory({
