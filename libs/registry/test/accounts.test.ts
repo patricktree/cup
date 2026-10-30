@@ -1392,11 +1392,58 @@ test("a deleted conversion is fenced, keeps its settled charge and releases only
   expect(await storage.exec("SELECT * FROM credit_operations WHERE state = 'reserved'")).toEqual(
     [],
   );
+});
+
+test("a deletion returns before any workflow is terminated, and the alarm then tries each one", async () => {
+  const { account, conversionId } = await startPreparedConversion();
+
+  expect(await account.deleteConversion(conversionId)).toEqual({ result: "marked" });
+
+  expect(await account.terminationsForTest()).toEqual([]);
+  expect(await account.getConversion(conversionId)).toBeUndefined();
+  expect((await account.history()).items).toEqual([]);
+
+  await account.reconcileForTest();
+
   expect(await account.terminationsForTest()).toEqual([
     conversionId,
     `segment-${conversionId}-0`,
     `segment-${conversionId}-1`,
   ]);
+});
+
+test("a stalled cleanup does not try termination again, even after the object restarts", async () => {
+  const { account, accountId, conversionId, storage } = await startPreparedConversion();
+  await account.failNextOwnerRemovalForTest();
+  await account.deleteConversion(conversionId);
+
+  await account.reconcileForTest();
+  expect(await account.terminationsForTest()).toHaveLength(3);
+  // The failed owner removal left the conversion marked, so the next pass cleans it up again.
+  expect((await readConversionRows(storage, conversionId)).account_conversions).toHaveLength(1);
+
+  await expectWorkerRpcRejection(account.restartForTest());
+  const restarted = bindings.ACCOUNTS.get(bindings.ACCOUNTS.idFromName(accountId));
+  await restarted.reconcileForTest();
+
+  // The restart emptied the record of attempts, so any attempt listed here is a second one.
+  expect(await restarted.terminationsForTest()).toEqual([]);
+  expect(await readConversionRows(storage, conversionId)).toEqual(NO_CONVERSION_ROWS);
+});
+
+test("a failed termination does not fail the deletion or stop its cleanup", async () => {
+  const { account, conversionId, storage } = await startPreparedConversion();
+  await account.failTerminationsForTest();
+
+  expect(await account.deleteConversion(conversionId)).toEqual({ result: "marked" });
+  await account.reconcileForTest();
+
+  expect(await account.terminationsForTest()).toEqual([
+    conversionId,
+    `segment-${conversionId}-0`,
+    `segment-${conversionId}-1`,
+  ]);
+  expect(await readConversionRows(storage, conversionId)).toEqual(NO_CONVERSION_ROWS);
 });
 
 test("the dispatch alarm binds no owner and creates no workflow for a deleted conversion", async () => {
@@ -1447,7 +1494,7 @@ test("a conversion deleted and cleaned up while its owner bind is in flight is l
   expect(await account.preparationCreationsForTest()).toEqual([]);
 });
 
-test("a repeated delete releases nothing, a failed termination does not fail it, and a missing conversion is not found", async () => {
+test("a repeated delete releases nothing, owes no second termination, and a missing conversion is not found", async () => {
   const { account, accountId } = await createAccount();
   const started = await account.startConversion(
     { idempotencyKey: crypto.randomUUID(), sourceUrl: "https://example.com/repeat" },
@@ -1464,17 +1511,16 @@ test("a repeated delete releases nothing, a failed termination does not fail it,
     1,
     [100],
   );
-  await account.failTerminationsForTest();
 
   expect(await account.deleteConversion(conversionId)).toEqual({ result: "marked" });
-  const terminations = await account.terminationsForTest();
-  expect(terminations).toEqual([conversionId, `segment-${conversionId}-0`]);
   const entries = (await account.inspectAccounting()).entries;
 
   expect(await account.deleteConversion(conversionId)).toEqual({ result: "already-marked" });
-  expect(await account.terminationsForTest()).toEqual(terminations);
   expect((await account.inspectAccounting()).entries).toBe(entries);
   expect(await account.deleteConversion(crypto.randomUUID())).toEqual({ result: "not-found" });
+
+  await account.reconcileForTest();
+  expect(await account.terminationsForTest()).toEqual([conversionId, `segment-${conversionId}-0`]);
 });
 
 test("a deletion-scheduled account accepts a conversion deletion and a deleting account refuses it", async () => {
@@ -1498,12 +1544,13 @@ test("a deletion-scheduled account accepts a conversion deletion and a deleting 
     nowMs * 2,
   );
   expect(await account.deleteConversion(scheduledConversionId)).toEqual({ result: "marked" });
+  await account.reconcileForTest();
+  expect(await account.terminationsForTest()).toContain(scheduledConversionId);
 
   await storage.exec("UPDATE account SET state = 'deleting', execution_epoch = 2 WHERE id = 1");
   expect(await account.deleteConversion(deletingConversionId)).toEqual({
     result: "account-unavailable",
   });
-  expect(await account.terminationsForTest()).toEqual([scheduledConversionId]);
   await storage.exec("UPDATE account SET state = 'active' WHERE id = 1");
   expect(await account.getConversion(deletingConversionId)).toBeDefined();
 });

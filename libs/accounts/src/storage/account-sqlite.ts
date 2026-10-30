@@ -355,15 +355,12 @@ export class AccountSqlite {
 
   /**
    * Sets the conversion deletion marker and releases the conversion's open reservations in one
-   * transaction, so no hold outlives the marker; settled segments stay charged. Returns the segment
-   * sequences whose workflows may still run.
+   * transaction, so no hold outlives the marker; settled segments stay charged.
    */
   markConversionDeletion(
     conversionId: string,
     nowMs: number,
-  ):
-    | { result: "marked"; segmentSequences: number[] }
-    | { result: "already-marked" | "not-found" | "account-unavailable" } {
+  ): { result: "marked" | "already-marked" | "not-found" | "account-unavailable" } {
     z.number().int().nonnegative().safe().parse(nowMs);
     return this.database.transaction(() => {
       if (this.snapshot().state === "deleting") {
@@ -384,11 +381,38 @@ export class AccountSqlite {
         .where(eq(accountConversions.conversionId, conversionId))
         .run();
       this.duration.releaseReservations(conversionId, nowMs);
-      return {
-        result: "marked",
-        segmentSequences: this.duration.segments(conversionId).map((segment) => segment.sequence),
-      };
+      return { result: "marked" };
     });
+  }
+
+  /** The marked conversions whose one attempt to terminate their workflows is still to come. */
+  conversionsOwingWorkflowTermination(): string[] {
+    return this.database
+      .select({ conversionId: accountConversions.conversionId })
+      .from(accountConversions)
+      .where(
+        and(
+          isNotNull(accountConversions.deletingSinceMs),
+          isNull(accountConversions.workflowTerminationTriedAtMs),
+        ),
+      )
+      .all()
+      .map((row) => row.conversionId);
+  }
+
+  /**
+   * Takes the conversion's one attempt to terminate its workflows and returns the segment sequences
+   * whose workflows may still run. It is recorded ahead of the attempt, so an alarm that dies
+   * partway through a long conversion's workflows does not start over on every pass.
+   */
+  claimWorkflowTermination(conversionId: string, nowMs: number): number[] {
+    z.number().int().nonnegative().safe().parse(nowMs);
+    this.database
+      .update(accountConversions)
+      .set({ workflowTerminationTriedAtMs: nowMs })
+      .where(eq(accountConversions.conversionId, conversionId))
+      .run();
+    return this.duration.segments(conversionId).map((segment) => segment.sequence);
   }
 
   /**

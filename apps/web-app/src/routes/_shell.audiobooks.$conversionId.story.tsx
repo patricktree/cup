@@ -458,7 +458,12 @@ export const AccountFailedConversion = accountStory({
 });
 
 /** How the stories below answer the listener's request to delete the track. */
-type DeletionOutcome = "deleted" | "not-found" | "fails-once" | "never-answers";
+type DeletionOutcome =
+  | "deleted"
+  | "deleted-recents-refresh-never-answers"
+  | "not-found"
+  | "fails-once"
+  | "never-answers";
 
 /**
  * A signed-in listener deletes a ready track that Recents lists. Once the track is deleted, the
@@ -473,14 +478,17 @@ function createDeletionStory(outcome: DeletionOutcome, audiobook: Audiobook = cr
       http.get(`/api/audiobooks/${CONVERSION_ID}`, () =>
         isDeleted ? trackNotFoundResponse() : HttpResponse.json(audiobook),
       ),
-      http.get("/api/account/conversions", () =>
-        HttpResponse.json({
+      http.get("/api/account/conversions", async () => {
+        if (isDeleted && outcome === "deleted-recents-refresh-never-answers") {
+          await delay("infinite");
+        }
+        return HttpResponse.json({
           items: isDeleted
             ? []
             : [createRecentsItem(CONVERSION_ID, "A deterministic document about careful testing")],
           nextCursor: null,
-        }),
-      ),
+        });
+      }),
       http.delete(`/api/account/conversions/${CONVERSION_ID}`, async ({ request }) => {
         deletionRequestCount += 1;
         // Tests that capture the player's audio element read what it held when the request was sent.
@@ -524,6 +532,10 @@ function createDeletionStory(outcome: DeletionOutcome, audiobook: Audiobook = cr
 }
 
 export const DeleteTrack = createDeletionStory("deleted");
+/** Recents can show only its cached list after the deletion, which was loaded with the track. */
+export const DeleteTrackRecentsRefreshNeverAnswers = createDeletionStory(
+  "deleted-recents-refresh-never-answers",
+);
 /** The track was already deleted, for example on another device. */
 export const DeleteTrackAlreadyDeleted = createDeletionStory("not-found");
 export const DeleteTrackFailsOnce = createDeletionStory("fails-once");

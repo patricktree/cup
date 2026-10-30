@@ -56,6 +56,8 @@ export const accountConversions = sqliteTable(
     // The conversion deletion marker: set when deletion was requested, it fences the conversion
     // like a missing row and records that cleanup is still owed. It is not a conversion status.
     deletingSinceMs: integer("deleting_since_ms"),
+    // Set when the alarm takes a marked conversion's one attempt to terminate its workflows.
+    workflowTerminationTriedAtMs: integer("workflow_termination_tried_at_ms"),
   },
   (table) => [
     check("account_conversion_status", sql`${table.status} IN ('pending', 'ready', 'failed')`),

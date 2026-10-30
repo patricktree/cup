@@ -571,6 +571,25 @@ test("deleting a track unloads the player first, then lands on Recents without i
   await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(0);
 });
 
+test("Recents never lists a deleted track from its cached list, before its refresh answers", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount(
+    "routes/_shell.audiobooks.$conversionId/DeleteTrackRecentsRefreshNeverAnswers",
+  );
+  await component.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete track…" }).click();
+  await page
+    .getByRole("alertdialog", { name: "Delete track?" })
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
+
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+  await expect(component.getByRole("link", { name: "Add your first track" })).toBeVisible();
+  await expect(component.getByRole("list", { name: "Tracks" })).toHaveCount(0);
+});
+
 test("a track already deleted elsewhere counts as deleted", async ({ mount, page }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/DeleteTrackAlreadyDeleted");
   await component.getByRole("button", { name: "More", exact: true }).click();

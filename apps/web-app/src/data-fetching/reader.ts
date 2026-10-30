@@ -9,7 +9,10 @@ import {
   type PlaybackPosition,
 } from "@cup/listener-api.routes";
 
-import { invalidateAccountHistory } from "#src/data-fetching/account-history.js";
+import {
+  invalidateAccountHistory,
+  removeFromAccountHistory,
+} from "#src/data-fetching/account-history.js";
 import { ERROR_CODE, requestApi, RpcError } from "#src/data-fetching/api-request.js";
 import { notifyError } from "#src/notifications.js";
 
@@ -96,6 +99,8 @@ export function useDeleteConversion({
       return deleteConversion(subject, conversionId);
     },
     onSuccess: async () => {
+      // Before leaving the page, so Recents never renders the deleted track from its cached list.
+      await removeFromAccountHistory(subject, conversionId);
       await onDeleted();
       queryClient.removeQueries({ queryKey: createAudiobookQuery(conversionId).queryKey });
       await invalidateAccountHistory(subject);

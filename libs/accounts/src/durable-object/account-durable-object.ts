@@ -252,7 +252,8 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
   /**
    * Deletes a conversion of an `active` or `deletion_scheduled` account: marks it, which fences it
    * like a missing row, and releases its open reservations in one transaction. A repeat while
-   * marked changes nothing. See docs/architecture/conversion-deletion.md.
+   * marked changes nothing. Everything else, however many segments the conversion has, runs after
+   * the response. See docs/architecture/conversion-deletion.md.
    */
   async deleteConversion(
     conversionId: string,
@@ -263,10 +264,20 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
       return { result: marking.result };
     }
 
-    // The alarm cleans up the conversion and also publishes the usage the release changed.
+    // The alarm terminates the conversion's workflows, cleans it up, and also publishes the usage
+    // the release changed.
     await this.ctx.storage.setAlarm(nowMs);
-    await this.terminateConversionWorkflows(conversionId, marking.segmentSequences);
     return { result: "marked" };
+  }
+
+  private async terminateWorkflowsOfDeletedConversions() {
+    for (const conversionId of this.sqlite.conversionsOwingWorkflowTermination()) {
+      const segmentSequences = this.sqlite.claimWorkflowTermination(
+        conversionId,
+        Temporal.Now.instant().epochMilliseconds,
+      );
+      await this.terminateConversionWorkflows(conversionId, segmentSequences);
+    }
   }
 
   /**
@@ -354,6 +365,8 @@ export class AccountDurableObject extends DurableObject<AccountEnvironment> {
     }
     // Re-arm before external calls: abrupt termination must not lose dispatch intent.
     await this.ctx.storage.setAlarm(Temporal.Now.instant().epochMilliseconds + 60_000);
+    // Ahead of cleanup, which deletes the segment rows this reads, and of every step that can throw.
+    await this.terminateWorkflowsOfDeletedConversions();
     await this.reconcileArtifactWriters();
     await this.reconcileLifecycle();
     // Account erasure sweeps the whole account, so it subsumes any conversion cleanup still owed.

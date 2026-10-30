@@ -57,3 +57,24 @@ export function useIsAccountConversion(subject: string | undefined, conversionId
 export function invalidateAccountHistory(subject?: string) {
   return queryClient.invalidateQueries({ queryKey: createAccountHistoryQuery(subject).queryKey });
 }
+
+/**
+ * Takes a deleted conversion out of the cached history, so Recents cannot list it while its refresh
+ * runs. A request already under way started before the deletion and may still list it, so it is
+ * cancelled first.
+ */
+export async function removeFromAccountHistory(subject: string | undefined, conversionId: string) {
+  const { queryKey } = createAccountHistoryQuery(subject);
+  await queryClient.cancelQueries({ queryKey });
+  queryClient.setQueryData(queryKey, (history) =>
+    history
+      ? {
+          ...history,
+          pages: history.pages.map((page) => ({
+            ...page,
+            items: page.items.filter((item) => item.conversionId !== conversionId),
+          })),
+        }
+      : history,
+  );
+}
