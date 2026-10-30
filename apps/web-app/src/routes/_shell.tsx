@@ -28,10 +28,10 @@ function ShellLayout() {
           min-height: 100dvh;
 
           /*
-           * A bottom bar leaves its row during a view transition (fixDuringViewTransition).
+           * A bottom bar leaves its row during a view transition (bottomBarDuringViewTransition).
            * This row is taller than any bar, so the page never gets shorter and its scroll stays.
            */
-          :root:active-view-transition-type(track-cover, screen-fade) & {
+          :root:active-view-transition & {
             grid-template-rows: max-content 1fr 400px;
           }
 

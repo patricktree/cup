@@ -3,7 +3,10 @@ import React from "react";
 
 import { AccountAvatar } from "#src/app/components/account-avatar.js";
 import { AccountTabBar, TAB_BAR_HEIGHTS } from "#src/app/components/account-tab-bar.js";
-import { fixDuringViewTransition, fadeFooterClearance } from "#src/app/components/fade-footer.js";
+import {
+  bottomBarDuringViewTransition,
+  fadeFooterClearance,
+} from "#src/app/components/fade-footer.js";
 import { MiniPlayer } from "#src/app/components/mini-player.js";
 import { textStyles } from "#src/app/design-system/text-styles.js";
 import { interTypefaceScope } from "#src/app/global-styles.js";
@@ -74,8 +77,10 @@ export function RecentsLayout({ children }: { children: React.ReactNode }): Reac
       {/* the mini player stacks on the tab bar, so it needs no offset from the tab bar's height */}
       <div
         className={composeClassnames(
-          fixDuringViewTransition,
+          bottomBarDuringViewTransition,
           css`
+            --bottom-bar-transition-name: recents-footer;
+
             /* stays at the bottom of the screen while the document scrolls */
             position: sticky;
             bottom: 0;
@@ -84,11 +89,6 @@ export function RecentsLayout({ children }: { children: React.ReactNode }): Reac
             z-index: 1;
             display: grid;
             grid-area: shell-footer;
-
-            /* drawn above a moving cover, as the bar is above the page (global styles) */
-            :root:active-view-transition-type(track-cover, screen-fade) & {
-              view-transition-name: recents-footer;
-            }
           `,
         )}
       >

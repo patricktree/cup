@@ -3,7 +3,7 @@ import { css } from "@linaria/core";
 import React from "react";
 
 import {
-  fixDuringViewTransition,
+  bottomBarDuringViewTransition,
   FADE_FOOTER_PADDING_BLOCK_END_PIXELS,
   fadeFooter,
 } from "#src/app/components/fade-footer.js";
@@ -94,8 +94,9 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
       aria-label="Player"
       className={composeClassnames(
         fadeFooter,
-        fixDuringViewTransition,
+        bottomBarDuringViewTransition,
         css`
+          --bottom-bar-transition-name: player-sheet;
           --fade-height: ${PLAYER_SHEET_HEIGHTS.fadeHeightPixels}px;
           --fade-background: var(--background-fade-player-sheet);
 
@@ -105,11 +106,6 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
           padding-block: 0 ${FADE_FOOTER_PADDING_BLOCK_END_PIXELS}px;
           padding-inline: 24px;
           background-color: var(--color-surface);
-
-          /* drawn above a moving cover, as the bar is above the page (global styles) */
-          :root:active-view-transition-type(track-cover, screen-fade) & {
-            view-transition-name: player-sheet;
-          }
         `,
       )}
     >

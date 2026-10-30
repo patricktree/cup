@@ -184,7 +184,7 @@ export const cssBase = css`
       animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
     }
 
-    /* the screens' bottom bars, named in their own styles: a moving cover passes under them */
+    /* the screens' bottom bars (bottomBarDuringViewTransition): a moving cover passes under them */
     ::view-transition-group(recents-footer),
     ::view-transition-group(player-sheet) {
       z-index: 1;
