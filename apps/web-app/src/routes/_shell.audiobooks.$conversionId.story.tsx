@@ -469,7 +469,12 @@ export const AccountFailedConversion = accountStory({
 });
 
 /** How the stories below answer the listener's request to delete the track. */
-type DeletionOutcome = "deleted" | "not-found" | "fails-once" | "never-answers";
+type DeletionOutcome =
+  | "deleted"
+  | "deleted-recents-refresh-never-answers"
+  | "not-found"
+  | "fails-once"
+  | "never-answers";
 
 /** Tracks Recents lists above the deletable one when the story starts on Recents. */
 const TRACKS_ABOVE_DELETABLE_COUNT = 30;
@@ -511,6 +516,9 @@ function createDeletionStory(
       ),
       http.get("/api/account/conversions", async () => {
         await waitWhileHeld("account-history");
+        if (isDeleted && outcome === "deleted-recents-refresh-never-answers") {
+          await delay("infinite");
+        }
         return HttpResponse.json({
           items: [...itemsAbove, ...(isDeleted ? [] : [deletableItem]), ...itemsBelow],
           nextCursor: null,
@@ -564,6 +572,10 @@ export const DeleteTrackOpenedFromRecents = createDeletionStory(
   "deleted",
   createAudiobook(),
   "recents",
+);
+/** Recents can show only its cached list after the deletion, which was loaded with the track. */
+export const DeleteTrackRecentsRefreshNeverAnswers = createDeletionStory(
+  "deleted-recents-refresh-never-answers",
 );
 /** The track was already deleted, for example on another device. */
 export const DeleteTrackAlreadyDeleted = createDeletionStory("not-found");

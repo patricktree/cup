@@ -102,6 +102,7 @@ export function useDeleteConversion({
       return { subject };
     },
     onSuccess: async ({ subject: deletingSubject }) => {
+      // Before leaving the page, so Recents never renders the deleted track from its cached list.
       await removeFromCachedAccountHistory(deletingSubject, conversionId);
       await onDeleted();
       queryClient.removeQueries({ queryKey: QUERY_KEYS.audiobook(conversionId) });
