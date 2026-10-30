@@ -5,6 +5,7 @@ import {
   readLoadingStateRecord,
   recordLoadingStates,
 } from "#src/test-utils/loading-state-recorder.ts";
+import { recordReactUseWarnings } from "#src/test-utils/react-use-warnings.ts";
 
 /**
  * Keeps the player host's audio element reachable, which is never attached to the document. The
@@ -954,14 +955,19 @@ for (const { story, message } of [
     mount,
     page,
   }) => {
+    await recordLoadingStates(page);
+    const useWarnings = recordReactUseWarnings(page);
     const component = await mount(`routes/_shell.audiobooks.$conversionId/${story}`);
     await expect(
       component.getByRole("heading", { name: "A deterministic document about careful testing" }),
     ).toBeVisible();
+    const recordedBefore = (await readLoadingStateRecord(page)).length;
 
     await expect(
       component.getByRole("heading", { name: "The track could not be loaded." }),
     ).toBeVisible();
+    expect((await readLoadingStateRecord(page)).slice(recordedBefore)).toEqual([]);
+    expect(useWarnings).toEqual([]);
     await expect(component.getByText(message)).toBeVisible();
     await expect(
       component.getByRole("heading", { name: "A deterministic document about careful testing" }),
