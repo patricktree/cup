@@ -6,6 +6,7 @@ import { AccountTabBar, TAB_BAR_HEIGHTS } from "#src/app/components/account-tab-
 import {
   bottomBarDuringViewTransition,
   fadeFooterClearance,
+  stickyBottomBar,
 } from "#src/app/components/fade-footer.js";
 import { MiniPlayer } from "#src/app/components/mini-player.js";
 import { textStyles } from "#src/app/design-system/text-styles.js";
@@ -83,25 +84,20 @@ export function RecentsLayout({ children }: { children: React.ReactNode }): Reac
         </main>
       </div>
       {/* the mini player stacks on the tab bar, so it needs no offset from the tab bar's height */}
-      <div
-        className={composeClassnames(
-          bottomBarDuringViewTransition,
-          css`
-            --bottom-bar-transition-name: ${BOTTOM_BAR_TRANSITION_NAME};
+      <div className={stickyBottomBar}>
+        <div
+          className={composeClassnames(
+            bottomBarDuringViewTransition,
+            css`
+              --bottom-bar-transition-name: ${BOTTOM_BAR_TRANSITION_NAME};
 
-            /* stays at the bottom of the screen while the document scrolls */
-            position: sticky;
-            bottom: 0;
-
-            /* above shell <main>, whose end scrolls under the tab bar's fade */
-            z-index: 1;
-            display: grid;
-            grid-area: shell-footer;
-          `,
-        )}
-      >
-        <MiniPlayer />
-        <AccountTabBar />
+              display: grid;
+            `,
+          )}
+        >
+          <MiniPlayer />
+          <AccountTabBar />
+        </div>
       </div>
     </>
   );

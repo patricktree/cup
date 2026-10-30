@@ -20,10 +20,23 @@ export function fadeFooterClearance({ fadeHeightPixels }: FadeFooterHeights): st
  */
 export const FADE_FOOTER_CONTROLS_END_DISTANCE_PIXELS = 24;
 
+/** A shell page's bottom bar, which holds an element with `bottomBarDuringViewTransition`. */
+export const stickyBottomBar = css`
+  /* stays at the bottom of the screen while the document scrolls */
+  position: sticky;
+  bottom: 0;
+
+  /* above shell <main>, whose end scrolls under the fade */
+  z-index: 1;
+  grid-area: shell-footer;
+`;
+
 /**
- * A bar stuck to the bottom of the screen, during a view transition. It takes the name in
+ * The content of a `stickyBottomBar`, during a view transition. It takes the name in
  * `--bottom-bar-transition-name`, for a snapshot of its own that the global styles draw above a
- * moving cover.
+ * moving cover. The name stays off the bar itself, because iOS Safari cuts the snapshot of a
+ * `position: sticky` element by the page's scroll position, so that a bar on a scrolled page would
+ * show cut off or not at all, then appear when the transition ends.
  */
 export const bottomBarDuringViewTransition = css`
   :root:active-view-transition & {
@@ -32,17 +45,12 @@ export const bottomBarDuringViewTransition = css`
 `;
 
 /**
- * A bar fixed at the bottom of a shell page on the drawn transparent-to-white fade, which reaches
- * over the end of shell `<main>` above the bar. The element sets `--fade-height` and
- * `--fade-background`.
+ * The content of a bottom bar, on the drawn transparent-to-white fade, which reaches over the end
+ * of shell `<main>` above the bar. The element sets `--fade-height` and `--fade-background`.
  */
 export const fadeFooter = css`
-  /* stays at the bottom of the screen while the document scrolls; also the fade's containing block */
-  position: sticky;
-  bottom: 0;
-
-  /* above shell <main>, whose end scrolls under the fade */
-  z-index: 1;
+  /* the fade's containing block */
+  position: relative;
 
   &::before {
     position: absolute;
