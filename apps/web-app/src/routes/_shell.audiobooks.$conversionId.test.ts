@@ -980,6 +980,7 @@ for (const { story, message } of [
     ).toBeVisible();
     const recordedBefore = (await readLoadingStateRecord(page)).length;
 
+    await releaseResponses(page, "audiobook-poll");
     await expect(
       component.getByRole("heading", { name: "The track could not be loaded." }),
     ).toBeVisible();

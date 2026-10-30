@@ -15,7 +15,7 @@ import { queryClient } from "#src/data-fetching/query-client.js";
 import { createAudiobookQuery } from "#src/data-fetching/reader.js";
 import { accountStory } from "#src/ui-gallery/account-fixtures.jsx";
 import gatesNotesAudiobook from "#src/ui-gallery/gates-notes-audiobook.json" with { type: "json" };
-import { waitWhileHeld } from "#src/ui-gallery/held-responses.js";
+import { holdStoryResponses, waitWhileHeld } from "#src/ui-gallery/held-responses.js";
 import {
   createStoryNarrationTrack,
   storyNarrationTrackHandler,
@@ -701,14 +701,17 @@ export const PollingInterrupted = {
 
 /**
  * Polling an audiobook whose audio is generated finds it gone or no longer accessible, as after its
- * deletion on another device or a revoked trial.
+ * deletion on another device or a revoked trial. The poll's answer is held from the start, so a
+ * test sees the track until it releases `audiobook-poll`, however slowly the first response
+ * renders.
  */
 function createAccessLostWhilePollingStory(failure: "not-found" | "access-denied") {
   let requestCount = 0;
   return {
+    beforeMount: async () => holdStoryResponses("audiobook-poll"),
     component: () => <GlobalProviders router={router} />,
     handlers: [
-      http.get(`/api/audiobooks/${CONVERSION_ID}`, () => {
+      http.get(`/api/audiobooks/${CONVERSION_ID}`, async () => {
         requestCount += 1;
         if (requestCount === 1) {
           return HttpResponse.json({
@@ -721,6 +724,8 @@ function createAccessLostWhilePollingStory(failure: "not-found" | "access-denied
             ],
           } satisfies Audiobook);
         }
+
+        await waitWhileHeld("audiobook-poll");
         return failure === "not-found"
           ? trackNotFoundResponse()
           : HttpResponse.json(
