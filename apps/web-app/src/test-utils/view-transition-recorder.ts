@@ -23,6 +23,8 @@ const viewTransitionRecordSchema = z.array(
     bottomBarGap: z.number().optional(),
     /** The bottom bars drawn above the moving cover, in their own snapshot. */
     bottomBarsAboveCover: z.array(z.string()),
+    /** Whether the document has a snapshot of its own, which would draw stuck bars too low. */
+    isDocumentCaptured: z.boolean(),
   }),
 );
 
@@ -50,17 +52,13 @@ export async function recordViewTransitions(page: Page): Promise<void> {
           .filter((element) => getComputedStyle(element).viewTransitionName === coverTransitionName)
           .map((element) => (element.closest("li") ? "card" : "detail"));
 
-      const findBottomBarsAboveCover = () => {
-        const pseudoElements = document
-          .getAnimations()
-          .map(({ effect }) => (effect instanceof KeyframeEffect ? effect.pseudoElement : null));
-        return bottomBarNames.filter(
+      const findBottomBarsAboveCover = (pseudoElements: (string | null)[]) =>
+        bottomBarNames.filter(
           (name) =>
             pseudoElements.some((element) => element?.endsWith(`(${name})`)) &&
             getComputedStyle(document.documentElement, `::view-transition-group(${name})`)
               .zIndex === "1",
         );
-      };
 
       const startViewTransition = document.startViewTransition.bind(document);
       document.startViewTransition = (options) => {
@@ -77,11 +75,15 @@ export async function recordViewTransitions(page: Page): Promise<void> {
           const bottomBar =
             document.querySelector('footer[aria-label="Player"]') ??
             document.querySelector('section[aria-label="Player"]')?.parentElement;
+          const pseudoElements = document
+            .getAnimations()
+            .map(({ effect }) => (effect instanceof KeyframeEffect ? effect.pseudoElement : null));
           record.push({
             ...(typeof options === "object" && { types: options.types }),
             oldCovers,
             newCovers: findCovers(),
-            bottomBarsAboveCover: findBottomBarsAboveCover(),
+            bottomBarsAboveCover: findBottomBarsAboveCover(pseudoElements),
+            isDocumentCaptured: pseudoElements.some((element) => element?.endsWith("(root)")),
             bottomBarGap:
               bottomBar && Math.round(innerHeight - bottomBar.getBoundingClientRect().bottom),
           });

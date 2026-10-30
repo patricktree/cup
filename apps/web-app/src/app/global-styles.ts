@@ -184,6 +184,16 @@ export const cssBase = css`
       outline-offset: var(--focus-ring-offset);
     }
 
+    /*
+     * No view transition captures the document, so only named elements animate and the rest of the
+     * screen changes at once. While the document is captured, the browser measures sticky positions
+     * against the snapshot, which extends under a bottom browser toolbar, and would draw the bottom
+     * bars that much lower.
+     */
+    :root {
+      view-transition-name: none;
+    }
+
     /* a track's cover moving between Recents and its detail view, named in cover-transition.ts */
     ::view-transition-group(${TRACK_COVER_TRANSITION_NAME}) {
       animation-duration: 300ms;
