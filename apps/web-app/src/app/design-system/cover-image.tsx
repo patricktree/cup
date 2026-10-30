@@ -3,6 +3,7 @@ import React from "react";
 
 import type { MapPropsToRequiredDataAttributeProps } from "#src/app/styling.utils.js";
 import { composeClassnames } from "#src/app/utils.js";
+import { TRACK_COVER_ATTRIBUTE } from "#src/app/view-transition-names.js";
 
 type DSCoverImageProps = DSCoverImageCustomProps & {
   /** No URL shows the empty placeholder. */
@@ -10,7 +11,7 @@ type DSCoverImageProps = DSCoverImageCustomProps & {
   alt: string;
   className?: string;
   /** Names the cover for a screen change's view transition (`cover-transition.ts`). */
-  "data-track-cover"?: string;
+  [TRACK_COVER_ATTRIBUTE]?: string;
 };
 
 type DSCoverImageCustomProps = {
@@ -38,7 +39,7 @@ export function DSCoverImage({
   shape = "rectangle",
   corners = "rounded",
   className,
-  "data-track-cover": trackCover,
+  [TRACK_COVER_ATTRIBUTE]: trackCover,
 }: DSCoverImageProps): React.JSX.Element {
   const [shownImage, setShownImage] = React.useState<ShownImage | undefined>(undefined);
   const dataAttributes: DSCoverImageDataAttributes = {
@@ -87,7 +88,7 @@ export function DSCoverImage({
         className,
       )}
       {...dataAttributes}
-      data-track-cover={trackCover}
+      {...{ [TRACK_COVER_ATTRIBUTE]: trackCover }}
     >
       {src !== undefined && shownImage !== undefined && (
         <img src={shownImage.src} alt={isLoading ? shownImage.alt : alt} />

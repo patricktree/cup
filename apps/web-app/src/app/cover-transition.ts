@@ -1,6 +1,9 @@
 import type { AnyRouter, ParsedLocation } from "@tanstack/react-router";
 
-import { TRACK_COVER_TRANSITION_NAME } from "#src/app/view-transition-names.js";
+import {
+  TRACK_COVER_ATTRIBUTE,
+  TRACK_COVER_TRANSITION_NAME,
+} from "#src/app/view-transition-names.js";
 import type { FileRoutesById } from "#src/routeTree.gen.js";
 
 /**
@@ -65,7 +68,7 @@ export function createCoverViewTransition(router: Pick<AnyRouter, "getMatchedRou
       }
 
       rule.replaceSync(
-        `:root:active-view-transition-type(${COVER_TRANSITION_TYPE}) [data-track-cover="${CSS.escape(conversionId)}"] {
+        `:root:active-view-transition-type(${COVER_TRANSITION_TYPE}) [${TRACK_COVER_ATTRIBUTE}="${CSS.escape(conversionId)}"] {
           view-transition-name: ${TRACK_COVER_TRANSITION_NAME};
         }`,
       );
@@ -80,8 +83,10 @@ export const screenFadeViewTransition = supportsViewTransitionTypes() && {
 };
 
 /** Marks a cover as the given conversion's, to move when its detail view opens or closes. */
-export function coverTransitionTarget(conversionId: string): { "data-track-cover": string } {
-  return { "data-track-cover": conversionId };
+export function coverTransitionTarget(conversionId: string): {
+  [TRACK_COVER_ATTRIBUTE]: string;
+} {
+  return { [TRACK_COVER_ATTRIBUTE]: conversionId };
 }
 
 function supportsViewTransitionTypes(): boolean {
