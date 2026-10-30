@@ -11,7 +11,10 @@ import { MiniPlayer } from "#src/app/components/mini-player.js";
 import { textStyles } from "#src/app/design-system/text-styles.js";
 import { interTypefaceScope } from "#src/app/global-styles.js";
 import { composeClassnames } from "#src/app/utils.js";
-import { RECENTS_FOOTER_TRANSITION_NAME } from "#src/app/view-transition-names.js";
+import {
+  RECENTS_FOOTER_TRANSITION_NAME,
+  RECENTS_SCREEN_TRANSITION_NAME,
+} from "#src/app/view-transition-names.js";
 import { useAccountSession } from "#src/auth/hooks.js";
 
 /** Recents' header, tab bar and mini player, around the tracks or what shows in their place. */
@@ -24,6 +27,10 @@ export function RecentsLayout({ children }: { children: React.ReactNode }): Reac
       <div
         className={css`
           grid-area: shell-main;
+
+          :root:active-view-transition & {
+            view-transition-name: ${RECENTS_SCREEN_TRANSITION_NAME};
+          }
         `}
       >
         <header

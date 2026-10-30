@@ -185,8 +185,8 @@ export const cssBase = css`
     }
 
     /*
-     * No view transition captures the document, so only named elements animate and the rest of the
-     * screen changes at once. While the document is captured, the browser measures sticky positions
+     * No view transition captures the document, so only named elements animate, which each screen's
+     * content is too. While the document is captured, the browser measures sticky positions
      * against the snapshot, which extends under a bottom browser toolbar, and would draw the bottom
      * bars that much lower.
      */
@@ -196,6 +196,8 @@ export const cssBase = css`
 
     /* a track's cover moving between Recents and its detail view, named in cover-transition.ts */
     ::view-transition-group(${TRACK_COVER_TRANSITION_NAME}) {
+      /* above the screens' content, whose sticky header would otherwise paint over it */
+      z-index: 1;
       animation-duration: 300ms;
       animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
     }
@@ -203,7 +205,7 @@ export const cssBase = css`
     /* the screens' bottom bars (bottomBarDuringViewTransition): a moving cover passes under them */
     ::view-transition-group(${RECENTS_FOOTER_TRANSITION_NAME}),
     ::view-transition-group(${PLAYER_SHEET_TRANSITION_NAME}) {
-      z-index: 1;
+      z-index: 2;
     }
 
     ::selection {

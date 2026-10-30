@@ -13,7 +13,7 @@ import type { FileRoutesById } from "#src/routeTree.gen.js";
  * element with the same name would make the browser skip the whole transition.
  */
 const COVER_TRANSITION_TYPE = "track-cover";
-const BOTTOM_BARS_ONLY_TYPE = "bottom-bars-only";
+const SCREEN_FADE_TYPE = "screen-fade";
 
 const RECENTS_ROUTE_ID = "/_shell/recent" satisfies keyof FileRoutesById;
 const DETAIL_ROUTE_ID = "/_shell/audiobooks/$conversionId" satisfies keyof FileRoutesById;
@@ -77,9 +77,9 @@ export function createCoverViewTransition(router: Pick<AnyRouter, "getMatchedRou
   };
 }
 
-/** A navigation's view transition that only cross-fades the bottom bars, moving no cover. */
-export const bottomBarsOnlyViewTransition = supportsViewTransitionTypes() && {
-  types: () => (prefersReducedMotion() ? false : [BOTTOM_BARS_ONLY_TYPE]),
+/** A navigation's view transition that only cross-fades the screen, moving no cover. */
+export const screenFadeViewTransition = supportsViewTransitionTypes() && {
+  types: () => (prefersReducedMotion() ? false : [SCREEN_FADE_TYPE]),
 };
 
 /** Marks a cover as the given conversion's, to move when its detail view opens or closes. */

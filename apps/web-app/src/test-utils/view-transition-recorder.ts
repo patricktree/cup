@@ -7,6 +7,9 @@ const COVER_TRANSITION_NAME = "track-cover";
 /** The view transition names of the screens' bottom bars, sorted. */
 const BOTTOM_BAR_NAMES = ["player-sheet", "recents-footer"];
 
+/** The view transition names of the screens' content, sorted. */
+const SCREEN_NAMES = ["detail-header", "detail-screen", "recents-screen"];
+
 const coverPlaceSchema = z.enum(["card", "detail"]);
 
 const viewTransitionRecordSchema = z.array(
@@ -23,6 +26,8 @@ const viewTransitionRecordSchema = z.array(
     bottomBarGap: z.number().optional(),
     /** The bottom bars drawn above the moving cover, in their own snapshot. */
     bottomBarsAboveCover: z.array(z.string()),
+    /** The screens' content fading in or out, each in a snapshot of its own. */
+    fadingScreens: z.array(z.string()),
     /** Whether the document has a snapshot of its own, which would draw stuck bars too low. */
     isDocumentCaptured: z.boolean(),
   }),
@@ -43,7 +48,7 @@ const RECORD_KEY = "cupViewTransitionRecord";
  */
 export async function recordViewTransitions(page: Page): Promise<void> {
   await page.addInitScript(
-    ({ recordKey, coverTransitionName, bottomBarNames }) => {
+    ({ recordKey, coverTransitionName, bottomBarNames, screenNames }) => {
       const record: unknown[] = [];
       Object.assign(window, { [recordKey]: record });
 
@@ -57,7 +62,7 @@ export async function recordViewTransitions(page: Page): Promise<void> {
           (name) =>
             pseudoElements.some((element) => element?.endsWith(`(${name})`)) &&
             getComputedStyle(document.documentElement, `::view-transition-group(${name})`)
-              .zIndex === "1",
+              .zIndex === "2",
         );
 
       const startViewTransition = document.startViewTransition.bind(document);
@@ -83,6 +88,9 @@ export async function recordViewTransitions(page: Page): Promise<void> {
             oldCovers,
             newCovers: findCovers(),
             bottomBarsAboveCover: findBottomBarsAboveCover(pseudoElements),
+            fadingScreens: screenNames.filter((name) =>
+              pseudoElements.some((element) => element?.endsWith(`(${name})`)),
+            ),
             isDocumentCaptured: pseudoElements.some((element) => element?.endsWith("(root)")),
             bottomBarGap:
               bottomBar && Math.round(innerHeight - bottomBar.getBoundingClientRect().bottom),
@@ -95,6 +103,7 @@ export async function recordViewTransitions(page: Page): Promise<void> {
       recordKey: RECORD_KEY,
       coverTransitionName: COVER_TRANSITION_NAME,
       bottomBarNames: BOTTOM_BAR_NAMES,
+      screenNames: SCREEN_NAMES,
     },
   );
 }

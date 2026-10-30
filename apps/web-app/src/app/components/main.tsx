@@ -1,6 +1,11 @@
 import { css } from "@linaria/core";
 import React from "react";
 
+import {
+  DETAIL_HEADER_TRANSITION_NAME,
+  DETAIL_SCREEN_TRANSITION_NAME,
+} from "#src/app/view-transition-names.js";
+
 type MainProps = React.ComponentProps<"main">;
 
 /** The page's content; the document scrolls it (see the shell layout in `routes/_shell.tsx`). */
@@ -36,6 +41,10 @@ export function ShellContent({
 
             font-size: var(--font-size-xxxl);
             background-color: var(--color-bg);
+
+            :root:active-view-transition & {
+              view-transition-name: ${DETAIL_HEADER_TRANSITION_NAME};
+            }
           `}
         >
           <div
@@ -76,6 +85,10 @@ export function ShellContent({
           padding-block: var(--app-padding-block) var(--padding-block-end);
           padding-inline: var(--app-padding-inline);
           margin-inline: auto;
+
+          :root:active-view-transition & {
+            view-transition-name: ${DETAIL_SCREEN_TRANSITION_NAME};
+          }
         `}
         style={{
           ["--grid-area"]: headerContent ? "shell-main" : "shell-header / shell-main",
