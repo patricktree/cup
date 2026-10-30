@@ -6,9 +6,8 @@ import type { ParsedLocation } from "@tanstack/react-router";
  * navigation. One rule names that track's covers, and only while a cover transition runs: a second
  * element with the same name would make the browser skip the whole transition.
  */
-// The global styles shape the moving cover's corners by these types, and time it by this name.
-const COVER_TRANSITION_TYPE_OPEN = "track-cover-open";
-const COVER_TRANSITION_TYPE_CLOSE = "track-cover-close";
+const COVER_TRANSITION_TYPE = "track-cover";
+// The global styles time the moving cover by this name.
 const COVER_TRANSITION_NAME = "track-cover";
 const SCREEN_FADE_TYPE = "screen-fade";
 
@@ -64,15 +63,11 @@ export function createCoverViewTransition():
       }
 
       rule.replaceSync(
-        `:root:active-view-transition-type(${COVER_TRANSITION_TYPE_OPEN}, ${COVER_TRANSITION_TYPE_CLOSE}) [data-track-cover="${CSS.escape(conversionId)}"] {
+        `:root:active-view-transition-type(${COVER_TRANSITION_TYPE}) [data-track-cover="${CSS.escape(conversionId)}"] {
           view-transition-name: ${COVER_TRANSITION_NAME};
         }`,
       );
-      return [
-        fromLocation !== undefined && RECENTS_PATH.test(fromLocation.pathname)
-          ? COVER_TRANSITION_TYPE_OPEN
-          : COVER_TRANSITION_TYPE_CLOSE,
-      ];
+      return [COVER_TRANSITION_TYPE];
     },
   };
 }

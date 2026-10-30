@@ -107,7 +107,7 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
           background-color: var(--color-surface);
 
           /* drawn above a moving cover, as the bar is above the page (global styles) */
-          :root:active-view-transition-type(track-cover-open, track-cover-close, screen-fade) & {
+          :root:active-view-transition-type(track-cover, screen-fade) & {
             view-transition-name: player-sheet;
           }
         `,

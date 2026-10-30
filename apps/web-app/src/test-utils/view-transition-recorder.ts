@@ -16,8 +16,6 @@ const viewTransitionRecordSchema = z.array(
     oldCovers: z.array(coverPlaceSchema),
     /** The same, when the new screen is captured. */
     newCovers: z.array(coverPlaceSchema),
-    /** The moving cover's computed `border-radius` when the transition starts and ends. */
-    coverCorners: z.object({ start: z.string(), end: z.string() }).optional(),
     /**
      * The distance from the shown bottom bar to the bottom of the screen, once the new screen
      * shows.
@@ -64,29 +62,6 @@ export async function recordViewTransitions(page: Page): Promise<void> {
         );
       };
 
-      const readCoverCorners = () => {
-        const pseudoElement = `::view-transition-image-pair(${coverTransitionName})`;
-        const animation = document.getAnimations().find((candidate) => {
-          const { effect } = candidate;
-          return effect instanceof KeyframeEffect && effect.pseudoElement === pseudoElement;
-        });
-        if (animation === undefined) {
-          return undefined;
-        }
-        const readAt = (time: number) => {
-          animation.currentTime = time;
-          return getComputedStyle(document.documentElement, pseudoElement).borderRadius;
-        };
-        animation.pause();
-        const corners = {
-          start: readAt(0),
-          end: readAt(Number(animation.effect?.getComputedTiming().endTime)),
-        };
-        animation.currentTime = 0;
-        animation.play();
-        return corners;
-      };
-
       const startViewTransition = document.startViewTransition.bind(document);
       document.startViewTransition = (options) => {
         const transition = startViewTransition(options);
@@ -106,7 +81,6 @@ export async function recordViewTransitions(page: Page): Promise<void> {
             ...(typeof options === "object" && { types: options.types }),
             oldCovers,
             newCovers: findCovers(),
-            coverCorners: readCoverCorners(),
             bottomBarsAboveCover: findBottomBarsAboveCover(),
             bottomBarGap:
               bottomBar && Math.round(innerHeight - bottomBar.getBoundingClientRect().bottom),

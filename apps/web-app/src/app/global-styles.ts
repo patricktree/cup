@@ -179,46 +179,9 @@ export const cssBase = css`
     }
 
     /* a track's cover moving between Recents and its detail view, named in cover-transition.ts */
-    ::view-transition-group(track-cover),
-    ::view-transition-image-pair(track-cover) {
+    ::view-transition-group(track-cover) {
       animation-duration: 300ms;
       animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
-    }
-
-    /*
-     * A snapshot leaves out the clip of the element's ancestors, so a card's cover would show none
-     * of the card's rounded corners. The cover clips itself instead, from the shape it has on one
-     * screen to the shape it has on the other, so nothing snaps when the transition ends.
-     */
-    ::view-transition-image-pair(track-cover) {
-      overflow: hidden;
-      animation-fill-mode: both;
-    }
-
-    :root:active-view-transition-type(track-cover-open)::view-transition-image-pair(track-cover) {
-      animation-name: cover-corners-to-detail;
-    }
-
-    :root:active-view-transition-type(track-cover-close)::view-transition-image-pair(track-cover) {
-      animation-name: cover-corners-to-card;
-    }
-
-    @keyframes cover-corners-to-detail {
-      from {
-        border-radius: 0 0 calc(var(--border-radius-lg) - 1px) calc(var(--border-radius-lg) - 1px);
-      }
-      to {
-        border-radius: var(--border-radius-lg);
-      }
-    }
-
-    @keyframes cover-corners-to-card {
-      from {
-        border-radius: var(--border-radius-lg);
-      }
-      to {
-        border-radius: 0 0 calc(var(--border-radius-lg) - 1px) calc(var(--border-radius-lg) - 1px);
-      }
     }
 
     /* the screens' bottom bars, named in their own styles: a moving cover passes under them */

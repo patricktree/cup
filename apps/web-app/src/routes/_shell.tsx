@@ -31,7 +31,7 @@ function ShellLayout() {
            * A bottom bar leaves its row during a view transition (fixDuringViewTransition).
            * This row is taller than any bar, so the page never gets shorter and its scroll stays.
            */
-          :root:active-view-transition-type(track-cover-open, track-cover-close, screen-fade) & {
+          :root:active-view-transition-type(track-cover, screen-fade) & {
             grid-template-rows: max-content 1fr 400px;
           }
 

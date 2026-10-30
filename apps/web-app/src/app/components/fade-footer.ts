@@ -27,7 +27,7 @@ export const FADE_FOOTER_PADDING_BLOCK_END_PIXELS = 24;
  * shell keeps a row for the bar's place in the page.
  */
 export const fixDuringViewTransition = css`
-  :root:active-view-transition-type(track-cover-open, track-cover-close, screen-fade) & {
+  :root:active-view-transition-type(track-cover, screen-fade) & {
     position: fixed;
     inset-inline: 0;
   }

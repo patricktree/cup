@@ -874,10 +874,6 @@ test("leaving a track being prepared stops polling it, and reopening it polls ag
   await expect.poll(() => audiobookRequestCount).toBeGreaterThan(requestCountOnLeaving + 1);
 });
 
-/** A card clips its cover: square below the title, and the card's inner radius at the bottom. */
-const CARD_COVER_CORNERS = "0px 0px 23px 23px";
-const DETAIL_COVER_CORNERS = "24px";
-
 test("opening a track from Recents and going back runs the cover transition between the card and the detail view", async ({
   mount,
   page,
@@ -895,18 +891,16 @@ test("opening a track from Recents and going back runs the cover transition betw
     .poll(() => readViewTransitionRecord(page))
     .toEqual([
       {
-        types: ["track-cover-open"],
+        types: ["track-cover"],
         oldCovers: ["card"],
         newCovers: ["detail"],
-        coverCorners: { start: CARD_COVER_CORNERS, end: DETAIL_COVER_CORNERS },
         bottomBarGap: 0,
         bottomBarsAboveCover: ["player-sheet", "recents-footer"],
       },
       {
-        types: ["track-cover-close"],
+        types: ["track-cover"],
         oldCovers: ["detail"],
         newCovers: ["card"],
-        coverCorners: { start: DETAIL_COVER_CORNERS, end: CARD_COVER_CORNERS },
         bottomBarGap: 0,
         bottomBarsAboveCover: ["player-sheet", "recents-footer"],
       },

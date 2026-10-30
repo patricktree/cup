@@ -16,8 +16,11 @@ type DSCoverImageProps = DSCoverImageCustomProps & {
 type DSCoverImageCustomProps = {
   /** `circle` crops to a circle, as in the mini player; its size comes from `className`. */
   shape?: "rectangle" | "circle";
-  /** `square` leaves the corners to a container that clips the cover, such as a card. */
-  corners?: "rounded" | "square";
+  /**
+   * `card` fits the bottom of a card: square on top, and the card's inner radius below. The cover
+   * has its own corners, because a view transition's snapshot leaves out a container's clip.
+   */
+  corners?: "rounded" | "card";
 };
 
 type DSCoverImageDataAttributes = MapPropsToRequiredDataAttributeProps<DSCoverImageCustomProps>;
@@ -64,8 +67,9 @@ export function DSCoverImage({
             border-radius: var(--border-radius-full);
           }
 
-          &[data-corners="square"] {
-            border-radius: 0;
+          &[data-corners="card"] {
+            border-radius: 0 0 calc(var(--border-radius-lg) - 1px)
+              calc(var(--border-radius-lg) - 1px);
           }
 
           & > img {

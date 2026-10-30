@@ -86,7 +86,7 @@ export function RecentsLayout({ children }: { children: React.ReactNode }): Reac
             grid-area: shell-footer;
 
             /* drawn above a moving cover, as the bar is above the page (global styles) */
-            :root:active-view-transition-type(track-cover-open, track-cover-close, screen-fade) & {
+            :root:active-view-transition-type(track-cover, screen-fade) & {
               view-transition-name: recents-footer;
             }
           `,

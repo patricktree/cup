@@ -91,7 +91,7 @@ export function RecentsCard({ item }: { item: HistoryItem }): React.JSX.Element 
           <DSCoverImage
             src={coverUrl}
             alt=""
-            corners="square"
+            corners="card"
             {...coverTransitionTarget(item.conversionId)}
           />
         )}
