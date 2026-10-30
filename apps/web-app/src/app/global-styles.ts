@@ -1,6 +1,5 @@
 import {
-  PLAYER_SHEET_TRANSITION_NAME,
-  RECENTS_FOOTER_TRANSITION_NAME,
+  BOTTOM_BAR_TRANSITION_NAME,
   TRACK_COVER_TRANSITION_NAME,
 } from "#src/app/view-transition-names.js";
 
@@ -203,9 +202,15 @@ export const cssBase = css`
     }
 
     /* the screens' bottom bars (bottomBarDuringViewTransition): a moving cover passes under them */
-    ::view-transition-group(${RECENTS_FOOTER_TRANSITION_NAME}),
-    ::view-transition-group(${PLAYER_SHEET_TRANSITION_NAME}) {
+    ::view-transition-group(${BOTTOM_BAR_TRANSITION_NAME}) {
       z-index: 2;
+    }
+
+    /* the bars differ in height, and both end at the bottom of the screen */
+    ::view-transition-old(${BOTTOM_BAR_TRANSITION_NAME}),
+    ::view-transition-new(${BOTTOM_BAR_TRANSITION_NAME}) {
+      top: auto;
+      bottom: 0;
     }
 
     ::selection {

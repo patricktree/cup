@@ -1,7 +1,11 @@
 /** The view transition names and markers that the app's styles and scripts share. */
 export const TRACK_COVER_TRANSITION_NAME = "track-cover";
-export const RECENTS_FOOTER_TRANSITION_NAME = "recents-footer";
-export const PLAYER_SHEET_TRANSITION_NAME = "player-sheet";
+/**
+ * Both screens' bottom bars share a name, so they cross-fade as a pair, which stays opaque where
+ * they overlap. Two separate fades would let the page's text show through the half-transparent
+ * bars.
+ */
+export const BOTTOM_BAR_TRANSITION_NAME = "bottom-bar";
 /**
  * Each screen's content has a name of its own, so the old screen fades out where it was and the new
  * one fades in where it lands. A shared name would slide them by the difference in scroll

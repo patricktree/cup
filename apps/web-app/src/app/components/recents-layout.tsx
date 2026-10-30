@@ -12,7 +12,7 @@ import { textStyles } from "#src/app/design-system/text-styles.js";
 import { interTypefaceScope } from "#src/app/global-styles.js";
 import { composeClassnames } from "#src/app/utils.js";
 import {
-  RECENTS_FOOTER_TRANSITION_NAME,
+  BOTTOM_BAR_TRANSITION_NAME,
   RECENTS_SCREEN_TRANSITION_NAME,
 } from "#src/app/view-transition-names.js";
 import { useAccountSession } from "#src/auth/hooks.js";
@@ -87,7 +87,7 @@ export function RecentsLayout({ children }: { children: React.ReactNode }): Reac
         className={composeClassnames(
           bottomBarDuringViewTransition,
           css`
-            --bottom-bar-transition-name: ${RECENTS_FOOTER_TRANSITION_NAME};
+            --bottom-bar-transition-name: ${BOTTOM_BAR_TRANSITION_NAME};
 
             /* stays at the bottom of the screen while the document scrolls */
             position: sticky;

@@ -27,7 +27,7 @@ import {
 } from "#src/app/player/player-host-provider.js";
 import type { LoadedAudiobook } from "#src/app/player/player-host.js";
 import { composeClassnames } from "#src/app/utils.js";
-import { PLAYER_SHEET_TRANSITION_NAME } from "#src/app/view-transition-names.js";
+import { BOTTOM_BAR_TRANSITION_NAME } from "#src/app/view-transition-names.js";
 
 /**
  * The player sheet's fade. The page above leaves `fadeFooterClearance(PLAYER_SHEET_HEIGHTS)` free
@@ -97,7 +97,7 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
         fadeFooter,
         bottomBarDuringViewTransition,
         css`
-          --bottom-bar-transition-name: ${PLAYER_SHEET_TRANSITION_NAME};
+          --bottom-bar-transition-name: ${BOTTOM_BAR_TRANSITION_NAME};
           --fade-height: ${PLAYER_SHEET_HEIGHTS.fadeHeightPixels}px;
           --fade-background: var(--background-fade-player-sheet);
 
