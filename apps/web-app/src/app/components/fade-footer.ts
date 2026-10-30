@@ -22,11 +22,11 @@ export const FADE_FOOTER_CONTROLS_END_DISTANCE_PIXELS = 24;
 
 /**
  * A bar stuck to the bottom of the screen, during a view transition. It is fixed there instead,
- * because iOS Safari cuts the snapshot of a stuck element by the page's scroll position, so that a
- * bar on a scrolled page would show cut off or not at all, then appear when the transition ends;
- * the shell keeps a row for the bar's place in the page. It also takes the name in
- * `--bottom-bar-transition-name`, for a snapshot of its own that the global styles draw above a
- * moving cover.
+ * because iOS Safari cuts the snapshot of a `position: sticky` element by the page's scroll
+ * position, so that a bar on a scrolled page would show cut off or not at all, then appear when
+ * the transition ends; the shell keeps a row for the bar's place in the page. It also takes the
+ * name in `--bottom-bar-transition-name`, for a snapshot of its own that the global styles draw
+ * above a moving cover.
  */
 export const bottomBarDuringViewTransition = css`
   :root:active-view-transition & {
