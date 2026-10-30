@@ -14,6 +14,8 @@ import { composeClassnames } from "#src/app/utils.js";
 
 const PADDING_BLOCK_START_PIXELS = 24;
 const TAB_PADDING_PIXELS = 5;
+/** The tabs' padding counts towards the fade footers' shared distance from the screen's bottom edge. */
+const PADDING_BLOCK_END_PIXELS = FADE_FOOTER_PADDING_BLOCK_END_PIXELS - TAB_PADDING_PIXELS;
 /** The tab bar's fade. The page above leaves `fadeFooterClearance(TAB_BAR_HEIGHTS)` free at its end. */
 export const TAB_BAR_HEIGHTS = {
   fadeHeightPixels: 50,
@@ -37,7 +39,7 @@ export function AccountTabBar(): React.JSX.Element {
           --fade-height: ${TAB_BAR_HEIGHTS.fadeHeightPixels}px;
           --fade-background: var(--background-fade-tab-bar);
 
-          padding: ${PADDING_BLOCK_START_PIXELS}px 24px ${FADE_FOOTER_PADDING_BLOCK_END_PIXELS}px;
+          padding: ${PADDING_BLOCK_START_PIXELS}px 24px ${PADDING_BLOCK_END_PIXELS}px;
           background-color: var(--color-surface);
         `,
       )}
@@ -56,13 +58,13 @@ export function AccountTabBar(): React.JSX.Element {
         <li>
           <Link to="/recent" className={tabStyles}>
             <TabRecentIcon />
-            <span className={captionStyles}>Recent</span>
+            <span className={textStyles.label}>Recent</span>
           </Link>
         </li>
         <li>
           <ActionLink to="/recent/add" state={{ isOpenedFromRecents: true }} className={tabStyles}>
             <TabAddIcon />
-            <span className={captionStyles}>Add</span>
+            <span className={textStyles.label}>Add</span>
           </ActionLink>
         </li>
       </ul>
@@ -83,7 +85,7 @@ const tabStyles = composeClassnames(
   pressableOverlay,
   css`
     display: grid;
-    gap: 4px;
+    gap: 10px;
     justify-items: center;
     min-width: 44px;
     padding: ${TAB_PADDING_PIXELS}px;
@@ -95,12 +97,5 @@ const tabStyles = composeClassnames(
     &[aria-current="page"] {
       color: var(--color-ink);
     }
-  `,
-);
-
-const captionStyles = composeClassnames(
-  textStyles.label,
-  css`
-    padding-block: 6px;
   `,
 );
