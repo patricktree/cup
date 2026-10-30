@@ -3,7 +3,7 @@ import { createLink, Link } from "@tanstack/react-router";
 import React from "react";
 
 import {
-  FADE_FOOTER_PADDING_BLOCK_END_PIXELS,
+  FADE_FOOTER_CONTROLS_END_DISTANCE_PIXELS,
   fadeFooter,
 } from "#src/app/components/fade-footer.js";
 import { TabAddIcon, TabRecentIcon } from "#src/app/design-system/icons.js";
@@ -15,7 +15,7 @@ import { composeClassnames } from "#src/app/utils.js";
 const PADDING_BLOCK_START_PIXELS = 24;
 const TAB_PADDING_PIXELS = 5;
 /** The tabs' padding counts towards the fade footers' shared distance from the screen's bottom edge. */
-const PADDING_BLOCK_END_PIXELS = FADE_FOOTER_PADDING_BLOCK_END_PIXELS - TAB_PADDING_PIXELS;
+const PADDING_BLOCK_END_PIXELS = FADE_FOOTER_CONTROLS_END_DISTANCE_PIXELS - TAB_PADDING_PIXELS;
 /** The tab bar's fade. The page above leaves `fadeFooterClearance(TAB_BAR_HEIGHTS)` free at its end. */
 export const TAB_BAR_HEIGHTS = {
   fadeHeightPixels: 50,
