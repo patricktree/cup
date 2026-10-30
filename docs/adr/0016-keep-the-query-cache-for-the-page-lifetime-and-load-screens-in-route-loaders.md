@@ -33,7 +33,7 @@ TkDodo's TanStack Router series advises against awaiting in loaders, so a slow r
 
 ### Viewport preloading
 
-Touch has no hover, and `intent` preloads only on touchstart and never for Back. Preloading every link once it scrolls into view makes opening a track from Recents, the account dialog and Back to Recents after a deep link usually instant. The accepted cost is one audiobook request per Recents card that scrolls into view, once per page lifetime (a long narration document is about 80 KB uncompressed), one account snapshot and, after a deep link, one history page. The router's built-in `viewport` preloading uses one `IntersectionObserver` per link.
+Touch has no hover, and `intent` preloads only on touchstart and never for Back. Preloading every link once it scrolls into view makes opening a track from Recents, the account dialog and Back to Recents after a deep link usually instant. The accepted cost is one audiobook request per Recents card that scrolls into view, once per page lifetime (a long narration document is about 80 KB uncompressed), one account snapshot and, after a deep link, one history page. The router's built-in `viewport` preloading uses one `IntersectionObserver` per link. _Note, 2026-10-30:_ Recents cards now wait until no dialog covers them. A preload behind the account dialog could still be under way when the listener scheduled deletion, and was then refused with a 403, which failed E2E tests that allow no console errors. Viewport preloading stands for everything else.
 
 ## Considered options
 

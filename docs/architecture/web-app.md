@@ -26,7 +26,7 @@ The avatar's initials come from the Supabase session's `user_metadata.name`, els
 
 ## Query cache
 
-[ADR 0016](../adr/0016-keep-the-query-cache-for-the-page-lifetime-and-load-screens-in-route-loaders.md) records why the cache lives for the page lifetime, why routes await their data, and why links preload once in view.
+[ADR 0016](../adr/0016-keep-the-query-cache-for-the-page-lifetime-and-load-screens-in-route-loaders.md) records why the cache lives for the page lifetime, why routes await their data, and why links preload once in view. A Recents card waits until no dialog covers it, so nothing is under way when the account dialog schedules deletion.
 
 Every screen reads server data through the TanStack Query cache, whose [key factories](../../apps/web-app/src/data-fetching/query-keys.ts) group keys by owner, so one prefix covers everything of an account.
 

@@ -187,7 +187,6 @@ test("signed in, home redirects to Recents, which opens the account dialog and t
   page,
   workerEnvironment,
 }) => {
-  test.setTimeout(90_000);
   const { origin } = workerEnvironment;
   await gotoPage(page, `${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);

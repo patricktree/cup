@@ -99,6 +99,13 @@ export const RecentsWithOneReadyItem = accountStory({
   recents: { items: createReadyItems(0, 1), nextCursor: null },
 });
 
+/** The account dialog over a ready card. */
+export const OneReadyItemBehindAccountDialog = accountStory({
+  path: "/recent/account",
+  handlers: [coverHandler()],
+  recents: { items: createReadyItems(0, 1), nextCursor: null },
+});
+
 /** A pending card for each preparation phase label, next to ready and failed cards. */
 export const RecentsWithPendingAndFailed = accountStory({
   path: "/recent",
