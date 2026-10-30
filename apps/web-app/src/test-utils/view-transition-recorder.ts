@@ -24,8 +24,8 @@ const viewTransitionRecordSchema = z.array(
      * shows.
      */
     bottomBarGap: z.number().optional(),
-    /** The shown bottom bar's position; iOS Safari cuts a `position: sticky` bar's snapshot. */
-    bottomBarPosition: z.string().optional(),
+    /** Whether the bar's named element is `position: sticky`; iOS Safari cuts its snapshot. */
+    isNamedBottomBarSticky: z.boolean(),
     /** Whether the bottom bars are drawn above the moving cover. */
     isBottomBarAboveCover: z.boolean(),
     /** Whether the two screens' bottom bars cross-fade as one pair, so no text shows through. */
@@ -65,6 +65,12 @@ export async function recordViewTransitions(page: Page): Promise<void> {
         getComputedStyle(document.documentElement, `::view-transition-group(${bottomBarName})`)
           .zIndex === "2";
 
+      const isNamedBottomBarSticky = () =>
+        [...document.querySelectorAll("*")].some((element) => {
+          const style = getComputedStyle(element);
+          return style.viewTransitionName === bottomBarName && style.position === "sticky";
+        });
+
       const hasBottomBarPair = (pseudoElements: (string | null)[]) =>
         pseudoElements.includes(`::view-transition-old(${bottomBarName})`) &&
         pseudoElements.includes(`::view-transition-new(${bottomBarName})`);
@@ -97,7 +103,7 @@ export async function recordViewTransitions(page: Page): Promise<void> {
               pseudoElements.some((element) => element?.endsWith(`(${name})`)),
             ),
             isDocumentCaptured: pseudoElements.some((element) => element?.endsWith("(root)")),
-            bottomBarPosition: bottomBar && getComputedStyle(bottomBar).position,
+            isNamedBottomBarSticky: isNamedBottomBarSticky(),
             bottomBarGap:
               bottomBar && Math.round(innerHeight - bottomBar.getBoundingClientRect().bottom),
           });

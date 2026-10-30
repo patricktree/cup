@@ -27,14 +27,6 @@ function ShellLayout() {
           grid-template-rows: max-content 1fr auto;
           min-height: 100dvh;
 
-          /*
-           * A bottom bar leaves its row during a view transition (bottomBarDuringViewTransition).
-           * This row is taller than any bar, so the page never gets shorter and its scroll stays.
-           */
-          :root:active-view-transition & {
-            grid-template-rows: max-content 1fr 400px;
-          }
-
           /* create stacking context for <header> and <main> of the shell */
           isolation: isolate;
         `}

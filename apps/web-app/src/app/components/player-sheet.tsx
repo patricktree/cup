@@ -6,6 +6,7 @@ import {
   bottomBarDuringViewTransition,
   FADE_FOOTER_CONTROLS_END_DISTANCE_PIXELS,
   fadeFooter,
+  stickyBottomBar,
 } from "#src/app/components/fade-footer.js";
 import { PlaybackError, PlaybackErrorMessage } from "#src/app/components/playback-error.js";
 import { DSIconButton } from "#src/app/design-system/icon-button.js";
@@ -90,43 +91,42 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
   }
 
   return (
-    <footer
-      {...interTypefaceScope}
-      aria-label="Player"
-      className={composeClassnames(
-        fadeFooter,
-        bottomBarDuringViewTransition,
-        css`
-          --bottom-bar-transition-name: ${BOTTOM_BAR_TRANSITION_NAME};
-          --fade-height: ${PLAYER_SHEET_HEIGHTS.fadeHeightPixels}px;
-          --fade-background: var(--background-fade-player-sheet);
-
-          display: grid;
-          grid-area: shell-footer;
-          align-content: end;
-          padding-block: 0 ${FADE_FOOTER_CONTROLS_END_DISTANCE_PIXELS}px;
-          padding-inline: 24px;
-          background-color: var(--color-surface);
-        `,
-      )}
-    >
+    <footer {...interTypefaceScope} aria-label="Player" className={stickyBottomBar}>
       <div
-        className={css`
-          display: grid;
-          width: 100%;
+        className={composeClassnames(
+          fadeFooter,
+          bottomBarDuringViewTransition,
+          css`
+            --bottom-bar-transition-name: ${BOTTOM_BAR_TRANSITION_NAME};
+            --fade-height: ${PLAYER_SHEET_HEIGHTS.fadeHeightPixels}px;
+            --fade-background: var(--background-fade-player-sheet);
 
-          /* as wide as the page's text above */
-          max-width: calc(var(--app-max-width) - 2 * var(--app-padding-inline));
-          margin-inline: auto;
-        `}
+            display: grid;
+            align-content: end;
+            padding-block: 0 ${FADE_FOOTER_CONTROLS_END_DISTANCE_PIXELS}px;
+            padding-inline: 24px;
+            background-color: var(--color-surface);
+          `,
+        )}
       >
-        {shownLoaded ? (
-          <PlaybackError player={shownLoaded.player} />
-        ) : unavailable && unavailable.conversionId === shown?.conversionId ? (
-          <PlaybackErrorMessage message={unavailable.message} />
-        ) : null}
-        <output className={textStyles.h5}>{statusLine}</output>
-        {controls}
+        <div
+          className={css`
+            display: grid;
+            width: 100%;
+
+            /* as wide as the page's text above */
+            max-width: calc(var(--app-max-width) - 2 * var(--app-padding-inline));
+            margin-inline: auto;
+          `}
+        >
+          {shownLoaded ? (
+            <PlaybackError player={shownLoaded.player} />
+          ) : unavailable && unavailable.conversionId === shown?.conversionId ? (
+            <PlaybackErrorMessage message={unavailable.message} />
+          ) : null}
+          <output className={textStyles.h5}>{statusLine}</output>
+          {controls}
+        </div>
       </div>
     </footer>
   );
