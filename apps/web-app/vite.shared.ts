@@ -22,6 +22,13 @@ export function createWebAppViteConfig() {
         // The app typechecks with `moduleResolution: node16`, which cannot resolve extensionless imports; the generated tree carries `@ts-nocheck`, so unresolved route imports would silently degrade every route type to `any`.
         addExtensions: ".js",
         autoCodeSplitting: true,
+        codeSplittingOptions: {
+          // The plugin's default minus `errorComponent`, which stays in the eagerly loaded route module.
+          // The router loads a split error screen only when a loader fails, so a query failing during
+          // render would first suspend on the chunk: the pending component flashes and React warns
+          // about `use()`.
+          defaultBehavior: [["component"], ["notFoundComponent"]],
+        },
         generatedRouteTree: path.join(WEB_APP_DIRECTORY, "src/routeTree.gen.ts"),
         routesDirectory: path.join(WEB_APP_DIRECTORY, "src/routes"),
         routeFileIgnorePattern: "\\.(story|test)\\.[jt]sx?$",

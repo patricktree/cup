@@ -248,6 +248,8 @@ test.describe("preparation recovery", () => {
     await expect(
       page.getByRole("heading", { name: "This track could not be prepared." }),
     ).toBeVisible({ timeout: 90000 });
+    // The detail view's Back link preloads its route once in view; a restart would refuse that chunk.
+    await page.waitForLoadState("networkidle");
     await workerEnvironment.restart("success");
     await page.getByRole("button", { name: "Retry", exact: true }).click();
     await waitForAudiobook(page);

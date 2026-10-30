@@ -1,5 +1,4 @@
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
-import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
 
 import {
@@ -26,7 +25,6 @@ const PlayerHostContext = React.createContext<PlayerHost | null>(null);
  * stops playback.
  */
 export function PlayerHostProvider({ children }: { children: React.ReactNode }) {
-  const queryClient = useQueryClient();
   const [host] = React.useState(
     () =>
       new PlayerHost({
@@ -35,7 +33,7 @@ export function PlayerHostProvider({ children }: { children: React.ReactNode }) 
         publishMediaMetadata,
         getAccount: readPlayerHostAccount,
         getLocalPosition: getLocalPlaybackPosition,
-        fetchAudiobook: (conversionId) => fetchAudiobookForPlayer(queryClient, conversionId),
+        fetchAudiobook: (conversionId) => fetchAudiobookForPlayer(conversionId),
         now: () => Date.now(),
       }),
   );
@@ -103,20 +101,22 @@ type ShownAudiobookPlayback = {
 
 /**
  * Reports the prepared audiobook a page shows, below `useShownConversion`, and describes its
- * playback. Segment taps load the audiobook first when another one is loaded.
+ * playback. Segment taps load the audiobook first when another one is loaded. `receivedAt` is when
+ * the audiobook's response arrived, the query's `dataUpdatedAt`, which dates its track URL.
  */
 export function useShownAudiobook(
   conversionId: string,
   audiobook: PreparedAudiobook,
+  receivedAt: number,
 ): ShownAudiobookPlayback {
   const host = usePlayerHost();
   const { loaded, shown } = usePlayerHostSnapshot();
 
   React.useLayoutEffect(
     function showLatestVersion() {
-      host.showConversion(conversionId, audiobook);
+      host.showConversion(conversionId, audiobook, receivedAt);
     },
-    [host, conversionId, audiobook],
+    [host, conversionId, audiobook, receivedAt],
   );
 
   return {

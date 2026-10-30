@@ -1,0 +1,9 @@
+{
+  "$schema": "../../node_modules/turbo/schema.json",
+  "extends": ["//", "@patricktree-stack/config-turbo-typescript"],
+  "tasks": {
+    "turbo:test": {
+      "outputs": ["playwright-output/**"],
+    },
+  },
+}

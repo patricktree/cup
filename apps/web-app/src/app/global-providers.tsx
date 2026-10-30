@@ -24,9 +24,20 @@ export function createAppRouter(history?: RouterHistory) {
       queryClient,
     },
     defaultErrorComponent: RouteErrorScreen,
-    defaultPendingMinMs: 0,
-    defaultPendingMs: 0,
-    defaultPreload: "intent",
+    /*
+     * A first visit keeps the previous screen, under the root layout's progress bar, until the
+     * route's data arrives or its pending component is due; once shown, that stays long enough to
+     * read. A loader that finds its data cached also resolves a moment later, so a revisit never
+     * reaches the pending component.
+     */
+    defaultPendingMinMs: 300,
+    defaultPendingMs: 500,
+    /*
+     * A link preloads its route once it scrolls into view, since touch offers no hover to preload
+     * on, so opening a track from Recents is usually instant. The query cache decides whether a
+     * preload requests anything, so the router keeps no preload of its own.
+     */
+    defaultPreload: "viewport",
     defaultPreloadStaleTime: 0,
     routeTree,
     routeMasks: [addDialogMask],
@@ -41,8 +52,11 @@ declare module "@tanstack/react-router" {
     router: ReturnType<typeof createAppRouter>;
   }
   interface HistoryState {
-    /** Set when the app itself opened a dialog over Recents, so closing it goes back one entry. */
-    isRecentsDialogOpenedInApp?: boolean;
+    /**
+     * Set by every in-app link on Recents, to a dialog over it or a detail view, so leaving that
+     * screen goes back one entry and Recents returns at its scroll position.
+     */
+    isOpenedFromRecents?: boolean;
   }
   // oxlint-enable typescript/consistent-type-definitions
 }

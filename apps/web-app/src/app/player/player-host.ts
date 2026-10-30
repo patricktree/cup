@@ -136,13 +136,21 @@ export class PlayerHost {
   /**
    * Reports the conversion whose page the listener is on and, once the page has it, its latest
    * prepared audiobook. Called again whenever that audiobook changes.
+   *
+   * `receivedAt` is when the client received the audiobook, by the client clock, which dates its
+   * track URL. A page passes the time its cached response arrived, which can lie long before the
+   * page showed it; without one, the audiobook counts as received now.
    */
-  showConversion = (conversionId: string, audiobook?: PreparedAudiobook) => {
+  showConversion = (
+    conversionId: string,
+    audiobook?: PreparedAudiobook,
+    receivedAt: number = this.services.now(),
+  ) => {
     const previous =
       this.snapshot.shown?.conversionId === conversionId ? this.snapshot.shown : null;
     const shownAudiobook = audiobook ?? previous?.audiobook ?? null;
     if (shownAudiobook !== previous?.audiobook) {
-      this.shownAudiobookReceivedAt = this.services.now();
+      this.shownAudiobookReceivedAt = receivedAt;
     }
     this.update({
       shown: {

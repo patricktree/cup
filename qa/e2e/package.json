@@ -37,6 +37,7 @@
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",
+    "@cup/loading-state-recorder": "workspace:*",
     "@patricktree-stack/config-playwright": "workspace:*",
     "@patricktree-stack/config-typescript": "workspace:*",
     "@patricktree-stack/config-vitest": "workspace:*",

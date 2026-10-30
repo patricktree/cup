@@ -11,7 +11,8 @@ import { accountQuery } from "#src/data-fetching/account.js";
  * The account's lifecycle controls: deleting an active account, restoring one whose deletion is
  * scheduled, and confirming either after signing in with Google again. The account dialog offers
  * both; the account recovery page offers restoring only, and sends an active account to Recents.
- * Render it inside an `AccountQueryBoundary`.
+ * Its route's loader loads the account snapshot, and the route shows `AccountLoading` and
+ * `AccountLoadError` in its place.
  */
 export function AccountSettings({
   subject,

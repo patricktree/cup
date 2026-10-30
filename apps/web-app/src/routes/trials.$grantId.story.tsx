@@ -3,7 +3,12 @@ import type { ResolveParams } from "@tanstack/react-router";
 import { delay, http, HttpResponse } from "msw";
 import React from "react";
 
-import type { ErrorResponse, GrantSnapshot } from "@cup/listener-api.routes";
+import type {
+  Audiobook,
+  ErrorResponse,
+  GrantSnapshot,
+  StartConversionResponse,
+} from "@cup/listener-api.routes";
 
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
 import { Route as trialRoute } from "#src/routes/trials.$grantId.js";
@@ -148,6 +153,38 @@ function TrialRoute({ hash = "" }: { hash?: string }) {
 
   return <GlobalProviders router={router} />;
 }
+
+const STARTED_CONVERSION_ID = "0f6a4a8e-2b1c-4d3e-8f5a-6b7c8d9e0f1a";
+
+export const StartSucceeds = {
+  component: () => <TrialRoute />,
+  handlers: [
+    ...OpenGrant.handlers,
+    http.post(`/api/grants/${GRANT_ID}/conversions`, () =>
+      HttpResponse.json({
+        result: "created",
+        conversion: {
+          status: "pending",
+          conversionId: STARTED_CONVERSION_ID,
+          sourceUrl: "https://source.example.test/fixture",
+          acceptedAt: "2026-08-28T10:05:00Z",
+        },
+        duration: {
+          availableMilliseconds: 7_200_000,
+          reservedMilliseconds: 0,
+          spentMilliseconds: 0,
+        },
+      } satisfies StartConversionResponse),
+    ),
+    http.get(`/api/audiobooks/${STARTED_CONVERSION_ID}`, () =>
+      HttpResponse.json({
+        status: "pending",
+        originalUrl: "https://source.example.test/fixture",
+        canGenerate: true,
+      } satisfies Audiobook),
+    ),
+  ],
+} satisfies Story;
 
 export const StartUnavailable = {
   component: () => <TrialRoute />,

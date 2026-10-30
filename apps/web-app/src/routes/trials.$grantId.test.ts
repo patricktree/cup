@@ -88,6 +88,32 @@ test("renders a pending conversion start", async ({ mount }) => {
   await expect(component).toHaveScreenshot("start-pending.png");
 });
 
+test("starting a conversion requests the grant again, for its duration and conversions", async ({
+  mount,
+  page,
+}) => {
+  let isStarted = false;
+  let grantRequestsAfterStart = 0;
+  page.on("request", (request) => {
+    const { pathname } = new URL(request.url());
+    if (request.method() === "POST" && /\/api\/grants\/[^/]+\/conversions$/.test(pathname)) {
+      isStarted = true;
+    }
+    if (isStarted && request.method() === "GET" && /\/api\/grants\/[^/]+$/.test(pathname)) {
+      grantRequestsAfterStart += 1;
+    }
+  });
+  const component = await mount("routes/trials.$grantId/StartSucceeds");
+
+  await component
+    .getByRole("textbox", { name: "URL", exact: true })
+    .fill("https://source.example.test/fixture");
+  await component.getByRole("button", { name: "Load & listen" }).click();
+
+  await expect(component.getByLabel("Preparing track")).toBeVisible();
+  expect(grantRequestsAfterStart).toBe(1);
+});
+
 test("retrying a trial submission reuses its key and sends only the source URL", async ({
   mount,
   page,

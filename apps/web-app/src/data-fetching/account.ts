@@ -1,4 +1,3 @@
-import { check } from "@patricktree-stack/utils-ecma/assert.utils";
 import { queryOptions } from "@tanstack/react-query";
 import { useMutation } from "@tanstack/react-query";
 
@@ -11,27 +10,26 @@ import {
   clearPendingAccountConversion,
   type PendingAccountConversion,
 } from "#src/data-fetching/account-conversion-storage.js";
-import { invalidateAccountHistory } from "#src/data-fetching/account-history.js";
 import { requestApi, RpcError } from "#src/data-fetching/api-request.js";
 import { queryClient } from "#src/data-fetching/query-client.js";
+import { QUERY_KEYS } from "#src/data-fetching/query-keys.js";
 
-export const accountQuery = (subject?: string) =>
+export const accountQuery = (subject: string) =>
   queryOptions({
-    queryKey: ["account", subject],
-    enabled: !!subject,
-    queryFn: async () => {
-      check.assert(subject, "The account query runs only for a signed-in account.");
-      return requestApi({ subject }, (client) => client.getAccount());
-    },
+    queryKey: QUERY_KEYS.accountSnapshot(subject),
+    queryFn: () => requestApi({ subject }, (client) => client.getAccount()),
     retry: false,
     // The account settings replace themselves with the setup error, which explains rate limiting.
     meta: { errorDisplay: "inline" },
   });
 
-export function invalidateAccountQueries(subject?: string) {
-  return queryClient.invalidateQueries({
-    queryKey: subject === undefined ? ["account"] : accountQuery(subject).queryKey,
-  });
+/** Invalidates every query of the account's data: its snapshot and its history. */
+export function invalidateAccountQueries(subject: string) {
+  return queryClient.invalidateQueries({ queryKey: QUERY_KEYS.account(subject) });
+}
+
+export function invalidateAccountSnapshot(subject: string) {
+  return queryClient.invalidateQueries({ queryKey: QUERY_KEYS.accountSnapshot(subject) });
 }
 
 export function useSignInMutation() {
@@ -72,10 +70,7 @@ export function useStartAccountConversionMutation(
       if (readPendingAccountConversion()?.idempotencyKey === request.idempotencyKey) {
         clearPendingAccountConversion();
       }
-      await Promise.all([
-        invalidateAccountQueries(request.subject),
-        invalidateAccountHistory(request.subject),
-      ]);
+      await invalidateAccountQueries(request.subject);
       if (isSignedInAs(request.subject)) {
         await onSuccess(result.conversionId);
       }

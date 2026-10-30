@@ -15,6 +15,7 @@ import { queryClient } from "#src/data-fetching/query-client.js";
 import { createAudiobookQuery } from "#src/data-fetching/reader.js";
 import { accountStory } from "#src/ui-gallery/account-fixtures.jsx";
 import gatesNotesAudiobook from "#src/ui-gallery/gates-notes-audiobook.json" with { type: "json" };
+import { waitWhileHeld } from "#src/ui-gallery/held-responses.js";
 import {
   createStoryNarrationTrack,
   storyNarrationTrackHandler,
@@ -29,8 +30,7 @@ const router = createAppRouter(memoryHistory);
 
 export const ReadyAudiobook = {
   beforeMount: async () => {
-    // Keep preloaded data until the story mounts; the app normally collects unused queries immediately.
-    await queryClient.fetchQuery({ ...createAudiobookQuery(CONVERSION_ID), gcTime: Infinity });
+    await queryClient.fetchQuery(createAudiobookQuery(CONVERSION_ID));
     await router.load();
   },
   component: () => <GlobalProviders router={router} />,
@@ -48,10 +48,7 @@ const gatesNotesRouter = createAppRouter(
 
 export const GatesNotesArticle = {
   beforeMount: async () => {
-    await queryClient.fetchQuery({
-      ...createAudiobookQuery(GATES_NOTES_CONVERSION_ID),
-      gcTime: Infinity,
-    });
+    await queryClient.fetchQuery(createAudiobookQuery(GATES_NOTES_CONVERSION_ID));
     await gatesNotesRouter.load();
   },
   component: () => <GlobalProviders router={gatesNotesRouter} />,
@@ -185,20 +182,31 @@ export const AudiobookNotFound = {
   ],
 } satisfies Story;
 
+/** The first response fails; trying again finds the conversion still being prepared. */
 export const AudiobookLoadError = {
   component: () => <GlobalProviders router={router} />,
   handlers: [
+    http.get(
+      `/api/audiobooks/${CONVERSION_ID}`,
+      () =>
+        HttpResponse.json(
+          {
+            error: {
+              requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
+              code: "operational-error",
+              message: "The audiobook could not be loaded.",
+            },
+          } satisfies ErrorResponse,
+          { status: 500 },
+        ),
+      { once: true },
+    ),
     http.get(`/api/audiobooks/${CONVERSION_ID}`, () =>
-      HttpResponse.json(
-        {
-          error: {
-            requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
-            code: "operational-error",
-            message: "The audiobook could not be loaded.",
-          },
-        } satisfies ErrorResponse,
-        { status: 500 },
-      ),
+      HttpResponse.json({
+        status: "pending",
+        originalUrl: "https://example.com/article",
+        canGenerate: true,
+      } satisfies Audiobook),
     ),
   ],
 } satisfies Story;
@@ -235,7 +243,10 @@ function createListeningAcrossPagesStory({
       nextCursor: null,
     },
     handlers: [
-      http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(createAudiobook())),
+      http.get(`/api/audiobooks/${CONVERSION_ID}`, async () => {
+        await waitWhileHeld(`audiobook:${CONVERSION_ID}`);
+        return HttpResponse.json(createAudiobook());
+      }),
       http.get(`/api/audiobooks/${SECOND_CONVERSION_ID}`, () =>
         HttpResponse.json({
           ...PREPARED_AUDIOBOOK,
@@ -465,27 +476,51 @@ type DeletionOutcome =
   | "fails-once"
   | "never-answers";
 
+/** Tracks Recents lists above the deletable one when the story starts on Recents. */
+const TRACKS_ABOVE_DELETABLE_COUNT = 30;
+/** Tracks Recents lists below the deletable one when the story starts on Recents. */
+const TRACKS_BELOW_DELETABLE_COUNT = 4;
+
 /**
  * A signed-in listener deletes a ready track that Recents lists. Once the track is deleted, the
- * audiobook and Recents no longer have it.
+ * audiobook and Recents no longer have it. Opened from Recents, Recents lists enough other tracks
+ * to scroll, the deletable one far down; otherwise the story starts on the detail view, as a deep
+ * link does, and Recents lists only that track.
  */
-function createDeletionStory(outcome: DeletionOutcome, audiobook: Audiobook = createAudiobook()) {
+function createDeletionStory(
+  outcome: DeletionOutcome,
+  audiobook: Audiobook = createAudiobook(),
+  openedFrom: "deep-link" | "recents" = "deep-link",
+) {
   let isDeleted = false;
   let deletionRequestCount = 0;
+  const deletableItem = createRecentsItem(
+    CONVERSION_ID,
+    "A deterministic document about careful testing",
+  );
+  const otherItems = (count: number, firstNumber: number) =>
+    Array.from({ length: openedFrom === "recents" ? count : 0 }, (_, offset) => {
+      const number = firstNumber + offset;
+      return createRecentsItem(
+        `00000000-0000-4000-8000-${String(number).padStart(12, "0")}`,
+        `Another track ${number}`,
+      );
+    });
+  const itemsAbove = otherItems(TRACKS_ABOVE_DELETABLE_COUNT, 1);
+  const itemsBelow = otherItems(TRACKS_BELOW_DELETABLE_COUNT, TRACKS_ABOVE_DELETABLE_COUNT + 1);
   return accountStory({
-    path: `/audiobooks/${CONVERSION_ID}`,
+    path: openedFrom === "recents" ? "/recent" : `/audiobooks/${CONVERSION_ID}`,
     handlers: [
       http.get(`/api/audiobooks/${CONVERSION_ID}`, () =>
         isDeleted ? trackNotFoundResponse() : HttpResponse.json(audiobook),
       ),
       http.get("/api/account/conversions", async () => {
+        await waitWhileHeld("account-history");
         if (isDeleted && outcome === "deleted-recents-refresh-never-answers") {
           await delay("infinite");
         }
         return HttpResponse.json({
-          items: isDeleted
-            ? []
-            : [createRecentsItem(CONVERSION_ID, "A deterministic document about careful testing")],
+          items: [...itemsAbove, ...(isDeleted ? [] : [deletableItem]), ...itemsBelow],
           nextCursor: null,
         });
       }),
@@ -532,6 +567,12 @@ function createDeletionStory(outcome: DeletionOutcome, audiobook: Audiobook = cr
 }
 
 export const DeleteTrack = createDeletionStory("deleted");
+/** The listener scrolls Recents down to the track and opens it there. */
+export const DeleteTrackOpenedFromRecents = createDeletionStory(
+  "deleted",
+  createAudiobook(),
+  "recents",
+);
 /** Recents can show only its cached list after the deletion, which was loaded with the track. */
 export const DeleteTrackRecentsRefreshNeverAnswers = createDeletionStory(
   "deleted-recents-refresh-never-answers",
@@ -657,3 +698,45 @@ export const PollingInterrupted = {
     ];
   })(),
 } satisfies Story;
+
+/**
+ * Polling an audiobook whose audio is generated finds it gone or no longer accessible, as after its
+ * deletion on another device or a revoked trial.
+ */
+function createAccessLostWhilePollingStory(failure: "not-found" | "access-denied") {
+  let requestCount = 0;
+  return {
+    component: () => <GlobalProviders router={router} />,
+    handlers: [
+      http.get(`/api/audiobooks/${CONVERSION_ID}`, () => {
+        requestCount += 1;
+        if (requestCount === 1) {
+          return HttpResponse.json({
+            ...PREPARED_AUDIOBOOK,
+            status: "synthesizing",
+            segments: [
+              createReadySegment(0),
+              { sequence: 1, status: "generating" },
+              { sequence: 2, status: "generating" },
+            ],
+          } satisfies Audiobook);
+        }
+        return failure === "not-found"
+          ? trackNotFoundResponse()
+          : HttpResponse.json(
+              {
+                error: {
+                  requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
+                  code: "grant-revoked",
+                  message: "This trial was revoked.",
+                },
+              } satisfies ErrorResponse,
+              { status: 403 },
+            );
+      }),
+    ],
+  } satisfies Story;
+}
+
+export const TrackGoneWhilePolling = createAccessLostWhilePollingStory("not-found");
+export const TrackAccessDeniedWhilePolling = createAccessLostWhilePollingStory("access-denied");

@@ -1,16 +1,14 @@
-import { css } from "@linaria/core";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, type ErrorComponentProps } from "@tanstack/react-router";
 import React from "react";
 
-import { AccountQueryBoundary } from "#src/app/components/account-query-boundary.js";
+import { AccountLoadError } from "#src/app/components/account-load-states.js";
+import { AccountRecoveryFrame } from "#src/app/components/account-recovery-frame.js";
 import { AccountSettings } from "#src/app/components/account-settings.js";
-import { Main } from "#src/app/components/main.tsx";
+import { PageSkeleton } from "#src/app/components/page-skeleton.js";
 import { SignInButtons } from "#src/app/components/sign-in-dialog.js";
-import { textStyles } from "#src/app/design-system/text-styles.js";
-import { interTypefaceScope } from "#src/app/global-styles.js";
-import { composeClassnames } from "#src/app/utils.js";
-import { useAccountAuthState, useAccountSession, useSignInMethods } from "#src/auth/hooks.js";
-import { useSignInMutation } from "#src/data-fetching/account.js";
+import { settleAccountSession } from "#src/auth/account-session.js";
+import { useAccountSession, useSignInMethods } from "#src/auth/hooks.js";
+import { accountQuery, useSignInMutation } from "#src/data-fetching/account.js";
 
 /**
  * Restores an account whose deletion is scheduled; the scheduled-deletion email links here.
@@ -20,50 +18,37 @@ import { useSignInMutation } from "#src/data-fetching/account.js";
  */
 export const Route = createFileRoute("/account-recovery")({
   component: AccountRecoveryPage,
+  beforeLoad: async () => {
+    const session = await settleAccountSession();
+    return { subject: session?.user.id };
+  },
+  loader: async ({ context }) => {
+    if (context.subject !== undefined) {
+      await context.queryClient.query({ ...accountQuery(context.subject), staleTime: "static" });
+    }
+  },
+  pendingComponent: () => <PageSkeleton label="Loading account" />,
+  errorComponent: ({ error }: ErrorComponentProps) => (
+    <AccountRecoveryFrame>
+      <AccountLoadError error={error} />
+    </AccountRecoveryFrame>
+  ),
 });
 
 function AccountRecoveryPage(): React.ReactNode {
   const session = useAccountSession();
-  const authState = useAccountAuthState();
   const signIn = useSignInMutation();
   const signInMethods = useSignInMethods();
 
   return (
-    <Main
-      {...interTypefaceScope}
-      className={css`
-        display: grid;
-        gap: calc(2 * var(--spacing-base));
-        align-content: center;
-        max-width: var(--app-max-width);
-        min-height: 100dvh;
-        padding-block: var(--app-padding-block);
-        padding-inline: var(--app-padding-inline);
-        margin-inline: auto;
-      `}
-    >
-      <h1
-        className={composeClassnames(
-          textStyles.h1,
-          css`
-            margin: 0;
-          `,
-        )}
-      >
-        Restore your account
-      </h1>
-      {authState.status === "loading" ? (
-        <output>Loading account…</output>
-      ) : authState.status === "error" ? (
-        <p role="alert">{authState.error.message}</p>
-      ) : session ? (
-        <AccountQueryBoundary key={session.user.id}>
-          <AccountSettings
-            subject={session.user.id}
-            email={session.user.email}
-            purpose="recovery"
-          />
-        </AccountQueryBoundary>
+    <AccountRecoveryFrame>
+      {session ? (
+        <AccountSettings
+          key={session.user.id}
+          subject={session.user.id}
+          email={session.user.email}
+          purpose="recovery"
+        />
       ) : (
         <section aria-label="Sign in">
           <p>Sign in with the account whose deletion is scheduled.</p>
@@ -75,6 +60,6 @@ function AccountRecoveryPage(): React.ReactNode {
           {signIn.error && <p role="alert">{signIn.error.message}</p>}
         </section>
       )}
-    </Main>
+    </AccountRecoveryFrame>
   );
 }

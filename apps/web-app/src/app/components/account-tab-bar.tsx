@@ -60,11 +60,7 @@ export function AccountTabBar(): React.JSX.Element {
           </Link>
         </li>
         <li>
-          <ActionLink
-            to="/recent/add"
-            state={{ isRecentsDialogOpenedInApp: true }}
-            className={tabStyles}
-          >
+          <ActionLink to="/recent/add" state={{ isOpenedFromRecents: true }} className={tabStyles}>
             <TabAddIcon />
             <span className={captionStyles}>Add</span>
           </ActionLink>

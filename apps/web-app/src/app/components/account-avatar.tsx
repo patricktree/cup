@@ -30,7 +30,7 @@ export function AccountAvatar({
     <Link
       {...interTypefaceScope}
       to="/recent/account"
-      state={{ isRecentsDialogOpenedInApp: true }}
+      state={{ isOpenedFromRecents: true }}
       // the initials are decoration; the link says where it goes
       aria-label="Account"
       className={composeClassnames(

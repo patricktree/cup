@@ -1,6 +1,7 @@
-import { useLocation, useNavigate, useRouter } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import React from "react";
 
+import { useReturnToRecents } from "#src/app/return-to-recents.js";
 import type { FileRouteTypes } from "#src/routeTree.gen.js";
 
 /**
@@ -9,10 +10,7 @@ import type { FileRouteTypes } from "#src/routeTree.gen.js";
  */
 export function useCloseRecentsDialog(routeId: FileRouteTypes["id"]): () => void {
   const router = useRouter();
-  const navigate = useNavigate();
-  const isOpenedInApp = useLocation({
-    select: (location) => location.state.isRecentsDialogOpenedInApp === true,
-  });
+  const returnToRecents = useReturnToRecents();
   // Several events can ask to close, such as the Add dialog's Cancel and its successful start, but
   // only one may move the history.
   const isClosing = React.useRef(false);
@@ -26,12 +24,6 @@ export function useCloseRecentsDialog(routeId: FileRouteTypes["id"]): () => void
     }
     isClosing.current = true;
 
-    // Opening inside the app pushed this entry, so Back returns to Recents; a share, a direct link
-    // or the return from a Google sign-in has no Recents entry below it to return to.
-    if (isOpenedInApp) {
-      router.history.back();
-    } else {
-      void navigate({ to: "/recent", replace: true });
-    }
+    void returnToRecents();
   };
 }

@@ -1,6 +1,6 @@
 import { Menu } from "@base-ui/react/menu";
 import { css } from "@linaria/core";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import React from "react";
 
 import { iconButtonStyles } from "#src/app/design-system/icon-button.js";
@@ -10,11 +10,14 @@ import { singleLine, textStyles } from "#src/app/design-system/text-styles.js";
 import { interTypefaceScope } from "#src/app/global-styles.js";
 import { composeClassnames } from "#src/app/utils.js";
 
-/** Only accounts have Recents; trial listeners return to the start. */
-export type DetailBackTarget = "/recent" | "/";
+/**
+ * Where Back leads. Only accounts have Recents; trial listeners return to the start. A detail view
+ * opened from Recents goes back in history instead, so Recents returns at its scroll position.
+ */
+export type DetailBack = { to: "/recent" | "/"; shouldGoBackInHistory: boolean };
 
 type DetailTopBarProps = {
-  backTo: DetailBackTarget;
+  back: DetailBack;
   /**
    * Fades in in the middle once the page's own title has scrolled out of view (`isShown`). Absent
    * while the audiobook has no title.
@@ -33,7 +36,9 @@ type DetailMenuProps = {
 };
 
 /** The detail view's top bar: back, the compact title once scrolled, and the "…" menu. */
-export function DetailTopBar({ backTo, compactTitle, menu }: DetailTopBarProps): React.JSX.Element {
+export function DetailTopBar({ back, compactTitle, menu }: DetailTopBarProps): React.JSX.Element {
+  const router = useRouter();
+
   return (
     <div
       {...interTypefaceScope}
@@ -48,7 +53,13 @@ export function DetailTopBar({ backTo, compactTitle, menu }: DetailTopBarProps):
       `}
     >
       <Link
-        to={backTo}
+        to={back.to}
+        onClick={(event) => {
+          if (back.shouldGoBackInHistory) {
+            event.preventDefault();
+            router.history.back();
+          }
+        }}
         aria-label="Back"
         className={composeClassnames(
           iconButtonStyles,

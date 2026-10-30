@@ -1,5 +1,10 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { readLoadingStateRecord, recordLoadingStates } from "@cup/loading-state-recorder";
+
+import { holdResponses, releaseResponses } from "#src/test-utils/held-responses.ts";
+import { recordReactUseWarnings } from "#src/test-utils/react-use-warnings.ts";
+
 /**
  * Keeps the player host's audio element reachable, which is never attached to the document. The
  * first one created is the host's: development mode runs state initializers twice and keeps the
@@ -26,6 +31,17 @@ async function readNarrationAudio(page: Page) {
       throw new Error("The player host created no audio element.");
     }
     return { src: audio.src, currentTime: audio.currentTime, paused: audio.paused };
+  });
+}
+
+/** Goes back in history as the system Back gesture does, which no element of the page sees. */
+async function goBackAsTheSystemDoes(page: Page) {
+  await page.evaluate(() => {
+    const goBack: unknown = Reflect.get(window, "goBackInAccountStory");
+    if (typeof goBack !== "function") {
+      throw new TypeError("The account story offers no Back");
+    }
+    Reflect.apply(goBack, window, []);
   });
 }
 
@@ -257,25 +273,11 @@ test("the player sheet is disabled until the audiobook has a narration track", a
   await expect(disabledSheet).toHaveScreenshot("player-sheet-disabled.png");
 });
 
-test("a trial audiobook renders without preparation skeletons and leads back home", async ({
+test("a trial audiobook renders without a loading state and leads back home", async ({
   mount,
   page,
 }) => {
-  await page.addInitScript(() => {
-    const skeletonSelector = '[aria-label="Preparing track"]';
-    new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of mutation.addedNodes) {
-          if (
-            node instanceof Element &&
-            (node.matches(skeletonSelector) || node.querySelector(skeletonSelector))
-          ) {
-            document.documentElement.dataset["sawReaderSkeleton"] = "true";
-          }
-        }
-      }
-    }).observe(document, { childList: true, subtree: true });
-  });
+  await recordLoadingStates(page);
 
   const component = await mount("routes/_shell.audiobooks.$conversionId/ReadyAudiobook");
   await expect(
@@ -295,10 +297,26 @@ test("a trial audiobook renders without preparation skeletons and leads back hom
   await expect(
     component.getByRole("contentinfo", { name: "Player" }).getByRole("status"),
   ).toHaveText("");
-  expect(
-    await page.evaluate(() => document.documentElement.dataset["sawReaderSkeleton"]),
-  ).toBeUndefined();
+  expect(await readLoadingStateRecord(page)).toEqual([]);
   await expect(page).toHaveScreenshot("trial-audiobook.png");
+});
+
+test("Back after a deep link opens Recents as a new entry above the track", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/AccountAudiobook");
+  const title = component.getByRole("heading", {
+    name: "The turbulent AI era is here. The choices we make now are critical.",
+  });
+  await expect(title).toBeVisible();
+
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+
+  // Back pushed Recents, so the system Back returns to the track below it.
+  await goBackAsTheSystemDoes(page);
+  await expect(title).toBeVisible();
 });
 
 test("an account audiobook opens with its cover, title and host below a plain top bar", async ({
@@ -656,6 +674,94 @@ test("a pending track is deleted without its polling showing the deletion as an 
   await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(0);
 });
 
+test("deleting a track opened from Recents returns to Recents where it was, without the track", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount(
+    "routes/_shell.audiobooks.$conversionId/DeleteTrackOpenedFromRecents",
+  );
+  const deletableCard = component.getByRole("link", {
+    name: "A deterministic document about careful testing",
+  });
+  await deletableCard.scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await deletableCard.click();
+  await component.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete track…" }).click();
+  await page
+    .getByRole("alertdialog", { name: "Delete track?" })
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
+
+  await expect(component.getByRole("status").filter({ hasText: "Track deleted." })).toHaveCount(1);
+  await expect(deletableCard).toHaveCount(0);
+  // The track listed just above the deleted one is still in view.
+  await expect(
+    component.getByRole("link", { name: "Another track 30", exact: true }),
+  ).toBeInViewport();
+
+  await goBackAsTheSystemDoes(page);
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+  await expect(
+    component.getByRole("heading", { name: "A deterministic document about careful testing" }),
+  ).toHaveCount(0);
+});
+
+test("after a deletion, Recents' cached history lacks the track while its refetch is held", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/DeleteTrack");
+  await expect(
+    component.getByRole("heading", { name: "A deterministic document about careful testing" }),
+  ).toBeVisible();
+  await component.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete track…" }).click();
+
+  await holdResponses(page, "account-history");
+  await page
+    .getByRole("alertdialog", { name: "Delete track?" })
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
+
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+  await expect(component.getByRole("link", { name: "Add your first track" })).toBeVisible();
+  await releaseResponses(page, "account-history");
+  await expect(component.getByRole("link", { name: "Add your first track" })).toBeVisible();
+});
+
+test("an audiobook opened again loads at the position saved meanwhile, while its refetch is held", async ({
+  mount,
+  page,
+}) => {
+  await captureNarrationAudio(page);
+  await page.clock.install();
+  const component = await mount("routes/_shell.audiobooks.$conversionId/ListeningAcrossPages");
+  const playerSheet = component.getByRole("contentinfo", { name: "Player" });
+  const openFromRecents = async (title: string) => {
+    await component.getByRole("link", { name: "Back", exact: true }).click();
+    await component.getByRole("listitem").filter({ hasText: title }).getByRole("link").click();
+  };
+
+  await component.getByRole("button", { name: "Play segment 2", exact: true }).click();
+  await expectPlayingFrom(page, 5);
+  // Playing another audiobook saves the listening position in this one.
+  await openFromRecents("A second document about listening");
+  await playerSheet.getByRole("button", { name: "Play", exact: true }).click();
+  await expect.poll(async () => (await readNarrationAudio(page)).src).toContain("audiobook=second");
+  // Longer than Query keeps an unobserved suspense query at the least, one second.
+  await page.clock.fastForward(5_000);
+
+  await holdResponses(page, "audiobook:693af4c4-9fa8-430d-9dc5-c00e88fb38a7");
+  await openFromRecents("A deterministic document about careful testing");
+  await playerSheet.getByRole("button", { name: "Play", exact: true }).click();
+
+  await expect.poll(async () => (await readNarrationAudio(page)).src).toContain("audiobook=story");
+  await expectPlayingFrom(page, 5);
+  await releaseResponses(page, "audiobook:693af4c4-9fa8-430d-9dc5-c00e88fb38a7");
+});
+
 test("a track found gone when its audio is requested again is unloaded and reported", async ({
   mount,
   page,
@@ -778,18 +884,17 @@ test("renders audiobook-load-error", async ({ mount, page }) => {
   ).toBeVisible();
   await expect(page).toHaveScreenshot("audiobook-load-error.png");
 
-  await page.route("**/api/audiobooks/*", (route) =>
-    route.fulfill({
-      json: { status: "pending", originalUrl: "https://example.com/article", canGenerate: true },
-    }),
-  );
+  // The story answers the next request with a conversion still being prepared.
   await component.getByRole("button", { name: "Try again" }).click();
   await expect(component.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
 });
 
 test("shows loading skeletons with an unknown preparation phase", async ({ mount, page }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/LoadingAudiobook");
-  await expect(component.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
+  const skeleton = component.getByLabel("Loading track");
+  await expect(skeleton).toHaveAttribute("aria-busy", "true");
+  await expect(skeleton).toHaveAttribute("data-loading-state", "");
+  await expect(component.getByLabel("Preparing track")).toHaveCount(0);
   await expect(
     component.getByRole("contentinfo", { name: "Player" }).getByRole("status"),
   ).toHaveText("Preparing");
@@ -798,7 +903,10 @@ test("shows loading skeletons with an unknown preparation phase", async ({ mount
 
 test("shows preparation skeletons with a disabled player sheet", async ({ mount, page }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/PendingConversion");
-  await expect(component.getByLabel("Preparing track")).toHaveAttribute("aria-busy", "true");
+  const skeleton = component.getByLabel("Preparing track");
+  await expect(skeleton).toHaveAttribute("aria-busy", "true");
+  // A conversion still being prepared is content, not a loading state.
+  await expect(skeleton).not.toHaveAttribute("data-loading-state");
   await expect(
     component.getByRole("contentinfo", { name: "Player" }).getByRole("status"),
   ).toHaveText("Preparing");
@@ -855,6 +963,35 @@ test("a refused retry is reported with a toast and leaves the reader in place", 
   await page.getByRole("button", { name: "Dismiss", includeHidden: true }).click();
   await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(0);
 });
+
+for (const { story, message } of [
+  { story: "TrackGoneWhilePolling", message: "Track not found." },
+  { story: "TrackAccessDeniedWhilePolling", message: "This trial was revoked." },
+]) {
+  test(`a shown track that polling finds inaccessible is replaced by the error screen (${story})`, async ({
+    mount,
+    page,
+  }) => {
+    await recordLoadingStates(page);
+    const useWarnings = recordReactUseWarnings(page);
+    const component = await mount(`routes/_shell.audiobooks.$conversionId/${story}`);
+    await expect(
+      component.getByRole("heading", { name: "A deterministic document about careful testing" }),
+    ).toBeVisible();
+    const recordedBefore = (await readLoadingStateRecord(page)).length;
+
+    await expect(
+      component.getByRole("heading", { name: "The track could not be loaded." }),
+    ).toBeVisible();
+    expect((await readLoadingStateRecord(page)).slice(recordedBefore)).toEqual([]);
+    expect(useWarnings).toEqual([]);
+    await expect(component.getByText(message)).toBeVisible();
+    await expect(
+      component.getByRole("heading", { name: "A deterministic document about careful testing" }),
+    ).toHaveCount(0);
+    await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(0);
+  });
+}
 
 test("failed polling keeps the track and shows one toast until polling recovers", async ({
   mount,

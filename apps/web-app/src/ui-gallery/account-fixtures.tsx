@@ -21,6 +21,7 @@ export function accountStory({
   setupFailure = false,
   userMetadata = { name: "Verena Handler-Kunze" },
   isSignedOut = false,
+  isColdStart = false,
   handlers = [],
   play,
 }: {
@@ -33,6 +34,8 @@ export function accountStory({
   userMetadata?: Record<string, unknown>;
   /** Starts without a stored session, as a listener following a link does. */
   isSignedOut?: boolean;
+  /** Mounts the app while auth restores the stored session, as a cold start does. */
+  isColdStart?: boolean;
   handlers?: RequestHandler[];
   play?: Story["play"];
 }): Story {
@@ -49,13 +52,27 @@ export function accountStory({
     const [ready, setReady] = React.useState(false);
     const [error, setError] = React.useState<string>();
     React.useEffect(() => {
-      // Lets tests go back as the system Back gesture does, which no element of the page sees.
-      Object.assign(window, { goBackInAccountStory: () => router.history.back() });
+      Object.assign(window, {
+        // Lets tests go back as the system Back gesture does, which no element of the page sees.
+        goBackInAccountStory: () => router.history.back(),
+        // Lets tests open a screen that no element of the current one links to, as a typed URL does.
+        openPathInAccountStory: (pathToOpen: string) => router.history.push(`/app${pathToOpen}`),
+        // Lets tests tell a replaced history entry from a pushed one.
+        readAccountStoryHistoryLength: () => router.history.length,
+      });
       const initialize = async () => {
         // A signed-out story stores no session, so neither its user nor a confirmation applies.
-        await (isSignedOut
-          ? ensureAuthInitialized()
-          : initializeAccountStorySession(userMetadata, confirmation));
+        if (!isSignedOut) {
+          storeAccountStorySession(userMetadata, confirmation);
+        }
+        if (isColdStart) {
+          // Loads every route's code first, so the screen renders as soon as its route lets it.
+          for (const route of Object.values(router.routesById)) {
+            await router.loadRouteChunk(route);
+          }
+          setReady(true);
+        }
+        await ensureAuthInitialized();
         setReady(true);
       };
       void initialize().catch((failure: unknown) => setError(String(failure)));
@@ -121,7 +138,7 @@ export function accountStory({
   };
 }
 
-async function initializeAccountStorySession(
+function storeAccountStorySession(
   userMetadata: Record<string, unknown>,
   confirmation?: "delete" | "restore",
 ) {
@@ -149,5 +166,4 @@ async function initializeAccountStorySession(
       }),
     );
   }
-  await ensureAuthInitialized();
 }

@@ -18,10 +18,14 @@ const MENU: DetailTopBarStoryProps["menu"] = {
   deletion: { start: () => undefined },
 };
 
-export const Plain = createTopBarStory({ backTo: "/recent", compactTitle: undefined, menu: MENU });
+export const Plain = createTopBarStory({
+  back: { to: "/recent", shouldGoBackInHistory: false },
+  compactTitle: undefined,
+  menu: MENU,
+});
 
 export const Compact = createTopBarStory({
-  backTo: "/recent",
+  back: { to: "/recent", shouldGoBackInHistory: false },
   compactTitle: {
     title: "A deterministic document about careful testing that runs long enough to be cut off",
     host: "source.example.test",

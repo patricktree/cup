@@ -45,6 +45,22 @@ for (const state of [
   });
 }
 
+test("closing the account dialog opened from Recents returns to Recents", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount("routes/_shell.recent/EmptyRecents");
+  await component.getByRole("link", { name: "Account", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Account settings" });
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+
+  await expect(dialog).toHaveCount(0);
+  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+  // Opening again proves closing went back to the entry below, not forward to a new one.
+  await component.getByRole("link", { name: "Account", exact: true }).click();
+  await expect(dialog).toBeVisible();
+});
+
 test("closing the account dialog opened by a direct link leads to Recents", async ({
   mount,
   page,
@@ -109,4 +125,22 @@ test("the account dialog stays open while a confirmation step runs", async ({ mo
   await expect(dialog.getByRole("button", { name: "Close", exact: true })).toBeDisabled();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeVisible();
+});
+
+test("the account dialog opens with focus on Close, not on a step that changes the account", async ({
+  mount,
+  page,
+}) => {
+  await mount("routes/_shell.recent.account/ConfirmDeletion");
+  const dialog = page.getByRole("dialog", { name: "Account settings" });
+  await expect(dialog.getByRole("button", { name: "Schedule deletion" })).toBeVisible();
+
+  await expect(dialog.getByRole("button", { name: "Close", exact: true })).toBeFocused();
+});
+
+test("the account still loading is marked as a loading state", async ({ mount, page }) => {
+  await mount("routes/_shell.recent.account/LoadingAccount");
+
+  const dialog = page.getByRole("dialog", { name: "Account settings" });
+  await expect(dialog.getByText("Loading account…")).toHaveAttribute("data-loading-state", "");
 });

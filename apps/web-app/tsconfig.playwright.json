@@ -10,5 +10,5 @@
     "types": ["node", "vite/client"]
   },
   "include": ["playwright.config.ts", "ui-gallery/**/*", "src/**/*.story.tsx", "src/**/*.test.ts"],
-  "references": [{ "path": "./tsconfig.build.json" }]
+  "references": [{ "path": "./tsconfig.build.json" }, { "path": "./tsconfig.test-utils.json" }]
 }

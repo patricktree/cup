@@ -6,6 +6,11 @@ import type { Audiobook } from "@cup/listener-api.routes";
 
 import { accountStory } from "#src/ui-gallery/account-fixtures.jsx";
 import {
+  holdStoryResponses,
+  readFailedStoryResponse,
+  waitWhileHeld,
+} from "#src/ui-gallery/held-responses.js";
+import {
   createStoryNarrationTrack,
   storyNarrationTrackHandler,
 } from "#src/ui-gallery/narration-track.js";
@@ -36,16 +41,47 @@ const HOSTS = ["derstandard.at", "www.theverge.com", "nytimes.com"];
 const COVER_COLORS = ["#5b7f95", "#c4733d", "#7a8f4e", "#8a5a83"];
 
 export const EmptyRecents = accountStory({ path: "/recent" });
+/** The history never answers, so Recents keeps loading its tracks. */
+export const LoadingTracks = accountStory({
+  path: "/recent",
+  handlers: [http.get("/api/account/conversions", () => delay("infinite"))],
+});
 /** The session carries no name, so the avatar shows its glyph. */
 export const RecentsWithoutName = accountStory({ path: "/recent", userMetadata: {} });
 /** A signed-in listener opening the home page lands on Recents. */
 export const SignedInHome = accountStory({ path: "/" });
+/**
+ * The app starts on the home page while auth restores the stored session. The auth configuration is
+ * held as `"auth-config"` from the start, so a test sees what the page shows meanwhile.
+ */
+export const SignedInColdStartHome = {
+  ...accountStory({
+    path: "/",
+    isColdStart: true,
+    handlers: [http.get("/api/auth/config", () => waitWhileHeld("auth-config"))],
+  }),
+  beforeMount: async () => holdStoryResponses("auth-config"),
+} satisfies Story;
+/** A signed-out listener follows a link to Recents or one of its dialogs. */
+export const SignedOutRecents = accountStory({ path: "/recent", isSignedOut: true });
+export const SignedOutAddDialog = accountStory({ path: "/recent/add", isSignedOut: true });
+export const SignedOutAccountDialog = accountStory({ path: "/recent/account", isSignedOut: true });
 
-/** Two pages of ready cards, most of them with a cover; the second page loads on scrolling. */
+/**
+ * Two pages of ready cards, most of them with a cover; the second page loads on scrolling. A card
+ * opens a track that is still being prepared.
+ */
 export const Recents = accountStory({
   path: "/recent",
   handlers: [
     coverHandler(),
+    http.get("/api/audiobooks/:conversionId", ({ params }) =>
+      HttpResponse.json({
+        status: "pending",
+        originalUrl: `https://example.test/articles/${String(params["conversionId"])}`,
+        canGenerate: true,
+      } satisfies Audiobook),
+    ),
     http.get("/api/account/conversions", ({ request }) => {
       const isSecondPage = new URL(request.url).searchParams.get("cursor") === SECOND_PAGE_CURSOR;
       return HttpResponse.json(
@@ -210,6 +246,84 @@ function coverHandler() {
   });
 }
 
+const REVISITED_READY_INDEX = 0;
+const REVISITED_PENDING_INDEX = 1;
+
+/**
+ * A signed-in listener moves between Recents, its dialogs and two tracks, one ready and one still
+ * being prepared. Tests hold or fail each refetch by name (see `src/ui-gallery/held-responses.ts`):
+ * `"account-history"`, `"account"` and `` `audiobook:${conversionId}` ``.
+ */
+export const RevisitingScreens = accountStory({
+  path: "/recent",
+  recents: {
+    items: [
+      ...createReadyItems(REVISITED_READY_INDEX, 1),
+      historyItem(REVISITED_PENDING_INDEX, { status: "pending", outcome: null }),
+    ],
+    nextCursor: null,
+  },
+  handlers: [
+    coverHandler(),
+    // Unless failed, each of these handlers answers nothing, so the story's default answers once it
+    // is released.
+    http.get("/api/account/conversions", () => answerControlledResponse("account-history")),
+    http.get("/api/account", () => answerControlledResponse("account")),
+    http.get(`/api/audiobooks/${toStoryConversionId(REVISITED_READY_INDEX)}`, async () => {
+      const failedResponse = await answerControlledResponse(
+        `audiobook:${toStoryConversionId(REVISITED_READY_INDEX)}`,
+      );
+      if (failedResponse) {
+        return failedResponse;
+      }
+      const title = TITLES[REVISITED_READY_INDEX] ?? "";
+      return HttpResponse.json({
+        status: "ready",
+        canGenerate: true,
+        playbackPosition: null,
+        title,
+        originalUrl: `https://${HOSTS[REVISITED_READY_INDEX]}/articles/${REVISITED_READY_INDEX}`,
+        narrationDocument: {
+          html: `<article><h1 id="unit-1">${title}</h1><p id="unit-2">Two.</p></article>`,
+          synchronizationUnits: [
+            { id: "unit-1", narrationText: title },
+            { id: "unit-2", narrationText: "Two." },
+          ],
+        },
+        segments: [
+          { sequence: 0, status: "ready" },
+          { sequence: 1, status: "ready" },
+        ],
+        narrationTrack: createStoryNarrationTrack([30_000, 30_000]),
+      } satisfies Audiobook);
+    }),
+    http.get(`/api/audiobooks/${toStoryConversionId(REVISITED_PENDING_INDEX)}`, async () => {
+      const failedResponse = await answerControlledResponse(
+        `audiobook:${toStoryConversionId(REVISITED_PENDING_INDEX)}`,
+      );
+      if (failedResponse) {
+        return failedResponse;
+      }
+      return HttpResponse.json({
+        status: "pending",
+        originalUrl: `https://${HOSTS[REVISITED_PENDING_INDEX]}/articles/${REVISITED_PENDING_INDEX}`,
+        canGenerate: true,
+      } satisfies Audiobook);
+    }),
+    storyNarrationTrackHandler,
+  ],
+});
+
+/**
+ * `RevisitingScreens` with the ready track's audiobook held from the start, so a test sees both its
+ * preload and its first visit wait until it releases `` `audiobook:${conversionId}` ``.
+ */
+export const FirstVisitToHeldTrack = {
+  ...RevisitingScreens,
+  beforeMount: async () =>
+    holdStoryResponses(`audiobook:${toStoryConversionId(REVISITED_READY_INDEX)}`),
+} satisfies Story;
+
 export const AddDialog = accountStory({ path: "/recent/add" });
 
 /** The start request never answers, so the submit button keeps its loading state. */
@@ -300,4 +414,10 @@ async function submitSourceUrl({ canvasElement }: Parameters<NonNullable<Story["
     }
   });
   await user.click(submit);
+}
+
+/** Holds the response while a test holds it, then answers the failure a test asked for, if any. */
+async function answerControlledResponse(name: string) {
+  await waitWhileHeld(name);
+  return readFailedStoryResponse(name);
 }

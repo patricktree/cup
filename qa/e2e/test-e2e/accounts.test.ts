@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 import { accountSnapshotSchema } from "@cup/listener-api.routes";
 
 import { expect, test } from "#test-e2e/fixtures.ts";
-import { waitForAudiobook } from "#test-e2e/journey.ts";
+import { readAccessToken, waitForAudiobook } from "#test-e2e/journey.ts";
 import { readAudiobook, waitForGeneratedAudio } from "#test-e2e/synthesis.ts";
 
 const SOURCE_URL = "https://source.example.test/fixture";
@@ -366,13 +366,14 @@ test("a listener deletes a track from its detail view, and the duration it used 
   await expect(page).toHaveURL(`${origin}/app/recent`);
   await expect(page.getByRole("link", { name: "Add your first track" })).toBeVisible();
   await expect(page.getByRole("list", { name: "Tracks" })).toHaveCount(0);
-  // The deletion replaced the detail entry, so Back leaves Recents for the page before it.
-  await page.goBack();
-  await expect(page).not.toHaveURL(/\/app\/audiobooks\//);
-
   expectConsoleError(/^Failed to load resource: the server responded with a status of 404/);
+  // React logs the one failed request twice: the error screen is in the route module, not in a lazy
+  // chunk, since "keep error screens out of lazy route chunks".
   expectConsoleError(/^RpcError: Track not found\./);
-  await page.goto(detailUrl);
+  expectConsoleError(/^RpcError: Track not found\./);
+  // The deletion went back to the Recents entry, so the deleted track is only the Forward entry.
+  await page.goForward();
+  await expect(page).toHaveURL(detailUrl);
   await expect(page.getByText("Track not found.")).toBeVisible();
   expect((await readAccount(page, origin)).balance.available).toBe(remainingAllowance);
 });
@@ -422,25 +423,6 @@ test("a rate-limited resumed conversion waits for explicit retry and keeps its i
   expect(keys[0]).toBeTruthy();
   expect(keys).toEqual([keys[0], keys[0]]);
 });
-
-async function readAccessToken(page: Page) {
-  return page.evaluate(() => {
-    const stored = window.localStorage.getItem("cup_supabase_session");
-    if (!stored) {
-      throw new Error("Expected an authenticated browser session");
-    }
-    const session: unknown = JSON.parse(stored);
-    if (
-      !session ||
-      typeof session !== "object" ||
-      !("access_token" in session) ||
-      typeof session.access_token !== "string"
-    ) {
-      throw new Error("Expected an access token");
-    }
-    return session.access_token;
-  });
-}
 
 test("account positions restore once and use last-write-wins across players", async ({
   page,

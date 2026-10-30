@@ -1,0 +1,48 @@
+{
+  "name": "@cup/loading-state-recorder",
+  "private": true,
+  "description": "Records every loading state a page shows in a Playwright test, however briefly, so a test can fail on a loading flash",
+  "files": [
+    "src/**"
+  ],
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/types/loading-state-recorder.d.ts",
+      "default": "./src/loading-state-recorder.ts"
+    }
+  },
+  "scripts": {
+    "build": "turbo run turbo:build",
+    "clean": "del-cli --dot=true \"dist\" \"*.tsbuildinfo\" \"playwright-output\"",
+    "lint": "turbo run turbo:lint",
+    "lint:fix": "turbo run turbo:lint:fix",
+    "test": "playwright test",
+    "turbo:build": "prepare-declaration-build --declaration-output-dir ./dist/types --build-info-file ./dist/tsconfig.build.tsbuildinfo --source-package-json ./src/package.json && tsc --build ./tsconfig.json",
+    "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
+    "turbo:lint:fix": "pnpm run turbo:lint --fix",
+    "turbo:test": "pnpm run test"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@cup/config-oxlint": "workspace:*",
+    "@cup/prepare-declaration-build": "workspace:*",
+    "@patricktree-stack/config-playwright": "workspace:*",
+    "@patricktree-stack/config-typescript": "workspace:*",
+    "@playwright/test": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "@playwright/test": "catalog:"
+  }
+}

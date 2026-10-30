@@ -1,17 +1,18 @@
 import { css } from "@linaria/core";
 import { check } from "@patricktree-stack/utils-ecma/assert.utils";
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate, type ErrorComponentProps } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute, type ErrorComponentProps } from "@tanstack/react-router";
 import React from "react";
 
 import type { Audiobook } from "@cup/listener-api.routes";
 
 import { DetailTopBar } from "#src/app/components/detail-top-bar.js";
-import type { DetailBackTarget } from "#src/app/components/detail-top-bar.js";
+import type { DetailBack } from "#src/app/components/detail-top-bar.js";
+import { ErrorScreen } from "#src/app/components/error-message.js";
 import { fadeFooterClearance } from "#src/app/components/fade-footer.js";
 import { ShellContent } from "#src/app/components/main.tsx";
 import { PLAYER_SHEET_HEIGHTS, PlayerSheet } from "#src/app/components/player-sheet.js";
-import { QueryBoundary, QueryErrorScreen } from "#src/app/components/query-boundary.js";
+import { TrackSkeleton } from "#src/app/components/track-skeleton.js";
 import { DSButton } from "#src/app/design-system/button.js";
 import { DSCoverImage } from "#src/app/design-system/cover-image.js";
 import { DSDialog } from "#src/app/design-system/dialog.js";
@@ -27,8 +28,10 @@ import {
 } from "#src/app/player/player-host-provider.js";
 import type { LoadedAudiobook } from "#src/app/player/player-host.js";
 import { toPreparationPhaseLabel } from "#src/app/preparation-phase-label.js";
+import { useIsOpenedFromRecents, useReturnToRecents } from "#src/app/return-to-recents.js";
 import { toSourceHost } from "#src/app/source-host.js";
 import { useAnnounceStatus } from "#src/app/status-announcer.js";
+import { useRetryRoute } from "#src/app/use-retry-route.js";
 import { composeClassnames } from "#src/app/utils.ts";
 import { useAccountSession } from "#src/auth/hooks.js";
 import { useIsAccountConversion } from "#src/data-fetching/account-history.js";
@@ -39,33 +42,59 @@ import {
 } from "#src/data-fetching/reader.js";
 import { describeError } from "#src/errors.js";
 
+// The audiobook request waits for any session itself (`requestApi("optional")`), so the detail view
+// needs no `beforeLoad`.
 export const Route = createFileRoute("/_shell/audiobooks/$conversionId")({
   component: AudiobookRoute,
+  loader: async ({ context, params }) => {
+    await context.queryClient.query({
+      ...createAudiobookQuery(params.conversionId),
+      staleTime: "static",
+    });
+  },
+  pendingComponent: () => (
+    <DetailLayout topBar={<PlainTopBar />} statusLine={toPreparationPhaseLabel(undefined)}>
+      <TrackSkeleton label="Loading track" isLoadingState />
+    </DetailLayout>
+  ),
+  errorComponent: ReaderQueryError,
 });
 
 type RetryMutation = ReturnType<typeof useRetryConversion>;
 
 function AudiobookRoute() {
   const { conversionId } = Route.useParams();
-  // Outside the boundary, so the page counts as shown while it loads, fails, or is still preparing.
-  useShownConversion(conversionId);
+  const session = useAccountSession();
 
-  return (
-    <QueryBoundary
-      pending={
-        <DetailLayout topBar={<PlainTopBar />} statusLine={toPreparationPhaseLabel(undefined)}>
-          <PreparationView />
-        </DetailLayout>
-      }
-      errorComponent={ReaderQueryError}
-    >
-      {/* Another audiobook starts with a fresh retry outcome and its title in view. */}
-      <AudiobookPage key={conversionId} conversionId={conversionId} />
-    </QueryBoundary>
+  // Another audiobook starts with a fresh retry outcome and its title in view.
+  return session ? (
+    <AccountAudiobookPage
+      key={conversionId}
+      subject={session.user.id}
+      conversionId={conversionId}
+    />
+  ) : (
+    <AudiobookPage key={conversionId} conversionId={conversionId} isDeletable={false} />
   );
 }
 
-/** Every detail view has the player sheet, disabled until the shown audiobook can play. */
+/** Trial conversions cannot be deleted, even by a signed-in listener who can open one. */
+function AccountAudiobookPage({
+  subject,
+  conversionId,
+}: {
+  subject: string;
+  conversionId: string;
+}): React.JSX.Element {
+  const isDeletable = useIsAccountConversion(subject, conversionId);
+
+  return <AudiobookPage conversionId={conversionId} isDeletable={isDeletable} />;
+}
+
+/**
+ * Every detail view has the player sheet, disabled until the shown audiobook can play. The page
+ * counts as shown while it loads, fails, or is still preparing.
+ */
 function DetailLayout({
   topBar,
   statusLine = "",
@@ -76,6 +105,8 @@ function DetailLayout({
   statusLine?: string;
   children: React.ReactNode;
 }): React.JSX.Element {
+  useShownConversion(Route.useParams().conversionId);
+
   return (
     <>
       <ShellContent
@@ -90,43 +121,57 @@ function DetailLayout({
 
 /** The top bar before the audiobook has loaded: Back only. */
 function PlainTopBar() {
-  return <DetailTopBar backTo={useBackTarget()} compactTitle={undefined} menu={undefined} />;
+  return <DetailTopBar back={useDetailBack()} compactTitle={undefined} menu={undefined} />;
 }
 
-/** Only accounts have Recents; trial listeners return to the start. */
-function useBackTarget(): DetailBackTarget {
-  return useAccountSession() ? "/recent" : "/";
+/**
+ * Only accounts have Recents; trial listeners return to the start. Opened from Recents, Back goes
+ * back in history, so Recents returns at its scroll position; otherwise, such as after a deep link,
+ * there is no Recents entry below to return to, and Back opens Recents at the top.
+ */
+function useDetailBack(): DetailBack {
+  const isAccount = useAccountSession() !== null;
+  const isOpenedFromRecents = useIsOpenedFromRecents();
+
+  return isAccount
+    ? { to: "/recent", shouldGoBackInHistory: isOpenedFromRecents }
+    : { to: "/", shouldGoBackInHistory: false };
 }
 
-function ReaderQueryError(props: ErrorComponentProps) {
+function ReaderQueryError({ error }: ErrorComponentProps) {
+  const retry = useRetryRoute();
+
   return (
     <DetailLayout topBar={<PlainTopBar />}>
-      <QueryErrorScreen {...props} fallbackTitle="The track could not be loaded." />
+      <ErrorScreen error={error} fallbackTitle="The track could not be loaded." onRetry={retry} />
     </DetailLayout>
   );
 }
 
-function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.Element {
+function AudiobookPage({
+  conversionId,
+  isDeletable,
+}: {
+  conversionId: string;
+  isDeletable: boolean;
+}): React.JSX.Element {
   const session = useAccountSession();
-  const backTo = useBackTarget();
-  const queryClient = useQueryClient();
+  const back = useDetailBack();
   const deletion = useTrackDeletion(conversionId);
-  // Trial conversions cannot be deleted, even by a signed-in listener who can open one.
-  const isDeletable = useIsAccountConversion(session?.user.id, conversionId);
   const audiobookQuery = createAudiobookQuery(conversionId);
-  const { data: audiobook } = useSuspenseQuery(
+  const { data: audiobook, dataUpdatedAt: audiobookReceivedAt } = useSuspenseQuery(
     // A poll during or after the deletion would find the track gone and report a failure.
     deletion.isPollingStopped ? { ...audiobookQuery, refetchInterval: false } : audiobookQuery,
   );
   // The top bar's "…" menu and the page's Retry buttons share one mutation, so a refused retry is
   // reported in the notices wherever it was started.
-  const retry = useRetryConversion(conversionId, queryClient);
+  const retry = useRetryConversion(conversionId);
   const [isTitleScrolledAway, setIsTitleScrolledAway] = React.useState(false);
 
   const topBar = (
     <>
       <DetailTopBar
-        backTo={backTo}
+        back={back}
         compactTitle={
           "title" in audiobook
             ? {
@@ -155,7 +200,7 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
         topBar={topBar}
         statusLine={toPreparationPhaseLabel(audiobook.preparationPhase)}
       >
-        <PreparationView />
+        <TrackSkeleton label="Preparing track" isLoadingState={false} />
       </DetailLayout>
     );
   }
@@ -206,6 +251,7 @@ function AudiobookPage({ conversionId }: { conversionId: string }): React.JSX.El
         key={session?.user.id ?? "anonymous"}
         conversionId={conversionId}
         audiobook={audiobook}
+        audiobookReceivedAt={audiobookReceivedAt}
         retry={retry}
         onTitleScrolledAwayChange={setIsTitleScrolledAway}
       />
@@ -219,16 +265,16 @@ type TrackDeletion = ReturnType<typeof useTrackDeletion>;
 function useTrackDeletion(conversionId: string) {
   const session = useAccountSession();
   const host = usePlayerHost();
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
+  const returnToRecents = useReturnToRecents();
   const announce = useAnnounceStatus();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const mutation = useDeleteConversion({
     subject: session?.user.id,
     conversionId,
     onDeleted: async () => {
-      // Replaces the detail entry, so Back cannot return to the deleted track.
-      await navigate({ to: "/recent", replace: true });
+      // Either way Back cannot return to the deleted track: going back leaves it as the Forward
+      // entry, which leads to the not-found error screen, and replacing drops it.
+      await returnToRecents();
       // Once the dialog is gone, which hides the rest of the page from screen readers while open.
       announce("Track deleted.");
     },
@@ -251,7 +297,6 @@ function useTrackDeletion(conversionId: string) {
     confirm: () => {
       // Before the request, so no part of the app plays the track while it is deleted.
       host.release(conversionId);
-      void queryClient.cancelQueries({ queryKey: createAudiobookQuery(conversionId).queryKey });
       mutation.mutate();
     },
   };
@@ -302,15 +347,18 @@ function DeleteTrackDialog({ deletion }: { deletion: TrackDeletion }): React.JSX
 function PreparedReader({
   conversionId,
   audiobook,
+  audiobookReceivedAt,
   retry,
   onTitleScrolledAwayChange,
 }: {
   conversionId: string;
   audiobook: PreparedAudiobook;
+  /** When the audiobook's response arrived, which can lie long before this page showed it. */
+  audiobookReceivedAt: number;
   retry: RetryMutation;
   onTitleScrolledAwayChange: (isScrolledAway: boolean) => void;
 }) {
-  const playback = useShownAudiobook(conversionId, audiobook);
+  const playback = useShownAudiobook(conversionId, audiobook, audiobookReceivedAt);
   const { loaded, canPlay } = playback;
   const narrationDocumentRef = React.useRef<HTMLDivElement>(null);
   const failedUnitIndexes = React.useMemo(
@@ -764,38 +812,4 @@ function offersRetry(audiobook: Audiobook): boolean {
 
 function formatSegmentCount(count: number) {
   return `${count} ${count === 1 ? "segment" : "segments"}`;
-}
-
-/** Shown while the audiobook loads or its conversion is still preparing. */
-function PreparationView(): React.JSX.Element {
-  return (
-    <section aria-busy="true" aria-label="Preparing track">
-      <div
-        aria-hidden="true"
-        className={css`
-          display: grid;
-          gap: var(--spacing-gutter);
-
-          & > div {
-            height: 24px;
-            background-color: var(--color-placeholder);
-            border-radius: var(--border-radius-full);
-          }
-
-          & > div:first-child {
-            height: auto;
-            aspect-ratio: 5 / 3;
-            margin-block-end: calc(2 * var(--spacing-gutter));
-            border-radius: var(--border-radius-lg);
-          }
-        `}
-      >
-        <div />
-        <div />
-        <div />
-        <div />
-        <div />
-      </div>
-    </section>
-  );
 }
