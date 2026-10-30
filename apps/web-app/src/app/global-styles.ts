@@ -1,3 +1,9 @@
+import {
+  PLAYER_SHEET_TRANSITION_NAME,
+  RECENTS_FOOTER_TRANSITION_NAME,
+  TRACK_COVER_TRANSITION_NAME,
+} from "#src/app/view-transition-names.js";
+
 /** Cross-browser baseline styles applied before application styles. */
 export const cssReset = css`
   @layer reset {
@@ -176,6 +182,18 @@ export const cssBase = css`
     :focus-visible {
       outline: var(--focus-ring);
       outline-offset: var(--focus-ring-offset);
+    }
+
+    /* a track's cover moving between Recents and its detail view, named in cover-transition.ts */
+    ::view-transition-group(${TRACK_COVER_TRANSITION_NAME}) {
+      animation-duration: 300ms;
+      animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    /* the screens' bottom bars (bottomBarDuringViewTransition): a moving cover passes under them */
+    ::view-transition-group(${RECENTS_FOOTER_TRANSITION_NAME}),
+    ::view-transition-group(${PLAYER_SHEET_TRANSITION_NAME}) {
+      z-index: 1;
     }
 
     ::selection {

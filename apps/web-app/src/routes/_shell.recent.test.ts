@@ -4,6 +4,10 @@ import { readLoadingStateRecord, recordLoadingStates } from "@cup/loading-state-
 
 import { failResponses, holdResponses, releaseResponses } from "#src/test-utils/held-responses.ts";
 import { recordReactUseWarnings } from "#src/test-utils/react-use-warnings.ts";
+import {
+  readViewTransitionRecord,
+  recordViewTransitions,
+} from "#src/test-utils/view-transition-recorder.ts";
 
 const ADDED_SOURCE_URL = "https://example.test/added";
 /** Cards on the first page of the `Recents` story. */
@@ -868,6 +872,85 @@ test("leaving a track being prepared stops polling it, and reopening it polls ag
   await expect.poll(() => audiobookRequestCount).toBe(requestCountOnLeaving + 1);
   await page.clock.fastForward(2_000);
   await expect.poll(() => audiobookRequestCount).toBeGreaterThan(requestCountOnLeaving + 1);
+});
+
+test("opening a track from Recents and going back runs the cover transition between the card and the detail view", async ({
+  mount,
+  page,
+}) => {
+  await recordViewTransitions(page);
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+  await expectCoversLoaded(page);
+
+  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+  await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(cardsOf(component)).toHaveCount(2);
+
+  await expect
+    .poll(() => readViewTransitionRecord(page))
+    .toEqual([
+      {
+        types: ["track-cover"],
+        oldCovers: ["card"],
+        newCovers: ["detail"],
+        bottomBarGap: 0,
+        bottomBarsAboveCover: ["player-sheet", "recents-footer"],
+      },
+      {
+        types: ["track-cover"],
+        oldCovers: ["detail"],
+        newCovers: ["card"],
+        bottomBarGap: 0,
+        bottomBarsAboveCover: ["player-sheet", "recents-footer"],
+      },
+    ]);
+});
+
+test("opening a track from the mini player only cross-fades, even with its card in view", async ({
+  mount,
+  page,
+}) => {
+  await recordViewTransitions(page);
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+  await expectCoversLoaded(page);
+  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+  await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+  const player = component.getByRole("region", { name: "Player" });
+  await expect(player).toBeVisible();
+  await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(2);
+  await page.evaluate(() => document.activeViewTransition?.finished);
+
+  await player.getByRole("link").click();
+
+  await expect
+    .poll(async () => (await readViewTransitionRecord(page)).at(-1))
+    .toEqual({
+      types: ["screen-fade"],
+      oldCovers: [],
+      newCovers: [],
+      bottomBarGap: 0,
+      bottomBarsAboveCover: ["player-sheet", "recents-footer"],
+    });
+  expect(await readViewTransitionRecord(page)).toHaveLength(3);
+});
+
+test("with reduced motion, opening a track and going back start no view transition", async ({
+  mount,
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await recordViewTransitions(page);
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+
+  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+  await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(cardsOf(component)).toHaveCount(2);
+
+  await page.evaluate(() => document.activeViewTransition?.finished);
+  expect(await readViewTransitionRecord(page)).toEqual([]);
 });
 
 async function openPathInAccountStory(page: Page, path: string) {

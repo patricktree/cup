@@ -3,19 +3,25 @@ import React from "react";
 
 import type { MapPropsToRequiredDataAttributeProps } from "#src/app/styling.utils.js";
 import { composeClassnames } from "#src/app/utils.js";
+import { TRACK_COVER_ATTRIBUTE } from "#src/app/view-transition-names.js";
 
 type DSCoverImageProps = DSCoverImageCustomProps & {
   /** No URL shows the empty placeholder. */
   src: string | undefined;
   alt: string;
   className?: string;
+  /** Names the cover for a screen change's view transition (`cover-transition.ts`). */
+  [TRACK_COVER_ATTRIBUTE]?: string;
 };
 
 type DSCoverImageCustomProps = {
   /** `circle` crops to a circle, as in the mini player; its size comes from `className`. */
   shape?: "rectangle" | "circle";
-  /** `square` leaves the corners to a container that clips the cover, such as a card. */
-  corners?: "rounded" | "square";
+  /**
+   * `card` fits the bottom of a card: square on top, and the card's inner radius below. The cover
+   * has its own corners, because a view transition's snapshot leaves out a container's clip.
+   */
+  corners?: "rounded" | "card";
 };
 
 type DSCoverImageDataAttributes = MapPropsToRequiredDataAttributeProps<DSCoverImageCustomProps>;
@@ -24,7 +30,8 @@ type ShownImage = { src: string; alt: string };
 
 /**
  * A cover cropped to 5:3 (or a circle) on the placeholder color while it loads. When the URL
- * changes, it keeps showing the previous image until the new one has loaded.
+ * changes, it keeps showing the previous image until the new one has loaded. An image the document
+ * has already loaded shows on the first paint, so a remounted cover never flashes the placeholder.
  */
 export function DSCoverImage({
   src,
@@ -32,6 +39,7 @@ export function DSCoverImage({
   shape = "rectangle",
   corners = "rounded",
   className,
+  [TRACK_COVER_ATTRIBUTE]: trackCover,
 }: DSCoverImageProps): React.JSX.Element {
   const [shownImage, setShownImage] = React.useState<ShownImage | undefined>(undefined);
   const dataAttributes: DSCoverImageDataAttributes = {
@@ -60,8 +68,9 @@ export function DSCoverImage({
             border-radius: var(--border-radius-full);
           }
 
-          &[data-corners="square"] {
-            border-radius: 0;
+          &[data-corners="card"] {
+            border-radius: 0 0 calc(var(--border-radius-lg) - 1px)
+              calc(var(--border-radius-lg) - 1px);
           }
 
           & > img {
@@ -79,6 +88,7 @@ export function DSCoverImage({
         className,
       )}
       {...dataAttributes}
+      {...{ [TRACK_COVER_ATTRIBUTE]: trackCover }}
     >
       {src !== undefined && shownImage !== undefined && (
         <img src={shownImage.src} alt={isLoading ? shownImage.alt : alt} />
@@ -90,6 +100,12 @@ export function DSCoverImage({
           src={src}
           alt=""
           data-loading=""
+          ref={(image) => {
+            // The list of available images completes a cached image as soon as its src is set.
+            if (image?.complete && image.naturalWidth > 0) {
+              setShownImage({ src, alt });
+            }
+          }}
           onLoad={() => setShownImage({ src, alt })}
         />
       )}

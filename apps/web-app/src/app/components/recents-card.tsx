@@ -4,6 +4,7 @@ import React from "react";
 
 import type { HistoryItem } from "@cup/listener-api.routes";
 
+import { coverTransitionTarget } from "#src/app/cover-transition.js";
 import { DSCoverImage } from "#src/app/design-system/cover-image.js";
 import { pressableOverlay } from "#src/app/design-system/interaction-states.js";
 import { textStyles } from "#src/app/design-system/text-styles.js";
@@ -86,7 +87,14 @@ export function RecentsCard({ item }: { item: HistoryItem }): React.JSX.Element 
               : "Couldn't prepare this track"}
         </span>
         {/* the title names the card, so the cover is decorative */}
-        {coverUrl !== undefined && <DSCoverImage src={coverUrl} alt="" corners="square" />}
+        {coverUrl !== undefined && (
+          <DSCoverImage
+            src={coverUrl}
+            alt=""
+            corners="card"
+            {...coverTransitionTarget(item.conversionId)}
+          />
+        )}
       </Link>
       <p
         className={composeClassnames(

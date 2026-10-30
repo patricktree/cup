@@ -4,6 +4,7 @@ import React from "react";
 
 import { TAB_BAR_ICONS_OFFSET_PIXELS } from "#src/app/components/account-tab-bar.js";
 import { PlaybackError, PlaybackErrorMessage } from "#src/app/components/playback-error.js";
+import { screenFadeViewTransition } from "#src/app/cover-transition.js";
 import { DSCoverImage } from "#src/app/design-system/cover-image.js";
 import { DSIconButton } from "#src/app/design-system/icon-button.js";
 import { PauseMiniIcon, PlayIcon, SkipBack15Icon } from "#src/app/design-system/icons.js";
@@ -80,6 +81,8 @@ export function MiniPlayer(): React.ReactNode {
           params={{ conversionId: loaded.conversionId }}
           // the mini player is only shown on Recents
           state={{ isOpenedFromRecents: true }}
+          // the press came from this pill, so a card's cover moving would draw the eye elsewhere
+          viewTransition={screenFadeViewTransition}
           className={composeClassnames(
             pressableOverlay,
             css`

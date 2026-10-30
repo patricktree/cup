@@ -5,6 +5,7 @@ import type { RouterHistory } from "@tanstack/react-router";
 import React from "react";
 
 import { RouteErrorScreen } from "#src/app/components/error-message.js";
+import { createCoverViewTransition } from "#src/app/cover-transition.js";
 import { DSToastViewport } from "#src/app/design-system/toast.js";
 import { queryClient } from "#src/data-fetching/query-client.js";
 import { toastManager } from "#src/notifications.js";
@@ -17,7 +18,7 @@ import { routeTree } from "#src/routeTree.gen.js";
 const addDialogMask = createRouteMask({ routeTree, from: "/recent/add", to: "/recent" });
 
 export function createAppRouter(history?: RouterHistory) {
-  return createRouter({
+  const router = createRouter({
     basepath: "/app",
     ...(history && { history }),
     context: {
@@ -44,6 +45,9 @@ export function createAppRouter(history?: RouterHistory) {
     // The document is the scroll container, which the router restores and resets by default.
     scrollRestoration: true,
   });
+  // The cover transition looks up routes on the router it belongs to.
+  router.update({ ...router.options, defaultViewTransition: createCoverViewTransition(router) });
+  return router;
 }
 
 declare module "@tanstack/react-router" {
