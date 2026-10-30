@@ -16,6 +16,8 @@ Can the web app easily get three animations? (1) On Recents, when a card is adde
 
 ## Relation to the loading map
 
+> Note, 2026-10-30: the map was built in [#165](https://github.com/patricktree/cup/pull/165) and recorded in [ADR 0016](../adr/0016-keep-the-query-cache-for-the-page-lifetime-and-load-screens-in-route-loaders.md), so the prerequisites below now exist. No transition is built, and the items under "Still open after the map" remain open.
+
 The map [Navigate the web app without loading flashes](https://github.com/patricktree/cup/issues/143) leaves View Transitions out of scope, but several of its decisions remove prerequisites that this page lists. Once they are built, the transition work shrinks to the pieces that are specific to animation.
 
 - **Detail data before the transition:** [Where a screen starts loading its data](https://github.com/patricktree/cup/issues/147) gives every route a loader that awaits `queryClient.query({ ...options, staleTime: 'static' })` and has components read through suspense hooks. That replaces step 2 of (2), including its `ensureQueryData` call, which TanStack Query 5.104 deprecates ([research on loaders and Query](https://github.com/patricktree/cup/issues/144)).
