@@ -1,5 +1,7 @@
 import type { ParsedLocation } from "@tanstack/react-router";
 
+import { TRACK_COVER_TRANSITION_NAME } from "#src/app/view-transition-names.js";
+
 /**
  * Opening a track from Recents, and going back from its detail view to Recents, moves the track's
  * cover from where it was to where it lands, in a View Transition that the router starts for the
@@ -7,8 +9,6 @@ import type { ParsedLocation } from "@tanstack/react-router";
  * element with the same name would make the browser skip the whole transition.
  */
 const COVER_TRANSITION_TYPE = "track-cover";
-// The global styles time the moving cover by this name.
-const COVER_TRANSITION_NAME = "track-cover";
 const SCREEN_FADE_TYPE = "screen-fade";
 
 const RECENTS_PATH = /\/recent\/?$/;
@@ -64,7 +64,7 @@ export function createCoverViewTransition():
 
       rule.replaceSync(
         `:root:active-view-transition-type(${COVER_TRANSITION_TYPE}) [data-track-cover="${CSS.escape(conversionId)}"] {
-          view-transition-name: ${COVER_TRANSITION_NAME};
+          view-transition-name: ${TRACK_COVER_TRANSITION_NAME};
         }`,
       );
       return [COVER_TRANSITION_TYPE];
