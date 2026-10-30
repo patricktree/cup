@@ -1005,7 +1005,7 @@ test("opening a track from Recents scrolled past its card only cross-fades", asy
   expect(await readViewTransitionRecord(page)).toHaveLength(3);
 });
 
-test("opening a track from the mini player only cross-fades, even with its card in view", async ({
+test("opening a track from the mini player and going back only cross-fade, even with its card in view", async ({
   mount,
   page,
 }) => {
@@ -1036,6 +1036,18 @@ test("opening a track from the mini player only cross-fades, even with its card 
       isDocumentCaptured: false,
     });
   expect(await readViewTransitionRecord(page)).toHaveLength(3);
+  await page.evaluate(() => document.activeViewTransition?.finished);
+
+  // the detail view's cover is in view, and so is the card it would land on
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+
+  await expect(cardsOf(component)).toHaveCount(2);
+  await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(4);
+  expect((await readViewTransitionRecord(page)).at(-1)).toMatchObject({
+    types: ["screen-fade"],
+    oldCovers: [],
+    newCovers: [],
+  });
 });
 
 test("with reduced motion, opening a track and going back start no view transition", async ({
