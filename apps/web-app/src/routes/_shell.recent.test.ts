@@ -938,7 +938,74 @@ test("opening a track from Recents and going back runs the cover transition betw
     ]);
 });
 
-test("opening a track from the mini player only cross-fades, even with its card in view", async ({
+test("going back from a detail view scrolled past its cover only cross-fades", async ({
+  mount,
+  page,
+}) => {
+  await recordViewTransitions(page);
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+  await expectCoversLoaded(page);
+  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+  await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+  await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(1);
+  await page.evaluate(() => document.activeViewTransition?.finished);
+
+  await scrollCoverTo(page, "above-viewport");
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(cardsOf(component)).toHaveCount(2);
+
+  await expect
+    .poll(async () => (await readViewTransitionRecord(page)).at(-1))
+    .toMatchObject({ types: ["screen-fade"], oldCovers: [], newCovers: [] });
+});
+
+test("going back from a detail view with its cover partly in view moves the cover", async ({
+  mount,
+  page,
+}) => {
+  await recordViewTransitions(page);
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+  await expectCoversLoaded(page);
+  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+  await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+  await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(1);
+  await page.evaluate(() => document.activeViewTransition?.finished);
+
+  await scrollCoverTo(page, "partly-in-viewport");
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(cardsOf(component)).toHaveCount(2);
+
+  await expect
+    .poll(async () => (await readViewTransitionRecord(page)).at(-1))
+    .toMatchObject({ types: ["track-cover"], oldCovers: ["detail"], newCovers: ["card"] });
+});
+
+test("opening a track from Recents scrolled past its card only cross-fades", async ({
+  mount,
+  page,
+}) => {
+  await recordViewTransitions(page);
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+  await expectCoversLoaded(page);
+  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+  await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(cardsOf(component)).toHaveCount(2);
+  await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(2);
+  await page.evaluate(() => document.activeViewTransition?.finished);
+
+  await scrollCoverTo(page, "above-viewport");
+  // Not a tap on the card, as that would scroll it into view: the way a browser Forward opens it.
+  await openPathInAccountStory(page, `/audiobooks/${REVISITED_READY_ID}`);
+  await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+
+  await expect
+    .poll(async () => (await readViewTransitionRecord(page)).at(-1))
+    .toMatchObject({ types: ["screen-fade"], oldCovers: [], newCovers: [] });
+  expect(await readViewTransitionRecord(page)).toHaveLength(3);
+});
+
+test("opening a track from the mini player and going back only cross-fade, even with its card in view", async ({
   mount,
   page,
 }) => {
@@ -969,6 +1036,18 @@ test("opening a track from the mini player only cross-fades, even with its card 
       isDocumentCaptured: false,
     });
   expect(await readViewTransitionRecord(page)).toHaveLength(3);
+  await page.evaluate(() => document.activeViewTransition?.finished);
+
+  // the detail view's cover is in view, and so is the card it would land on
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+
+  await expect(cardsOf(component)).toHaveCount(2);
+  await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(4);
+  expect((await readViewTransitionRecord(page)).at(-1)).toMatchObject({
+    types: ["screen-fade"],
+    oldCovers: [],
+    newCovers: [],
+  });
 });
 
 test("with reduced motion, opening a track and going back start no view transition", async ({
@@ -987,6 +1066,23 @@ test("with reduced motion, opening a track and going back start no view transiti
   await page.evaluate(() => document.activeViewTransition?.finished);
   expect(await readViewTransitionRecord(page)).toEqual([]);
 });
+
+/** Scrolls the shown screen's track cover, on a page made tall enough for any story's content. */
+async function scrollCoverTo(page: Page, place: "above-viewport" | "partly-in-viewport") {
+  await page.evaluate((coverPlace) => {
+    document.body.style.minHeight = "500vh";
+
+    const cover = document.querySelector("[data-track-cover]");
+    if (cover === null) {
+      throw new TypeError("The shown screen has no track cover");
+    }
+    const { top, height } = cover.getBoundingClientRect();
+    window.scrollTo({
+      top: window.scrollY + top + (coverPlace === "above-viewport" ? height + 1 : height / 2),
+      behavior: "instant",
+    });
+  }, place);
+}
 
 async function openPathInAccountStory(page: Page, path: string) {
   await page.evaluate((pathToOpen) => {

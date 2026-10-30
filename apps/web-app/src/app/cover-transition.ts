@@ -10,7 +10,11 @@ import type { FileRoutesById } from "#src/routeTree.gen.js";
  * Opening a track from Recents, and going back from its detail view to Recents, moves the track's
  * cover from where it was to where it lands, in a View Transition that the router starts for the
  * navigation. One rule names that track's covers, and only while a cover transition runs: a second
- * element with the same name would make the browser skip the whole transition.
+ * element with the same name would make the browser skip the whole transition. The screens only
+ * cross-fade when a cover starts outside the viewport, because it would cross a long distance
+ * within the transition's short duration, and for a detail view opened from the mini player (the
+ * `isOpenedFromMiniPlayer` history state), both ways: the press came from the pill, and its card
+ * can be anywhere on Recents.
  */
 const COVER_TRANSITION_TYPE = "track-cover";
 const SCREEN_FADE_TYPE = "screen-fade";
@@ -67,8 +71,17 @@ export function createCoverViewTransition(router: Pick<AnyRouter, "getMatchedRou
         return false;
       }
 
+      const isOpenedFromMiniPlayer =
+        fromLocation?.state.isOpenedFromMiniPlayer === true ||
+        toLocation.state.isOpenedFromMiniPlayer === true;
+      const coverSelector = `[${TRACK_COVER_ATTRIBUTE}="${CSS.escape(conversionId)}"]`;
+      // The router asks before it commits the navigation, so this finds the old screen's cover.
+      if (isOpenedFromMiniPlayer || !isInViewport(document.querySelector(coverSelector))) {
+        return [SCREEN_FADE_TYPE];
+      }
+
       rule.replaceSync(
-        `:root:active-view-transition-type(${COVER_TRANSITION_TYPE}) [${TRACK_COVER_ATTRIBUTE}="${CSS.escape(conversionId)}"] {
+        `:root:active-view-transition-type(${COVER_TRANSITION_TYPE}) ${coverSelector} {
           view-transition-name: ${TRACK_COVER_TRANSITION_NAME};
         }`,
       );
@@ -76,11 +89,6 @@ export function createCoverViewTransition(router: Pick<AnyRouter, "getMatchedRou
     },
   };
 }
-
-/** A navigation's view transition that only cross-fades the screen, moving no cover. */
-export const screenFadeViewTransition = supportsViewTransitionTypes() && {
-  types: () => (prefersReducedMotion() ? false : [SCREEN_FADE_TYPE]),
-};
 
 /** Marks a cover as the given conversion's, to move when its detail view opens or closes. */
 export function coverTransitionTarget(conversionId: string): {
@@ -98,6 +106,16 @@ function supportsViewTransitionTypes(): boolean {
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** Whether any part of the element is inside the viewport; no element, such as no cover, is not. */
+function isInViewport(element: Element | null): boolean {
+  if (element === null) {
+    return false;
+  }
+
+  const { top, right, bottom, left } = element.getBoundingClientRect();
+  return bottom > 0 && top < window.innerHeight && right > 0 && left < window.innerWidth;
 }
 
 function findCoverTransitionConversionId(

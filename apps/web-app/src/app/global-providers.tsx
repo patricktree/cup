@@ -61,6 +61,8 @@ declare module "@tanstack/react-router" {
      * screen goes back one entry and Recents returns at its scroll position.
      */
     isOpenedFromRecents?: boolean;
+    /** Set by the mini player's link, so its detail view only cross-fades, both ways. */
+    isOpenedFromMiniPlayer?: boolean;
   }
   // oxlint-enable typescript/consistent-type-definitions
 }
