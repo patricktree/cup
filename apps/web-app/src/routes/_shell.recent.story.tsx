@@ -196,7 +196,7 @@ async function goBackToRecentsOnceLoaded({
   );
   await userEvent.setup().click(canvas.getByRole("link", { name: "Back" }));
   await canvas.findByRole("region", { name: "Player" }, { timeout: 10_000 });
-  // Back morphs the cover; a tap during the morph would reach the document instead of Recents.
+  // Back runs the cover transition; a tap during it would reach the document instead of Recents.
   await document.activeViewTransition?.finished;
 }
 
@@ -287,7 +287,7 @@ export const RevisitingScreens = accountStory({
         playbackPosition: null,
         title,
         originalUrl: `https://${HOSTS[REVISITED_READY_INDEX]}/articles/${REVISITED_READY_INDEX}`,
-        // the card's cover, which morphs into this one
+        // the card's cover, which moves into this one's place
         coverImage: { url: toStoryCoverUrl(REVISITED_READY_INDEX) },
         narrationDocument: {
           html: `<article><h1 id="unit-1">${title}</h1><p id="unit-2">Two.</p></article>`,

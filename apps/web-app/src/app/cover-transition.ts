@@ -2,24 +2,27 @@ import type { ParsedLocation } from "@tanstack/react-router";
 import React from "react";
 
 /**
- * Opening a track from Recents, and going back from its detail view to Recents, morphs the track's
+ * Opening a track from Recents, and going back from its detail view to Recents, moves the track's
  * cover from where it was to where it lands, in a View Transition that the router starts for the
  * navigation. Only the track's own covers carry the transition name, and only while it runs: a
  * second element with the same name would make the browser skip the whole transition.
  */
 const COVER_TRANSITION_TYPE = "track-cover";
-// The global styles time the morph by this name.
+// The global styles time the cover transition by this name.
 const COVER_TRANSITION_NAME = "track-cover";
 
 const RECENTS_PATH = /\/recent\/?$/;
 const DETAIL_PATH = /\/audiobooks\/([^/]+)\/?$/;
 
-/** The mounted covers of each conversion that take part in the morph: a Recents card, a detail view. */
+/**
+ * The mounted covers of each conversion that take part in the cover transition: a Recents card, a
+ * detail view.
+ */
 const coversByConversionId = new Map<string, Set<HTMLElement>>();
 const namedCovers = new Set<HTMLElement>();
 
-/** The conversion whose cover the running navigation morphs, until its landing cover mounts. */
-let morphingConversionId: string | undefined;
+/** The conversion whose cover the running navigation moves, until its landing cover mounts. */
+let coverTransitionConversionId: string | undefined;
 let isListeningToPopState = false;
 let isPopStateVisualTransition = false;
 
@@ -60,9 +63,12 @@ export function createCoverViewTransition():
       const hasVisualTransition = isPopStateVisualTransition;
       isPopStateVisualTransition = false;
       clearCoverNames();
-      morphingConversionId = undefined;
+      coverTransitionConversionId = undefined;
 
-      const conversionId = findMorphingConversionId(fromLocation?.pathname, toLocation.pathname);
+      const conversionId = findCoverTransitionConversionId(
+        fromLocation?.pathname,
+        toLocation.pathname,
+      );
       if (
         conversionId === undefined ||
         hasVisualTransition ||
@@ -73,14 +79,14 @@ export function createCoverViewTransition():
 
       // Still the previous screen: name the cover that the transition starts from.
       nameCoverOf(conversionId);
-      morphingConversionId = conversionId;
+      coverTransitionConversionId = conversionId;
       return [COVER_TRANSITION_TYPE];
     },
   };
 }
 
 /**
- * Registers a cover as the given conversion's, to morph when its detail view opens or closes. The
+ * Registers a cover as the given conversion's, to move when its detail view opens or closes. The
  * cover that a navigation lands on mounts in the router's commit, before the browser captures the
  * new screen, and takes the name then.
  */
@@ -95,9 +101,9 @@ export function useCoverTransitionRef(conversionId: string): React.RefCallback<H
       const covers = coversByConversionId.get(conversionId) ?? new Set();
       covers.add(cover);
       coversByConversionId.set(conversionId, covers);
-      if (morphingConversionId === conversionId) {
+      if (coverTransitionConversionId === conversionId) {
         nameCoverOf(conversionId);
-        morphingConversionId = undefined;
+        coverTransitionConversionId = undefined;
       }
 
       return () => {
@@ -112,7 +118,7 @@ export function useCoverTransitionRef(conversionId: string): React.RefCallback<H
   );
 }
 
-function findMorphingConversionId(
+function findCoverTransitionConversionId(
   fromPathname: string | undefined,
   toPathname: string,
 ): string | undefined {

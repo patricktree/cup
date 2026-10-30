@@ -178,7 +178,7 @@ export const cssBase = css`
       outline-offset: var(--focus-ring-offset);
     }
 
-    /* a track's cover morphing between Recents and its detail view, named in cover-transition.ts */
+    /* a track's cover moving between Recents and its detail view, named in cover-transition.ts */
     ::view-transition-group(track-cover) {
       animation-duration: 300ms;
       animation-timing-function: cubic-bezier(0.2, 0, 0, 1);

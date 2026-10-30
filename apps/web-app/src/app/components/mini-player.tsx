@@ -80,6 +80,8 @@ export function MiniPlayer(): React.ReactNode {
           params={{ conversionId: loaded.conversionId }}
           // the mini player is only shown on Recents
           state={{ isOpenedFromRecents: true }}
+          // the press came from this pill, so a card's cover moving would draw the eye elsewhere
+          viewTransition={false}
           className={composeClassnames(
             pressableOverlay,
             css`

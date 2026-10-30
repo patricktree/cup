@@ -874,7 +874,7 @@ test("leaving a track being prepared stops polling it, and reopening it polls ag
   await expect.poll(() => audiobookRequestCount).toBeGreaterThan(requestCountOnLeaving + 1);
 });
 
-test("opening a track from Recents and going back morphs its cover between the card and the detail view", async ({
+test("opening a track from Recents and going back runs the cover transition between the card and the detail view", async ({
   mount,
   page,
 }) => {
@@ -895,6 +895,22 @@ test("opening a track from Recents and going back morphs its cover between the c
     ]);
 });
 
+test("opening a track from the mini player starts no view transition", async ({ mount, page }) => {
+  await recordViewTransitions(page);
+  const component = await mount("routes/_shell.recent/RecentsWithMiniPlayer");
+  const player = component.getByRole("region", { name: "Player" });
+  await expectCoversLoaded(page);
+  const transitionsBefore = (await readViewTransitionRecord(page)).length;
+
+  await player.getByRole("link").click();
+
+  await expect(
+    component.getByRole("heading", { name: "Sure, let’s smoosh SpaceX and xAI together" }),
+  ).toBeVisible();
+  await page.evaluate(() => document.activeViewTransition?.finished);
+  expect(await readViewTransitionRecord(page)).toHaveLength(transitionsBefore);
+});
+
 test("with reduced motion, opening a track and going back start no view transition", async ({
   mount,
   page,
@@ -908,6 +924,7 @@ test("with reduced motion, opening a track and going back start no view transiti
   await component.getByRole("link", { name: "Back", exact: true }).click();
   await expect(cardsOf(component)).toHaveCount(2);
 
+  await page.evaluate(() => document.activeViewTransition?.finished);
   expect(await readViewTransitionRecord(page)).toEqual([]);
 });
 

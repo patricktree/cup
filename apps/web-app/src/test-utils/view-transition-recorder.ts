@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { z } from "zod";
 
-/** The view transition name of a track's morphing cover (`src/app/cover-transition.ts`). */
+/** The view transition name of a track's moving cover (`src/app/cover-transition.ts`). */
 const COVER_TRANSITION_NAME = "track-cover";
 
 const coverPlaceSchema = z.enum(["card", "detail"]);
@@ -9,7 +9,7 @@ const coverPlaceSchema = z.enum(["card", "detail"]);
 const viewTransitionRecordSchema = z.array(
   z.object({
     types: z.array(z.string()).optional(),
-    /** Where each element named as the morphing cover sits when the old screen is captured. */
+    /** Where each element named as the moving cover sits when the old screen is captured. */
     oldCovers: z.array(coverPlaceSchema),
     /** The same, when the new screen is captured. */
     newCovers: z.array(coverPlaceSchema),
@@ -23,7 +23,7 @@ export type ViewTransitionRecord = z.infer<typeof viewTransitionRecordSchema>[nu
 const RECORD_KEY = "cupViewTransitionRecord";
 
 /**
- * Records every same-document view transition the page starts, with the covers it morphs: a cover
+ * Records every same-document view transition the page starts, with the covers it moves: a cover
  * inside a list item is a Recents card's, any other the detail view's. A transition the browser
  * skips, such as one with a duplicate name, never gets ready and is not recorded.
  *
