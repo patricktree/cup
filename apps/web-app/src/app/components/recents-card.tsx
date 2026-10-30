@@ -4,7 +4,7 @@ import React from "react";
 
 import type { HistoryItem } from "@cup/listener-api.routes";
 
-import { useCoverTransitionRef } from "#src/app/cover-transition.js";
+import { coverTransitionTarget } from "#src/app/cover-transition.js";
 import { DSCoverImage } from "#src/app/design-system/cover-image.js";
 import { pressableOverlay } from "#src/app/design-system/interaction-states.js";
 import { textStyles } from "#src/app/design-system/text-styles.js";
@@ -28,7 +28,6 @@ type CardCustomProps = {
 export function RecentsCard({ item }: { item: HistoryItem }): React.JSX.Element {
   const outcome = item.outcome?.status === "ready" ? item.outcome : undefined;
   const coverUrl = outcome?.coverImage?.url;
-  const coverTransitionRef = useCoverTransitionRef(item.conversionId);
   const dataAttributes: MapPropsToRequiredDataAttributeProps<CardCustomProps> = {
     "data-title": outcome ? "ready" : "muted",
     "data-cover": coverUrl === undefined ? "none" : "shown",
@@ -89,7 +88,12 @@ export function RecentsCard({ item }: { item: HistoryItem }): React.JSX.Element 
         </span>
         {/* the title names the card, so the cover is decorative */}
         {coverUrl !== undefined && (
-          <DSCoverImage src={coverUrl} alt="" corners="square" ref={coverTransitionRef} />
+          <DSCoverImage
+            src={coverUrl}
+            alt=""
+            corners="square"
+            {...coverTransitionTarget(item.conversionId)}
+          />
         )}
       </Link>
       <p

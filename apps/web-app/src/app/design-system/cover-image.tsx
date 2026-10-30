@@ -9,7 +9,8 @@ type DSCoverImageProps = DSCoverImageCustomProps & {
   src: string | undefined;
   alt: string;
   className?: string;
-  ref?: React.Ref<HTMLDivElement>;
+  /** Names the cover for a screen change's view transition (`cover-transition.ts`). */
+  "data-track-cover"?: string;
 };
 
 type DSCoverImageCustomProps = {
@@ -34,7 +35,7 @@ export function DSCoverImage({
   shape = "rectangle",
   corners = "rounded",
   className,
-  ref,
+  "data-track-cover": trackCover,
 }: DSCoverImageProps): React.JSX.Element {
   const [shownImage, setShownImage] = React.useState<ShownImage | undefined>(undefined);
   const dataAttributes: DSCoverImageDataAttributes = {
@@ -82,7 +83,7 @@ export function DSCoverImage({
         className,
       )}
       {...dataAttributes}
-      ref={ref}
+      data-track-cover={trackCover}
     >
       {src !== undefined && shownImage !== undefined && (
         <img src={shownImage.src} alt={isLoading ? shownImage.alt : alt} />

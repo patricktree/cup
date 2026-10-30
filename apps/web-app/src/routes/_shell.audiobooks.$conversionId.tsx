@@ -13,7 +13,7 @@ import { fadeFooterClearance } from "#src/app/components/fade-footer.js";
 import { ShellContent } from "#src/app/components/main.tsx";
 import { PLAYER_SHEET_HEIGHTS, PlayerSheet } from "#src/app/components/player-sheet.js";
 import { TrackSkeleton } from "#src/app/components/track-skeleton.js";
-import { useCoverTransitionRef } from "#src/app/cover-transition.js";
+import { coverTransitionTarget } from "#src/app/cover-transition.js";
 import { DSButton } from "#src/app/design-system/button.js";
 import { DSCoverImage } from "#src/app/design-system/cover-image.js";
 import { DSDialog } from "#src/app/design-system/dialog.js";
@@ -370,13 +370,12 @@ function PreparedReader({
     [audiobook.segments],
   );
   const hasAudio = audiobook.segments.some((segment) => segment.status === "ready");
-  const coverTransitionRef = useCoverTransitionRef(conversionId);
 
   return (
     <>
       {audiobook.coverImage ? (
         <DSCoverImage
-          ref={coverTransitionRef}
+          {...coverTransitionTarget(conversionId)}
           src={audiobook.coverImage.url}
           alt={audiobook.coverImage.alternativeText ?? ""}
           className={css`

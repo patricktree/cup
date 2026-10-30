@@ -48,8 +48,8 @@ export async function recordViewTransitions(page: Page): Promise<void> {
       Object.assign(window, { [recordKey]: record });
 
       const findCovers = () =>
-        [...document.querySelectorAll<HTMLElement>("*")]
-          .filter((element) => element.style.viewTransitionName === coverTransitionName)
+        [...document.querySelectorAll("[data-track-cover]")]
+          .filter((element) => getComputedStyle(element).viewTransitionName === coverTransitionName)
           .map((element) => (element.closest("li") ? "card" : "detail"));
 
       const findBottomBarsAboveCover = () => {
@@ -89,8 +89,9 @@ export async function recordViewTransitions(page: Page): Promise<void> {
 
       const startViewTransition = document.startViewTransition.bind(document);
       document.startViewTransition = (options) => {
-        const oldCovers = findCovers();
         const transition = startViewTransition(options);
+        // The rule that names a cover matches only from here on; the old screen is still shown.
+        const oldCovers = findCovers();
         void (async () => {
           try {
             await transition.ready;
