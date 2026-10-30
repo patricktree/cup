@@ -1,6 +1,7 @@
-import type { ParsedLocation } from "@tanstack/react-router";
+import type { AnyRouter, ParsedLocation } from "@tanstack/react-router";
 
 import { TRACK_COVER_TRANSITION_NAME } from "#src/app/view-transition-names.js";
+import type { FileRoutesById } from "#src/routeTree.gen.js";
 
 /**
  * Opening a track from Recents, and going back from its detail view to Recents, moves the track's
@@ -11,8 +12,8 @@ import { TRACK_COVER_TRANSITION_NAME } from "#src/app/view-transition-names.js";
 const COVER_TRANSITION_TYPE = "track-cover";
 const SCREEN_FADE_TYPE = "screen-fade";
 
-const RECENTS_PATH = /\/recent\/?$/;
-const DETAIL_PATH = /\/audiobooks\/([^/]+)\/?$/;
+const RECENTS_ROUTE_ID = "/_shell/recent" satisfies keyof FileRoutesById;
+const DETAIL_ROUTE_ID = "/_shell/audiobooks/$conversionId" satisfies keyof FileRoutesById;
 
 let coverNameRule: CSSStyleSheet | undefined;
 let isPopStateVisualTransition = false;
@@ -22,7 +23,7 @@ let isPopStateVisualTransition = false;
  * for any other navigation. Browsers without view transition types get no transition at all, as the
  * router would otherwise cross-fade every navigation.
  */
-export function createCoverViewTransition():
+export function createCoverViewTransition(router: Pick<AnyRouter, "getMatchedRoutes">):
   | false
   | {
       types: (change: {
@@ -55,6 +56,7 @@ export function createCoverViewTransition():
       isPopStateVisualTransition = false;
 
       const conversionId = findCoverTransitionConversionId(
+        router,
         fromLocation?.pathname,
         toLocation.pathname,
       );
@@ -94,6 +96,7 @@ function prefersReducedMotion(): boolean {
 }
 
 function findCoverTransitionConversionId(
+  router: Pick<AnyRouter, "getMatchedRoutes">,
   fromPathname: string | undefined,
   toPathname: string,
 ): string | undefined {
@@ -101,13 +104,17 @@ function findCoverTransitionConversionId(
     return undefined;
   }
 
-  const detailPathname = RECENTS_PATH.test(fromPathname)
-    ? toPathname
-    : RECENTS_PATH.test(toPathname)
-      ? fromPathname
-      : undefined;
-  const encodedConversionId =
-    detailPathname === undefined ? undefined : DETAIL_PATH.exec(detailPathname)?.[1];
+  const findRouteId = (pathname: string) => router.getMatchedRoutes(pathname)[2]?.id;
+  const detailPathname =
+    findRouteId(fromPathname) === RECENTS_ROUTE_ID
+      ? toPathname
+      : findRouteId(toPathname) === RECENTS_ROUTE_ID
+        ? fromPathname
+        : undefined;
+  if (detailPathname === undefined) {
+    return undefined;
+  }
 
-  return encodedConversionId === undefined ? undefined : decodeURIComponent(encodedConversionId);
+  const [, params, route] = router.getMatchedRoutes(detailPathname);
+  return route?.id === DETAIL_ROUTE_ID ? params["conversionId"] : undefined;
 }
