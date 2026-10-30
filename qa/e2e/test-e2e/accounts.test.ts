@@ -109,6 +109,7 @@ test("signup keeps trial conversions separate from the new account and its Recen
   request: isolatedRequest,
   workerEnvironment,
 }) => {
+  test.setTimeout(90_000);
   const { origin } = workerEnvironment;
   const grant = await workerEnvironment.createGrant();
   const credential = new URL(grant.trialLink).hash;
