@@ -21,6 +21,19 @@ export function fadeFooterClearance({ fadeHeightPixels }: FadeFooterHeights): st
 export const FADE_FOOTER_PADDING_BLOCK_END_PIXELS = 24;
 
 /**
+ * During a view transition, a bar stuck to the bottom of the screen is fixed there instead. The
+ * browser measures sticky positions against the snapshot, which extends under a bottom browser
+ * toolbar, so it would draw the bar that much lower; fixed positions still follow the screen. The
+ * shell keeps a row for the bar's place in the page.
+ */
+export const fixDuringViewTransition = css`
+  :root:active-view-transition-type(track-cover-open, track-cover-close, screen-fade) & {
+    position: fixed;
+    inset-inline: 0;
+  }
+`;
+
+/**
  * A bar fixed at the bottom of a shell page on the drawn transparent-to-white fade, which reaches
  * over the end of shell `<main>` above the bar. The element sets `--fade-height` and
  * `--fade-background`.

@@ -3,7 +3,7 @@ import React from "react";
 
 import { AccountAvatar } from "#src/app/components/account-avatar.js";
 import { AccountTabBar, TAB_BAR_HEIGHTS } from "#src/app/components/account-tab-bar.js";
-import { fadeFooterClearance } from "#src/app/components/fade-footer.js";
+import { fixDuringViewTransition, fadeFooterClearance } from "#src/app/components/fade-footer.js";
 import { MiniPlayer } from "#src/app/components/mini-player.js";
 import { textStyles } from "#src/app/design-system/text-styles.js";
 import { interTypefaceScope } from "#src/app/global-styles.js";
@@ -73,24 +73,19 @@ export function RecentsLayout({ children }: { children: React.ReactNode }): Reac
       </div>
       {/* the mini player stacks on the tab bar, so it needs no offset from the tab bar's height */}
       <div
-        className={css`
-          /* stays at the bottom of the screen while the document scrolls */
-          position: sticky;
-          bottom: 0;
+        className={composeClassnames(
+          fixDuringViewTransition,
+          css`
+            /* stays at the bottom of the screen while the document scrolls */
+            position: sticky;
+            bottom: 0;
 
-          /* above shell <main>, whose end scrolls under the tab bar's fade */
-          z-index: 1;
-          display: grid;
-          grid-area: shell-footer;
-          /*
-           * Its own snapshot, because the root snapshot extends under a mobile browser's bottom toolbar
-           * and would draw this bar that much lower. Only during a transition: a name changes how the
-           * browser layers the bar, and so how its text renders.
-           */
-          :root:active-view-transition-type(track-cover-open, track-cover-close, screen-fade) & {
-            view-transition-name: recents-footer;
-          }
-        `}
+            /* above shell <main>, whose end scrolls under the tab bar's fade */
+            z-index: 1;
+            display: grid;
+            grid-area: shell-footer;
+          `,
+        )}
       >
         <MiniPlayer />
         <AccountTabBar />
