@@ -899,12 +899,14 @@ test("opening a track from Recents and going back runs the cover transition betw
         oldCovers: ["card"],
         newCovers: ["detail"],
         coverCorners: { start: CARD_COVER_CORNERS, end: DETAIL_COVER_CORNERS },
+        bottomBars: ["player-sheet", "recents-footer"],
       },
       {
         types: ["track-cover-close"],
         oldCovers: ["detail"],
         newCovers: ["card"],
         coverCorners: { start: DETAIL_COVER_CORNERS, end: CARD_COVER_CORNERS },
+        bottomBars: ["player-sheet", "recents-footer"],
       },
     ]);
 });
@@ -928,7 +930,12 @@ test("opening a track from the mini player only cross-fades, even with its card 
 
   await expect
     .poll(async () => (await readViewTransitionRecord(page)).at(-1))
-    .toEqual({ types: ["screen-fade"], oldCovers: [], newCovers: [] });
+    .toEqual({
+      types: ["screen-fade"],
+      oldCovers: [],
+      newCovers: [],
+      bottomBars: ["player-sheet", "recents-footer"],
+    });
   expect(await readViewTransitionRecord(page)).toHaveLength(3);
 });
 

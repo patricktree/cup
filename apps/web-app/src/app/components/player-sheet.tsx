@@ -103,6 +103,14 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
           padding-block: 0 ${FADE_FOOTER_PADDING_BLOCK_END_PIXELS}px;
           padding-inline: 24px;
           background-color: var(--color-surface);
+          /*
+           * Its own snapshot, because the root snapshot extends under a mobile browser's bottom toolbar
+           * and would draw this bar that much lower. Only during a transition: a name changes how the
+           * browser layers the bar, and so how its text renders.
+           */
+          :root:active-view-transition-type(track-cover-open, track-cover-close, screen-fade) & {
+            view-transition-name: player-sheet;
+          }
         `,
       )}
     >

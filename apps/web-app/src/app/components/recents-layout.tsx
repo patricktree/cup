@@ -82,6 +82,14 @@ export function RecentsLayout({ children }: { children: React.ReactNode }): Reac
           z-index: 1;
           display: grid;
           grid-area: shell-footer;
+          /*
+           * Its own snapshot, because the root snapshot extends under a mobile browser's bottom toolbar
+           * and would draw this bar that much lower. Only during a transition: a name changes how the
+           * browser layers the bar, and so how its text renders.
+           */
+          :root:active-view-transition-type(track-cover-open, track-cover-close, screen-fade) & {
+            view-transition-name: recents-footer;
+          }
         `}
       >
         <MiniPlayer />
