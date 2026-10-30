@@ -24,7 +24,7 @@ const viewTransitionRecordSchema = z.array(
      * shows.
      */
     bottomBarGap: z.number().optional(),
-    /** The shown bottom bar's position; iOS Safari cuts the snapshot of a `position: sticky` one. */
+    /** The shown bottom bar's position; iOS Safari cuts a `position: sticky` bar's snapshot. */
     bottomBarPosition: z.string().optional(),
     /** Whether the bottom bars are drawn above the moving cover. */
     isBottomBarAboveCover: z.boolean(),
