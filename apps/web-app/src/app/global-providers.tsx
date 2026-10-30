@@ -5,6 +5,7 @@ import type { RouterHistory } from "@tanstack/react-router";
 import React from "react";
 
 import { RouteErrorScreen } from "#src/app/components/error-message.js";
+import { createCoverViewTransition } from "#src/app/cover-transition.js";
 import { DSToastViewport } from "#src/app/design-system/toast.js";
 import { queryClient } from "#src/data-fetching/query-client.js";
 import { toastManager } from "#src/notifications.js";
@@ -39,6 +40,7 @@ export function createAppRouter(history?: RouterHistory) {
      */
     defaultPreload: "viewport",
     defaultPreloadStaleTime: 0,
+    defaultViewTransition: createCoverViewTransition(),
     routeTree,
     routeMasks: [addDialogMask],
     // The document is the scroll container, which the router restores and resets by default.

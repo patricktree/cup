@@ -9,6 +9,7 @@ type DSCoverImageProps = DSCoverImageCustomProps & {
   src: string | undefined;
   alt: string;
   className?: string;
+  ref?: React.Ref<HTMLDivElement>;
 };
 
 type DSCoverImageCustomProps = {
@@ -24,7 +25,8 @@ type ShownImage = { src: string; alt: string };
 
 /**
  * A cover cropped to 5:3 (or a circle) on the placeholder color while it loads. When the URL
- * changes, it keeps showing the previous image until the new one has loaded.
+ * changes, it keeps showing the previous image until the new one has loaded. An image the document
+ * has already loaded shows on the first paint, so a remounted cover never flashes the placeholder.
  */
 export function DSCoverImage({
   src,
@@ -32,6 +34,7 @@ export function DSCoverImage({
   shape = "rectangle",
   corners = "rounded",
   className,
+  ref,
 }: DSCoverImageProps): React.JSX.Element {
   const [shownImage, setShownImage] = React.useState<ShownImage | undefined>(undefined);
   const dataAttributes: DSCoverImageDataAttributes = {
@@ -79,6 +82,7 @@ export function DSCoverImage({
         className,
       )}
       {...dataAttributes}
+      ref={ref}
     >
       {src !== undefined && shownImage !== undefined && (
         <img src={shownImage.src} alt={isLoading ? shownImage.alt : alt} />
@@ -90,6 +94,12 @@ export function DSCoverImage({
           src={src}
           alt=""
           data-loading=""
+          ref={(image) => {
+            // The list of available images completes a cached image as soon as its src is set.
+            if (image?.complete && image.naturalWidth > 0) {
+              setShownImage({ src, alt });
+            }
+          }}
           onLoad={() => setShownImage({ src, alt })}
         />
       )}

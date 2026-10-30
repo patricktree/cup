@@ -196,6 +196,8 @@ async function goBackToRecentsOnceLoaded({
   );
   await userEvent.setup().click(canvas.getByRole("link", { name: "Back" }));
   await canvas.findByRole("region", { name: "Player" }, { timeout: 10_000 });
+  // Back morphs the cover; a tap during the morph would reach the document instead of Recents.
+  await document.activeViewTransition?.finished;
 }
 
 /** A stable conversion ID per generated history item. */
@@ -215,13 +217,15 @@ function createReadyItems(firstIndex: number, count: number): Record<string, unk
         title: TITLES[index % TITLES.length],
         ...(hasCoverImage && {
           hasCoverImage,
-          coverImage: {
-            url: `${window.location.origin}${COVER_PATH}/${COVER_COLORS[index % COVER_COLORS.length]?.slice(1)}.svg`,
-          },
+          coverImage: { url: toStoryCoverUrl(index) },
         }),
       },
     });
   });
+}
+
+function toStoryCoverUrl(index: number): string {
+  return `${window.location.origin}${COVER_PATH}/${COVER_COLORS[index % COVER_COLORS.length]?.slice(1)}.svg`;
 }
 
 function historyItem(index: number, fields: Record<string, unknown>): Record<string, unknown> {
@@ -283,6 +287,8 @@ export const RevisitingScreens = accountStory({
         playbackPosition: null,
         title,
         originalUrl: `https://${HOSTS[REVISITED_READY_INDEX]}/articles/${REVISITED_READY_INDEX}`,
+        // the card's cover, which morphs into this one
+        coverImage: { url: toStoryCoverUrl(REVISITED_READY_INDEX) },
         narrationDocument: {
           html: `<article><h1 id="unit-1">${title}</h1><p id="unit-2">Two.</p></article>`,
           synchronizationUnits: [
