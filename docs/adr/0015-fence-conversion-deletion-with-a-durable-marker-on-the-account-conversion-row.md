@@ -11,7 +11,7 @@ status: accepted
 - **A durable marker is the fence.** A nullable column on the account conversion row records when deletion was requested. The account's existing gates treat a marked row exactly like a missing one: execution checks, settlement, the artifact-writer target check and dispatch reconciliation refuse it, and every read reports the conversion as unknown. The marker is not a conversion status and the listener API never exposes it.
 - **The marker also records the owed cleanup.** It stays set until cleanup removes the row, last of all the conversion's records.
 - **One synchronous call marks and releases.** The account object's deletion method sets the marker and releases every still-reserved duration reservation of the conversion in one transaction. Settled segments stay charged, so spent duration stays spent.
-- **Termination is best effort.** After that commit the method tries once to terminate the preparation instance and each segment instance; a failed termination is neither retried nor recorded.
+- **Termination is best effort.** After that commit the method tries once to terminate the preparation instance and each segment instance; a failed termination is neither retried nor recorded. _Note, 2026-10-30:_ [CUP-48](https://linear.app/cup-audio/issue/CUP-48/return-from-track-deletion-as-soon-as-the-track-is-marked-without) moved this attempt from the deletion method to the account alarm, so the request no longer waits for it; it stays best effort, and [conversion deletion](../architecture/conversion-deletion.md) states the current behaviour.
 - **No per-conversion epoch.** The account execution epoch stays the only epoch.
 
 ## Considered options

@@ -1,0 +1,1 @@
+ALTER TABLE `account_conversions` ADD `workflow_termination_tried_at_ms` integer;
