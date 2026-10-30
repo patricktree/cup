@@ -24,6 +24,8 @@ const viewTransitionRecordSchema = z.array(
      * shows.
      */
     bottomBarGap: z.number().optional(),
+    /** The shown bottom bar's position; iOS Safari cuts the snapshot of a stuck bar. */
+    bottomBarPosition: z.string().optional(),
     /** Whether the bottom bars are drawn above the moving cover. */
     isBottomBarAboveCover: z.boolean(),
     /** Whether the two screens' bottom bars cross-fade as one pair, so no text shows through. */
@@ -95,6 +97,7 @@ export async function recordViewTransitions(page: Page): Promise<void> {
               pseudoElements.some((element) => element?.endsWith(`(${name})`)),
             ),
             isDocumentCaptured: pseudoElements.some((element) => element?.endsWith("(root)")),
+            bottomBarPosition: bottomBar && getComputedStyle(bottomBar).position,
             bottomBarGap:
               bottomBar && Math.round(innerHeight - bottomBar.getBoundingClientRect().bottom),
           });
