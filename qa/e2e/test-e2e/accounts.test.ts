@@ -367,6 +367,9 @@ test("a listener deletes a track from its detail view, and the duration it used 
   await expect(page.getByRole("link", { name: "Add your first track" })).toBeVisible();
   await expect(page.getByRole("list", { name: "Tracks" })).toHaveCount(0);
   expectConsoleError(/^Failed to load resource: the server responded with a status of 404/);
+  // React logs the one failed request twice: the error screen is in the route module, not in a lazy
+  // chunk, since "keep error screens out of lazy route chunks".
+  expectConsoleError(/^RpcError: Track not found\./);
   expectConsoleError(/^RpcError: Track not found\./);
   // The deletion went back to the Recents entry, so the deleted track is only the Forward entry.
   await page.goForward();
