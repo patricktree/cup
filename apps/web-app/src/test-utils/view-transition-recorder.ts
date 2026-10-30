@@ -4,6 +4,9 @@ import { z } from "zod";
 /** The view transition name of a track's moving cover (`src/app/cover-transition.ts`). */
 const COVER_TRANSITION_NAME = "track-cover";
 
+/** The view transition names of the screens' bottom bars, sorted. */
+const BOTTOM_BAR_NAMES = ["player-sheet", "recents-footer"];
+
 const coverPlaceSchema = z.enum(["card", "detail"]);
 
 const viewTransitionRecordSchema = z.array(
@@ -20,6 +23,8 @@ const viewTransitionRecordSchema = z.array(
      * shows.
      */
     bottomBarGap: z.number().optional(),
+    /** The bottom bars drawn above the moving cover, in their own snapshot. */
+    bottomBarsAboveCover: z.array(z.string()),
   }),
 );
 
@@ -38,7 +43,7 @@ const RECORD_KEY = "cupViewTransitionRecord";
  */
 export async function recordViewTransitions(page: Page): Promise<void> {
   await page.addInitScript(
-    ({ recordKey, coverTransitionName }) => {
+    ({ recordKey, coverTransitionName, bottomBarNames }) => {
       const record: unknown[] = [];
       Object.assign(window, { [recordKey]: record });
 
@@ -46,6 +51,18 @@ export async function recordViewTransitions(page: Page): Promise<void> {
         [...document.querySelectorAll<HTMLElement>("*")]
           .filter((element) => element.style.viewTransitionName === coverTransitionName)
           .map((element) => (element.closest("li") ? "card" : "detail"));
+
+      const findBottomBarsAboveCover = () => {
+        const pseudoElements = document
+          .getAnimations()
+          .map(({ effect }) => (effect instanceof KeyframeEffect ? effect.pseudoElement : null));
+        return bottomBarNames.filter(
+          (name) =>
+            pseudoElements.some((element) => element?.endsWith(`(${name})`)) &&
+            getComputedStyle(document.documentElement, `::view-transition-group(${name})`)
+              .zIndex === "1",
+        );
+      };
 
       const readCoverCorners = () => {
         const pseudoElement = `::view-transition-image-pair(${coverTransitionName})`;
@@ -89,6 +106,7 @@ export async function recordViewTransitions(page: Page): Promise<void> {
             oldCovers,
             newCovers: findCovers(),
             coverCorners: readCoverCorners(),
+            bottomBarsAboveCover: findBottomBarsAboveCover(),
             bottomBarGap:
               bottomBar && Math.round(innerHeight - bottomBar.getBoundingClientRect().bottom),
           });
@@ -96,7 +114,11 @@ export async function recordViewTransitions(page: Page): Promise<void> {
         return transition;
       };
     },
-    { recordKey: RECORD_KEY, coverTransitionName: COVER_TRANSITION_NAME },
+    {
+      recordKey: RECORD_KEY,
+      coverTransitionName: COVER_TRANSITION_NAME,
+      bottomBarNames: BOTTOM_BAR_NAMES,
+    },
   );
 }
 

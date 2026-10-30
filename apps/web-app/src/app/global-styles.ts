@@ -221,6 +221,12 @@ export const cssBase = css`
       }
     }
 
+    /* the screens' bottom bars, named in their own styles: a moving cover passes under them */
+    ::view-transition-group(recents-footer),
+    ::view-transition-group(player-sheet) {
+      z-index: 1;
+    }
+
     ::selection {
       color: var(--color-bg);
       background: var(--color-fg);

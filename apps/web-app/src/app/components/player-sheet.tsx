@@ -105,6 +105,11 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
           padding-block: 0 ${FADE_FOOTER_PADDING_BLOCK_END_PIXELS}px;
           padding-inline: 24px;
           background-color: var(--color-surface);
+
+          /* drawn above a moving cover, as the bar is above the page (global styles) */
+          :root:active-view-transition-type(track-cover-open, track-cover-close, screen-fade) & {
+            view-transition-name: player-sheet;
+          }
         `,
       )}
     >

@@ -84,6 +84,11 @@ export function RecentsLayout({ children }: { children: React.ReactNode }): Reac
             z-index: 1;
             display: grid;
             grid-area: shell-footer;
+
+            /* drawn above a moving cover, as the bar is above the page (global styles) */
+            :root:active-view-transition-type(track-cover-open, track-cover-close, screen-fade) & {
+              view-transition-name: recents-footer;
+            }
           `,
         )}
       >
