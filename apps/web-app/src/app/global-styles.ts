@@ -1,6 +1,5 @@
 import {
-  PLAYER_SHEET_TRANSITION_NAME,
-  RECENTS_FOOTER_TRANSITION_NAME,
+  BOTTOM_BAR_TRANSITION_NAME,
   TRACK_COVER_TRANSITION_NAME,
 } from "#src/app/view-transition-names.js";
 
@@ -184,16 +183,34 @@ export const cssBase = css`
       outline-offset: var(--focus-ring-offset);
     }
 
+    /*
+     * No view transition captures the document, so only named elements animate, which each screen's
+     * content is too. While the document is captured, the browser measures sticky positions
+     * against the snapshot, which extends under a bottom browser toolbar, and would draw the bottom
+     * bars that much lower.
+     */
+    :root {
+      view-transition-name: none;
+    }
+
     /* a track's cover moving between Recents and its detail view, named in cover-transition.ts */
     ::view-transition-group(${TRACK_COVER_TRANSITION_NAME}) {
+      /* above the screens' content, whose sticky header would otherwise paint over it */
+      z-index: 1;
       animation-duration: 300ms;
       animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
     }
 
     /* the screens' bottom bars (bottomBarDuringViewTransition): a moving cover passes under them */
-    ::view-transition-group(${RECENTS_FOOTER_TRANSITION_NAME}),
-    ::view-transition-group(${PLAYER_SHEET_TRANSITION_NAME}) {
-      z-index: 1;
+    ::view-transition-group(${BOTTOM_BAR_TRANSITION_NAME}) {
+      z-index: 2;
+    }
+
+    /* the bars differ in height, and both end at the bottom of the screen */
+    ::view-transition-old(${BOTTOM_BAR_TRANSITION_NAME}),
+    ::view-transition-new(${BOTTOM_BAR_TRANSITION_NAME}) {
+      top: auto;
+      bottom: 0;
     }
 
     ::selection {

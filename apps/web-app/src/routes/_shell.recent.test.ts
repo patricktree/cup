@@ -918,14 +918,20 @@ test("opening a track from Recents and going back runs the cover transition betw
         oldCovers: ["card"],
         newCovers: ["detail"],
         bottomBarGap: 0,
-        bottomBarsAboveCover: ["player-sheet", "recents-footer"],
+        isBottomBarAboveCover: true,
+        isBottomBarPair: true,
+        fadingScreens: ["detail-header", "detail-screen", "recents-screen"],
+        isDocumentCaptured: false,
       },
       {
         types: ["track-cover"],
         oldCovers: ["detail"],
         newCovers: ["card"],
         bottomBarGap: 0,
-        bottomBarsAboveCover: ["player-sheet", "recents-footer"],
+        isBottomBarAboveCover: true,
+        isBottomBarPair: true,
+        fadingScreens: ["detail-header", "detail-screen", "recents-screen"],
+        isDocumentCaptured: false,
       },
     ]);
 });
@@ -954,7 +960,10 @@ test("opening a track from the mini player only cross-fades, even with its card 
       oldCovers: [],
       newCovers: [],
       bottomBarGap: 0,
-      bottomBarsAboveCover: ["player-sheet", "recents-footer"],
+      isBottomBarAboveCover: true,
+      isBottomBarPair: true,
+      fadingScreens: ["detail-header", "detail-screen", "recents-screen"],
+      isDocumentCaptured: false,
     });
   expect(await readViewTransitionRecord(page)).toHaveLength(3);
 });

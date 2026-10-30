@@ -24,7 +24,7 @@ let isPopStateVisualTransition = false;
 /**
  * The router's view transition setting: a transition for Recents to a detail view and back, none
  * for any other navigation. Browsers without view transition types get no transition at all, as the
- * router would otherwise cross-fade every navigation.
+ * router would otherwise start a transition for every navigation.
  */
 export function createCoverViewTransition(router: Pick<AnyRouter, "getMatchedRoutes">):
   | false
