@@ -4,7 +4,7 @@ import React from "react";
 
 import {
   bottomBarDuringViewTransition,
-  FADE_FOOTER_PADDING_BLOCK_END_PIXELS,
+  FADE_FOOTER_CONTROLS_END_DISTANCE_PIXELS,
   fadeFooter,
 } from "#src/app/components/fade-footer.js";
 import { PlaybackError, PlaybackErrorMessage } from "#src/app/components/playback-error.js";
@@ -104,7 +104,7 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
           display: grid;
           grid-area: shell-footer;
           align-content: end;
-          padding-block: 0 ${FADE_FOOTER_PADDING_BLOCK_END_PIXELS}px;
+          padding-block: 0 ${FADE_FOOTER_CONTROLS_END_DISTANCE_PIXELS}px;
           padding-inline: 24px;
           background-color: var(--color-surface);
         `,

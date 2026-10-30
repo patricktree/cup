@@ -15,10 +15,10 @@ export function fadeFooterClearance({ fadeHeightPixels }: FadeFooterHeights): st
 }
 
 /**
- * Bottom padding of every fade footer, so their controls end at the same distance from the screen's
- * bottom edge.
+ * Distance from the screen's bottom edge to the end of the content of every fade footer's controls.
+ * A footer whose controls have padding of their own subtracts it from its bottom padding.
  */
-export const FADE_FOOTER_PADDING_BLOCK_END_PIXELS = 24;
+export const FADE_FOOTER_CONTROLS_END_DISTANCE_PIXELS = 24;
 
 /**
  * A bar stuck to the bottom of the screen, during a view transition. It is fixed there instead,
