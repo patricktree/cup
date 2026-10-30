@@ -13,6 +13,8 @@ const viewTransitionRecordSchema = z.array(
     oldCovers: z.array(coverPlaceSchema),
     /** The same, when the new screen is captured. */
     newCovers: z.array(coverPlaceSchema),
+    /** The moving cover's computed `border-radius` when the transition starts and ends. */
+    coverCorners: z.object({ start: z.string(), end: z.string() }).optional(),
   }),
 );
 
@@ -40,6 +42,29 @@ export async function recordViewTransitions(page: Page): Promise<void> {
           .filter((element) => element.style.viewTransitionName === coverTransitionName)
           .map((element) => (element.closest("li") ? "card" : "detail"));
 
+      const readCoverCorners = () => {
+        const pseudoElement = `::view-transition-image-pair(${coverTransitionName})`;
+        const animation = document.getAnimations().find((candidate) => {
+          const { effect } = candidate;
+          return effect instanceof KeyframeEffect && effect.pseudoElement === pseudoElement;
+        });
+        if (animation === undefined) {
+          return undefined;
+        }
+        const readAt = (time: number) => {
+          animation.currentTime = time;
+          return getComputedStyle(document.documentElement, pseudoElement).borderRadius;
+        };
+        animation.pause();
+        const corners = {
+          start: readAt(0),
+          end: readAt(Number(animation.effect?.getComputedTiming().endTime)),
+        };
+        animation.currentTime = 0;
+        animation.play();
+        return corners;
+      };
+
       const startViewTransition = document.startViewTransition.bind(document);
       document.startViewTransition = (options) => {
         const oldCovers = findCovers();
@@ -55,6 +80,7 @@ export async function recordViewTransitions(page: Page): Promise<void> {
             ...(typeof options === "object" && { types: options.types }),
             oldCovers,
             newCovers: findCovers(),
+            coverCorners: readCoverCorners(),
           });
         })();
         return transition;

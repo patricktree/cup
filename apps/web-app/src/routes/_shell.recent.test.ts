@@ -874,6 +874,10 @@ test("leaving a track being prepared stops polling it, and reopening it polls ag
   await expect.poll(() => audiobookRequestCount).toBeGreaterThan(requestCountOnLeaving + 1);
 });
 
+/** A card clips its cover: square below the title, and the card's inner radius at the bottom. */
+const CARD_COVER_CORNERS = "0px 0px 23px 23px";
+const DETAIL_COVER_CORNERS = "24px";
+
 test("opening a track from Recents and going back runs the cover transition between the card and the detail view", async ({
   mount,
   page,
@@ -890,25 +894,42 @@ test("opening a track from Recents and going back runs the cover transition betw
   await expect
     .poll(() => readViewTransitionRecord(page))
     .toEqual([
-      { types: ["track-cover"], oldCovers: ["card"], newCovers: ["detail"] },
-      { types: ["track-cover"], oldCovers: ["detail"], newCovers: ["card"] },
+      {
+        types: ["track-cover-open"],
+        oldCovers: ["card"],
+        newCovers: ["detail"],
+        coverCorners: { start: CARD_COVER_CORNERS, end: DETAIL_COVER_CORNERS },
+      },
+      {
+        types: ["track-cover-close"],
+        oldCovers: ["detail"],
+        newCovers: ["card"],
+        coverCorners: { start: DETAIL_COVER_CORNERS, end: CARD_COVER_CORNERS },
+      },
     ]);
 });
 
-test("opening a track from the mini player starts no view transition", async ({ mount, page }) => {
+test("opening a track from the mini player only cross-fades, even with its card in view", async ({
+  mount,
+  page,
+}) => {
   await recordViewTransitions(page);
-  const component = await mount("routes/_shell.recent/RecentsWithMiniPlayer");
-  const player = component.getByRole("region", { name: "Player" });
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
   await expectCoversLoaded(page);
-  const transitionsBefore = (await readViewTransitionRecord(page)).length;
+  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+  await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+  const player = component.getByRole("region", { name: "Player" });
+  await expect(player).toBeVisible();
+  await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(2);
+  await page.evaluate(() => document.activeViewTransition?.finished);
 
   await player.getByRole("link").click();
 
-  await expect(
-    component.getByRole("heading", { name: "Sure, let’s smoosh SpaceX and xAI together" }),
-  ).toBeVisible();
-  await page.evaluate(() => document.activeViewTransition?.finished);
-  expect(await readViewTransitionRecord(page)).toHaveLength(transitionsBefore);
+  await expect
+    .poll(async () => (await readViewTransitionRecord(page)).at(-1))
+    .toEqual({ types: ["screen-fade"], oldCovers: [], newCovers: [] });
+  expect(await readViewTransitionRecord(page)).toHaveLength(3);
 });
 
 test("with reduced motion, opening a track and going back start no view transition", async ({

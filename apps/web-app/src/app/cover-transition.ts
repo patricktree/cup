@@ -7,9 +7,11 @@ import React from "react";
  * navigation. Only the track's own covers carry the transition name, and only while it runs: a
  * second element with the same name would make the browser skip the whole transition.
  */
-const COVER_TRANSITION_TYPE = "track-cover";
-// The global styles time the cover transition by this name.
+// The global styles shape the moving cover's corners by these types, and time it by this name.
+const COVER_TRANSITION_TYPE_OPEN = "track-cover-open";
+const COVER_TRANSITION_TYPE_CLOSE = "track-cover-close";
 const COVER_TRANSITION_NAME = "track-cover";
+const SCREEN_FADE_TYPE = "screen-fade";
 
 const RECENTS_PATH = /\/recent\/?$/;
 const DETAIL_PATH = /\/audiobooks\/([^/]+)\/?$/;
@@ -21,7 +23,11 @@ const DETAIL_PATH = /\/audiobooks\/([^/]+)\/?$/;
 const coversByConversionId = new Map<string, Set<HTMLElement>>();
 const namedCovers = new Set<HTMLElement>();
 
-/** The conversion whose cover the running navigation moves, until its landing cover mounts. */
+/**
+ * The conversion whose cover the latest navigation moves. It stays set after the landing cover
+ * mounts, because StrictMode attaches a ref twice and the second attach has to name the cover
+ * again.
+ */
 let coverTransitionConversionId: string | undefined;
 let isListeningToPopState = false;
 let isPopStateVisualTransition = false;
@@ -39,10 +45,7 @@ export function createCoverViewTransition():
         toLocation: ParsedLocation;
       }) => string[] | false;
     } {
-  if (
-    typeof window === "undefined" ||
-    !window.CSS?.supports?.("selector(:active-view-transition-type(a))")
-  ) {
+  if (!supportsViewTransitionTypes()) {
     return false;
   }
 
@@ -80,10 +83,29 @@ export function createCoverViewTransition():
       // Still the previous screen: name the cover that the transition starts from.
       nameCoverOf(conversionId);
       coverTransitionConversionId = conversionId;
-      return [COVER_TRANSITION_TYPE];
+      return [
+        fromLocation !== undefined && RECENTS_PATH.test(fromLocation.pathname)
+          ? COVER_TRANSITION_TYPE_OPEN
+          : COVER_TRANSITION_TYPE_CLOSE,
+      ];
     },
   };
 }
+
+/**
+ * A navigation's view transition that only cross-fades the screen, moving no cover. The router does
+ * not ask the setting above for such a navigation, so this clears a name that an earlier cover
+ * transition left on a card; that card would still animate otherwise.
+ */
+export const screenFadeViewTransition = supportsViewTransitionTypes() && {
+  types: () => {
+    clearCoverNames();
+    coverTransitionConversionId = undefined;
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? false
+      : [SCREEN_FADE_TYPE];
+  },
+};
 
 /**
  * Registers a cover as the given conversion's, to move when its detail view opens or closes. The
@@ -103,7 +125,6 @@ export function useCoverTransitionRef(conversionId: string): React.RefCallback<H
       coversByConversionId.set(conversionId, covers);
       if (coverTransitionConversionId === conversionId) {
         nameCoverOf(conversionId);
-        coverTransitionConversionId = undefined;
       }
 
       return () => {
@@ -115,6 +136,13 @@ export function useCoverTransitionRef(conversionId: string): React.RefCallback<H
       };
     },
     [conversionId],
+  );
+}
+
+function supportsViewTransitionTypes(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.CSS.supports("selector(:active-view-transition-type(a))")
   );
 }
 
