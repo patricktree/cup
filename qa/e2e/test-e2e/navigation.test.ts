@@ -1,9 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import {
-  readLoadingStateRecord,
-  recordLoadingStates,
-} from "@cup/web-app/test-utils/loading-state-recorder";
+import { readLoadingStateRecord, recordLoadingStates } from "@cup/loading-state-recorder";
 
 import { expect, test } from "#test-e2e/fixtures.ts";
 import { readAccessToken, waitForAudiobook } from "#test-e2e/journey.ts";

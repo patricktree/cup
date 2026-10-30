@@ -1,10 +1,8 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { readLoadingStateRecord, recordLoadingStates } from "@cup/loading-state-recorder";
+
 import { failResponses, holdResponses, releaseResponses } from "#src/test-utils/held-responses.ts";
-import {
-  readLoadingStateRecord,
-  recordLoadingStates,
-} from "#src/test-utils/loading-state-recorder.ts";
 import { recordReactUseWarnings } from "#src/test-utils/react-use-warnings.ts";
 
 const ADDED_SOURCE_URL = "https://example.test/added";

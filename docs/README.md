@@ -41,6 +41,7 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 | [Declaration builds](declaration-builds.md)                                           | Understand source and declaration package scopes, compiler settings, and build caching |
 | [Brand assets](../tooling/brand-assets/README.md)                                     | Maintain generated application branding                                                |
 | [Workspace checks](../qa/workspace-checks/README.md)                                  | Tests for invariants across all packages, such as the package export check             |
+| [Loading state recorder](../qa/loading-state-recorder/README.md)                      | Fail a Playwright test on a loading flash, however briefly it shows                    |
 | [Migration generator](../tooling/drizzle-migrations/README.md)                        | Generate SQLite migrations, snapshots, Worker bundles, and schema diagrams             |
 | [Submodule check](../.patricktree-stack/tooling/submodule-check/README.md)            | Reject commits that move a submodule pointer backwards                                 |
 | [Mermaid check](../.patricktree-stack/tooling/mermaid-check/README.md)                | Parse Mermaid diagrams in documentation                                                |

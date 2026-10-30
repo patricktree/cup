@@ -743,6 +743,9 @@ importers:
       '@cup/config-oxlint':
         specifier: workspace:*
         version: link:../../tooling/config-oxlint
+      '@cup/loading-state-recorder':
+        specifier: workspace:*
+        version: link:../../qa/loading-state-recorder
       '@cup/prepare-declaration-build':
         specifier: workspace:*
         version: link:../../tooling/prepare-declaration-build
@@ -1853,9 +1856,9 @@ importers:
       '@cup/config-oxlint':
         specifier: workspace:*
         version: link:../../tooling/config-oxlint
-      '@cup/web-app':
+      '@cup/loading-state-recorder':
         specifier: workspace:*
-        version: link:../../apps/web-app
+        version: link:../loading-state-recorder
       '@patricktree-stack/config-playwright':
         specifier: workspace:*
         version: link:../../.patricktree-stack/tooling/config-playwright
@@ -1895,6 +1898,43 @@ importers:
       wrangler:
         specifier: 'catalog:'
         version: 4.144.0(@types/node@26.6.5)
+
+  qa/loading-state-recorder:
+    dependencies:
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@cup/config-oxlint':
+        specifier: workspace:*
+        version: link:../../tooling/config-oxlint
+      '@cup/prepare-declaration-build':
+        specifier: workspace:*
+        version: link:../../tooling/prepare-declaration-build
+      '@patricktree-stack/config-playwright':
+        specifier: workspace:*
+        version: link:../../.patricktree-stack/tooling/config-playwright
+      '@patricktree-stack/config-typescript':
+        specifier: workspace:*
+        version: link:../../.patricktree-stack/tooling/config-typescript
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.64.0
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.5
+      '@typescript/native':
+        specifier: 'catalog:'
+        version: typescript@7.0.2
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.87.0(oxlint-tsgolint@7.0.2004)
+      oxlint-tsgolint:
+        specifier: 'catalog:'
+        version: 7.0.2004
+      typescript:
+        specifier: 'catalog:'
+        version: '@typescript/typescript6@6.0.2'
 
   qa/resend-stub:
     dependencies:

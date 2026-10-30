@@ -1,9 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import {
-  readLoadingStateRecord,
-  recordLoadingStates,
-} from "#src/test-utils/loading-state-recorder.ts";
+import { readLoadingStateRecord, recordLoadingStates } from "#src/loading-state-recorder.ts";
 
 const PAGE_URL = "http://loading-state-recorder.test/";
 

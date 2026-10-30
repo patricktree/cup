@@ -9,7 +9,6 @@
   },
   "exports": {
     "./package.json": "./package.json",
-    "./test-utils/loading-state-recorder": "./src/test-utils/loading-state-recorder.ts",
     "./vite": "./vite.shared.ts"
   },
   "scripts": {
@@ -53,6 +52,7 @@
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",
+    "@cup/loading-state-recorder": "workspace:*",
     "@cup/prepare-declaration-build": "workspace:*",
     "@patricktree-stack/config-playwright": "workspace:*",
     "@patricktree-stack/config-stylelint": "workspace:*",
