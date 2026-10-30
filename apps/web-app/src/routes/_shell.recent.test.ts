@@ -5,6 +5,7 @@ import {
   readLoadingStateRecord,
   recordLoadingStates,
 } from "#src/test-utils/loading-state-recorder.ts";
+import { recordReactUseWarnings } from "#src/test-utils/react-use-warnings.ts";
 
 const ADDED_SOURCE_URL = "https://example.test/added";
 /** Cards on the first page of the `Recents` story. */
@@ -648,6 +649,7 @@ for (const { status, message } of [
     mount,
     page,
   }) => {
+    const useWarnings = recordReactUseWarnings(page);
     await page.clock.install();
     const component = await mount("routes/_shell.recent/RevisitingScreens");
     await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
@@ -665,12 +667,14 @@ for (const { status, message } of [
     await expect(component.getByText(message)).toBeVisible();
     await expect(component.getByText("Two.", { exact: true })).toHaveCount(0);
     await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(0);
+    expect(useWarnings).toEqual([]);
   });
 
   test(`returning to Recents whose refetch answers ${status} replaces its cached cards by the error screen`, async ({
     mount,
     page,
   }) => {
+    const useWarnings = recordReactUseWarnings(page);
     await page.clock.install();
     const component = await mount("routes/_shell.recent/RevisitingScreens");
     await expect(cardsOf(component)).toHaveCount(2);
@@ -685,6 +689,7 @@ for (const { status, message } of [
     await expect(component.getByText(message)).toBeVisible();
     await expect(cardsOf(component)).toHaveCount(0);
     await expect(page.getByRole("alertdialog", { includeHidden: true })).toHaveCount(0);
+    expect(useWarnings).toEqual([]);
   });
 }
 
