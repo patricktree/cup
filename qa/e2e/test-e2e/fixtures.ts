@@ -82,9 +82,13 @@ export const test = base.extend<Fixtures>({
     await attachText(testInfo, "browser-console-errors", consoleErrors);
     await attachText(testInfo, "browser-page-errors", pageErrors);
     expect(unexpectedRequests, "The browser made an unapproved external request").toEqual([]);
-    expect(consoleErrors, "The browser logged an unexpected number of console errors").toHaveLength(
-      expectConsoleError.messages.length,
-    );
+    // A test may expect an error when its route answers a request, before the browser logs it.
+    await expect(() => {
+      expect(
+        consoleErrors,
+        "The browser logged an unexpected number of console errors",
+      ).toHaveLength(expectConsoleError.messages.length);
+    }).toPass({ timeout: 5_000 });
     for (const [index, expectedMessage] of expectConsoleError.messages.entries()) {
       const actualMessage = consoleErrors[index];
       expect(actualMessage, `Unexpected browser console error at index ${index}`).toBeDefined();

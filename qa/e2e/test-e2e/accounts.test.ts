@@ -60,7 +60,7 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   await page.getByRole("button", { name: "Delete account…" }).click();
   await expect(page.getByRole("button", { name: "Schedule deletion" })).toBeVisible();
   await expect.poll(() => authProvider.exchanges()).toBe(2);
-  await page.getByRole("button", { name: "Schedule deletion" }).click();
+  await scheduleDeletion(page);
   // Scheduling deletion signs the browser out, and signed out, Recents and its dialogs lead home.
   await expect(page).toHaveURL(`${origin}/app/`);
   // The unexpired signed URL is refused like a bearer request of an account scheduled for deletion.
@@ -177,7 +177,7 @@ test("signup keeps trial conversions separate from the new account and its Recen
   expect(importRequests).toBe(0);
   await page.goto(`${origin}/app/recent/account`);
   await page.getByRole("button", { name: "Delete account…", exact: true }).click();
-  await page.getByRole("button", { name: "Schedule deletion", exact: true }).click();
+  await scheduleDeletion(page);
   // Scheduling deletion signs the browser out. Its unexpired track URL is refused like a bearer
   // request of the account, and the track without a signed URL is refused outright.
   await expect.poll(async () => (await page.request.get(privateTrackUrl)).status()).toBe(403);
@@ -219,7 +219,7 @@ test("signed-in accounts skip trial credentials and signed-out users can reopen 
   expect(trialRequests).toBe(0);
   await page.goto(`${origin}/app/recent/account`);
   await page.getByRole("button", { name: "Delete account…", exact: true }).click();
-  await page.getByRole("button", { name: "Schedule deletion", exact: true }).click();
+  await scheduleDeletion(page);
   // Scheduling deletion signs the browser out, and signed out, Recents and its dialogs lead home.
   await expect(page).toHaveURL(`${origin}/app/`);
   await page.goto(trialUrl);
@@ -377,6 +377,25 @@ test("a listener deletes a track from its detail view, and the duration it used 
   await expect(page.getByText("Track not found.")).toBeVisible();
   expect((await readAccount(page, origin)).balance.available).toBe(remainingAllowance);
 });
+
+/**
+ * Confirms the deletion once the covers on Recents behind the dialog have loaded: the account would
+ * refuse one still loading, and a listener takes far longer to confirm than a test.
+ */
+async function scheduleDeletion(page: Page) {
+  const confirm = page.getByRole("button", { name: "Schedule deletion", exact: true });
+  await expect(confirm).toBeVisible();
+  await expect
+    .poll(() =>
+      page
+        .locator("img")
+        .evaluateAll((images) =>
+          images.every((image) => image instanceof HTMLImageElement && image.complete),
+        ),
+    )
+    .toBe(true);
+  await confirm.click();
+}
 
 async function readAccount(page: Page, origin: string) {
   const accessToken = await readAccessToken(page);

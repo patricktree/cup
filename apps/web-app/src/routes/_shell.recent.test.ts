@@ -53,6 +53,29 @@ test("a ready card links to its detail view and shows its title, cover and host"
   await expect(link.getByText("derstandard.at")).toHaveCount(0);
 });
 
+test("a card preloads its track only once no dialog covers it", async ({ mount, page }) => {
+  const preloads: string[] = [];
+  page.on("request", (request) => {
+    const { pathname } = new URL(request.url());
+    if (pathname.startsWith("/api/audiobooks/")) {
+      preloads.push(pathname);
+    }
+  });
+  await mount("routes/_shell.recent/OneReadyItemBehindAccountDialog");
+  const dialog = page.getByRole("dialog", { name: "Account settings" });
+  await expect(dialog.getByText("Delete account…")).toBeVisible();
+  await expectCoversLoaded(page);
+  // The longest a preload takes to start, as nothing on the page tells that none will.
+  await page.waitForTimeout(500);
+  expect(preloads).toEqual([]);
+
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect
+    .poll(() => preloads)
+    .toEqual(["/api/audiobooks/00000000-0000-4000-8000-000000000000"]);
+});
+
 test("pending and failed cards show a muted line in the title slot and no cover", async ({
   mount,
 }) => {

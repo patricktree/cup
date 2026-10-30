@@ -6,6 +6,7 @@ import {
   Navigate,
   Outlet,
   redirect,
+  useChildMatches,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import React from "react";
@@ -87,6 +88,7 @@ function RecentTracks({ subject }: { subject: string }): React.ReactNode {
   const recents = useSuspenseInfiniteQuery(createAccountHistoryQuery(subject));
   const masonryRef = useMasonryRowSpans();
   const [sentinelRef, isSentinelInReach] = useIsInScrollReach();
+  const isCoveredByDialog = useChildMatches({ select: (matches) => matches.length > 0 });
 
   const { hasNextPage, isFetching, isFetchNextPageError, fetchNextPage } = recents;
   // Keeps loading while the end of the list stays in reach, one page at a time. A failed page waits
@@ -141,7 +143,7 @@ function RecentTracks({ subject }: { subject: string }): React.ReactNode {
         `}
       >
         {items.map((item) => (
-          <RecentsCard key={item.conversionId} item={item} />
+          <RecentsCard key={item.conversionId} item={item} isCoveredByDialog={isCoveredByDialog} />
         ))}
       </ul>
       {/* loads the next page once the end of the list comes within about one screen */}
