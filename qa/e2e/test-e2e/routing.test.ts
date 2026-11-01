@@ -191,7 +191,7 @@ test("signed in, home redirects to Recents, which opens the account dialog and t
   const { origin } = workerEnvironment;
   await gotoPage(page, `${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
-  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Listen" }).click();
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
 

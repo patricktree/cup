@@ -42,6 +42,7 @@ export function AddAudiobookDialog({ onClose }: { onClose: () => void }): React.
         error={submission.requiresSignIn ? undefined : submission.error}
         errorFallbackMessage="The track could not be added."
         onSubmit={submission.submit}
+        placeholder="Paste URL here"
         submitLabel="Add"
         submittingLabel="Adding…"
         sx={{

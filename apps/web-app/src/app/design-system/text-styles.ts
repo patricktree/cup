@@ -1,8 +1,8 @@
 import { css } from "@linaria/core";
 
 /**
- * The text styles of the Recents and detail-view designs, all in Inter. Each sets its own font
- * family, so it also applies to elements the global Space Mono rule reaches.
+ * The text styles of the Recents, detail-view and conversion designs, all in Inter. Each sets its
+ * own font family, so it also applies to elements the global Space Mono rule reaches.
  */
 export const textStyles = {
   /** Screen title, such as "Recent". */

@@ -5,7 +5,7 @@ test("renders an open Trial", async ({ mount }) => {
 
   await expect(component.getByRole("heading", { name: "Just listen." })).toBeVisible();
   await expect(component.getByRole("textbox", { name: "URL", exact: true })).toBeVisible();
-  await expect(component.getByRole("button", { name: "Load & listen" })).toBeDisabled();
+  await expect(component.getByRole("button", { name: "Listen" })).toBeDisabled();
   await expect(component).toHaveScreenshot("open-trial.png");
 });
 
@@ -63,16 +63,16 @@ test("renders an invalid source URL", async ({ mount }) => {
   await component.getByRole("textbox", { name: /^URL/ }).fill("not a URL");
   await component.getByRole("textbox", { name: /^URL/ }).blur();
   await expect(component.getByRole("alert")).toHaveCount(0);
-  await component.getByRole("button", { name: "Load & listen" }).click();
+  await component.getByRole("button", { name: "Listen" }).click();
   await expect(component.getByRole("textbox", { name: /^URL/ })).toHaveAttribute(
     "aria-invalid",
     "true",
   );
-  await expect(component.getByRole("button", { name: "Load & listen" })).toBeDisabled();
+  await expect(component.getByRole("button", { name: "Listen" })).toBeDisabled();
   await expect(component).toHaveScreenshot("invalid-article-url.png");
   await component.getByRole("textbox", { name: "URL", exact: true }).fill("https://example.com");
   await expect(component.getByRole("alert")).toHaveCount(0);
-  await expect(component.getByRole("button", { name: "Load & listen" })).toBeEnabled();
+  await expect(component.getByRole("button", { name: "Listen" })).toBeEnabled();
 });
 
 test("renders a pending conversion start", async ({ mount }) => {
@@ -80,7 +80,7 @@ test("renders a pending conversion start", async ({ mount }) => {
   await component
     .getByRole("textbox", { name: /^URL/ })
     .fill("https://source.example.test/fixture");
-  await component.getByRole("button", { name: "Load & listen" }).click();
+  await component.getByRole("button", { name: "Listen" }).click();
   await expect(component.getByRole("button", { name: "Starting conversion..." })).toBeDisabled();
   await expect(component.getByRole("textbox", { name: /^URL/ })).toHaveValue(
     "https://source.example.test/fixture",
@@ -108,7 +108,7 @@ test("starting a conversion requests the grant again, for its duration and conve
   await component
     .getByRole("textbox", { name: "URL", exact: true })
     .fill("https://source.example.test/fixture");
-  await component.getByRole("button", { name: "Load & listen" }).click();
+  await component.getByRole("button", { name: "Listen" }).click();
 
   await expect(component.getByLabel("Preparing track")).toBeVisible();
   expect(grantRequestsAfterStart).toBe(1);
@@ -133,7 +133,7 @@ test("retrying a trial submission reuses its key and sends only the source URL",
   const sourceUrl = "https://source.example.test/fixture";
   await component.getByRole("textbox", { name: "URL", exact: true }).fill(sourceUrl);
   for (const count of [1, 2]) {
-    await component.getByRole("button", { name: "Load & listen" }).click();
+    await component.getByRole("button", { name: "Listen" }).click();
     // A server failure carries no message meant for users.
     await expect(component.getByRole("alert")).toHaveText("The conversion could not start.");
     await expect.poll(() => keys.length).toBe(count);

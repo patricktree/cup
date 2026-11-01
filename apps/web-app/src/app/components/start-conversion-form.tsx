@@ -7,7 +7,10 @@ import type { GrantSnapshot } from "@cup/listener-api.routes";
 
 import { SignInDialog } from "#src/app/components/sign-in-dialog.js";
 import { SourceUrlForm } from "#src/app/components/source-url-form.js";
+import { ArrowRightIcon } from "#src/app/design-system/icons.js";
+import { textStyles } from "#src/app/design-system/text-styles.js";
 import { useAccountConversionSubmission } from "#src/app/use-cases/account-conversions.js";
+import { composeClassnames } from "#src/app/utils.js";
 import { useStartTrialConversionMutation } from "#src/data-fetching/conversion-grant.js";
 import { useRateLimitCountdown } from "#src/data-fetching/rate-limit.js";
 
@@ -114,30 +117,42 @@ function ConversionForm({
       error={error}
       errorFallbackMessage="The conversion could not start."
       onSubmit={onSubmit}
-      submitLabel="Load & listen"
+      placeholder="Paste website link (https://...)"
+      submitLabel="Listen"
       submittingLabel="Starting conversion..."
+      submitIcon={<ArrowRightIcon />}
       refs={{ submitButton: refs?.submitButton }}
       sx={{
         form: css`
           display: grid;
-          gap: calc(3 * var(--spacing-base));
-          padding-block: calc(5 * var(--spacing-base));
-          padding-inline: calc(2 * var(--spacing-base));
+          gap: 23px;
+          margin-block: 67px 16px;
         `,
-        input: css`
-          height: 64px;
-          padding-inline: 24px;
+        input: composeClassnames(
+          textStyles.paragraph,
+          css`
+            height: 41px;
+            padding-block: 0 9px;
+            padding-inline: 9px;
 
-          font-family: var(--font-family-1);
-          font-size: var(--font-size-md);
-          background: var(--color-surface) padding-box;
-          backdrop-filter: saturate(6);
+            /* the rule's round caps overhang the column by 1 px on each side */
+            margin-inline: -1px;
+            background: url("./wavy-rule.svg") bottom / 100% auto no-repeat;
 
-          &::placeholder {
-            color: var(--color-fg-emphasized-sm);
-          }
-        `,
+            /* DSInput draws a pill with a border and a shadow; the design has only the wavy rule */
+            border: 0;
+            border-radius: var(--border-radius-sm);
+            box-shadow: none;
+
+            /* DSInput's focus style rounds it into a pill */
+            &:focus-visible {
+              border-radius: var(--border-radius-sm);
+            }
+          `,
+        ),
         submitButton: css`
+          /* wider than DSButton's gap, between the label and the arrow */
+          gap: calc(2 * var(--spacing-base));
           justify-self: end;
         `,
       }}

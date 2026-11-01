@@ -31,7 +31,7 @@ export async function openNewTrial(
 
 export async function startConversion(page: Page): Promise<void> {
   await page.getByLabel("URL").fill(CONTROLLED_SOURCE_URL);
-  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Listen" }).click();
   await expect(page).toHaveURL(/\/app\/(?:conversions|audiobooks)\/[0-9a-f-]+$/);
 }
 

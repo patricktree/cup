@@ -6,8 +6,10 @@ import { DSButton } from "#src/app/design-system/button.js";
 import { DSCoverImage } from "#src/app/design-system/cover-image.js";
 import { DSIconButton } from "#src/app/design-system/icon-button.js";
 import {
+  ArrowRightIcon,
   AvatarRingIcon,
   BackChevronIcon,
+  CupLogoIcon,
   MoreIcon,
   PauseIcon,
   PauseMiniIcon,
@@ -129,6 +131,8 @@ const ICONS = [
   ["skip-forward-15", SkipForward15Icon],
   ["pause", PauseIcon],
   ["play", PlayIcon],
+  ["cup-logo", CupLogoIcon],
+  ["arrow-right", ArrowRightIcon],
 ] as const;
 
 const COVER_PATH = "/__story/covers";
