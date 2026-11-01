@@ -21,7 +21,7 @@ test("Recents and a track opened again show their cached content while each is r
   const { origin } = workerEnvironment;
   await page.goto(`${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
-  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Listen" }).click();
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
   const conversionId = new URL(page.url()).pathname.split("/").at(-1);

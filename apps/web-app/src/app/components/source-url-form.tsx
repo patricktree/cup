@@ -18,8 +18,10 @@ type SourceUrlFormProps = {
   /** Shown for a failure that carries no message for the listener. */
   errorFallbackMessage: string;
   onSubmit: (value: { sourceUrl: string }) => Promise<void>;
+  placeholder: string;
   submitLabel: string;
   submittingLabel: string;
+  submitIcon?: React.ReactNode;
   sx: { form: string; input?: string; submitButton?: string };
   refs?: { submitButton?: React.Ref<HTMLButtonElement> | undefined };
 };
@@ -37,8 +39,10 @@ export function SourceUrlForm({
   error,
   errorFallbackMessage,
   onSubmit,
+  placeholder,
   submitLabel,
   submittingLabel,
+  submitIcon,
   sx,
   refs,
 }: SourceUrlFormProps): React.JSX.Element {
@@ -81,7 +85,7 @@ export function SourceUrlForm({
                 maxLength={2048}
                 required
                 type="url"
-                placeholder="Paste URL here"
+                placeholder={placeholder}
                 hideLabel
               />
             )}
@@ -94,6 +98,7 @@ export function SourceUrlForm({
                 disabled={isPending || retryIn > 0 || !sourceUrl.trim()}
                 label={submitLabel}
                 submittingLabel={submittingLabel}
+                icon={submitIcon}
               />
             )}
           </form.Subscribe>

@@ -74,7 +74,7 @@ test("a late rate-limit response cannot change the next account's pending reques
   });
   const component = page.locator("main");
   await component.getByRole("textbox", { name: "URL", exact: true }).fill("https://example.com/");
-  await component.getByRole("button", { name: "Load & listen" }).click();
+  await component.getByRole("button", { name: "Listen" }).click();
   await expect.poll(() => requests).toBe(1);
   await page.evaluate(async (subject) => {
     const path = "/src/auth/account-session.ts";

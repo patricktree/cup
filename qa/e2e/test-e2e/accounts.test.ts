@@ -16,7 +16,7 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   const { origin, authProvider } = workerEnvironment;
   await page.goto(`${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
-  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Listen" }).click();
   const signup = page.getByRole("dialog", { name: "Sign in", exact: true });
   await expect(signup).toBeVisible();
   await expect(page).toHaveScreenshot("signup-prompt.png");
@@ -68,7 +68,7 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   expectConsoleError(/^Failed to load resource: the server responded with a status of 403/);
   await page.goto(`${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
-  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Listen" }).click();
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect.poll(() => authProvider.exchanges()).toBe(3);
   await expect(page.getByRole("alert")).toBeVisible();
@@ -115,7 +115,7 @@ test("signup keeps trial conversions separate from the new account and its Recen
   const credential = new URL(grant.trialLink).hash;
   await page.goto(`${origin}/app/trials/${grant.grantId}${credential}`);
   await page.getByRole("textbox", { name: "URL" }).fill(SOURCE_URL);
-  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Listen" }).click();
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
   const originalUrl = page.url();
   const originalId = new URL(originalUrl).pathname.split("/").at(-1);
@@ -132,7 +132,7 @@ test("signup keeps trial conversions separate from the new account and its Recen
   });
   await page.goto(`${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
-  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Listen" }).click();
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
   await waitForAudiobook(page);
@@ -204,7 +204,7 @@ test("signed-in accounts skip trial credentials and signed-out users can reopen 
   const trialUrl = `${origin}/app/trials/${grant.grantId}${new URL(grant.trialLink).hash}`;
   await page.goto(`${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
-  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Listen" }).click();
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
 
@@ -262,7 +262,7 @@ test("root auth handles signup and session restoration without account navigatio
   await page.goto(`${origin}/app/`);
   await expect(page.getByRole("navigation", { name: "Account" })).toHaveCount(0);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
-  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Listen" }).click();
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect(page).toHaveURL(/\/app\/audiobooks\/[^?]+$/, { timeout: 60_000 });
   expect(authProvider.exchanges()).toBe(1);
@@ -315,7 +315,7 @@ test("failed sign-in leaves anonymous trial access available", async ({
   });
   await page.goto(`${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
-  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Listen" }).click();
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect(
     page.getByText("Sign-in is temporarily unavailable.", { exact: true }),
@@ -324,7 +324,7 @@ test("failed sign-in leaves anonymous trial access available", async ({
   await page.goto(`${origin}/app/trials/${grant.grantId}${new URL(grant.trialLink).hash}`);
   await expect(page).toHaveURL(`${origin}/app/trials/${grant.grantId}`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
-  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Listen" }).click();
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
   await expect(page.getByRole("button", { name: "Play", exact: true })).toBeEnabled({
     timeout: 60_000,
@@ -339,7 +339,7 @@ test("a listener deletes a track from its detail view, and the duration it used 
   const { origin } = workerEnvironment;
   await page.goto(`${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
-  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Listen" }).click();
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
   const detailUrl = page.url();
@@ -430,14 +430,14 @@ test("a rate-limited resumed conversion waits for explicit retry and keeps its i
   });
   await page.goto(`${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
-  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Listen" }).click();
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect(page.getByRole("alert")).toHaveText("Try again shortly.");
   await page.reload();
   await expect(page.getByRole("textbox", { name: "URL", exact: true })).toHaveValue(SOURCE_URL);
-  await expect(page.getByRole("button", { name: "Load & listen" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Listen" })).toBeEnabled();
   expect(keys).toHaveLength(1);
-  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Listen" }).click();
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
   expect(keys[0]).toBeTruthy();
   expect(keys).toEqual([keys[0], keys[0]]);
@@ -450,7 +450,7 @@ test("account positions restore once and use last-write-wins across players", as
   const { origin } = workerEnvironment;
   await page.goto(origin + "/app/");
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
-  await page.getByRole("button", { name: "Load & listen" }).click();
+  await page.getByRole("button", { name: "Listen" }).click();
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60000 });
   await waitForAudiobook(page);

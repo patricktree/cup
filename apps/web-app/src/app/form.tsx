@@ -67,6 +67,8 @@ type SubmitButtonProps = {
   disabledWhenPristine?: boolean;
   label: string;
   submittingLabel?: string;
+  /** Follows the label; a submitting button shows its spinner instead. */
+  icon?: React.ReactNode;
 };
 
 function SubmitButton({
@@ -76,6 +78,7 @@ function SubmitButton({
   disabledWhenPristine = false,
   label,
   submittingLabel = label,
+  icon,
 }: SubmitButtonProps): React.JSX.Element {
   const form = useFormContext();
 
@@ -93,6 +96,7 @@ function SubmitButton({
           variant="contained"
         >
           {isSubmitting ? submittingLabel : label}
+          {isSubmitting ? null : icon}
         </DSButton>
       )}
     </form.Subscribe>

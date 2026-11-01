@@ -28,7 +28,7 @@ export const SignIn = {
     await user.clear(input);
     await user.type(input, "https://example.com/article");
 
-    const submit = canvas.getByRole("button", { name: "Load & listen" });
+    const submit = canvas.getByRole("button", { name: "Listen" });
     await waitFor(() => {
       if (submit.matches(":disabled")) {
         throw new Error("Waiting for conversion submission");
