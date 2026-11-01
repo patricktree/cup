@@ -41,9 +41,10 @@ type DesignCheckOptions = {
   reportDirectory: string;
   /** Rows the comparison skips, such as a device status bar drawn into the design. */
   ignoreTopPixels?: number;
-  /** Largest difference of a band's edge that still counts as a match. */
-  tolerancePixels?: number;
 };
+
+/** A design tool and a browser rasterize an edge up to this far apart, so closer is no mismatch. */
+const BAND_TOLERANCE_PIXELS = 1;
 
 const PNG_SIGNATURE = "89504e470d0a1a0a";
 /** The width and height of a PNG's first chunk (IHDR) follow the signature and the chunk header. */
@@ -63,20 +64,23 @@ export function readDesignImageSize(designImagePath: string): { width: number; h
 }
 
 /**
- * Compares the page with the design's image. The page should render at the image's size and at a
- * device scale above 1: 1x text snaps to whole pixels, unlike the design's render, so the page is
- * scaled down to the image's size to compare like with like.
+ * Compares the page with the design's image. The page must render at the image's size, and should
+ * at a device scale above 1: 1x text snaps to whole pixels, unlike the design's render, so the page
+ * is scaled down to the image's size to compare like with like.
  */
 export async function checkAgainstDesign(
   page: Page,
-  {
-    designImagePath,
-    reportDirectory,
-    ignoreTopPixels = 0,
-    tolerancePixels = 1,
-  }: DesignCheckOptions,
+  { designImagePath, reportDirectory, ignoreTopPixels = 0 }: DesignCheckOptions,
 ): Promise<DesignCheckReport> {
-  const renderedImage = await page.screenshot();
+  const designSize = readDesignImageSize(designImagePath);
+  const viewport = page.viewportSize();
+  if (viewport?.width !== designSize.width || viewport.height !== designSize.height) {
+    throw new Error(
+      `The page must render at the design image's size, ${designSize.width}×${designSize.height}, not ${viewport?.width}×${viewport?.height}`,
+    );
+  }
+
+  const renderedImage = await page.screenshot({ animations: "disabled" });
   const comparison = await page.evaluate(compareImagesInPage, {
     designImageUrl: toPngDataUrl(fs.readFileSync(designImagePath)),
     renderedImageUrl: toPngDataUrl(renderedImage),
@@ -85,6 +89,11 @@ export async function checkAgainstDesign(
   // After the screenshot, which waits for the fonts that the page has started loading.
   const { loadedFonts, elements } = await page.evaluate(measureElementsInPage);
 
+  // Without this, comparing no rows at all would report a match.
+  if (comparison.designBands.length === 0) {
+    throw new Error(`The design check found no ink in the design below row ${ignoreTopPixels}`);
+  }
+
   const bandCount = Math.max(comparison.designBands.length, comparison.renderedBands.length);
   const bands = Array.from({ length: bandCount }, (_, index) => {
     const design = comparison.designBands[index];
@@ -92,7 +101,7 @@ export async function checkAgainstDesign(
     return {
       design,
       rendered,
-      isWithinTolerance: isBandWithinTolerance(design, rendered, tolerancePixels),
+      isWithinTolerance: isBandWithinTolerance(design, rendered),
     };
   });
   const report = {
@@ -107,7 +116,7 @@ export async function checkAgainstDesign(
   fs.writeFileSync(path.join(reportDirectory, "rendered.png"), renderedImage);
   fs.writeFileSync(
     path.join(reportDirectory, "overlay.png"),
-    Buffer.from(comparison.overlayUrl.split(",")[1] ?? "", "base64"),
+    Buffer.from(comparison.overlayUrl.replace("data:image/png;base64,", ""), "base64"),
   );
 
   return report;
@@ -134,9 +143,11 @@ export function formatDesignCheckReport(report: DesignCheckReport): string {
         fontWeight,
         lineHeight,
         letterSpacing,
-        ...paint
+        color,
+        backgroundColor,
+        opacity,
       }) =>
-        `  <${tag}> "${label}" x=${rect.x} y=${rect.y} ${rect.width}×${rect.height} | ${fontFamily} ${fontSize}/${lineHeight} weight ${fontWeight} spacing ${letterSpacing} | color ${paint.color} background ${paint.backgroundColor} opacity ${paint.opacity}`,
+        `  <${tag}> "${label}" x=${rect.x} y=${rect.y} ${rect.width}×${rect.height} | ${fontFamily} ${fontSize}/${lineHeight} weight ${fontWeight} spacing ${letterSpacing} | color ${color} background ${backgroundColor} opacity ${opacity}`,
     ),
   ].join("\n");
 }
@@ -144,16 +155,15 @@ export function formatDesignCheckReport(report: DesignCheckReport): string {
 function isBandWithinTolerance(
   design: InkBand | undefined,
   rendered: InkBand | undefined,
-  tolerancePixels: number,
 ): boolean {
   if (design === undefined || rendered === undefined) {
     return false;
   }
   return (
-    Math.abs(design.top - rendered.top) <= tolerancePixels &&
-    Math.abs(design.bottom - rendered.bottom) <= tolerancePixels &&
-    Math.abs(design.left - rendered.left) <= tolerancePixels &&
-    Math.abs(design.right - rendered.right) <= tolerancePixels
+    Math.abs(design.top - rendered.top) <= BAND_TOLERANCE_PIXELS &&
+    Math.abs(design.bottom - rendered.bottom) <= BAND_TOLERANCE_PIXELS &&
+    Math.abs(design.left - rendered.left) <= BAND_TOLERANCE_PIXELS &&
+    Math.abs(design.right - rendered.right) <= BAND_TOLERANCE_PIXELS
   );
 }
 
@@ -221,6 +231,9 @@ async function compareImagesInPage({
 
   /* A design's corner shows its background; the rendered page is measured against the same color. */
   const backgroundOffset = (width * height - 1) * 4;
+  if (designPixels[backgroundOffset + 3] !== 255) {
+    throw new Error("The design image's bottom right corner must show the background, opaque");
+  }
   const isInk = (pixels: Uint8ClampedArray, offset: number) =>
     distanceFromDesign(pixels, offset, backgroundOffset) > INK_DISTANCE;
 

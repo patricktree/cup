@@ -4,4 +4,4 @@ Reviews enforce these judgement calls. A rule that a linter, type check or test 
 
 ## Design fidelity
 
-A claim that a screen matches a design rests on the [design check](qa/design-check/README.md)'s output, compared against the design's own values. Report a claim backed only by screenshots judged by eye or by updated baselines as "not verified".
+A claim that a screen matches a design rests on the [design check](qa/design-check/README.md)'s output, compared against the design's own values. Report any other such claim as "not verified", including one backed by screenshots judged by eye, updated baselines or hand measurements.

@@ -13,9 +13,16 @@ pnpm --filter '@cup/web-app' design-check
 
 `DESIGN_CHECK_IGNORE_TOP` skips rows the app does not draw, such as a device status bar in the design. The run renders at the image's size and needs Docker like the other Playwright suites. Its files land in `apps/web-app/playwright-output/design-check`: `report.json`, `rendered.png`, and `overlay.png`, which is dark where both images have ink, red for the design alone, and blue for the screen alone.
 
-The run prints two sections, and only the first can fail it:
+The run prints the share of noticeably differing pixels, which text edges keep above zero, and two sections. Only the first can fail it:
 
-- **Bands** are the rows of ink each image has, compared by their edges. A band further than 1 px from the design fails the run. An element inside a band can be off without moving the band's edges, so read the overlay too.
-- **Elements** lists the box, font, color and opacity of every drawn element. The design's image cannot supply these, so compare them with the design's values by hand.
+- **Bands** are the rows of ink each image has, compared by their edges. An edge further than 1 px from the design fails the run, and it stops with an error when the design image shows no ink at all.
+- **Elements** lists the box, font, color and opacity of each input, button, SVG and element with its own text. The design's image cannot supply these, so compare them with the design's values by hand.
 
-The story is rendered in its first state, so a state the design shows differently, such as a disabled button it draws enabled, shows up as a difference to judge rather than to fix. Text widths can also differ slightly between the design tool and the browser.
+A pass does not show a match on its own, so read the numbers and the overlay too:
+
+- **Inside the tolerance:** a band 1 px off prints `ok`. Compare the numbers when exact placement matters.
+- **Inside a band:** an element can be off without moving its band's edges, and a surface that spans a row merges its contents into one band.
+- **Pale surfaces:** ink means a color clearly apart from the design's bottom right corner, which must show the background. A hairline or a pale card may not count, and neither image shows it as ink.
+- **Paired by position:** bands pair in order from the top, so one extra or missing band makes every later pair report a mismatch.
+
+The story must have a `main` landmark, and it is compared in the state it renders first, once `main` is visible. A screen still loading its data is compared as it is, so give the state to compare a story of its own that reaches it. A difference the design draws on purpose, such as a disabled button it draws enabled, also shows up. It can fail the run, as can text widths that differ between the design tool and the browser, so judge a failure before fixing it.

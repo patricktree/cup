@@ -76,6 +76,57 @@ test("reports a font that was still loading when the check started", async ({
   expect(report.loadedFonts).toEqual(["DelayedFont normal"]);
 });
 
+test("rejects a comparison that finds no ink in the design", async ({
+  browser,
+  page,
+}, testInfo) => {
+  const designImagePath = await renderDesignImage(browser, testInfo);
+  await showBoxes(page, BOXES);
+
+  await expect(
+    checkAgainstDesign(page, {
+      designImagePath,
+      reportDirectory: testInfo.outputPath("report"),
+      ignoreTopPixels: VIEWPORT.height,
+    }),
+  ).rejects.toThrow("found no ink in the design");
+});
+
+test("rejects a page rendered at another size than the design", async ({
+  browser,
+  page,
+}, testInfo) => {
+  const designImagePath = await renderDesignImage(browser, testInfo);
+  await page.setViewportSize({ width: VIEWPORT.width + 10, height: VIEWPORT.height });
+  await showBoxes(page, BOXES);
+
+  await expect(
+    checkAgainstDesign(page, {
+      designImagePath,
+      reportDirectory: testInfo.outputPath("report"),
+    }),
+  ).rejects.toThrow("must render at the design image's size");
+});
+
+test("rejects a design image with a transparent corner", async ({ browser, page }, testInfo) => {
+  const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1 });
+  const designPage = await context.newPage();
+  await designPage.setContent(
+    `<!doctype html><html><body style="margin:0;background:transparent"><div style="width:50px;height:50px;background:#121212"></div></body></html>`,
+  );
+  const designImagePath = testInfo.outputPath("design.png");
+  await designPage.screenshot({ path: designImagePath, omitBackground: true });
+  await context.close();
+  await showBoxes(page, BOXES);
+
+  await expect(
+    checkAgainstDesign(page, {
+      designImagePath,
+      reportDirectory: testInfo.outputPath("report"),
+    }),
+  ).rejects.toThrow("corner must show the background");
+});
+
 test("rejects a design image that is not a PNG", () => {
   const notAPng = test.info().outputPath("design.jpg");
   fs.writeFileSync(notAPng, "not a png");
