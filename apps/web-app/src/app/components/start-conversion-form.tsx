@@ -125,15 +125,18 @@ function ConversionForm({
       sx={{
         form: css`
           display: grid;
-          gap: 22px;
-          margin-block: 68px 16px;
+          gap: 23px;
+          margin-block: 67px 16px;
         `,
         input: composeClassnames(
           textStyles.paragraph,
           css`
-            height: 42px;
-            padding-block: 0 10px;
-            padding-inline: var(--spacing-base);
+            height: 41px;
+            padding-block: 0 9px;
+            padding-inline: 9px;
+
+            /* the rule's round caps overhang the column by 1 px on each side */
+            margin-inline: -1px;
             background: url("./wavy-rule.svg") bottom / 100% auto no-repeat;
 
             /* DSInput draws a pill with a border and a shadow; the design has only the wavy rule */

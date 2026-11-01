@@ -31,7 +31,7 @@ export function ConversionShell({ children }: ConversionShellProps): React.JSX.E
       <CupLogoIcon />
       <div
         className={css`
-          margin-block-start: 47px;
+          margin-block-start: 48px;
           margin-inline: 4px;
         `}
       >
