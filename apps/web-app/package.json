@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "imports": {
+    "#playwright.config.ts": "./playwright.config.ts",
     "#src/*": "./src/*",
     "#ui-gallery/*.jsx": "./ui-gallery/*.tsx",
     "#ui-gallery/*.js": "./ui-gallery/*.ts"
@@ -14,6 +15,7 @@
   "scripts": {
     "build": "turbo run turbo:build",
     "clean": "del-cli --dot=true \"dist\" \"*.tsbuildinfo\" \"playwright-output\"",
+    "design-check": "playwright test --config playwright.design-check.config.ts",
     "dev:gallery": "msw init ui-gallery --save=false && vite --config ui-gallery/vite.config.ts",
     "lint": "turbo run turbo:lint",
     "lint:css": "stylelint \"./src/**/*.(css|ts|cts|mts|tsx|ctsx|mtsx)\"",
@@ -52,6 +54,7 @@
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",
+    "@cup/design-check": "workspace:*",
     "@cup/loading-state-recorder": "workspace:*",
     "@cup/prepare-declaration-build": "workspace:*",
     "@patricktree-stack/config-playwright": "workspace:*",

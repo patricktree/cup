@@ -9,6 +9,13 @@
     "jsx": "react-jsx",
     "types": ["node", "vite/client"]
   },
-  "include": ["playwright.config.ts", "ui-gallery/**/*", "src/**/*.story.tsx", "src/**/*.test.ts"],
+  "include": [
+    "playwright.config.ts",
+    "playwright.design-check.config.ts",
+    "ui-gallery/**/*",
+    "src/**/*.story.tsx",
+    "src/**/*.test.ts",
+    "src/design-check.run.ts"
+  ],
   "references": [{ "path": "./tsconfig.build.json" }, { "path": "./tsconfig.test-utils.json" }]
 }
