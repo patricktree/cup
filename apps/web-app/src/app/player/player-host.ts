@@ -1,6 +1,8 @@
 import type { Audiobook, PlaybackPosition } from "@cup/listener-api.routes";
 
+import { clampToTimeline } from "#src/app/player/audiobook-timeline.ts";
 import {
+  isElementPlaying,
   NarrationTrackPlayer,
   type NarrationAudioElement,
   type Player,
@@ -33,9 +35,9 @@ export type ShownConversion = {
   /** Whether Play and segment taps on the page can start playback: it has a narration track. */
   canPlay: boolean;
   /**
-   * Where loading the audiobook resumes on its narration track: the listener's stored listening
-   * position, or the start while the page cannot play or the account is being restored. Shown
-   * before the audiobook is loaded.
+   * Where loading the audiobook resumes on its narration track: the listener's listening position,
+   * within the track, or the start while the page cannot play or the account is being restored.
+   * Shown before the audiobook is loaded.
    */
   resumePositionMilliseconds: number;
 };
@@ -135,17 +137,8 @@ export class PlayerHost {
       this.unload();
     }
 
-    // Which stored position applies depends on the account.
-    const { shown } = this.snapshot;
-    if (shown) {
-      const resumePositionMilliseconds = this.readResumePosition(
-        shown.conversionId,
-        shown.audiobook,
-      );
-      if (resumePositionMilliseconds !== shown.resumePositionMilliseconds) {
-        this.update({ shown: { ...shown, resumePositionMilliseconds } });
-      }
-    }
+    // Which listening position applies depends on the account.
+    this.refreshResumePosition();
   };
 
   /**
@@ -175,7 +168,10 @@ export class PlayerHost {
           shownAudiobook !== null &&
           isPlayableAudiobook(shownAudiobook) &&
           this.snapshot.unavailable?.conversionId !== conversionId,
-        resumePositionMilliseconds: this.readResumePosition(conversionId, shownAudiobook),
+        resumePositionMilliseconds: this.readResumePositionMilliseconds(
+          conversionId,
+          shownAudiobook,
+        ),
       },
     });
   };
@@ -221,10 +217,10 @@ export class PlayerHost {
   /** Pauses the loaded audiobook while it plays, and plays it otherwise, from a user gesture. */
   togglePlayback = () => {
     // A failed source can leave the element unpaused; Play then renews the track URL.
-    if (this.element.paused || this.element.error) {
-      this.play();
-    } else {
+    if (isElementPlaying(this.element)) {
       this.pause();
+    } else {
+      this.play();
     }
   };
 
@@ -288,16 +284,41 @@ export class PlayerHost {
       : audiobook.playbackPosition;
   }
 
-  private readResumePosition(conversionId: string, audiobook: PreparedAudiobook | null): number {
+  private readResumePositionMilliseconds(
+    conversionId: string,
+    audiobook: PreparedAudiobook | null,
+  ): number {
     const account = this.services.getAccount();
     if (!audiobook || !isPlayableAudiobook(audiobook) || account.status === "restoring") {
       return 0;
     }
 
-    return toTrackPositionMilliseconds(
-      audiobook,
-      this.readStoredPosition(conversionId, audiobook, account.subject),
+    return clampToTimeline(
+      audiobook.narrationTrack,
+      toTrackPositionMilliseconds(
+        audiobook,
+        this.readStoredPosition(conversionId, audiobook, account.subject),
+      ),
     );
+  }
+
+  /**
+   * Reads the shown audiobook's resume position again, after its listening position may have
+   * changed.
+   */
+  private refreshResumePosition() {
+    const { shown } = this.snapshot;
+    if (!shown) {
+      return;
+    }
+
+    const resumePositionMilliseconds = this.readResumePositionMilliseconds(
+      shown.conversionId,
+      shown.audiobook,
+    );
+    if (resumePositionMilliseconds !== shown.resumePositionMilliseconds) {
+      this.update({ shown: { ...shown, resumePositionMilliseconds } });
+    }
   }
 
   private isShownLoaded() {
@@ -386,6 +407,9 @@ export class PlayerHost {
     this.element.removeAttribute("src");
     this.element.load();
     this.update({ loaded: null });
+    // Playback moved the listening position, which a listener without an account keeps only on the
+    // device, where the shown audiobook does not see it change.
+    this.refreshResumePosition();
   }
 
   private closeLoadedPlayer(position: PositionOnClose = "save") {

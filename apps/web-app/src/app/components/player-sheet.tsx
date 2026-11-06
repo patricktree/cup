@@ -55,8 +55,8 @@ type SheetPlayback =
  * The detail view's player, fixed at the bottom on the drawn fade: the status line, a scrubber, the
  * elapsed and remaining time, and −15 s / play-pause / +15 s. It controls the shown audiobook and
  * is disabled until that audiobook has a narration track. Before the shown audiobook is loaded it
- * shows where loading resumes, the listener's stored position; Play, seeking and skipping load it,
- * replacing another loaded audiobook.
+ * shows where loading resumes, the listener's listening position; Play, seeking and skipping load
+ * it, replacing another loaded audiobook.
  */
 export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.Element {
   const host = usePlayerHost();
@@ -76,11 +76,7 @@ export function PlayerSheet({ statusLine }: { statusLine: string }): React.JSX.E
         playback={{
           status: "enabled",
           title: audiobook.title,
-          // The position never exceeds the length.
-          positionMilliseconds: Math.min(
-            shown.resumePositionMilliseconds,
-            audiobook.narrationTrack.durationMilliseconds,
-          ),
+          positionMilliseconds: shown.resumePositionMilliseconds,
           durationMilliseconds: audiobook.narrationTrack.durationMilliseconds,
           isPlaying: false,
           seekTo: (positionMilliseconds) => host.loadShown()?.seekTo(positionMilliseconds),

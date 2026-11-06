@@ -192,34 +192,26 @@ async function goBackToRecentsOnceLoaded({
   canvasElement,
 }: Parameters<NonNullable<Story["play"]>>[0]) {
   const canvas = within(canvasElement);
-  // The loading view's disabled sheet is replaced once the audiobook arrives, so query each time.
-  await waitFor(
-    () => {
-      const position = canvas.getByRole("slider", { name: /^Position in / });
-      if (!(position instanceof HTMLInputElement) || position.disabled) {
-        throw new Error("The player sheet is still disabled.");
-      }
-    },
-    { timeout: 10_000 },
-  );
+  // The loading view's disabled sheet is replaced once the audiobook arrives, and the sheet swaps
+  // its controls once the audiobook is loaded, so each wait queries the scrubber again.
+  const waitForScrubber = (isReady: (scrubber: HTMLInputElement) => boolean, timeout = 1_000) =>
+    waitFor(
+      () => {
+        const scrubber = canvas.getByRole("slider", { name: /^Position in / });
+        if (!(scrubber instanceof HTMLInputElement) || !isReady(scrubber)) {
+          throw new Error("The player sheet's scrubber is not ready yet.");
+        }
+        return scrubber;
+      },
+      { timeout },
+    );
   const user = userEvent.setup();
-  // The sheet swaps its controls once the audiobook is loaded, so query the scrubber each time.
-  canvas.getByRole("slider", { name: /^Position in / }).focus();
+
+  (await waitForScrubber((scrubber) => !scrubber.disabled, 10_000)).focus();
   await user.keyboard("{End}");
-  await waitFor(() => {
-    const position = canvas.getByRole("slider", { name: /^Position in / });
-    if (!(position instanceof HTMLInputElement) || Number(position.value) === 0) {
-      throw new Error("The audiobook is not loaded yet.");
-    }
-    position.focus();
-  });
+  (await waitForScrubber((scrubber) => Number(scrubber.value) !== 0)).focus();
   await user.keyboard("{Home}");
-  await waitFor(() => {
-    const position = canvas.getByRole("slider", { name: /^Position in / });
-    if (!(position instanceof HTMLInputElement) || Number(position.value) !== 0) {
-      throw new Error("The audiobook is not back at its start yet.");
-    }
-  });
+  await waitForScrubber((scrubber) => Number(scrubber.value) === 0);
   await user.click(canvas.getByRole("link", { name: "Back" }));
   await canvas.findByRole("region", { name: "Player" }, { timeout: 10_000 });
   // Back runs the cover transition; a tap during it would reach the document instead of Recents.

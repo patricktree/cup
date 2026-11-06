@@ -215,7 +215,7 @@ test("the player sheet skips 15 seconds back and forward, within the track", asy
   expect((await readNarrationAudio(page)).paused).toBe(true);
 });
 
-test("before an audiobook is loaded, the detail view shows and skips from its stored position", async ({
+test("before an audiobook is loaded, the detail view shows and skips from its listening position", async ({
   mount,
   page,
 }) => {

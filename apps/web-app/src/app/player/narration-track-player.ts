@@ -70,6 +70,14 @@ const MEDIA_EVENT_TYPES = [
 ] as const;
 
 /**
+ * Whether the element plays. A source that fails before playback starts leaves it unpaused, as
+ * Chromium follows the HTML spec's media source failure steps, though it plays nothing.
+ */
+export function isElementPlaying(element: Pick<NarrationAudioElement, "paused" | "error">) {
+  return !element.paused && !element.error;
+}
+
+/**
  * Plays a loaded audiobook's narration track on the host's one `<audio>` element.
  *
  * The element is the only playback state: the snapshot is read from it whenever it fires a media
@@ -247,8 +255,7 @@ export class NarrationTrackPlayer implements Player {
   private readSnapshot(): PlayerSnapshot {
     const { element } = this;
     const positionMilliseconds = this.readPosition();
-    // A source that fails before playback starts leaves the element unpaused, though it plays nothing.
-    const isPlaying = !element.paused && !element.error;
+    const isPlaying = isElementPlaying(element);
 
     return {
       currentUnitIndex: findUnitIndexAt(this.session.timeline, positionMilliseconds),

@@ -121,7 +121,7 @@ test("generates audio for the whole document, then plays its narration track", a
     .poll(async () => (await readNarrationAudio(page)).currentTime)
     .toBeGreaterThanOrEqual(pausedAt);
   await page.getByRole("button", { name: "Pause", exact: true }).click();
-  // Play resumed near the saved position, not further along.
+  // Play resumed at the saved position, not further along: the track played for a moment only.
   expect((await readNarrationAudio(page)).currentTime).toBeLessThan(pausedAt + 5);
   expect(await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json()).toEqual(
     calls,

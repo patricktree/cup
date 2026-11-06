@@ -157,6 +157,10 @@ function createHost({
       new PlaybackSession(request, {
         savePosition: (position, savedSubject) => {
           saved.push({ position, subject: savedSubject });
+          // Listeners without an account keep their position on the device.
+          if (savedSubject === null) {
+            localPositions.set(request.conversionId, position);
+          }
           return savePosition();
         },
         now: () => clock.now,
@@ -310,6 +314,22 @@ test("while the account is restored, the shown audiobook resumes from the start,
     resumePositionMilliseconds: 5_000,
   });
   expect(element.calls).toEqual([]);
+});
+
+test("after its track is unloaded, the shown audiobook resumes from where a listener without an account stopped", async () => {
+  const { host, element, clock } = createHost();
+  host.showConversion("first", FIRST);
+  host.playShown();
+  element.loadMetadata(15);
+  clock.now = 6_000;
+  element.advanceTo(6);
+  await settle();
+  expect(host.getSnapshot().shown?.resumePositionMilliseconds).toBe(0);
+
+  host.release("first");
+
+  expect(host.getSnapshot().loaded).toBeNull();
+  expect(host.getSnapshot().shown?.resumePositionMilliseconds).toBe(6_000);
 });
 
 test("a shown audiobook that cannot play resumes from the start", () => {

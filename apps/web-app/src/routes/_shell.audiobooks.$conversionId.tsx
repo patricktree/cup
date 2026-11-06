@@ -372,6 +372,12 @@ function PreparedReader({
 }) {
   const playback = useShownAudiobook(conversionId, audiobook, audiobookReceivedAt);
   const { loaded, canPlay, resumePositionMilliseconds } = playback;
+  const units = audiobook.narrationDocument.synchronizationUnits;
+  // Before the audiobook is loaded, the segment Play resumes from.
+  const resumeUnitId =
+    canPlay && isPlayableAudiobook(audiobook)
+      ? units[findUnitIndexAt(audiobook.narrationTrack, resumePositionMilliseconds)]?.id
+      : undefined;
   const narrationDocumentRef = React.useRef<HTMLDivElement>(null);
   const failedUnitIndexes = React.useMemo(
     () =>
@@ -412,20 +418,12 @@ function PreparedReader({
       {loaded ? (
         <PlayingSegmentHighlight
           loaded={loaded}
-          units={audiobook.narrationDocument.synchronizationUnits}
+          units={units}
           narrationDocumentRef={narrationDocumentRef}
         />
-      ) : canPlay && isPlayableAudiobook(audiobook) ? (
-        // Before the audiobook is loaded, the segment Play resumes from.
-        <SegmentHighlight
-          unitId={
-            audiobook.narrationDocument.synchronizationUnits[
-              findUnitIndexAt(audiobook.narrationTrack, resumePositionMilliseconds)
-            ]?.id
-          }
-          narrationDocumentRef={narrationDocumentRef}
-        />
-      ) : null}
+      ) : (
+        <SegmentHighlight unitId={resumeUnitId} narrationDocumentRef={narrationDocumentRef} />
+      )}
     </>
   );
 }

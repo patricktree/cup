@@ -121,11 +121,11 @@ export function useShownAudiobook(
     [host, conversionId, audiobook, receivedAt],
   );
 
+  const isShown = shown?.conversionId === conversionId;
   return {
     loaded: loaded?.conversionId === conversionId ? loaded : null,
-    canPlay: shown?.conversionId === conversionId && shown.canPlay,
-    resumePositionMilliseconds:
-      shown?.conversionId === conversionId ? shown.resumePositionMilliseconds : 0,
+    canPlay: isShown && shown.canPlay,
+    resumePositionMilliseconds: isShown ? shown.resumePositionMilliseconds : 0,
     playFromUnit: host.playShown,
   };
 }
