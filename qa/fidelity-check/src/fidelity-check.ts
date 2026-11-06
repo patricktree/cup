@@ -27,7 +27,7 @@ export type MeasuredElement = {
   opacity: string;
 };
 
-export type DesignCheckReport = {
+export type FidelityReport = {
   bands: BandComparison[];
   /** Share of the compared pixels that differ noticeably; text edges keep it above zero. */
   differingPixelRatio: number;
@@ -35,7 +35,7 @@ export type DesignCheckReport = {
   elements: MeasuredElement[];
 };
 
-type DesignCheckOptions = {
+type FidelityCheckOptions = {
   designImagePath: string;
   /** Receives `report.json`, `rendered.png` and `overlay.png`. */
   reportDirectory: string;
@@ -70,8 +70,8 @@ export function readDesignImageSize(designImagePath: string): { width: number; h
  */
 export async function checkAgainstDesign(
   page: Page,
-  { designImagePath, reportDirectory, ignoreTopPixels = 0 }: DesignCheckOptions,
-): Promise<DesignCheckReport> {
+  { designImagePath, reportDirectory, ignoreTopPixels = 0 }: FidelityCheckOptions,
+): Promise<FidelityReport> {
   const designSize = readDesignImageSize(designImagePath);
   const viewport = page.viewportSize();
   if (viewport?.width !== designSize.width || viewport.height !== designSize.height) {
@@ -91,7 +91,7 @@ export async function checkAgainstDesign(
 
   // Without this, comparing no rows at all would report a match.
   if (comparison.designBands.length === 0) {
-    throw new Error(`The design check found no ink in the design below row ${ignoreTopPixels}`);
+    throw new Error(`The fidelity check found no ink in the design below row ${ignoreTopPixels}`);
   }
 
   const bandCount = Math.max(comparison.designBands.length, comparison.renderedBands.length);
@@ -123,7 +123,7 @@ export async function checkAgainstDesign(
 }
 
 /** One line per band and element, for a test run's output. */
-export function formatDesignCheckReport(report: DesignCheckReport): string {
+export function formatFidelityReport(report: FidelityReport): string {
   return [
     `Differing pixels: ${(report.differingPixelRatio * 100).toFixed(2)}%`,
     `Loaded fonts: ${report.loadedFonts.join(", ") || "none"}`,

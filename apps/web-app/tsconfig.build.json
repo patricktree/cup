@@ -13,13 +13,6 @@
     "jsx": "react-jsx"
   },
   "include": ["src/**/*"],
-  "exclude": [
-    "**/node_modules",
-    "**/*.story.tsx",
-    "**/*.test.ts",
-    "src/design-check.cli.ts",
-    "src/design-check.run.ts",
-    "src/test-utils/**/*"
-  ],
+  "exclude": ["**/node_modules", "**/*.story.tsx", "**/*.test.ts", "src/test-utils/**/*"],
   "references": [{ "path": "./tsconfig.test-utils.json" }]
 }

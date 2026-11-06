@@ -1,5 +1,5 @@
 {
-  "name": "@cup/design-check",
+  "name": "@cup/fidelity-check",
   "private": true,
   "description": "Compares a rendered screen with the design's image and reports its layout, fonts and colors",
   "files": [
@@ -12,8 +12,8 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "types": "./dist/types/design-check.d.ts",
-      "default": "./src/design-check.ts"
+      "types": "./dist/types/fidelity-check.d.ts",
+      "default": "./src/fidelity-check.ts"
     }
   },
   "scripts": {

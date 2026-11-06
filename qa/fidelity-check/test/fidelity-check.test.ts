@@ -4,11 +4,11 @@ import { fileURLToPath } from "node:url";
 
 import {
   checkAgainstDesign,
-  formatDesignCheckReport,
+  formatFidelityReport,
   readDesignImageSize,
-} from "#src/design-check.ts";
+} from "#src/fidelity-check.ts";
 
-const FONT_URL = "http://design-check.test/font.woff2";
+const FONT_URL = "http://fidelity-check.test/font.woff2";
 const VIEWPORT = { width: 200, height: 300 };
 const BOXES = [
   { x: 20, y: 40, width: 100, height: 30 },
@@ -167,7 +167,7 @@ test("reports a band more than the tolerance away from the design", async ({
   });
 
   expect(report.bands.map(({ isWithinTolerance }) => isWithinTolerance)).toEqual([true, false]);
-  expect(formatDesignCheckReport(report)).toContain(
+  expect(formatFidelityReport(report)).toContain(
     "MISMATCH y=120–169 x=20–179 → y=122–171 x=20–179",
   );
 });
