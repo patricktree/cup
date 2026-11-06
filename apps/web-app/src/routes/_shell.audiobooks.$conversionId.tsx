@@ -11,6 +11,7 @@ import type { DetailBack } from "#src/app/components/detail-top-bar.js";
 import { ErrorScreen } from "#src/app/components/error-message.js";
 import { fadeFooterClearance } from "#src/app/components/fade-footer.js";
 import { ShellContent } from "#src/app/components/main.tsx";
+import { PageTitle } from "#src/app/components/page-title.js";
 import { PLAYER_SHEET_HEIGHTS, PlayerSheet } from "#src/app/components/player-sheet.js";
 import { TrackSkeleton } from "#src/app/components/track-skeleton.js";
 import { coverTransitionTarget } from "#src/app/cover-transition.js";
@@ -94,13 +95,17 @@ function AccountAudiobookPage({
 
 /**
  * Every detail view has the player sheet, disabled until the shown audiobook can play. The page
- * counts as shown while it loads, fails, or is still preparing.
+ * counts as shown while it loads, fails, or is still preparing, and is titled "Audiobook" until the
+ * audiobook has a title.
  */
 function DetailLayout({
+  audiobookTitle,
   topBar,
   statusLine = "",
   children,
 }: {
+  /** Absent while the audiobook loads, after it failed to load, and while it has no title yet. */
+  audiobookTitle?: string | undefined;
   topBar: React.ReactNode;
   /** The status line above the scrubber: the preparation phase or the synthesis progress. */
   statusLine?: string;
@@ -110,6 +115,7 @@ function DetailLayout({
 
   return (
     <>
+      <PageTitle name={audiobookTitle ?? "Audiobook"} />
       <ShellContent
         headerContent={topBar}
         mainContent={<div {...interTypefaceScope}>{children}</div>}
@@ -168,6 +174,8 @@ function AudiobookPage({
   // reported in the notices wherever it was started.
   const retry = useRetryConversion(conversionId);
   const [isTitleScrolledAway, setIsTitleScrolledAway] = React.useState(false);
+  // A pending conversion gets its title once preparation ends, which the poll above brings in.
+  const audiobookTitle = "title" in audiobook ? audiobook.title : undefined;
 
   const topBar = (
     <>
@@ -198,6 +206,7 @@ function AudiobookPage({
   if (audiobook.status === "pending") {
     return (
       <DetailLayout
+        audiobookTitle={audiobookTitle}
         topBar={topBar}
         statusLine={toPreparationPhaseLabel(audiobook.preparationPhase)}
       >
@@ -208,7 +217,7 @@ function AudiobookPage({
 
   if (audiobook.status === "failed") {
     return (
-      <DetailLayout topBar={topBar}>
+      <DetailLayout audiobookTitle={audiobookTitle} topBar={topBar}>
         <section
           className={css`
             display: grid;
@@ -241,6 +250,7 @@ function AudiobookPage({
 
   return (
     <DetailLayout
+      audiobookTitle={audiobookTitle}
       topBar={topBar}
       statusLine={
         audiobook.status === "synthesizing"

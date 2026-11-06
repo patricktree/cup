@@ -55,3 +55,11 @@ test("the account still loading shows the page skeleton, marked as a loading sta
   await expect(skeleton).toHaveAttribute("data-loading-state", "");
   await expect(skeleton).toHaveAttribute("aria-busy", "true");
 });
+
+for (const story of ["SignedOut", "DeletionScheduled", "LoadingAccount"] as const) {
+  test(`the page title of ${story} names account recovery`, async ({ mount, page }) => {
+    await mount(`routes/account-recovery/${story}`);
+
+    await expect(page).toHaveTitle("Account recovery · Cup");
+  });
+}

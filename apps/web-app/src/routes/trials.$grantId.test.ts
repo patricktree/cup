@@ -142,3 +142,11 @@ test("retrying a trial submission reuses its key and sends only the source URL",
   expect(keys).toEqual([keys[0], keys[0]]);
   expect(payloads).toEqual([{ sourceUrl }, { sourceUrl }]);
 });
+
+for (const story of ["OpenGrant", "MalformedCredential", "GrantLoadError"] as const) {
+  test(`the page title of ${story} names the free trial`, async ({ mount, page }) => {
+    await mount(`routes/trials.$grantId/${story}`);
+
+    await expect(page).toHaveTitle("Free trial · Cup");
+  });
+}

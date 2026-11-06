@@ -417,6 +417,34 @@ export const PendingReadingPage = createPendingStory("reading-page");
 export const PendingSelectingContent = createPendingStory("selecting-content");
 export const PendingPreparingText = createPendingStory("preparing-text");
 
+/** The first poll finds the conversion prepared, which brings in its title. */
+export const PendingConversionGetsPrepared = {
+  component: () => <GlobalProviders router={router} />,
+  handlers: [
+    http.get(
+      `/api/audiobooks/${CONVERSION_ID}`,
+      () =>
+        HttpResponse.json({
+          status: "pending",
+          originalUrl: SOURCE_URL,
+          canGenerate: true,
+        } satisfies Audiobook),
+      { once: true },
+    ),
+    http.get(`/api/audiobooks/${CONVERSION_ID}`, () =>
+      HttpResponse.json({
+        ...PREPARED_AUDIOBOOK,
+        status: "synthesizing",
+        segments: [
+          { sequence: 0, status: "generating" },
+          { sequence: 1, status: "generating" },
+          { sequence: 2, status: "generating" },
+        ],
+      } satisfies Audiobook),
+    ),
+  ],
+} satisfies Story;
+
 export const FailedConversion = {
   component: () => <GlobalProviders router={router} />,
   handlers: [

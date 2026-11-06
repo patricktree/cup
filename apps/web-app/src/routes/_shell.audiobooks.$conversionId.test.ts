@@ -1014,3 +1014,48 @@ test("failed polling keeps the track and shows one toast until polling recovers"
   expect(Math.max(...toastCounts)).toBe(1);
   await expect(component.getByText("Keep the important boundaries real.")).toBeVisible();
 });
+
+test("the page title names the audiobook once it has loaded", async ({ mount, page }) => {
+  await mount("routes/_shell.audiobooks.$conversionId/ReadyAudiobook");
+
+  await expect(page).toHaveTitle("A deterministic document about careful testing · Cup");
+});
+
+for (const story of ["LoadingAudiobook", "AudiobookNotFound", "AudiobookLoadError"] as const) {
+  test(`the page title of ${story} is the generic one`, async ({ mount, page }) => {
+    await mount(`routes/_shell.audiobooks.$conversionId/${story}`);
+
+    await expect(page).toHaveTitle("Audiobook · Cup");
+  });
+}
+
+test("the page title takes the audiobook's title once preparation brings it in", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount(
+    "routes/_shell.audiobooks.$conversionId/PendingConversionGetsPrepared",
+  );
+  await expect(component.getByLabel("Preparing track")).toBeVisible();
+  await expect(page).toHaveTitle("Audiobook · Cup");
+
+  await expect(page).toHaveTitle("A deterministic document about careful testing · Cup");
+});
+
+test("the page title follows the listener between audiobooks and Recents", async ({
+  mount,
+  page,
+}) => {
+  const component = await mount("routes/_shell.audiobooks.$conversionId/ListeningAcrossPages");
+  await expect(page).toHaveTitle("A deterministic document about careful testing · Cup");
+
+  await component.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(page).toHaveTitle("Recents · Cup");
+
+  await component
+    .getByRole("listitem")
+    .filter({ hasText: "A second document about listening" })
+    .getByRole("link")
+    .click();
+  await expect(page).toHaveTitle("A second document about listening · Cup");
+});

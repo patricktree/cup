@@ -3,6 +3,7 @@ import React from "react";
 
 import { AccountLoadError, AccountLoading } from "#src/app/components/account-load-states.js";
 import { AccountSettings } from "#src/app/components/account-settings.js";
+import { PageTitle } from "#src/app/components/page-title.js";
 import { DSDialog } from "#src/app/design-system/dialog.js";
 import { useCloseRecentsDialog } from "#src/app/use-close-recents-dialog.js";
 import { useAccountSession } from "#src/auth/hooks.js";
@@ -59,21 +60,24 @@ function AccountDialogFrame({ children }: { children: React.ReactNode }): React.
   const closeButtonRef = React.useRef<HTMLButtonElement>(null);
 
   return (
-    <DSDialog
-      open
-      onOpenChange={(open) => {
-        if (!open && !isConfirmationPending) {
-          close();
-        }
-      }}
-      initialFocus={closeButtonRef}
-      finalFocus={undefined}
-      title={<>Account settings</>}
-      cancelButtonText={<>Close</>}
-      cancelButtonDisabled={isConfirmationPending}
-      cancelButtonRef={closeButtonRef}
-    >
-      {children}
-    </DSDialog>
+    <>
+      <PageTitle name="Account" />
+      <DSDialog
+        open
+        onOpenChange={(open) => {
+          if (!open && !isConfirmationPending) {
+            close();
+          }
+        }}
+        initialFocus={closeButtonRef}
+        finalFocus={undefined}
+        title={<>Account settings</>}
+        cancelButtonText={<>Close</>}
+        cancelButtonDisabled={isConfirmationPending}
+        cancelButtonRef={closeButtonRef}
+      >
+        {children}
+      </DSDialog>
+    </>
   );
 }

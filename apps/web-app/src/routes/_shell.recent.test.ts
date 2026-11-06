@@ -1133,3 +1133,34 @@ async function expectCoversLoaded(page: Page) {
     )
     .toBe(true);
 }
+
+test("the page title names Recents, and the Add dialog while it is open", async ({
+  mount,
+  page,
+}) => {
+  await mount("routes/_shell.recent/AddDialog");
+  const dialog = page.getByRole("dialog", { name: "Add a track" });
+  await expect(dialog).toBeVisible();
+  await expect(page).toHaveTitle("Add · Cup");
+
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page).toHaveTitle("Recents · Cup");
+});
+
+test("the page title names the account dialog while it is open", async ({ mount, page }) => {
+  await mount("routes/_shell.recent/OneReadyItemBehindAccountDialog");
+  const dialog = page.getByRole("dialog", { name: "Account settings" });
+  await expect(dialog.getByText("Delete account…")).toBeVisible();
+  await expect(page).toHaveTitle("Account · Cup");
+
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page).toHaveTitle("Recents · Cup");
+});
+
+test("the page title names Recents while its tracks load", async ({ mount, page }) => {
+  const component = await mount("routes/_shell.recent/LoadingTracks");
+  await expect(component.getByText("Loading tracks…")).toBeVisible();
+  await expect(page).toHaveTitle("Recents · Cup");
+});
