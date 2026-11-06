@@ -86,7 +86,7 @@ _Avoid_: execution generation, generation
 
 ## trial link
 
-A URL that gives its bearer access to a conversion grant.
+A URL that gives its bearer access to a conversion grant. Trial links open in the browser; the mobile apps intentionally don't support them ([ADR 0017](adr/0017-keep-trial-links-out-of-the-mobile-apps.md)).
 
 _Avoid_: deep link, invite link
 

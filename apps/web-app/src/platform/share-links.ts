@@ -1,12 +1,7 @@
-import { handleAppLink } from "#src/platform/app-links.js";
 import { receiveSharedUrl } from "#src/platform/share-intake.js";
 
-export function handleShareLink(
-  value: string,
-  navigate: (href: string) => void,
-  onShare: () => void,
-): void {
-  const envelope = URL.parse(value);
+export function handleShareLink(incomingUrl: string, onShare: () => void | Promise<void>): void {
+  const envelope = URL.parse(incomingUrl);
   if (
     envelope === null ||
     envelope.protocol !== "audio.cup.app:" ||
@@ -24,7 +19,5 @@ export function handleShareLink(
     return;
   }
 
-  if (!handleAppLink(url.href, navigate)) {
-    receiveSharedUrl(url.href, onShare);
-  }
+  receiveSharedUrl(url.href, onShare);
 }

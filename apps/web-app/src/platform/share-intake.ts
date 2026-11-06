@@ -1,7 +1,20 @@
+// Cup's canonical and former hostnames; see `libs/api-server/src/http/domain-routing.ts`.
+const CUP_HOSTNAMES = new Set([
+  "cup.audio",
+  "www.cup.audio",
+  "cup-audio.com",
+  "www.cup-audio.com",
+  "create-audiobook-from-url.patricktree.me",
+]);
+
 let pendingUrl: string | undefined;
 let formListener: ((url: string) => void) | undefined;
 
 export function receiveSharedUrl(url: string, onShare: () => void | Promise<void>): void {
+  // The mobile apps don't support trial links; a shared Cup link is nothing to convert either.
+  if (CUP_HOSTNAMES.has(new URL(url).hostname)) {
+    return;
+  }
   pendingUrl = url;
   void Promise.resolve(onShare()).then(deliverPendingUrl);
 }

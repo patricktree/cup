@@ -44,34 +44,17 @@ The debug APK is written to `apps/mobile-app/android/app/build/outputs/apk/debug
 
 After building, open `apps/mobile-app/ios/App/App.xcodeproj` in Xcode and choose a simulator or configure signing for a device. The project uses Swift Package Manager, matching Content Relay.
 
-## Android App Links and sharing
+## Links and sharing
 
-The Android app accepts shared plain text containing an HTTP or HTTPS URL and fills a conversion form without submitting it. A signed-in account gets the Add dialog over Recents (`/recent/add`). Signed out, the app reopens the last trial whose credential was successfully exchanged in the app; if no trial is remembered, the shared URL waits until a conversion form is opened.
+The apps intentionally don't support trial links ([ADR 0017](../../docs/adr/0017-keep-trial-links-out-of-the-mobile-apps.md)). Neither app claims web links, so tapping a link to `cup.audio`, such as a trial link, opens the browser, and share intake ignores URLs on Cup's hostnames.
 
-HTTPS links to `/app` and `/app/…` on `cup.audio` open the matching route in the app after Android verifies the domain association. API and download URLs are excluded from App Links. Paths, query parameters, and fragments are preserved, including trial credentials. Both cold starts and links delivered to an already running app are handled. Normal Capacitor launches start at `/app/`.
-
-Deploy the web app so `https://cup.audio/.well-known/assetlinks.json` serves the file from `apps/web-app/public/.well-known/assetlinks.json` as JSON, without redirects. That file trusts Patrick's local Android debug certificate. A release or Play Store build requires its signing certificate's SHA-256 fingerprint to be added before deployment; another machine's debug certificate will also differ.
-
-After deploying the association file and installing the rebuilt APK, request verification and inspect the result:
-
-```sh
-adb shell pm verify-app-links --re-verify audio.cup.app
-adb shell pm get-app-links audio.cup.app
-```
-
-Verification is asynchronous. Wait until the domain reports `verified`, then open a link without specifying the app package, so Android exercises domain resolution:
-
-```sh
-adb shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d 'https://cup.audio/app/'
-```
-
-See [Android's App Links verification guide](https://developer.android.com/training/app-links/verify-applinks) for device settings and troubleshooting.
+The Android app accepts shared plain text containing an HTTP or HTTPS URL and fills a conversion form without submitting it. A signed-in account gets the Add dialog over Recents (`/recent/add`). Signed out, the URL fills the landing page's start form, which asks the listener to sign in when submitted.
 
 ## Backend access and grant sessions
 
 Mobile API requests use ordinary `fetch` calls patched by `CapacitorHttp` to use native networking. The backend origin is `https://cup.audio`. Browser requests continue using the browser's same-origin fetch.
 
-Both clients exchange trial credentials for persistent Secure, HttpOnly cookies. Capacitor's native cookie manager stores the server-issued cookies and sends them on later requests. Trial requests use those cookies; private account requests additionally carry the signed-in user's bearer token. The `CapacitorCookies` document.cookie patch (<https://capacitorjs.com/docs/apis/cookies>) is not enabled.
+The browser exchanges trial credentials for persistent Secure, HttpOnly cookies. The apps open no trials ([ADR 0017](../../docs/adr/0017-keep-trial-links-out-of-the-mobile-apps.md)), so their private account requests rely on the signed-in user's bearer token; Capacitor's native cookie manager still stores any server-issued cookies and sends them on later requests. The `CapacitorCookies` document.cookie patch (<https://capacitorjs.com/docs/apis/cookies>) is not enabled.
 
 Native mutations omit Origin and must include the existing custom request header and JSON content type. Browser mutations must have a matching Origin; cross-site Fetch Metadata is rejected. No cross-origin browser CORS access is enabled.
 
@@ -79,25 +62,13 @@ Capacitor's native HTTP response headers can expose Set-Cookie to JavaScript, so
 
 ## iOS Share Extension
 
-The iOS app bundles `CupShare.appex`, displayed as **Cup** in Safari and Chrome's Share Sheets. Share a web URL or text containing an HTTP(S) URL, then tap **Open in Cup** to open the main app and prefill the conversion form. Cup trial links open their app route, including the credential exchange.
+The iOS app bundles `CupShare.appex`, displayed as **Cup** in Safari and Chrome's Share Sheets. Share a web URL or text containing an HTTP(S) URL, then tap **Open in Cup** to open the main app and prefill the conversion form.
 
-The handoff uses `audio.cup.app://share?url=<encoded-url>`. Cup links under `https://cup.audio/app` open their corresponding app route, preserving trial credential fragments. Other HTTP(S) URLs prefill a conversion form as on [Android](#android-app-links-and-sharing); a URL still pending in memory is discarded when the app closes.
+The handoff uses `audio.cup.app://share?url=<encoded-url>`, the app's only URL scheme. The URL prefills a conversion form as on [Android](#links-and-sharing), and Cup links are ignored there too; a URL still pending in memory is discarded when the app closes.
 
 The extension uses the same responder-chain URL-opening approach as Chromium, calling `openURL:options:completionHandler:` dynamically. Apple does not support this handoff from Share Extensions; test it after iOS updates. A failed handoff stays in the extension with an error and retry button. The extension does not start conversions or access session cookies.
 
-Build the App scheme with a local `DEVELOPMENT_TEAM` override; it builds, signs, and embeds the extension. Both bundle identifiers need provisioning: `audio.cup.app` and `audio.cup.app.share`. Verify Safari and Chrome sharing with Cup terminated and already running, cancellation, repeated shares, URLs containing `&`, `+`, or fragments, and trial links. If Cup is hidden, look under More in the Share Sheet's app row.
-
-## iOS Universal Links
-
-The App target includes the Associated Domains entitlement for `applinks:cup.audio`. HTTPS links to `/app` and `/app/…` navigate to the corresponding app route on cold and warm launches, preserving query parameters and trial credential fragments. Other domains, credentials in the URL authority, and routes outside `/app` are rejected by the iOS intake handler.
-
-Deploy `apps/web-app/public/.well-known/apple-app-site-association` together with `apps/web-app/public/_headers` so `https://cup.audio/.well-known/apple-app-site-association` returns JSON with status 200 and no redirect. The association uses Cup's bundle ID with Patrick's current Personal Team prefix; it must be updated to the enrolled team's prefix before Universal Links can work. Before using another signing team, replace its app ID prefix with the application identifier prefix from that team's signed app or provisioning profile. Do not put a local development-team override into the Xcode project.
-
-Associated Domains requires a signing team enrolled in the Apple Developer Program. The current Personal Team cannot provision this capability; Xcode rejects the signed build until an eligible team is selected. An unsigned build can validate native compilation, but cannot verify Universal Links on an iPad.
-
-After deploying the association and signing with an eligible team, reinstall Cup so iOS fetches the association. Apple caches the association through its CDN, so server deployment alone may not update existing devices immediately. Test a trial link from Keep or Notes with Cup closed and already running; verify that it opens the trial and exchanges its credential. Then share an article from Safari and Chrome and verify that the URL appears in that trial's conversion form without submitting it. Browser-specific link handling can affect whether a tap hands control to iOS; use Apple's Universal Links diagnostics if a verified association still opens the browser.
-
-See [Apple's Universal Links troubleshooting](https://developer.apple.com/documentation/technotes/tn3155-debugging-universal-links/).
+Build the App scheme with a local `DEVELOPMENT_TEAM` override; it builds, signs, and embeds the extension. Both bundle identifiers need provisioning: `audio.cup.app` and `audio.cup.app.share`. Verify Safari and Chrome sharing with Cup terminated and already running, cancellation, repeated shares, URLs containing `&`, `+`, or fragments, and that a shared trial link is ignored. If Cup is hidden, look under More in the Share Sheet's app row.
 
 ## Brand assets
 

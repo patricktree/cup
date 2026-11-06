@@ -50,3 +50,46 @@ test("fills the form from a cold-start share and accepts repeat shares without s
   await expect(input).toHaveValue("https://example.com/second");
   await expect(component.getByRole("button", { name: "Listen" })).toBeEnabled();
 });
+
+test("ignores shared Cup links, so a trial link never fills the form", async ({ page, mount }) => {
+  await page.addInitScript(() => {
+    Object.assign(window, {
+      androidBridge: {},
+      Capacitor: {
+        PluginHeaders: [{ name: "AndroidShare", methods: [{ name: "addListener" }] }],
+        nativeCallback: (
+          _plugin: string,
+          _method: string,
+          _options: unknown,
+          listener: (payload: { text: string }) => void,
+        ) => {
+          window.addEventListener("test-share", (event) => {
+            if (event instanceof CustomEvent) {
+              listener({ text: String(event.detail) });
+            }
+          });
+          return "share-listener";
+        },
+      },
+    });
+  });
+  await mount("routes/trials.$grantId/OpenGrant");
+  const shares = await page.evaluate(async () => {
+    let count = 0;
+    const modulePath = "/src/platform/share-plugin.android.ts";
+    const { initializeAndroidShare } = await import(modulePath);
+    await initializeAndroidShare(() => {
+      count++;
+    });
+    for (const text of [
+      "Try Cup: https://cup.audio/app/trials/example#credential=v1.test",
+      "https://www.cup.audio/app/trials/example",
+      "https://cup-audio.com/trials/example",
+    ]) {
+      window.dispatchEvent(new CustomEvent("test-share", { detail: text }));
+    }
+    return count;
+  });
+  expect(shares).toBe(0);
+  await expect(page.getByRole("textbox", { name: "URL", exact: true })).toHaveValue("");
+});
