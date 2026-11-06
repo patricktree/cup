@@ -1,6 +1,8 @@
 import type { Audiobook, PlaybackPosition } from "@cup/listener-api.routes";
 
+import { clampToTimeline } from "#src/app/player/audiobook-timeline.ts";
 import {
+  isElementPlaying,
   NarrationTrackPlayer,
   type NarrationAudioElement,
   type Player,
@@ -8,6 +10,7 @@ import {
 } from "#src/app/player/narration-track-player.ts";
 import {
   isPlayableAudiobook,
+  toTrackPositionMilliseconds,
   type PlayableAudiobook,
   type PlaybackSession,
   type PlaybackSessionRequest,
@@ -31,6 +34,12 @@ export type ShownConversion = {
   audiobook: PreparedAudiobook | null;
   /** Whether Play and segment taps on the page can start playback: it has a narration track. */
   canPlay: boolean;
+  /**
+   * Where loading the audiobook resumes on its narration track: the listener's listening position,
+   * within the track, or the start while the page cannot play or the account is being restored.
+   * Shown before the audiobook is loaded.
+   */
+  resumePositionMilliseconds: number;
 };
 
 /** A track that was loaded and no longer exists, such as one deleted on another device. */
@@ -82,11 +91,11 @@ const UNAVAILABLE_TRACK_MESSAGE = "This track is no longer available.";
  * Holds the app's one `<audio>` element and the audiobook loaded into it, so playback continues
  * while the listener navigates, and decides what it plays.
  *
- * A page reports the conversion it shows; the host loads its narration track, paused, only while
- * nothing is loaded and the account is known. Only `play` and `playShown` start playback, which
- * must run within a user gesture. Playing the shown audiobook while another one is loaded saves the
- * previous one and sets the new track on the same element. A change of the signed-in user unloads
- * the element.
+ * A page reports the conversion it shows; showing it loads nothing. Its narration track is loaded
+ * only when the listener starts it: `playShown`, or `loadShown` for seeking and skipping. Only
+ * `play` and `playShown` start playback, which must run within a user gesture. Loading the shown
+ * audiobook while another one is loaded saves the previous one and sets the new track on the same
+ * element. A change of the signed-in user unloads the element.
  */
 export class PlayerHost {
   private readonly services: PlayerHostServices;
@@ -100,8 +109,6 @@ export class PlayerHost {
   private trackUrlReceivedAt = 0;
   /** The renewal Play is waiting for; Pause and unloading cancel it. */
   private pendingRenewal: symbol | null = null;
-  /** The conversion being deleted, which only Play loads again; see `release`. */
-  private releasedConversionId: string | null = null;
 
   constructor(services: PlayerHostServices) {
     this.services = services;
@@ -130,7 +137,8 @@ export class PlayerHost {
       this.unload();
     }
 
-    this.loadShownIntoEmptyPlayer();
+    // Which listening position applies depends on the account.
+    this.refreshResumePosition();
   };
 
   /**
@@ -160,10 +168,12 @@ export class PlayerHost {
           shownAudiobook !== null &&
           isPlayableAudiobook(shownAudiobook) &&
           this.snapshot.unavailable?.conversionId !== conversionId,
+        resumePositionMilliseconds: this.readResumePositionMilliseconds(
+          conversionId,
+          shownAudiobook,
+        ),
       },
     });
-
-    this.loadShownIntoEmptyPlayer();
   };
 
   /** The listener left the conversion's page. */
@@ -206,10 +216,11 @@ export class PlayerHost {
 
   /** Pauses the loaded audiobook while it plays, and plays it otherwise, from a user gesture. */
   togglePlayback = () => {
-    if (this.element.paused) {
-      this.play();
-    } else {
+    // A failed source can leave the element unpaused; Play then renews the track URL.
+    if (isElementPlaying(this.element)) {
       this.pause();
+    } else {
+      this.play();
     }
   };
 
@@ -230,9 +241,9 @@ export class PlayerHost {
   };
 
   /**
-   * Loads the shown audiobook, paused, when another one is loaded, and returns its player, so the
-   * player sheet can seek it before it plays. Returns `null` while the shown audiobook has no
-   * narration track.
+   * Loads the shown audiobook, paused, unless it is loaded already, and returns its player, so the
+   * player sheet can seek it before it plays. Returns `null` while the shown audiobook cannot
+   * play.
    */
   loadShown = (): Player | null => {
     const { shown } = this.snapshot;
@@ -252,16 +263,63 @@ export class PlayerHost {
   };
 
   /**
-   * Unloads the conversion, which the listener is deleting, and keeps it unloaded while its page
-   * stays shown, also when the deletion fails; only Play on the page loads it again. Its position
-   * is not saved, since that save would race the deletion.
+   * Unloads the conversion, which the listener is deleting; only Play on its page loads it again,
+   * also when the deletion fails. Its position is not saved, since that save would race the
+   * deletion.
    */
   release = (conversionId: string) => {
-    this.releasedConversionId = conversionId;
     if (this.snapshot.loaded?.conversionId === conversionId) {
       this.emptyElement("discard");
     }
   };
+
+  /** Signed-in listeners keep their position on the server; others on the device. */
+  private readStoredPosition(
+    conversionId: string,
+    audiobook: PlayableAudiobook,
+    subject: string | null,
+  ): PlaybackPosition | null {
+    return subject === null
+      ? this.services.getLocalPosition(conversionId)
+      : audiobook.playbackPosition;
+  }
+
+  private readResumePositionMilliseconds(
+    conversionId: string,
+    audiobook: PreparedAudiobook | null,
+  ): number {
+    const account = this.services.getAccount();
+    if (!audiobook || !isPlayableAudiobook(audiobook) || account.status === "restoring") {
+      return 0;
+    }
+
+    return clampToTimeline(
+      audiobook.narrationTrack,
+      toTrackPositionMilliseconds(
+        audiobook,
+        this.readStoredPosition(conversionId, audiobook, account.subject),
+      ),
+    );
+  }
+
+  /**
+   * Reads the shown audiobook's resume position again, after its listening position may have
+   * changed.
+   */
+  private refreshResumePosition() {
+    const { shown } = this.snapshot;
+    if (!shown) {
+      return;
+    }
+
+    const resumePositionMilliseconds = this.readResumePositionMilliseconds(
+      shown.conversionId,
+      shown.audiobook,
+    );
+    if (resumePositionMilliseconds !== shown.resumePositionMilliseconds) {
+      this.update({ shown: { ...shown, resumePositionMilliseconds } });
+    }
+  }
 
   private isShownLoaded() {
     const { shown, loaded } = this.snapshot;
@@ -274,18 +332,13 @@ export class PlayerHost {
     }
 
     this.closeLoadedPlayer();
-    this.releasedConversionId = null;
 
     const account = this.services.getAccount();
     const subject = account.status === "known" ? account.subject : null;
     const session = this.services.createSession({
       conversionId,
       audiobook,
-      // Signed-in listeners keep their position on the server; others on the device.
-      position:
-        subject === null
-          ? this.services.getLocalPosition(conversionId)
-          : audiobook.playbackPosition,
+      position: this.readStoredPosition(conversionId, audiobook, subject),
       subject,
     });
     const player = new NarrationTrackPlayer(session, this.element);
@@ -345,21 +398,6 @@ export class PlayerHost {
     });
   }
 
-  private loadShownIntoEmptyPlayer() {
-    const { shown, loaded } = this.snapshot;
-    // Waits for the account, whose listening position the player restores.
-    if (
-      loaded ||
-      !shown?.canPlay ||
-      shown.conversionId === this.releasedConversionId ||
-      this.services.getAccount().status === "restoring"
-    ) {
-      return;
-    }
-
-    this.load(shown);
-  }
-
   private emptyElement(position: PositionOnClose) {
     if (!this.snapshot.loaded) {
       return;
@@ -369,6 +407,9 @@ export class PlayerHost {
     this.element.removeAttribute("src");
     this.element.load();
     this.update({ loaded: null });
+    // Playback moved the listening position, which a listener without an account keeps only on the
+    // device, where the shown audiobook does not see it change.
+    this.refreshResumePosition();
   }
 
   private closeLoadedPlayer(position: PositionOnClose = "save") {

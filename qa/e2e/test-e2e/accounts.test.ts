@@ -483,7 +483,11 @@ test("account positions restore once and use last-write-wins across players", as
   await page.reload();
   await waitForAudiobook(page);
   await expect(page.locator(`[id="${unitId}"]`)).toHaveAttribute("aria-current", "true");
-  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+  // Play resumes there; the loaded player is never moved by another player's save.
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+  await expect(page.locator(`[id="${unitId}"]`)).toHaveAttribute("aria-current", "true");
   const second = await page.context().newPage();
   await second.goto(url);
   await waitForAudiobook(second);

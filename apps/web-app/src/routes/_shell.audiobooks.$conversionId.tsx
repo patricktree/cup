@@ -20,8 +20,9 @@ import { DSCoverImage } from "#src/app/design-system/cover-image.js";
 import { DSDialog } from "#src/app/design-system/dialog.js";
 import { textStyles } from "#src/app/design-system/text-styles.js";
 import { interTypefaceScope } from "#src/app/global-styles.js";
+import { findUnitIndexAt } from "#src/app/player/audiobook-timeline.js";
 import { formatDuration } from "#src/app/player/playback-format.js";
-import type { PreparedAudiobook } from "#src/app/player/playback-session.js";
+import { isPlayableAudiobook, type PreparedAudiobook } from "#src/app/player/playback-session.js";
 import {
   usePlayerHost,
   usePlayerState,
@@ -370,7 +371,13 @@ function PreparedReader({
   onTitleScrolledAwayChange: (isScrolledAway: boolean) => void;
 }) {
   const playback = useShownAudiobook(conversionId, audiobook, audiobookReceivedAt);
-  const { loaded, canPlay } = playback;
+  const { loaded, canPlay, resumePositionMilliseconds } = playback;
+  const units = audiobook.narrationDocument.synchronizationUnits;
+  // Before the audiobook is loaded, the segment Play resumes from.
+  const resumeUnitId =
+    canPlay && isPlayableAudiobook(audiobook)
+      ? units[findUnitIndexAt(audiobook.narrationTrack, resumePositionMilliseconds)]?.id
+      : undefined;
   const narrationDocumentRef = React.useRef<HTMLDivElement>(null);
   const failedUnitIndexes = React.useMemo(
     () =>
@@ -409,12 +416,14 @@ function PreparedReader({
         onTitleScrolledAwayChange={onTitleScrolledAwayChange}
       />
       {loaded ? (
-        <CurrentSegmentHighlight
+        <PlayingSegmentHighlight
           loaded={loaded}
-          units={audiobook.narrationDocument.synchronizationUnits}
+          units={units}
           narrationDocumentRef={narrationDocumentRef}
         />
-      ) : null}
+      ) : (
+        <SegmentHighlight unitId={resumeUnitId} narrationDocumentRef={narrationDocumentRef} />
+      )}
     </>
   );
 }
@@ -487,7 +496,7 @@ function ReaderNotices({
 }
 
 /** Marks the segment being played; rendered only while this page's audiobook is loaded. */
-function CurrentSegmentHighlight({
+function PlayingSegmentHighlight({
   loaded,
   units,
   narrationDocumentRef,
@@ -497,18 +506,32 @@ function CurrentSegmentHighlight({
   narrationDocumentRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const currentUnitIndex = usePlayerState(loaded.player, (state) => state.currentUnitIndex);
-  const currentUnitId = units[currentUnitIndex]?.id;
+  return (
+    <SegmentHighlight
+      unitId={units[currentUnitIndex]?.id}
+      narrationDocumentRef={narrationDocumentRef}
+    />
+  );
+}
 
+/** Marks a segment of the narration document as the current one. */
+function SegmentHighlight({
+  unitId,
+  narrationDocumentRef,
+}: {
+  unitId: string | undefined;
+  narrationDocumentRef: React.RefObject<HTMLDivElement | null>;
+}) {
   React.useEffect(
-    function highlightCurrentSegment() {
+    function highlightSegment() {
       const narrationDocumentElement = narrationDocumentRef.current;
       check.assert(narrationDocumentElement);
 
-      const segment = narrationDocumentElement.querySelector(`[id="${currentUnitId ?? ""}"]`);
+      const segment = narrationDocumentElement.querySelector(`[id="${unitId ?? ""}"]`);
       segment?.setAttribute("aria-current", "true");
       return () => segment?.removeAttribute("aria-current");
     },
-    [currentUnitId, narrationDocumentRef],
+    [unitId, narrationDocumentRef],
   );
 
   return null;

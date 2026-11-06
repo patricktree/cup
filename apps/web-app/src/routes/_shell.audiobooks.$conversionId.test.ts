@@ -215,7 +215,7 @@ test("the player sheet skips 15 seconds back and forward, within the track", asy
   expect((await readNarrationAudio(page)).paused).toBe(true);
 });
 
-test("before an audiobook is loaded, the player sheet skips from its stored position", async ({
+test("before an audiobook is loaded, the detail view shows and skips from its listening position", async ({
   mount,
   page,
 }) => {
@@ -232,10 +232,12 @@ test("before an audiobook is loaded, the player sheet skips from its stored posi
     .filter({ hasText: "A second document about listening" })
     .getByRole("link")
     .click();
-  await expect(playerSheet.getByText("0:00", { exact: true })).toBeVisible();
-  await expect(playerSheet.getByText("-0:30", { exact: true })).toBeVisible();
+  // The listener stopped 12 s in, in the second unit; showing it loads nothing.
+  await expect(playerSheet.getByText("0:12", { exact: true })).toBeVisible();
+  await expect(playerSheet.getByText("-0:18", { exact: true })).toBeVisible();
+  await expect(component.locator(`[id="unit-2"]`)).toHaveAttribute("aria-current", "true");
+  expect((await readNarrationAudio(page)).src).not.toContain("audiobook=second");
 
-  // The listener stopped 12 s in.
   await playerSheet.getByRole("button", { name: "Forward 15 seconds", exact: true }).click();
   await expect(playerSheet.getByText("0:27", { exact: true })).toBeVisible();
   expect((await readNarrationAudio(page)).src).toContain("audiobook=second");
@@ -560,6 +562,9 @@ test("deleting a track unloads the player first, then lands on Recents without i
   await expect(
     component.getByRole("heading", { name: "A deterministic document about careful testing" }),
   ).toBeVisible();
+  // Opening the track loads nothing into the player; Play does.
+  expect((await readNarrationAudio(page)).src).toBe("");
+  await component.getByRole("button", { name: "Play", exact: true }).click();
   await expect.poll(async () => (await readNarrationAudio(page)).src).toContain("audiobook=story");
 
   await component.getByRole("button", { name: "More", exact: true }).click();
@@ -645,6 +650,7 @@ test("a failed deletion keeps the dialog open with an inline error, the player u
   await expect(
     component.getByRole("heading", { name: "A deterministic document about careful testing" }),
   ).toBeVisible();
+  await component.getByRole("button", { name: "Play", exact: true }).click();
   await expect.poll(async () => (await readNarrationAudio(page)).src).toContain("audiobook=story");
   await component.getByRole("button", { name: "More", exact: true }).click();
   await page.getByRole("menuitem", { name: "Delete track…" }).click();
@@ -769,6 +775,7 @@ test("a track found gone when its audio is requested again is unloaded and repor
   await captureNarrationAudio(page);
   const component = await mount("routes/_shell.audiobooks.$conversionId/TrackGoneOnRenewal");
   const playerSheet = component.getByRole("contentinfo", { name: "Player" });
+  await playerSheet.getByRole("button", { name: "Play", exact: true }).click();
   await expect(playerSheet.getByRole("alert")).toHaveText(
     "Audio could not be played. Press Play to try again.",
   );

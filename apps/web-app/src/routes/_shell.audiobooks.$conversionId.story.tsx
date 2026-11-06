@@ -613,8 +613,8 @@ export const DeleteTrackNeverAnswers = createDeletionStory("never-answers");
 export const DeletePendingTrack = createDeletionStory("deleted", PENDING_AUDIOBOOK);
 
 /**
- * The loaded narration track cannot be read, and requesting the audiobook again finds it gone, as
- * after its deletion on another device.
+ * The narration track cannot be read once Play loads it, and requesting the audiobook again finds
+ * it gone, as after its deletion on another device.
  */
 export const TrackGoneOnRenewal = accountStory({
   path: `/audiobooks/${CONVERSION_ID}`,

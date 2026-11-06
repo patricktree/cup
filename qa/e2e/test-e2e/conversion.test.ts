@@ -46,12 +46,14 @@ test("generates audio for the whole document, then plays its narration track", a
   const position = page.getByRole("slider");
   // The progress bar spans the whole narration track, as the element reads it from the file.
   await expect(position).toHaveAttribute("max", String(narrationTrack.durationMilliseconds));
-  // Each audiobook response signs a fresh URL, so only the track itself is compared.
-  const trackPath = new URL(narrationTrack.url).pathname;
-  expect(new URL((await readNarrationAudio(page)).src).pathname).toBe(trackPath);
+  // Opening the audiobook loads nothing; only Play does.
+  expect((await readNarrationAudio(page)).src).toBe("");
 
   // Playing crosses from the first unit into the second.
   await play.click();
+  // Each audiobook response signs a fresh URL, so only the track itself is compared.
+  const trackPath = new URL(narrationTrack.url).pathname;
+  expect(new URL((await readNarrationAudio(page)).src).pathname).toBe(trackPath);
   await expect(page.locator(`[id="${units[0]!.id}"]`)).toHaveAttribute("aria-current", "true");
   await expect(page.locator(`[id="${units[1]!.id}"]`)).toHaveAttribute("aria-current", "true", {
     timeout: 30_000,
@@ -107,15 +109,20 @@ test("generates audio for the whole document, then plays its narration track", a
     );
   await validateNarrationTrack({ conversionId: id, origin: workerEnvironment.origin, page });
 
-  // Reloading restores the position saved on pause, paused.
+  // After a reload the position saved on pause is shown without loading the track, and Play
+  // resumes from it.
   await page.reload();
   await waitForAudiobook(page);
   await expect(play).toBeEnabled({ timeout: 30_000 });
   await expect(page.locator(`[id="${units[2]!.id}"]`)).toHaveAttribute("aria-current", "true");
+  expect((await readNarrationAudio(page)).src).toBe("");
+  await play.click();
   await expect
     .poll(async () => (await readNarrationAudio(page)).currentTime)
-    .toBeCloseTo(pausedAt, 2);
-  expect((await readNarrationAudio(page)).paused).toBe(true);
+    .toBeGreaterThanOrEqual(pausedAt);
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+  // Play resumed at the saved position, not further along: the track played for a moment only.
+  expect((await readNarrationAudio(page)).currentTime).toBeLessThan(pausedAt + 5);
   expect(await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json()).toEqual(
     calls,
   );
