@@ -37,6 +37,28 @@ export function isPlayableAudiobook(audiobook: PreparedAudiobook): audiobook is 
 }
 
 /**
+ * Where a listening position lies on the audiobook's narration track. No position, or an unknown
+ * unit such as one removed from the narration document, is the start.
+ */
+export function toTrackPositionMilliseconds(
+  audiobook: PlayableAudiobook,
+  position: PlaybackPosition | null,
+): number {
+  if (!position) {
+    return 0;
+  }
+
+  const unitIndex = audiobook.narrationDocument.synchronizationUnits.findIndex(
+    (unit) => unit.id === position.synchronizationUnitId,
+  );
+  if (unitIndex < 0) {
+    return 0;
+  }
+
+  return audiobook.narrationTrack.startMilliseconds[unitIndex]! + position.offsetMilliseconds;
+}
+
+/**
  * One subject's listening session on one loaded audiobook.
  *
  * It converts between listening positions, a synchronization unit and an offset in its audio, and
@@ -68,7 +90,10 @@ export class PlaybackSession {
     this.subject = request.subject;
     this.services = services;
     this.timeline = narrationTrack;
-    this.initialPositionMilliseconds = this.restore(request.position);
+    this.initialPositionMilliseconds = toTrackPositionMilliseconds(
+      request.audiobook,
+      request.position,
+    );
   }
 
   /** The listening position at a position on the narration track. */
@@ -106,20 +131,4 @@ export class PlaybackSession {
 
     return this.save(positionMilliseconds);
   };
-
-  /** An unknown unit, such as one removed from the narration document, restores the start. */
-  private restore(position: PlaybackPosition | null): number {
-    if (!position) {
-      return 0;
-    }
-
-    const unitIndex = this.audiobook.narrationDocument.synchronizationUnits.findIndex(
-      (unit) => unit.id === position.synchronizationUnitId,
-    );
-    if (unitIndex < 0) {
-      return 0;
-    }
-
-    return this.timeline.startMilliseconds[unitIndex]! + position.offsetMilliseconds;
-  }
 }

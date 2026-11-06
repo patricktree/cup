@@ -482,13 +482,16 @@ test("account positions restore once and use last-write-wins across players", as
   expect(save).toBe(204);
   await page.reload();
   await waitForAudiobook(page);
-  // Opening the audiobook loads nothing; Play resumes from the saved position.
-  await page.getByRole("button", { name: "Play", exact: true }).click();
   await expect(page.locator(`[id="${unitId}"]`)).toHaveAttribute("aria-current", "true");
+  // Play resumes there; the loaded player is never moved by another player's save.
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
+  await expect(page.locator(`[id="${unitId}"]`)).toHaveAttribute("aria-current", "true");
   const second = await page.context().newPage();
   await second.goto(url);
   await waitForAudiobook(second);
+  await expect(second.locator(`[id="${unitId}"]`)).toHaveAttribute("aria-current", "true");
   await second.getByRole("button", { name: "Play segment 3", exact: true }).click();
   await expect(second.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   await second.getByRole("button", { name: "Pause", exact: true }).click();
@@ -503,11 +506,9 @@ test("account positions restore once and use last-write-wins across players", as
   await expect(page.locator(`[id="${unitId}"]`)).toHaveAttribute("aria-current", "true");
   await page.reload();
   await waitForAudiobook(page);
-  await page.getByRole("button", { name: "Play", exact: true }).click();
   await expect(
     page.locator(`[id="${document.narrationDocument.synchronizationUnits[2]!.id}"]`),
   ).toHaveAttribute("aria-current", "true");
-  await page.getByRole("button", { name: "Pause", exact: true }).click();
   await expect
     .poll(async () => (await (await fetch(origin + "/__qa/speech-calls")).json()).length)
     .toBe(document.narrationDocument.synchronizationUnits.length);

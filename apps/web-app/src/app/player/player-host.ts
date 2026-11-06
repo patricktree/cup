@@ -8,6 +8,7 @@ import {
 } from "#src/app/player/narration-track-player.ts";
 import {
   isPlayableAudiobook,
+  toTrackPositionMilliseconds,
   type PlayableAudiobook,
   type PlaybackSession,
   type PlaybackSessionRequest,
@@ -31,6 +32,12 @@ export type ShownConversion = {
   audiobook: PreparedAudiobook | null;
   /** Whether Play and segment taps on the page can start playback: it has a narration track. */
   canPlay: boolean;
+  /**
+   * Where loading the audiobook resumes on its narration track: the listener's stored listening
+   * position, or the start while the page cannot play or the account is being restored. Shown
+   * before the audiobook is loaded.
+   */
+  resumePositionMilliseconds: number;
 };
 
 /** A track that was loaded and no longer exists, such as one deleted on another device. */
@@ -127,6 +134,18 @@ export class PlayerHost {
     if (account.status === "known" && loaded && loaded.subject !== subject) {
       this.unload();
     }
+
+    // Which stored position applies depends on the account.
+    const { shown } = this.snapshot;
+    if (shown) {
+      const resumePositionMilliseconds = this.readResumePosition(
+        shown.conversionId,
+        shown.audiobook,
+      );
+      if (resumePositionMilliseconds !== shown.resumePositionMilliseconds) {
+        this.update({ shown: { ...shown, resumePositionMilliseconds } });
+      }
+    }
   };
 
   /**
@@ -156,6 +175,7 @@ export class PlayerHost {
           shownAudiobook !== null &&
           isPlayableAudiobook(shownAudiobook) &&
           this.snapshot.unavailable?.conversionId !== conversionId,
+        resumePositionMilliseconds: this.readResumePosition(conversionId, shownAudiobook),
       },
     });
   };
@@ -257,6 +277,29 @@ export class PlayerHost {
     }
   };
 
+  /** Signed-in listeners keep their position on the server; others on the device. */
+  private readStoredPosition(
+    conversionId: string,
+    audiobook: PlayableAudiobook,
+    subject: string | null,
+  ): PlaybackPosition | null {
+    return subject === null
+      ? this.services.getLocalPosition(conversionId)
+      : audiobook.playbackPosition;
+  }
+
+  private readResumePosition(conversionId: string, audiobook: PreparedAudiobook | null): number {
+    const account = this.services.getAccount();
+    if (!audiobook || !isPlayableAudiobook(audiobook) || account.status === "restoring") {
+      return 0;
+    }
+
+    return toTrackPositionMilliseconds(
+      audiobook,
+      this.readStoredPosition(conversionId, audiobook, account.subject),
+    );
+  }
+
   private isShownLoaded() {
     const { shown, loaded } = this.snapshot;
     return shown !== null && shown.conversionId === loaded?.conversionId;
@@ -274,11 +317,7 @@ export class PlayerHost {
     const session = this.services.createSession({
       conversionId,
       audiobook,
-      // Signed-in listeners keep their position on the server; others on the device.
-      position:
-        subject === null
-          ? this.services.getLocalPosition(conversionId)
-          : audiobook.playbackPosition,
+      position: this.readStoredPosition(conversionId, audiobook, subject),
       subject,
     });
     const player = new NarrationTrackPlayer(session, this.element);

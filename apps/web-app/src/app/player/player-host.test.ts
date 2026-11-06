@@ -270,6 +270,63 @@ test("showing an audiobook loads nothing, while it can be played", () => {
   expect(mediaMetadata).toEqual([]);
 });
 
+test("before it is loaded, the shown audiobook resumes from the listening position the server stored", () => {
+  const { host } = createHost({ subject: "user-1" });
+
+  host.showConversion(
+    "first",
+    createAudiobook("First", { synchronizationUnitId: "unit-2", offsetMilliseconds: 1_500 }),
+  );
+
+  expect(host.getSnapshot().shown?.resumePositionMilliseconds).toBe(5_500);
+  expect(host.getSnapshot().loaded).toBeNull();
+});
+
+test("before it is loaded, the shown audiobook resumes from the device's position for listeners without an account", () => {
+  const localPosition = { synchronizationUnitId: "unit-3", offsetMilliseconds: 500 };
+  const { host } = createHost({ localPositions: new Map([["first", localPosition]]) });
+
+  host.showConversion(
+    "first",
+    createAudiobook("First", { synchronizationUnitId: "unit-2", offsetMilliseconds: 1_000 }),
+  );
+
+  expect(host.getSnapshot().shown?.resumePositionMilliseconds).toBe(10_500);
+});
+
+test("while the account is restored, the shown audiobook resumes from the start, then from the account's position", () => {
+  const { host, element, setAccount } = createHost();
+  setAccount({ status: "restoring" });
+
+  host.showConversion(
+    "first",
+    createAudiobook("First", { synchronizationUnitId: "unit-2", offsetMilliseconds: 1_000 }),
+  );
+  expect(host.getSnapshot().shown).toMatchObject({ canPlay: true, resumePositionMilliseconds: 0 });
+
+  setAccount({ status: "known", subject: "user-1" });
+  expect(host.getSnapshot().shown).toMatchObject({
+    canPlay: true,
+    resumePositionMilliseconds: 5_000,
+  });
+  expect(element.calls).toEqual([]);
+});
+
+test("a shown audiobook that cannot play resumes from the start", () => {
+  const { host } = createHost({ subject: "user-1" });
+
+  host.showConversion(
+    "first",
+    withoutNarrationTrack(
+      createAudiobook("First", { synchronizationUnitId: "unit-2", offsetMilliseconds: 1_000 }),
+      [ready(0), { sequence: 1, status: "generating" }, ready(2)],
+      "synthesizing",
+    ),
+  );
+
+  expect(host.getSnapshot().shown?.resumePositionMilliseconds).toBe(0);
+});
+
 test("loading the shown audiobook sets its narration track on the one element without playing", () => {
   const { host, elements, element, mediaMetadata } = createHost();
 

@@ -95,6 +95,8 @@ type ShownAudiobookPlayback = {
   /** This page's audiobook, while it is the loaded one. */
   loaded: LoadedAudiobook | null;
   canPlay: boolean;
+  /** Where loading this page's audiobook resumes, shown while it is not loaded. */
+  resumePositionMilliseconds: number;
   /** Must be called from a user gesture. */
   playFromUnit: (unitIndex: number) => void;
 };
@@ -122,6 +124,8 @@ export function useShownAudiobook(
   return {
     loaded: loaded?.conversionId === conversionId ? loaded : null,
     canPlay: shown?.conversionId === conversionId && shown.canPlay,
+    resumePositionMilliseconds:
+      shown?.conversionId === conversionId ? shown.resumePositionMilliseconds : 0,
     playFromUnit: host.playShown,
   };
 }

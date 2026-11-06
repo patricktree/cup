@@ -215,7 +215,7 @@ test("the player sheet skips 15 seconds back and forward, within the track", asy
   expect((await readNarrationAudio(page)).paused).toBe(true);
 });
 
-test("before an audiobook is loaded, the player sheet skips from its stored position", async ({
+test("before an audiobook is loaded, the detail view shows and skips from its stored position", async ({
   mount,
   page,
 }) => {
@@ -232,10 +232,12 @@ test("before an audiobook is loaded, the player sheet skips from its stored posi
     .filter({ hasText: "A second document about listening" })
     .getByRole("link")
     .click();
-  await expect(playerSheet.getByText("0:00", { exact: true })).toBeVisible();
-  await expect(playerSheet.getByText("-0:30", { exact: true })).toBeVisible();
+  // The listener stopped 12 s in, in the second unit; showing it loads nothing.
+  await expect(playerSheet.getByText("0:12", { exact: true })).toBeVisible();
+  await expect(playerSheet.getByText("-0:18", { exact: true })).toBeVisible();
+  await expect(component.locator(`[id="unit-2"]`)).toHaveAttribute("aria-current", "true");
+  expect((await readNarrationAudio(page)).src).not.toContain("audiobook=second");
 
-  // The listener stopped 12 s in.
   await playerSheet.getByRole("button", { name: "Forward 15 seconds", exact: true }).click();
   await expect(playerSheet.getByText("0:27", { exact: true })).toBeVisible();
   expect((await readNarrationAudio(page)).src).toContain("audiobook=second");

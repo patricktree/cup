@@ -109,13 +109,14 @@ test("generates audio for the whole document, then plays its narration track", a
     );
   await validateNarrationTrack({ conversionId: id, origin: workerEnvironment.origin, page });
 
-  // After a reload nothing is loaded, and Play resumes from the position saved on pause.
+  // After a reload the position saved on pause is shown without loading the track, and Play
+  // resumes from it.
   await page.reload();
   await waitForAudiobook(page);
   await expect(play).toBeEnabled({ timeout: 30_000 });
+  await expect(page.locator(`[id="${units[2]!.id}"]`)).toHaveAttribute("aria-current", "true");
   expect((await readNarrationAudio(page)).src).toBe("");
   await play.click();
-  await expect(page.locator(`[id="${units[2]!.id}"]`)).toHaveAttribute("aria-current", "true");
   await expect
     .poll(async () => (await readNarrationAudio(page)).currentTime)
     .toBeGreaterThanOrEqual(pausedAt);
