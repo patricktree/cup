@@ -35,9 +35,9 @@ const config: KnipConfig = {
       entry: [
         "ui-gallery/main.tsx",
         "src/**/*.story.tsx",
-        /* scripts/fidelity-check/cli.ts starts Playwright with this config, which runs run.ts. */
+        /* fidelity-check/cli.ts starts Playwright with this config, which runs run.ts. */
         "playwright.fidelity-check.config.ts",
-        "scripts/fidelity-check/run.ts",
+        "fidelity-check/run.ts",
       ],
     },
     "libs/registry": {

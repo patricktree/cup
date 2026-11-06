@@ -4,12 +4,12 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
-import { findWorkingDirectory, runFidelityCheckCli } from "#scripts/fidelity-check/cli.ts";
+import { findWorkingDirectory, runFidelityCheckCli } from "#fidelity-check/cli.ts";
 import {
   readFidelityCheckEnvironment,
   toFidelityCheckEnvironment,
   type FidelityCheckInputs,
-} from "#scripts/fidelity-check/inputs.ts";
+} from "#fidelity-check/inputs.ts";
 
 /** The PNG signature and the start of its IHDR chunk, which carries a 402×898 size. */
 const PNG_HEADER = Buffer.from("89504e470d0a1a0a0000000d494844520000019200000382", "hex");

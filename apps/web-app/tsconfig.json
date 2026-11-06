@@ -3,6 +3,6 @@
   "references": [
     { "path": "./tsconfig.build.json" },
     { "path": "./tsconfig.playwright.json" },
-    { "path": "./tsconfig.scripts.json" }
+    { "path": "./tsconfig.fidelity-check.json" }
   ]
 }

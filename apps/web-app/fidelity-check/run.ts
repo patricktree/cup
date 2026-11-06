@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { readFidelityCheckEnvironment } from "#scripts/fidelity-check/inputs.ts";
+import { readFidelityCheckEnvironment } from "#fidelity-check/inputs.ts";
 
 import { checkAgainstDesign, formatFidelityReport, readDesignImageSize } from "@cup/fidelity-check";
 

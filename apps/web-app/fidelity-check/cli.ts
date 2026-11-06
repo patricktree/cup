@@ -9,7 +9,7 @@ import {
   parseWholePixels,
   toFidelityCheckEnvironment,
   type FidelityCheckInputs,
-} from "#scripts/fidelity-check/inputs.ts";
+} from "#fidelity-check/inputs.ts";
 
 import { readDesignImageSize } from "@cup/fidelity-check";
 
@@ -21,7 +21,7 @@ type CliDependencies = {
   output: { log: (message: string) => void; error: (message: string) => void };
 };
 
-const PACKAGE_DIRECTORY = path.resolve(import.meta.dirname, "../..");
+const PACKAGE_DIRECTORY = path.resolve(import.meta.dirname, "..");
 /** The name of this package's script, which pnpm reports in `npm_lifecycle_event`. */
 const SCRIPT_NAME = "fidelity-check";
 /** A shell reports a process ended by a signal as 128 plus the signal's number. */
