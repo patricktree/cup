@@ -57,7 +57,7 @@ function RecentPage(): React.ReactNode {
   return (
     <>
       {/* ahead of the dialogs below, whose own titles then take over while one is open */}
-      <PageTitle name="Recents" />
+      <PageTitle name="Recent" />
       <RecentsLayout>
         <RecentTracks subject={session.user.id} />
       </RecentsLayout>
@@ -71,7 +71,7 @@ function RecentPage(): React.ReactNode {
 function RecentsPending(): React.JSX.Element {
   return (
     <RecentsLayout>
-      <PageTitle name="Recents" />
+      <PageTitle name="Recent" />
       <output data-loading-state="">Loading tracks…</output>
     </RecentsLayout>
   );
@@ -82,7 +82,7 @@ function RecentsError({ error }: ErrorComponentProps): React.JSX.Element {
 
   return (
     <RecentsLayout>
-      <PageTitle name="Recents" />
+      <PageTitle name="Recent" />
       <RecentsLoadError error={error} />
       <DSButton onClick={retry}>Retry</DSButton>
     </RecentsLayout>

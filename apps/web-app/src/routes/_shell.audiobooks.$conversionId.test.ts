@@ -1050,7 +1050,7 @@ test("the page title follows the listener between audiobooks and Recents", async
   await expect(page).toHaveTitle("A deterministic document about careful testing · Cup");
 
   await component.getByRole("link", { name: "Back", exact: true }).click();
-  await expect(page).toHaveTitle("Recents · Cup");
+  await expect(page).toHaveTitle("Recent · Cup");
 
   await component
     .getByRole("listitem")

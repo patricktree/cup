@@ -1134,7 +1134,7 @@ async function expectCoversLoaded(page: Page) {
     .toBe(true);
 }
 
-test("the page title names Recents, and the Add dialog while it is open", async ({
+test("the page title names Recent, and the Add dialog while it is open", async ({
   mount,
   page,
 }) => {
@@ -1145,7 +1145,7 @@ test("the page title names Recents, and the Add dialog while it is open", async 
 
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page).toHaveTitle("Recents · Cup");
+  await expect(page).toHaveTitle("Recent · Cup");
 });
 
 test("the page title names the account dialog while it is open", async ({ mount, page }) => {
@@ -1156,11 +1156,11 @@ test("the page title names the account dialog while it is open", async ({ mount,
 
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page).toHaveTitle("Recents · Cup");
+  await expect(page).toHaveTitle("Recent · Cup");
 });
 
-test("the page title names Recents while its tracks load", async ({ mount, page }) => {
+test("the page title names Recent while its tracks load", async ({ mount, page }) => {
   const component = await mount("routes/_shell.recent/LoadingTracks");
   await expect(component.getByText("Loading tracks…")).toBeVisible();
-  await expect(page).toHaveTitle("Recents · Cup");
+  await expect(page).toHaveTitle("Recent · Cup");
 });
