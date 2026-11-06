@@ -247,7 +247,8 @@ export class NarrationTrackPlayer implements Player {
   private readSnapshot(): PlayerSnapshot {
     const { element } = this;
     const positionMilliseconds = this.readPosition();
-    const isPlaying = !element.paused;
+    // A source that fails before playback starts leaves the element unpaused, though it plays nothing.
+    const isPlaying = !element.paused && !element.error;
 
     return {
       currentUnitIndex: findUnitIndexAt(this.session.timeline, positionMilliseconds),

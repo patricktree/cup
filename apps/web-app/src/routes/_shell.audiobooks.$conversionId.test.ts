@@ -560,6 +560,9 @@ test("deleting a track unloads the player first, then lands on Recents without i
   await expect(
     component.getByRole("heading", { name: "A deterministic document about careful testing" }),
   ).toBeVisible();
+  // Opening the track loads nothing into the player; Play does.
+  expect((await readNarrationAudio(page)).src).toBe("");
+  await component.getByRole("button", { name: "Play", exact: true }).click();
   await expect.poll(async () => (await readNarrationAudio(page)).src).toContain("audiobook=story");
 
   await component.getByRole("button", { name: "More", exact: true }).click();
@@ -645,6 +648,7 @@ test("a failed deletion keeps the dialog open with an inline error, the player u
   await expect(
     component.getByRole("heading", { name: "A deterministic document about careful testing" }),
   ).toBeVisible();
+  await component.getByRole("button", { name: "Play", exact: true }).click();
   await expect.poll(async () => (await readNarrationAudio(page)).src).toContain("audiobook=story");
   await component.getByRole("button", { name: "More", exact: true }).click();
   await page.getByRole("menuitem", { name: "Delete track…" }).click();
@@ -769,6 +773,7 @@ test("a track found gone when its audio is requested again is unloaded and repor
   await captureNarrationAudio(page);
   const component = await mount("routes/_shell.audiobooks.$conversionId/TrackGoneOnRenewal");
   const playerSheet = component.getByRole("contentinfo", { name: "Player" });
+  await playerSheet.getByRole("button", { name: "Play", exact: true }).click();
   await expect(playerSheet.getByRole("alert")).toHaveText(
     "Audio could not be played. Press Play to try again.",
   );

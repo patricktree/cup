@@ -82,11 +82,11 @@ const UNAVAILABLE_TRACK_MESSAGE = "This track is no longer available.";
  * Holds the app's one `<audio>` element and the audiobook loaded into it, so playback continues
  * while the listener navigates, and decides what it plays.
  *
- * A page reports the conversion it shows; the host loads its narration track, paused, only while
- * nothing is loaded and the account is known. Only `play` and `playShown` start playback, which
- * must run within a user gesture. Playing the shown audiobook while another one is loaded saves the
- * previous one and sets the new track on the same element. A change of the signed-in user unloads
- * the element.
+ * A page reports the conversion it shows; showing it loads nothing. Its narration track is loaded
+ * only when the listener starts it: `playShown`, or `loadShown` for seeking and skipping. Only
+ * `play` and `playShown` start playback, which must run within a user gesture. Loading the shown
+ * audiobook while another one is loaded saves the previous one and sets the new track on the same
+ * element. A change of the signed-in user unloads the element.
  */
 export class PlayerHost {
   private readonly services: PlayerHostServices;
@@ -100,8 +100,6 @@ export class PlayerHost {
   private trackUrlReceivedAt = 0;
   /** The renewal Play is waiting for; Pause and unloading cancel it. */
   private pendingRenewal: symbol | null = null;
-  /** The conversion being deleted, which only Play loads again; see `release`. */
-  private releasedConversionId: string | null = null;
 
   constructor(services: PlayerHostServices) {
     this.services = services;
@@ -129,8 +127,6 @@ export class PlayerHost {
     if (account.status === "known" && loaded && loaded.subject !== subject) {
       this.unload();
     }
-
-    this.loadShownIntoEmptyPlayer();
   };
 
   /**
@@ -162,8 +158,6 @@ export class PlayerHost {
           this.snapshot.unavailable?.conversionId !== conversionId,
       },
     });
-
-    this.loadShownIntoEmptyPlayer();
   };
 
   /** The listener left the conversion's page. */
@@ -206,7 +200,8 @@ export class PlayerHost {
 
   /** Pauses the loaded audiobook while it plays, and plays it otherwise, from a user gesture. */
   togglePlayback = () => {
-    if (this.element.paused) {
+    // A failed source can leave the element unpaused; Play then renews the track URL.
+    if (this.element.paused || this.element.error) {
       this.play();
     } else {
       this.pause();
@@ -230,9 +225,9 @@ export class PlayerHost {
   };
 
   /**
-   * Loads the shown audiobook, paused, when another one is loaded, and returns its player, so the
-   * player sheet can seek it before it plays. Returns `null` while the shown audiobook has no
-   * narration track.
+   * Loads the shown audiobook, paused, unless it is loaded already, and returns its player, so the
+   * player sheet can seek it before it plays. Returns `null` while the shown audiobook cannot
+   * play.
    */
   loadShown = (): Player | null => {
     const { shown } = this.snapshot;
@@ -252,12 +247,11 @@ export class PlayerHost {
   };
 
   /**
-   * Unloads the conversion, which the listener is deleting, and keeps it unloaded while its page
-   * stays shown, also when the deletion fails; only Play on the page loads it again. Its position
-   * is not saved, since that save would race the deletion.
+   * Unloads the conversion, which the listener is deleting; only Play on its page loads it again,
+   * also when the deletion fails. Its position is not saved, since that save would race the
+   * deletion.
    */
   release = (conversionId: string) => {
-    this.releasedConversionId = conversionId;
     if (this.snapshot.loaded?.conversionId === conversionId) {
       this.emptyElement("discard");
     }
@@ -274,7 +268,6 @@ export class PlayerHost {
     }
 
     this.closeLoadedPlayer();
-    this.releasedConversionId = null;
 
     const account = this.services.getAccount();
     const subject = account.status === "known" ? account.subject : null;
@@ -343,21 +336,6 @@ export class PlayerHost {
       unavailable: { conversionId, message: UNAVAILABLE_TRACK_MESSAGE },
       shown: shown?.conversionId === conversionId ? { ...shown, canPlay: false } : shown,
     });
-  }
-
-  private loadShownIntoEmptyPlayer() {
-    const { shown, loaded } = this.snapshot;
-    // Waits for the account, whose listening position the player restores.
-    if (
-      loaded ||
-      !shown?.canPlay ||
-      shown.conversionId === this.releasedConversionId ||
-      this.services.getAccount().status === "restoring"
-    ) {
-      return;
-    }
-
-    this.load(shown);
   }
 
   private emptyElement(position: PositionOnClose) {

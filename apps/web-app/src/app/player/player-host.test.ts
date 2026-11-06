@@ -109,9 +109,14 @@ class FakeAudioElement extends EventTarget implements NarrationAudioElement {
     this.fire("timeupdate");
   }
 
-  fail() {
+  /**
+   * The source failed. A failure while the element plays leaves it paused; one before playback
+   * starts, such as a track that cannot be fetched after `play()`, leaves it unpaused, as the HTML
+   * spec's media source failure steps do in Chromium.
+   */
+  fail({ paused = true } = {}) {
     this.error = { code: 2 };
-    this.paused = true;
+    this.paused = paused;
     this.fire("error");
   }
 
@@ -253,10 +258,23 @@ function withTrackUrl(audiobook: PlayableAudiobook, url: string): PlayableAudiob
   return { ...audiobook, narrationTrack: { ...audiobook.narrationTrack, url } };
 }
 
-test("showing an audiobook loads its narration track into the one element without playing", () => {
+test("showing an audiobook loads nothing, while it can be played", () => {
+  const { host, elements, element, mediaMetadata } = createHost();
+
+  host.showConversion("first", FIRST);
+
+  expect(elements).toHaveLength(1);
+  expect(element.calls).toEqual([]);
+  expect(host.getSnapshot().loaded).toBeNull();
+  expect(host.getSnapshot().shown?.canPlay).toBe(true);
+  expect(mediaMetadata).toEqual([]);
+});
+
+test("loading the shown audiobook sets its narration track on the one element without playing", () => {
   const { host, elements, element, mediaMetadata } = createHost();
 
   host.showConversion("first", { ...FIRST, coverImage: { url: "https://example.com/cover" } });
+  host.loadShown();
 
   expect(elements).toHaveLength(1);
   expect(element.calls).toEqual([`src:${FIRST_TRACK_URL}`]);
@@ -273,6 +291,7 @@ test("loading restores the saved unit and offset once metadata is loaded and sta
     "first",
     createAudiobook("First", { synchronizationUnitId: "unit-2", offsetMilliseconds: 1_500 }),
   );
+  host.loadShown();
   // The highlight shows the restored unit before the browser read the track.
   expect(player().getSnapshot()).toMatchObject({
     currentUnitIndex: 1,
@@ -297,6 +316,7 @@ test("loading restores the saved unit and offset once metadata is loaded and sta
 test("Play starts the element within the call, before anything is awaited", () => {
   const { host, element, player } = createHost();
   host.showConversion("first", FIRST);
+  host.loadShown();
 
   host.playShown();
 
@@ -311,6 +331,7 @@ test("Play starts the element within the call, before anything is awaited", () =
 test("toggling pauses a playing audiobook and plays a paused one", () => {
   const { host, element } = createHost();
   host.showConversion("first", FIRST);
+  host.loadShown();
   host.playShown();
 
   host.togglePlayback();
@@ -325,6 +346,7 @@ test("toggling pauses a playing audiobook and plays a paused one", () => {
 test("a unit tap sets the element's time to the unit's start offset", () => {
   const { host, element, player } = createHost();
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
 
   host.playShown(2);
@@ -350,6 +372,7 @@ test("a unit tap before metadata is loaded seeks once it is", () => {
 test("the position bar sets the element's time, short of the track's end", () => {
   const { host, element, player } = createHost();
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
 
   player().seekTo(7_000);
@@ -362,6 +385,7 @@ test("the position bar sets the element's time, short of the track's end", () =>
 test("the current unit follows the element's time across start offsets", () => {
   const { host, element, player } = createHost();
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
   host.play();
 
@@ -379,6 +403,7 @@ test("the current unit follows the element's time across start offsets", () => {
 test("time updates of the same position publish no new snapshot", () => {
   const { host, element, player } = createHost();
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
   let notifications = 0;
   player().subscribe(() => {
@@ -395,6 +420,7 @@ test("time updates of the same position publish no new snapshot", () => {
 test("saves during playback at most every save interval, and on pause", async () => {
   const { host, element, saved, clock } = createHost({ subject: "user-1" });
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
   host.play();
 
@@ -424,6 +450,7 @@ test("saves during playback at most every save interval, and on pause", async ()
 test("seeking saves the new position right away", async () => {
   const { host, element, saved } = createHost();
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
 
   host.playShown(1);
@@ -437,6 +464,7 @@ test("seeking saves the new position right away", async () => {
 test("skipping moves the element's time by the given amount and saves the new position", async () => {
   const { host, element, player, saved } = createHost();
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
   host.play();
   element.advanceTo(12.5);
@@ -458,6 +486,7 @@ test("skipping moves the element's time by the given amount and saves the new po
 test("skipping back stops at the start, and skipping forward short of the end", () => {
   const { host, element, player } = createHost();
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
   host.play();
 
@@ -476,6 +505,7 @@ test("skipping before metadata is loaded skips from the restored position once i
     "first",
     createAudiobook("First", { synchronizationUnitId: "unit-3", offsetMilliseconds: 2_000 }),
   );
+  host.loadShown();
 
   player().skipBy(-5_000);
   element.loadMetadata(15);
@@ -489,6 +519,7 @@ test("a refused save is shown as the player's error", async () => {
     savePosition: () => Promise.reject(new Error("Sign in again to continue playback.")),
   });
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
 
   player().seekTo(2_000);
@@ -500,6 +531,7 @@ test("a refused save is shown as the player's error", async () => {
 test("reaching the end returns to the start and saves it", async () => {
   const { host, element, player, saved } = createHost();
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
   host.play();
 
@@ -521,6 +553,7 @@ test("reaching the end returns to the start and saves it", async () => {
 test("Play within 12 hours of receiving the track URL plays it without a refetch", () => {
   const { host, element, fetchedConversionIds, clock } = createHost();
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
 
   clock.now = TWELVE_HOURS_MILLISECONDS;
@@ -535,6 +568,7 @@ test("Play more than 12 hours after receiving the track URL renews it and keeps 
     fetchAudiobook: () => Promise.resolve(withTrackUrl(FIRST, RENEWED_TRACK_URL)),
   });
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
   host.play();
   element.advanceTo(6);
@@ -565,6 +599,7 @@ test("the age of a shown audiobook's track URL counts from when the page receive
       ),
   });
   host.showConversion("first", FIRST);
+  host.loadShown();
   host.hideConversion("first");
   host.showConversion("second", SECOND);
 
@@ -599,6 +634,7 @@ test("a unit tap that renews the track URL seeks to the unit once the renewed tr
     fetchAudiobook: () => Promise.resolve(withTrackUrl(FIRST, RENEWED_TRACK_URL)),
   });
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
 
   clock.now = TWELVE_HOURS_MILLISECONDS + 1;
@@ -619,6 +655,7 @@ test("a media error is shown, and Play renews the track URL and resumes at the s
     fetchAudiobook: () => Promise.resolve(withTrackUrl(FIRST, RENEWED_TRACK_URL)),
   });
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
   host.play();
   element.advanceTo(6);
@@ -636,11 +673,29 @@ test("a media error is shown, and Play renews the track URL and resumes at the s
   expect(element.calls.at(-1)).toBe("currentTime:6");
 });
 
+test("a track that fails to load after Play shows the error, and the next tap plays again", async () => {
+  const { host, element, player, fetchedConversionIds } = createHost({
+    fetchAudiobook: () => Promise.resolve(withTrackUrl(FIRST, RENEWED_TRACK_URL)),
+  });
+  host.showConversion("first", FIRST);
+  host.playShown();
+
+  element.fail({ paused: false });
+  expect(player().getSnapshot()).toMatchObject({ isPlaying: false, error: MEDIA_ERROR_MESSAGE });
+
+  host.togglePlayback();
+  await settle();
+
+  expect(fetchedConversionIds).toEqual(["first"]);
+  expect(element.calls.slice(-2)).toEqual([`src:${RENEWED_TRACK_URL}`, "play"]);
+});
+
 test("a refused renewal keeps playback stopped and shows an error", async () => {
   const { host, element, player, clock } = createHost({
     fetchAudiobook: () => Promise.reject(new Error("Forbidden")),
   });
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
 
   clock.now = TWELVE_HOURS_MILLISECONDS + 1;
@@ -666,6 +721,7 @@ test("an audiobook response without a narration track refuses the renewal", asyn
       ),
   });
   host.showConversion("first", FIRST);
+  host.loadShown();
 
   clock.now = TWELVE_HOURS_MILLISECONDS + 1;
   host.play();
@@ -680,6 +736,7 @@ test("a play refused after the renewal leaves Play available", async () => {
     fetchAudiobook: () => Promise.resolve(withTrackUrl(FIRST, RENEWED_TRACK_URL)),
   });
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
   clock.now = TWELVE_HOURS_MILLISECONDS + 1;
   element.nextPlayError = new DOMException("Not allowed", "NotAllowedError");
@@ -699,6 +756,7 @@ test("Pause during a renewal keeps the track paused", async () => {
     fetchAudiobook: () => Promise.resolve(withTrackUrl(FIRST, RENEWED_TRACK_URL)),
   });
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
 
   clock.now = TWELVE_HOURS_MILLISECONDS + 1;
@@ -717,6 +775,7 @@ test("a renewal that completes after unloading plays nothing", async () => {
     fetchAudiobook: () => Promise.resolve(withTrackUrl(FIRST, RENEWED_TRACK_URL)),
   });
   host.showConversion("first", FIRST);
+  host.loadShown();
 
   clock.now = TWELVE_HOURS_MILLISECONDS + 1;
   host.play();
@@ -731,6 +790,7 @@ test("a renewal that finds the track gone unloads it and reports it as no longer
     fetchAudiobook: () => Promise.resolve(null),
   });
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
 
   clock.now = TWELVE_HOURS_MILLISECONDS + 1;
@@ -756,21 +816,24 @@ test("a renewal that finds the track gone unloads it and reports it as no longer
 test("loading another audiobook clears the notice of a track no longer available", async () => {
   const { host, element, clock } = createHost({ fetchAudiobook: () => Promise.resolve(null) });
   host.showConversion("first", FIRST);
+  host.loadShown();
   clock.now = TWELVE_HOURS_MILLISECONDS + 1;
   host.play();
   await settle();
 
   host.hideConversion("first");
   host.showConversion("second", SECOND);
+  host.playShown();
 
   expect(host.getSnapshot().loaded?.conversionId).toBe("second");
   expect(host.getSnapshot().unavailable).toBeNull();
-  expect(element.calls.at(-1)).toBe(`src:${SECOND_TRACK_URL}`);
+  expect(element.calls.slice(-2)).toEqual([`src:${SECOND_TRACK_URL}`, "play"]);
 });
 
-test("releasing a track being deleted unloads it and keeps it unloaded until Play", async () => {
+test("releasing a track being deleted unloads it until Play", async () => {
   const { host, element, saved } = createHost();
   host.showConversion("first", FIRST);
+  host.loadShown();
 
   host.release("first");
   await settle();
@@ -779,7 +842,7 @@ test("releasing a track being deleted unloads it and keeps it unloaded until Pla
   // A save would race the deletion of the track it belongs to.
   expect(saved).toEqual([]);
 
-  // A newer response for the page, such as a poll, does not load it again.
+  // A newer response for the page, such as a poll, loads nothing.
   host.showConversion("first", { ...FIRST });
   expect(host.getSnapshot().loaded).toBeNull();
   expect(host.getSnapshot().shown?.canPlay).toBe(true);
@@ -792,6 +855,7 @@ test("releasing a track being deleted unloads it and keeps it unloaded until Pla
 test("a refused play is shown, and Play stays available", async () => {
   const { host, element, player } = createHost();
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.nextPlayError = new DOMException("Not allowed", "NotAllowedError");
 
   host.play();
@@ -806,6 +870,7 @@ test("playing another audiobook sets its narration track on the same element", a
   const { host, elements, element, mediaMetadata, saved } = createHost();
 
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
   host.play();
   element.advanceTo(3);
@@ -836,6 +901,7 @@ test("seeking the shown audiobook while another one plays loads it paused at tha
   const { host, element, saved } = createHost();
 
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
   host.play();
   element.advanceTo(3);
@@ -865,6 +931,7 @@ test("the shown audiobook without a narration track loads nothing, and Play leav
   const { host, element } = createHost();
 
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
   host.hideConversion("first");
   host.showConversion(
@@ -908,7 +975,7 @@ test("an audiobook without a narration track is never loaded", () => {
   expect(element.calls).toEqual([]);
 });
 
-test("an audiobook is loaded once its narration track exists while shown", () => {
+test("an audiobook whose narration track appears while shown can be played, and loads nothing before", () => {
   const { host, element } = createHost();
 
   host.showConversion(
@@ -919,21 +986,23 @@ test("an audiobook is loaded once its narration track exists while shown", () =>
       { sequence: 2, status: "generating" },
     ]),
   );
-  expect(element.calls).toEqual([]);
-
   host.showConversion("first", FIRST);
-  expect(element.calls).toEqual([`src:${FIRST_TRACK_URL}`]);
+
+  expect(host.getSnapshot().shown?.canPlay).toBe(true);
+  expect(element.calls).toEqual([]);
+  host.playShown();
+  expect(element.calls).toEqual([`src:${FIRST_TRACK_URL}`, "play"]);
 });
 
-test("loading waits until the account is restored and uses its listening position", () => {
-  const { host, element, player, setAccount } = createHost();
-  const serverPosition = { synchronizationUnitId: "unit-2", offsetMilliseconds: 1_000 };
-  setAccount({ status: "restoring" });
+test("signed-in listeners resume from the listening position the server stored", () => {
+  const { host, player } = createHost({ subject: "user-1" });
 
-  host.showConversion("first", createAudiobook("First", serverPosition));
-  expect(element.calls).toEqual([]);
+  host.showConversion(
+    "first",
+    createAudiobook("First", { synchronizationUnitId: "unit-2", offsetMilliseconds: 1_000 }),
+  );
+  host.loadShown();
 
-  setAccount({ status: "known", subject: "user-1" });
   expect(host.getSnapshot().loaded?.subject).toBe("user-1");
   expect(player().getSnapshot().positionMilliseconds).toBe(5_000);
 });
@@ -946,6 +1015,7 @@ test("listeners without an account resume from the device's listening position",
     "first",
     createAudiobook("First", { synchronizationUnitId: "unit-2", offsetMilliseconds: 1_000 }),
   );
+  host.loadShown();
 
   expect(host.getSnapshot().loaded?.subject).toBeNull();
   expect(player().getSnapshot().positionMilliseconds).toBe(10_500);
@@ -954,6 +1024,7 @@ test("listeners without an account resume from the device's listening position",
 test("a change of the signed-in user unloads the element", async () => {
   const { host, element, mediaMetadata, saved, setAccount } = createHost({ subject: "user-1" });
   host.showConversion("first", FIRST);
+  host.loadShown();
   element.loadMetadata(15);
   host.play();
   element.advanceTo(2);
@@ -961,22 +1032,19 @@ test("a change of the signed-in user unloads the element", async () => {
   setAccount({ status: "known", subject: "user-2" });
   await settle();
 
-  expect(element.calls.slice(-4)).toEqual([
-    "pause",
-    "removeAttribute:src",
-    "load",
-    `src:${FIRST_TRACK_URL}`,
-  ]);
+  expect(element.calls.slice(-3)).toEqual(["pause", "removeAttribute:src", "load"]);
   expect(saved.map(({ subject }) => subject)).toEqual(["user-1", "user-1"]);
-  expect(mediaMetadata).toEqual(["First", null, "First"]);
-  // The shown audiobook loads again, for the new user.
+  expect(mediaMetadata).toEqual(["First", null]);
+  // The shown audiobook stays unloaded until the new user plays it.
+  expect(host.getSnapshot().loaded).toBeNull();
+  host.playShown();
   expect(host.getSnapshot().loaded?.subject).toBe("user-2");
-  expect(element.src).toBe(FIRST_TRACK_URL);
 });
 
 test("unloading leaves the element empty and paused", async () => {
   const { host, element, mediaMetadata } = createHost();
   host.showConversion("first", FIRST);
+  host.loadShown();
   host.play();
 
   host.unload();

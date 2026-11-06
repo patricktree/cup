@@ -907,6 +907,7 @@ test("opening a track from Recents and going back runs the cover transition betw
 
   await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
   await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+  await loadIntoPlayer(component);
   await component.getByRole("link", { name: "Back", exact: true }).click();
   await expect(cardsOf(component)).toHaveCount(2);
 
@@ -1014,6 +1015,7 @@ test("opening a track from the mini player and going back only cross-fade, even 
   await expectCoversLoaded(page);
   await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
   await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+  await loadIntoPlayer(component);
   await component.getByRole("link", { name: "Back", exact: true }).click();
   const player = component.getByRole("region", { name: "Player" });
   await expect(player).toBeVisible();
@@ -1164,3 +1166,10 @@ test("the page title names Recent while its tracks load", async ({ mount, page }
   await expect(component.getByText("Loading tracks…")).toBeVisible();
   await expect(page).toHaveTitle("Recent · Cup");
 });
+
+/** Plays and pauses the shown track, so Recents shows it in the mini player. */
+async function loadIntoPlayer(component: Locator): Promise<void> {
+  const playerSheet = component.getByRole("contentinfo", { name: "Player" });
+  await playerSheet.getByRole("button", { name: "Play", exact: true }).click();
+  await playerSheet.getByRole("button", { name: "Pause", exact: true }).click();
+}
