@@ -15,7 +15,7 @@
   "scripts": {
     "build": "turbo run turbo:build",
     "clean": "del-cli --dot=true \"dist\" \"*.tsbuildinfo\" \"playwright-output\"",
-    "design-check": "playwright test --config playwright.design-check.config.ts",
+    "design-check": "node src/design-check.cli.ts",
     "dev:gallery": "msw init ui-gallery --save=false && vite --config ui-gallery/vite.config.ts",
     "lint": "turbo run turbo:lint",
     "lint:css": "stylelint \"./src/**/*.(css|ts|cts|mts|tsx|ctsx|mtsx)\"",
@@ -53,6 +53,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@commander-js/extra-typings": "^15.0.0",
     "@cup/config-oxlint": "workspace:*",
     "@cup/design-check": "workspace:*",
     "@cup/loading-state-recorder": "workspace:*",
@@ -71,6 +72,7 @@
     "@typescript/native": "catalog:",
     "@vitejs/plugin-react": "catalog:web-app",
     "@wyw-in-js/vite": "catalog:web-app",
+    "commander": "^15.0.0",
     "msw": "^3.0.3",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",

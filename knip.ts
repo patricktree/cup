@@ -32,7 +32,13 @@ const config: KnipConfig = {
     },
     "apps/web-app": {
       /* Playwright and Vite load these component-testing modules indirectly. */
-      entry: ["ui-gallery/main.tsx", "src/**/*.story.tsx"],
+      entry: [
+        "ui-gallery/main.tsx",
+        "src/**/*.story.tsx",
+        /* design-check.cli.ts starts Playwright with this config, which runs design-check.run.ts. */
+        "playwright.design-check.config.ts",
+        "src/design-check.run.ts",
+      ],
     },
     "libs/registry": {
       /* Wrangler loads the integration Worker and its Cloudflare virtual module. */

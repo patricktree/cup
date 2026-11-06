@@ -6,7 +6,7 @@ import {
   readDesignImageSize,
 } from "@cup/design-check";
 
-/* oxlint-disable node/no-process-env -- The command's inputs: this run has no other way to get them. */
+/* oxlint-disable node/no-process-env -- The inputs design-check.cli.ts checked; this run has no other way to get them. */
 const story = process.env["DESIGN_CHECK_STORY"];
 const designImagePath = process.env["DESIGN_CHECK_IMAGE"];
 const ignoreTopPixels = Number(process.env["DESIGN_CHECK_IGNORE_TOP"] ?? 0);
@@ -14,7 +14,7 @@ const ignoreTopPixels = Number(process.env["DESIGN_CHECK_IGNORE_TOP"] ?? 0);
 
 if (story === undefined || designImagePath === undefined) {
   throw new Error(
-    "Set DESIGN_CHECK_STORY (such as routes/index/LandingPage) and DESIGN_CHECK_IMAGE (the absolute path of the design's PNG at 1x).",
+    "Run the design check through its command: pnpm --filter '@cup/web-app' design-check --help",
   );
 }
 

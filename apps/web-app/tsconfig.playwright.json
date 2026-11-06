@@ -15,6 +15,7 @@
     "ui-gallery/**/*",
     "src/**/*.story.tsx",
     "src/**/*.test.ts",
+    "src/design-check.cli.ts",
     "src/design-check.run.ts"
   ],
   "references": [{ "path": "./tsconfig.build.json" }, { "path": "./tsconfig.test-utils.json" }]
