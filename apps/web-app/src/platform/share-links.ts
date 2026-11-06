@@ -1,10 +1,6 @@
 import { receiveSharedUrl } from "#src/platform/share-intake.js";
 
-export function handleShareLink(
-  incomingUrl: string,
-  navigate: (href: string) => void,
-  onShare: () => void | Promise<void>,
-): void {
+export function handleShareLink(incomingUrl: string, onShare: () => void | Promise<void>): void {
   const envelope = URL.parse(incomingUrl);
   if (
     envelope === null ||
@@ -23,13 +19,5 @@ export function handleShareLink(
     return;
   }
 
-  if (
-    url.origin === "https://cup.audio" &&
-    (url.pathname === "/app" || url.pathname.startsWith("/app/"))
-  ) {
-    // A shared trial link opens its route; keep the query and the trial credential fragment.
-    navigate(url.pathname + url.search + url.hash);
-    return;
-  }
   receiveSharedUrl(url.href, onShare);
 }
