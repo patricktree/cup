@@ -1,12 +1,11 @@
-import { handleAppLink } from "#src/platform/app-links.js";
 import { receiveSharedUrl } from "#src/platform/share-intake.js";
 
 export function handleShareLink(
-  value: string,
+  incomingUrl: string,
   navigate: (href: string) => void,
-  onShare: () => void,
+  onShare: () => void | Promise<void>,
 ): void {
-  const envelope = URL.parse(value);
+  const envelope = URL.parse(incomingUrl);
   if (
     envelope === null ||
     envelope.protocol !== "audio.cup.app:" ||
@@ -24,7 +23,13 @@ export function handleShareLink(
     return;
   }
 
-  if (!handleAppLink(url.href, navigate)) {
-    receiveSharedUrl(url.href, onShare);
+  if (
+    url.origin === "https://cup.audio" &&
+    (url.pathname === "/app" || url.pathname.startsWith("/app/"))
+  ) {
+    // A shared trial link opens its route; keep the query and the trial credential fragment.
+    navigate(url.pathname + url.search + url.hash);
+    return;
   }
+  receiveSharedUrl(url.href, onShare);
 }

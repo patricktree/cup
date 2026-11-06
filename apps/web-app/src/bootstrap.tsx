@@ -4,7 +4,6 @@ import ReactDOM from "react-dom/client";
 import { AppStyles } from "#src/app/app-styles.js";
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
 import { ensureAuthInitialized, sessionSnapshot } from "#src/auth/account-session.js";
-import { initializeAndroidAppLinks } from "#src/platform/app-links.android.js";
 import { initializeAndroidBackButton } from "#src/platform/back-button.android.js";
 import { initializeIosIncomingUrls } from "#src/platform/incoming-urls.ios.js";
 import { initializeAndroidShare } from "#src/platform/share-plugin.android.js";
@@ -21,9 +20,6 @@ const router = createAppRouter();
 await initializeAndroidBackButton(router.history);
 
 await Promise.all([
-  initializeAndroidAppLinks((href) => router.history.push(href)).catch((error: unknown) => {
-    console.error("Failed to initialize Android App Links", error);
-  }),
   initializeAndroidShare(navigateToAccountConversionOrTrialConversion).catch((error: unknown) => {
     console.error("Failed to initialize Android share intake", error);
   }),

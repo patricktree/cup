@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-test("delivers share URLs to the form and preserves trial credentials", async ({ page, mount }) => {
+test("delivers share URLs to the form and opens shared trial links in the app", async ({
+  page,
+  mount,
+}) => {
   await page.addInitScript(() => {
     Object.assign(window, {
       webkit: { messageHandlers: { bridge: {} } },
@@ -72,10 +75,7 @@ test("delivers share URLs to the form and preserves trial credentials", async ({
   await expect(page).toHaveTitle("/app/trials/example?from=share#credential=v1.test");
 });
 
-test("opens cold-start and repeat Universal Links only for Cup app routes", async ({
-  page,
-  mount,
-}) => {
+test("ignores URLs other than share handoffs", async ({ page, mount }) => {
   await page.addInitScript(() => {
     Object.assign(window, {
       webkit: { messageHandlers: { bridge: {} } },
@@ -95,12 +95,12 @@ test("opens cold-start and repeat Universal Links only for Cup app routes", asyn
           _options: unknown,
           listener: (payload: { url: string }) => void,
         ) => {
-          window.addEventListener("test-app-link", (event) => {
+          window.addEventListener("test-url-open", (event) => {
             if (event instanceof CustomEvent) {
               listener({ url: String(event.detail) });
             }
           });
-          return "app-link-listener";
+          return "url-open-listener";
         },
       },
     });
@@ -119,32 +119,13 @@ test("opens cold-start and repeat Universal Links only for Cup app routes", asyn
     );
     for (const url of [
       "https://cup.audio/app/audiobooks/next",
-      "https://cup.audio/app",
-      "https://cup.audio/app/",
-      "https://cup.audio/app/trials/next#credential=v1.a+b",
-      "https://example.com/app/trials/test",
-      "https://cup-audio.com/app/trials/old",
-      "https://cup.audio.evil.test/app",
-      "http://cup.audio/app",
-      "https://user:password@cup.audio/app",
-      "https://cup.audio:444/app",
-      "https://cup.audio/application",
-      "https://cup.audio/api/grants/test",
-      "https://cup.audio/",
+      "https://example.com/article",
+      "audio.cup.app://other?url=" + encodeURIComponent("https://example.com/"),
       "not a URL",
     ]) {
-      window.dispatchEvent(new CustomEvent("test-app-link", { detail: url }));
+      window.dispatchEvent(new CustomEvent("test-url-open", { detail: url }));
     }
     return { paths, shares };
   });
-  expect(result).toEqual({
-    paths: [
-      "/app/trials/test?from=keep#credential=v1.test",
-      "/app/audiobooks/next",
-      "/app",
-      "/app/",
-      "/app/trials/next#credential=v1.a+b",
-    ],
-    shares: 0,
-  });
+  expect(result).toEqual({ paths: [], shares: 0 });
 });

@@ -34,7 +34,7 @@ Turbo builds the web package once, then the Worker build copies that bundle as s
 - `apps/cloudflare-worker/dist/client` — a copy of the shared SPA bundle
 - `apps/cloudflare-worker/dist/create_audiobook_from_url` — the Worker bundle and deployment configuration
 
-The router uses `/app` as its base path. Generated JavaScript, CSS, and fonts live under `app/assets/`, and app favicons live under `app/`. Vite keeps the bundle base at `/` so these physical paths work in both Workers and Capacitor without rewriting asset URLs. Domain association files remain under `.well-known/`. The Worker serves the root `index.html` internally for application routes; missing assets and unrelated paths return 404.
+The router uses `/app` as its base path. Generated JavaScript, CSS, and fonts live under `app/assets/`, and app favicons live under `app/`. Vite keeps the bundle base at `/` so these physical paths work in both Workers and Capacitor without rewriting asset URLs. The Worker serves the root `index.html` internally for application routes; missing assets and unrelated paths return 404.
 
 [Web application screens](../../docs/architecture/web-app.md) describes the routes and navigation and the Recents layout.
 

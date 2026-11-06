@@ -34,7 +34,6 @@ test.each(REDIRECTED_ORIGINS)("redirects every other path and method on %s", (or
     "/app/recent",
     "/api/operator/grants",
     "/api/grants/existing",
-    "/.well-known/assetlinks.json",
   ]) {
     const response = routeApplicationDomain(new Request(`${origin}${pathname}`));
     expect(response?.status).toBe(308);

@@ -151,12 +151,6 @@ test("returns real 404s outside the app and for missing assets", async ({
   const apiResponse = await request.get(`${workerEnvironment.origin}/api/missing`);
   expect(apiResponse.status()).toBe(404);
   expect(apiResponse.headers()["content-type"]).toContain("application/json");
-
-  const association = await request.get(`${workerEnvironment.origin}/.well-known/assetlinks.json`, {
-    maxRedirects: 0,
-  });
-  expect(association.status()).toBe(200);
-  expect(association.headers()["content-type"]).toContain("application/json");
 });
 
 test("signed out, Recents and its dialogs redirect home, account recovery offers sign-in, and the old History and account pages are gone", async ({
