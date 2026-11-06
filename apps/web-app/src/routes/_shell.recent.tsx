@@ -11,6 +11,7 @@ import {
 } from "@tanstack/react-router";
 import React from "react";
 
+import { PageTitle } from "#src/app/components/page-title.js";
 import { RecentsCard } from "#src/app/components/recents-card.js";
 import { RecentsLayout } from "#src/app/components/recents-layout.js";
 import { DSButton } from "#src/app/design-system/button.js";
@@ -55,6 +56,8 @@ function RecentPage(): React.ReactNode {
 
   return (
     <>
+      {/* ahead of the dialogs below, whose own titles then take over while one is open */}
+      <PageTitle name="Recent" />
       <RecentsLayout>
         <RecentTracks subject={session.user.id} />
       </RecentsLayout>
@@ -68,6 +71,7 @@ function RecentPage(): React.ReactNode {
 function RecentsPending(): React.JSX.Element {
   return (
     <RecentsLayout>
+      <PageTitle name="Recent" />
       <output data-loading-state="">Loading tracks…</output>
     </RecentsLayout>
   );
@@ -78,6 +82,7 @@ function RecentsError({ error }: ErrorComponentProps): React.JSX.Element {
 
   return (
     <RecentsLayout>
+      <PageTitle name="Recent" />
       <RecentsLoadError error={error} />
       <DSButton onClick={retry}>Retry</DSButton>
     </RecentsLayout>

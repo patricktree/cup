@@ -5,10 +5,13 @@ import { AccountLoadError } from "#src/app/components/account-load-states.js";
 import { AccountRecoveryFrame } from "#src/app/components/account-recovery-frame.js";
 import { AccountSettings } from "#src/app/components/account-settings.js";
 import { PageSkeleton } from "#src/app/components/page-skeleton.js";
+import { PageTitle } from "#src/app/components/page-title.js";
 import { SignInButtons } from "#src/app/components/sign-in-dialog.js";
 import { settleAccountSession } from "#src/auth/account-session.js";
 import { useAccountSession, useSignInMethods } from "#src/auth/hooks.js";
 import { accountQuery, useSignInMutation } from "#src/data-fetching/account.js";
+
+const RECOVERY_PAGE_NAME = "Account recovery";
 
 /**
  * Restores an account whose deletion is scheduled; the scheduled-deletion email links here.
@@ -27,9 +30,15 @@ export const Route = createFileRoute("/account-recovery")({
       await context.queryClient.query({ ...accountQuery(context.subject), staleTime: "static" });
     }
   },
-  pendingComponent: () => <PageSkeleton label="Loading account" />,
+  pendingComponent: () => (
+    <>
+      <PageTitle name={RECOVERY_PAGE_NAME} />
+      <PageSkeleton label="Loading account" />
+    </>
+  ),
   errorComponent: ({ error }: ErrorComponentProps) => (
     <AccountRecoveryFrame>
+      <PageTitle name={RECOVERY_PAGE_NAME} />
       <AccountLoadError error={error} />
     </AccountRecoveryFrame>
   ),
@@ -42,6 +51,7 @@ function AccountRecoveryPage(): React.ReactNode {
 
   return (
     <AccountRecoveryFrame>
+      <PageTitle name={RECOVERY_PAGE_NAME} />
       {session ? (
         <AccountSettings
           key={session.user.id}

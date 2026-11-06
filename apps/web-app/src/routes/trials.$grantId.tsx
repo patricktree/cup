@@ -12,6 +12,7 @@ import React from "react";
 import { ConversionShell } from "#src/app/components/conversion-shell.jsx";
 import { ErrorScreen } from "#src/app/components/error-message.js";
 import { PageSkeleton } from "#src/app/components/page-skeleton.js";
+import { PageTitle } from "#src/app/components/page-title.js";
 import { StartConversionForm } from "#src/app/components/start-conversion-form.js";
 import { getResourceAccountSession } from "#src/auth/account-session.js";
 import { useAccountSession } from "#src/auth/hooks.js";
@@ -20,6 +21,7 @@ import { createGrantQuery, exchangeCredential } from "#src/data-fetching/convers
 import { UserFacingError, type ErrorCopy } from "#src/errors.js";
 import { trialBrowserState } from "#src/trial-browser-state.js";
 
+const TRIAL_PAGE_NAME = "Free trial";
 const CHECK_COMPLETE_TRIAL_LINK = "Check that you opened the complete trial link.";
 const TRIAL_LINK_INVALID = {
   title: "This trial link is invalid.",
@@ -65,7 +67,12 @@ export const Route = createFileRoute("/trials/$grantId")({
   loader: async ({ context, params }) => {
     await context.queryClient.query({ ...createGrantQuery(params.grantId), staleTime: "static" });
   },
-  pendingComponent: () => <PageSkeleton label="Loading trial" />,
+  pendingComponent: () => (
+    <>
+      <PageTitle name={TRIAL_PAGE_NAME} />
+      <PageSkeleton label="Loading trial" />
+    </>
+  ),
   errorComponent: RouteErrorComponent,
 });
 
@@ -80,6 +87,7 @@ function TrialConversionPage(): React.JSX.Element {
 
   return (
     <ConversionShell>
+      <PageTitle name={TRIAL_PAGE_NAME} />
       <StartConversionForm mode="trial" grant={grantQuery.data} />
     </ConversionShell>
   );
@@ -103,12 +111,15 @@ function RouteErrorComponent({ error }: ErrorComponentProps): React.JSX.Element 
   const navigate = useNavigate();
 
   return (
-    <ErrorScreen
-      error={error}
-      fallbackTitle="The trial link could not be opened."
-      describeApiRefusal={describeTrialLinkRefusal}
-      onRetry={() => navigate({ to: ".", reloadDocument: true })}
-    />
+    <>
+      <PageTitle name={TRIAL_PAGE_NAME} />
+      <ErrorScreen
+        error={error}
+        fallbackTitle="The trial link could not be opened."
+        describeApiRefusal={describeTrialLinkRefusal}
+        onRetry={() => navigate({ to: ".", reloadDocument: true })}
+      />
+    </>
   );
 }
 
