@@ -1,0 +1,46 @@
+{
+  "name": "@cup/fidelity-check",
+  "private": true,
+  "description": "Compares a rendered screen with the design's image and reports its layout, fonts and colors",
+  "files": [
+    "src/**"
+  ],
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/types/fidelity-check.d.ts",
+      "default": "./src/fidelity-check.ts"
+    }
+  },
+  "scripts": {
+    "build": "turbo run turbo:build",
+    "clean": "del-cli --dot=true \"dist\" \"*.tsbuildinfo\" \"playwright-output\"",
+    "lint": "turbo run turbo:lint",
+    "lint:fix": "turbo run turbo:lint:fix",
+    "test": "playwright test",
+    "turbo:build": "prepare-declaration-build --declaration-output-dir ./dist/types --build-info-file ./dist/tsconfig.build.tsbuildinfo --source-package-json ./src/package.json && tsc --build ./tsconfig.json",
+    "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
+    "turbo:lint:fix": "pnpm run turbo:lint --fix",
+    "turbo:test": "pnpm run test"
+  },
+  "devDependencies": {
+    "@cup/config-oxlint": "workspace:*",
+    "@cup/prepare-declaration-build": "workspace:*",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@patricktree-stack/config-playwright": "workspace:*",
+    "@patricktree-stack/config-typescript": "workspace:*",
+    "@playwright/test": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "@playwright/test": "catalog:"
+  }
+}

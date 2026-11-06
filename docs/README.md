@@ -21,6 +21,7 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 | Guide                                                                                 | Purpose                                                                                |
 | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | [Repository setup and validation](../AGENTS.md)                                       | Prepare a checkout and run checks                                                      |
+| [Coding standards](../CODING_STANDARDS.md)                                            | Judgement calls that reviews enforce                                                   |
 | [Local development](local-development.md)                                             | Run the web application against local services, also from a phone over Tailscale       |
 | [Web application](../apps/web-app/README.md)                                          | Develop, build, and manually verify the shared UI; run component tests                 |
 | [Worker development and integration tests](../apps/cloudflare-worker/AGENTS.md)       | Run the Worker locally and test it without external services                           |
@@ -42,6 +43,7 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 | [Brand assets](../tooling/brand-assets/README.md)                                     | Maintain generated application branding                                                |
 | [Workspace checks](../qa/workspace-checks/README.md)                                  | Tests for invariants across all packages, such as the package export check             |
 | [Loading state recorder](../qa/loading-state-recorder/README.md)                      | Fail a Playwright test on a loading flash, however briefly it shows                    |
+| [Fidelity check](../qa/fidelity-check/README.md)                                      | Compare a rendered screen with the design's image                                      |
 | [Migration generator](../tooling/drizzle-migrations/README.md)                        | Generate SQLite migrations, snapshots, Worker bundles, and schema diagrams             |
 | [Submodule check](../.patricktree-stack/tooling/submodule-check/README.md)            | Reject commits that move a submodule pointer backwards                                 |
 | [Mermaid check](../.patricktree-stack/tooling/mermaid-check/README.md)                | Parse Mermaid diagrams in documentation                                                |
