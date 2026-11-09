@@ -9,10 +9,15 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     git_common_dir="$(git rev-parse --path-format=absolute --git-common-dir)"
     env_source="$(dirname "${git_common_dir}")/apps/cloudflare-worker/.env.local"
     if [ "${git_dir}" != "${git_common_dir}" ] && [ -f "${env_source}" ]; then
-        if [ ! -f apps/cloudflare-worker/.env.local ] || [ ! -f libs/narration-content-selection/.env.evals ]; then
+        if [ ! -f apps/cloudflare-worker/.env.local ] || [ ! -f libs/narration-source-analysis/.env.evals ]; then
             node tooling/env-setup/src/cli.ts setup --from "${env_source}"
         fi
     fi
+fi
+
+# a checkout from before the narration-source-analysis rename keeps .env.evals at the old library path; setup moves it
+if [ -f libs/narration-content-selection/.env.evals ] && [ ! -f libs/narration-source-analysis/.env.evals ]; then
+    node tooling/env-setup/src/cli.ts setup --from apps/cloudflare-worker/.env.local
 fi
 
 pnpm run env:check

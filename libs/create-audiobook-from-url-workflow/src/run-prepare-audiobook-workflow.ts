@@ -17,11 +17,11 @@ import {
   type ConversionParams,
 } from "@cup/conversion-contracts";
 import { findRootCauseDescription } from "@cup/errors";
+import { createNarrationDocument } from "@cup/narration-document-creation";
 import type {
   NarrationContentSelectionResult,
   SelectionChunkRunner,
-} from "@cup/narration-content-selection";
-import { createNarrationDocument } from "@cup/narration-document-creation";
+} from "@cup/narration-source-analysis";
 import type {
   CoverImageDeclaration,
   SourceMaterialPreparer,

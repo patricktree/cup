@@ -4,7 +4,13 @@ import path from "node:path";
 import util from "node:util";
 
 const ROOT = path.resolve(import.meta.dirname, "../../..");
-const FILES = ["apps/cloudflare-worker/.env.local", "libs/narration-content-selection/.env.evals"];
+const EVALS_FILE = "libs/narration-source-analysis/.env.evals";
+const FILES = ["apps/cloudflare-worker/.env.local", EVALS_FILE];
+/**
+ * Moves of environment files whose library was renamed, so existing checkouts keep working after a
+ * pull. Remove an entry once checkouts have had time to run setup.
+ */
+const RELOCATIONS = [{ from: "libs/narration-content-selection/.env.evals", to: EVALS_FILE }];
 const KEYS = ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_KEY"] as const;
 const HELP =
   "Run node tooling/env-setup/src/cli.ts setup --from /absolute/path/to/existing.env, or export both credentials and run node tooling/env-setup/src/cli.ts setup. Then retry pnpm install.";
@@ -29,7 +35,10 @@ export async function runCli(
     .command("setup")
     .description("Create missing environment files from a file or exported credentials")
     .option("--from <env-file>", "read credentials from an existing environment file")
-    .action(async (options) => run("setup", options.from));
+    .action(async (options) => {
+      await relocate();
+      await run("setup", options.from);
+    });
 
   program
     .command("check")
@@ -91,6 +100,24 @@ export async function runCli(
       }
     }
     output.log("Environment files are configured and match.");
+  }
+
+  async function relocate() {
+    for (const { from, to } of RELOCATIONS) {
+      if ((await exists(path.join(root, from))) && !(await exists(path.join(root, to)))) {
+        await fs.rename(path.join(root, from), path.join(root, to));
+        output.log(`Moved ${from} to ${to}`);
+      }
+    }
+  }
+}
+
+async function exists(file: string) {
+  try {
+    await fs.access(file);
+    return true;
+  } catch {
+    return false;
   }
 }
 
