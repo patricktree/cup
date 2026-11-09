@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+import { z } from "zod";
 
 import { loadAudiobook, storeAudiobook, SPEECH_CONFIG, type StoreOptions } from "#src/index.ts";
 
@@ -81,6 +82,38 @@ test.each(["de_AT", "de-at", "not a tag"])(
     expect(storedObjects.size).toBe(0);
   },
 );
+test("loads a manifest from before speechConfig with the policy 4 Gemini configuration", async () => {
+  const { bucket, storedObjects } = createTestBucket();
+  const reference = await storeAudiobook({
+    bucket,
+    conversionId: "conversion-id",
+    title: "Title",
+    originalUrl: "https://example.com",
+    narrationDocument: document,
+  });
+  const key = "conversions/conversion-id/audiobook.json";
+  const storedManifest = storedObjects.get(key);
+  if (!storedManifest) {
+    throw new Error("Expected a stored manifest");
+  }
+  const { speechConfig: _, ...manifestWithoutSpeechConfig } = z
+    .looseObject({ speechConfig: z.unknown() })
+    .parse(JSON.parse(storedManifest.body));
+  const body = JSON.stringify(manifestWithoutSpeechConfig);
+  storedObjects.set(key, { ...storedManifest, body });
+
+  const audiobook = await loadAudiobook({
+    bucket,
+    audiobookReference: { ...reference, byteLength: new TextEncoder().encode(body).byteLength },
+  });
+
+  expect(audiobook.speechConfig).toEqual({
+    provider: "google-ai-studio",
+    model: "gemini-3.8-flash-lite-tts",
+    voice: "Charon",
+    policyVersion: "4",
+  });
+});
 test("rejects invalid narration before publishing a prepared artifact", async () => {
   const { bucket, storedObjects } = createTestBucket();
   await expect(

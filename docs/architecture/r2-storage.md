@@ -60,7 +60,7 @@ A later successful retry can leave the failure object in storage: the [synthesis
 
 ## Object metadata
 
-Each MP3 object carries string custom metadata that describes its audio format, duration, CRC-32, exact narration text, and synthesis provider, model, voice, and policy version; the [segment storage implementation](../../libs/audiobook-production/src/audio-segment-storage.ts) defines the keys. A retry reuses a stored segment only when this synthesis identity matches.
+Each MP3 object carries string custom metadata that describes its audio format, duration, CRC-32, exact narration text, and synthesis provider, model, voice, and policy version; the [segment storage implementation](../../libs/audiobook-production/src/audio-segment-storage.ts) defines the keys. `synthesis-language` records the manifest's [narration language](conversion.md#narration-language), also one synthesis left out of the request as unspeakable, and is absent when the conversion has none. A retry reuses a stored segment only when this synthesis identity matches, including the synthesis language or its absence.
 
 Account-owned writes additionally carry `cup-writer-id` on manifests, cover images, audio segments, and failure objects. The [account artifact writer](../../libs/accounts/src/artifacts/artifact-writer.ts) derives this ID from the execution epoch and object key, registers the write before sending it to R2, and acknowledges and drains it afterward. This lets account deletion reconcile uncertain writes before erasing the prefix. Trial writes do not use this account wrapper.
 
