@@ -62,6 +62,8 @@ const config: KnipConfig = {
       ],
     },
     "qa/e2e": {
+      /* The global setup signs the suite's local HTTPS certificate with the system's openssl */
+      ignoreBinaries: ["openssl"],
       /* These dependencies express the built-app test dependency graph. */
       ignoreDependencies: [
         "@cup/cloudflare-worker",

@@ -8,6 +8,7 @@ The test-only Worker supplies deterministic fakes for source-material preparatio
 
 - Docker with host networking support
 - The repository's Node.js and pnpm versions
+- `openssl` on the `PATH`, which signs the suite's local HTTPS certificate
 
 The first test run downloads the pinned Playwright Docker image. Later runs reuse it.
 
@@ -25,9 +26,17 @@ This suite runs in `pnpm validate:extended` and `pnpm validate`. The root `pnpm 
 
 The [routing tests](test-e2e/routing.test.ts) exercise the built Worker's redirects and asset serving; the legacy trial redirect test uses a real browser because fragments are not sent in HTTP requests. The [navigation journey](test-e2e/navigation.test.ts) checks that Recents and a reopened track show their cached content in the production build while their refetches are held, which the web app's development-build component tests cannot show.
 
+## Browsers and HTTPS
+
+Every test runs in Chromium and WebKit, each on a desktop and a mobile device. The two old-origin redirect tests in [`routing.test.ts`](test-e2e/routing.test.ts) run in Chromium only, because Playwright's WebKit cannot fulfill a route with a redirect status.
+
+Each test's Worker and the fake auth provider serve HTTPS on `127.0.0.1`, as production does. The grant session cookie has the `__Secure-` prefix, and WebKit stores such a cookie only from an HTTPS response; it also blocks an HTTPS page from calling HTTP. [Global setup](test-e2e/https-certificate.global-setup.ts) signs a certificate for the run, the browsers ignore certificate errors, and the tests' own requests trust it through `NODE_EXTRA_CA_CERTS`.
+
+When a navigation replaces a page, WebKit fails that page's pending loads, which logs errors no listener sees. In WebKit, the [fixtures](test-e2e/fixtures.ts) attach the errors logged between a page's navigation request and the next page's commit to the report and leave them out of the console-error check.
+
 ## Update screenshots
 
-The E2E suite keeps one screenshot assertion for the open-trial URL input screen, with desktop and mobile baselines. Detailed visual coverage lives in the [web app component tests](../../apps/web-app/README.md#component-tests-and-visual-coverage); the E2E tests retain their behavior assertions.
+The E2E suite keeps a few screenshot assertions (the open-trial URL input screen, the signup prompt and private Recents), with desktop and mobile baselines in each browser. Detailed visual coverage lives in the [web app component tests](../../apps/web-app/README.md#component-tests-and-visual-coverage); the E2E tests retain their behavior assertions.
 
 After an intentional visual change, run:
 

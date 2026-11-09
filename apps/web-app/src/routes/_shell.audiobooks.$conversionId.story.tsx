@@ -16,10 +16,7 @@ import { createAudiobookQuery } from "#src/data-fetching/reader.js";
 import { accountStory } from "#src/ui-gallery/account-fixtures.jsx";
 import gatesNotesAudiobook from "#src/ui-gallery/gates-notes-audiobook.json" with { type: "json" };
 import { holdStoryResponses, waitWhileHeld } from "#src/ui-gallery/held-responses.js";
-import {
-  createStoryNarrationTrack,
-  storyNarrationTrackHandler,
-} from "#src/ui-gallery/narration-track.js";
+import { createStoryNarrationTrack } from "#src/ui-gallery/narration-track.js";
 import type { Story } from "#src/ui-gallery/story.js";
 
 const CONVERSION_ID = "693af4c4-9fa8-430d-9dc5-c00e88fb38a7";
@@ -36,7 +33,6 @@ export const ReadyAudiobook = {
   component: () => <GlobalProviders router={router} />,
   handlers: [
     http.get(`/api/audiobooks/${CONVERSION_ID}`, () => HttpResponse.json(createAudiobook())),
-    storyNarrationTrackHandler,
   ],
 } satisfies Story;
 
@@ -67,7 +63,6 @@ export const GatesNotesArticle = {
         ),
       } satisfies Audiobook),
     ),
-    storyNarrationTrackHandler,
   ],
 } satisfies Story;
 
@@ -107,7 +102,6 @@ export const AccountAudiobookOnLaterHistoryPage = accountStory({
             },
       ),
     ),
-    storyNarrationTrackHandler,
   ],
 });
 
@@ -142,7 +136,6 @@ function createGatesNotesAccountStory(recents: {
             { headers: { "Content-Type": "image/svg+xml" } },
           ),
       ),
-      storyNarrationTrackHandler,
       http.put(
         `/api/audiobooks/${GATES_NOTES_CONVERSION_ID}/position`,
         () => new HttpResponse(null, { status: 204 }),
@@ -264,7 +257,6 @@ function createListeningAcrossPagesStory({
           ),
         } satisfies Audiobook),
       ),
-      storyNarrationTrackHandler,
       http.put(
         "/api/audiobooks/:conversionId/position",
         () => new HttpResponse(null, { status: 204 }),
@@ -585,7 +577,6 @@ function createDeletionStory(
         isDeleted = true;
         return new HttpResponse(null, { status: 204 });
       }),
-      storyNarrationTrackHandler,
       http.put(
         `/api/audiobooks/${CONVERSION_ID}/position`,
         () => new HttpResponse(null, { status: 204 }),

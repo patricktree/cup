@@ -63,6 +63,7 @@ Every loading state a screen shows in place of its content carries `data-loading
 ## Unknowns
 
 - The Capacitor shells have no automated coverage of the loading model, because Playwright cannot drive iOS WKWebView and no test runs either shell. Back to Recents at its scroll position, reopening an audiobook and the first-visit progress bar are manual device checks in [CUP-44](https://linear.app/cup-audio/issue/CUP-44/test-the-android-and-ios-apps-native-functionality-on-physical-devices).
-- The masonry's `ResizeObserver` spans have no automated WebKit coverage: Playwright runs Chromium only, and iOS Safari is checked by hand.
+- The masonry's `ResizeObserver` spans have WebKit coverage only where the [app E2E suite](../../qa/e2e/README.md#browsers-and-https) shows Recents; the [component tests](../../apps/web-app/README.md#component-tests-and-visual-coverage) run in Chromium only.
+- Playwright's WebKit on Linux is not iOS Safari: it lacks Cocoa-only behaviour such as the [sticky snapshot clipping](../research/ios-safari-sticky-view-transition-snapshot.md), so iOS Safari is still checked by hand.
 - Covers and the narration track are likely blocked in the Capacitor shells, because media routes send `Cross-Origin-Resource-Policy: same-origin` to pages on `capacitor://localhost` and `https://localhost`. This is inferred from the header and untested; shell playback is native-app work.
 - That an Android native Google sign-in stores `user_metadata.name` was read from source, not observed on a device.
