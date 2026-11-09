@@ -37,5 +37,26 @@ export const ELEVENLABS_SPEECH_CONFIG = {
   policyVersion: "1",
 } as const satisfies SpeechConfig;
 
+/** Every speech configuration a stored audiobook manifest or audio segment may record. */
+export const KNOWN_SPEECH_CONFIGS = [
+  GEMINI_SPEECH_CONFIG,
+  LEGACY_GEMINI_V4_SPEECH_CONFIG,
+  LEGACY_GEMINI_V3_SPEECH_CONFIG,
+  ELEVENLABS_SPEECH_CONFIG,
+] as const satisfies readonly SpeechConfig[];
+
+/**
+ * Tells whether two speech configurations are the same by every field, as audio segment reuse
+ * compares them.
+ */
+export function isSameSpeechConfig(left: SpeechConfig, right: SpeechConfig): boolean {
+  return (
+    left.provider === right.provider &&
+    left.model === right.model &&
+    left.voice === right.voice &&
+    left.policyVersion === right.policyVersion
+  );
+}
+
 /** Change this assignment and redeploy to switch the backend provider. */
 export const SPEECH_CONFIG: SpeechConfig = { ...GEMINI_SPEECH_CONFIG };

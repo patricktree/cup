@@ -1,3 +1,4 @@
+import { toLanguageSubtag } from "#src/language-tag.ts";
 import { GEMINI_SPEECH_CONFIG, type SpeechConfig } from "#src/speech-synthesis-config.ts";
 
 /**
@@ -110,27 +111,32 @@ const GEMINI_FLASH_LITE_TTS_LANGUAGES = new Set([
   "vi", // Vietnamese
 ]);
 
-const SPEAKABLE_LANGUAGES_BY_MODEL: Readonly<Record<string, ReadonlySet<string>>> = {
-  [GEMINI_SPEECH_CONFIG.model]: GEMINI_FLASH_LITE_TTS_LANGUAGES,
-};
+/**
+ * How a speech configuration treats a narration language: its model speaks the language, cannot
+ * speak it, or ignores the narration language altogether, as ElevenLabs does.
+ */
+export type NarrationLanguageSupport = "speakable" | "unspeakable" | "ignored";
 
 /**
- * Tells whether the speech model of a speech configuration can speak a narration language, judged
- * by its language subtag. ElevenLabs ignores the narration language, so nothing is speakable
- * there.
+ * Tells how the speech model of a speech configuration treats a narration language, judged by its
+ * language subtag. A Gemini model without registered languages is a programmer error, so a model
+ * change cannot silently turn every language unspeakable.
  */
-export function isNarrationLanguageSpeakable(
+export function getNarrationLanguageSupport(
   narrationLanguage: string,
   speechConfig: SpeechConfig,
-): boolean {
-  if (speechConfig.provider !== "google-ai-studio") {
-    return false;
+): NarrationLanguageSupport {
+  if (speechConfig.provider === "elevenlabs") {
+    return "ignored";
   }
 
-  const speakableLanguages = SPEAKABLE_LANGUAGES_BY_MODEL[speechConfig.model];
-  if (speakableLanguages === undefined) {
-    return false;
+  if (speechConfig.model !== GEMINI_SPEECH_CONFIG.model) {
+    throw new Error(
+      `No speakable languages are registered for the Gemini speech model ${speechConfig.model}`,
+    );
   }
 
-  return speakableLanguages.has(new Intl.Locale(narrationLanguage).language);
+  return GEMINI_FLASH_LITE_TTS_LANGUAGES.has(toLanguageSubtag(narrationLanguage))
+    ? "speakable"
+    : "unspeakable";
 }

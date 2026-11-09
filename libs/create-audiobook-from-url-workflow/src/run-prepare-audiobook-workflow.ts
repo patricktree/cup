@@ -4,7 +4,7 @@ import { Temporal } from "temporal-polyfill";
 
 import {
   countNarrationTextCharactersBySegment,
-  isNarrationLanguageSpeakable,
+  getNarrationLanguageSupport,
   SPEECH_CONFIG,
   storeAudiobook,
   storeCoverImage,
@@ -352,7 +352,8 @@ async function storeDeclaredCoverImage({
  * Decides the narration language in one retryable step. Detection never rejects: when the step's
  * retries are exhausted, or the answer is unusable, it falls back to the declared language or to
  * none, and the fallback is logged. A narration language the speech model cannot speak stays the
- * narration language and is logged on its own, also when it came from a fallback.
+ * narration language and is logged on its own, also when it came from a fallback; a speech
+ * provider that ignores the narration language, such as ElevenLabs, logs nothing.
  */
 async function detectNarrationLanguage({
   conversionId,
@@ -388,7 +389,7 @@ async function detectNarrationLanguage({
 
   if (
     result.narrationLanguage !== undefined &&
-    !isNarrationLanguageSpeakable(result.narrationLanguage, SPEECH_CONFIG)
+    getNarrationLanguageSupport(result.narrationLanguage, SPEECH_CONFIG) === "unspeakable"
   ) {
     console.warn(
       JSON.stringify({

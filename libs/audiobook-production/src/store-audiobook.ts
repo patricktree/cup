@@ -5,6 +5,7 @@ import { SYNCHRONIZATION_UNIT_SCHEMA } from "@cup/narration-document-creation";
 import type { NarrationDocument } from "@cup/narration-document-creation";
 
 import { AUDIOBOOK_MANIFEST_CONTENT_TYPE } from "#src/audio-format.ts";
+import { isCanonicalLanguageTag } from "#src/language-tag.ts";
 import {
   LEGACY_GEMINI_V4_SPEECH_CONFIG,
   SPEECH_CONFIG,
@@ -157,12 +158,4 @@ export async function loadAudiobook({
   }
 
   return audiobookSchema.parse(JSON.parse(await storedManifest.text()));
-}
-
-function isCanonicalLanguageTag(tag: string): boolean {
-  try {
-    return Intl.getCanonicalLocales(tag)[0] === tag;
-  } catch {
-    return false;
-  }
 }
