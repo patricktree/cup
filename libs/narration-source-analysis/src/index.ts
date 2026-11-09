@@ -3,11 +3,10 @@ export type {
   NarrationContentSelectionResult,
   SelectionChunkRunner,
   NarrationContentSelectionUsage,
-  SelectionCostEstimateBasis,
 } from "#src/narration-content-selection.ts";
+export type { CompletionCostEstimateBasis } from "#src/completion.ts";
 export { PRODUCTION_DETECTOR as detectNarrationLanguage } from "#src/production-narration-language-detection.ts";
 export type {
-  DeclaredLanguage,
   NarrationLanguageDetectionInput,
   NarrationLanguageDetectionResult,
   NarrationLanguageDetectionRunner,

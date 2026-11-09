@@ -1,10 +1,11 @@
 import { createHarness } from "vitest-evals";
 import type { TranscriptEvent } from "vitest-evals";
 
-import type { SelectionCompletionResponse } from "#src/narration-content-selection.ts";
+import type { DeclaredLanguage } from "@cup/prepare-source-material";
+
+import type { CompletionResponse } from "#src/completion.ts";
 import { createNarrationLanguageDetector } from "#src/narration-language-detection.ts";
 import type {
-  DeclaredLanguage,
   NarrationLanguageDetectionConfig,
   NarrationLanguageFallbackReason,
 } from "#src/narration-language-detection.ts";
@@ -37,7 +38,7 @@ export function createNarrationLanguageDetectionHarness(
     name: candidate.name,
     run: async ({ input, setArtifact }) => {
       const startedAt = performance.now();
-      const responses: SelectionCompletionResponse[] = [];
+      const responses: CompletionResponse[] = [];
       const detectNarrationLanguage = createNarrationLanguageDetector({
         ...candidate,
         completion: async (request, options) => {
@@ -105,7 +106,7 @@ export function createNarrationLanguageDetectionHarness(
 function createTranscriptEvents(
   input: NarrationLanguageDetectionEvalInput,
   output: NarrationLanguageDetectionEvalOutput,
-  responses: readonly SelectionCompletionResponse[],
+  responses: readonly CompletionResponse[],
 ): TranscriptEvent[] {
   const toolCallEvents = responses.flatMap((response) =>
     response.toolCalls.map((toolCall): TranscriptEvent => ({

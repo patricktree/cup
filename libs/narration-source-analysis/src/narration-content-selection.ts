@@ -3,6 +3,14 @@ import { parseFragment, serialize, serializeOuter } from "parse5";
 import type { DefaultTreeAdapterMap } from "parse5";
 import { z } from "zod";
 
+import type {
+  Completion,
+  CompletionOptions,
+  CompletionRequest,
+  CompletionCostEstimateBasis,
+  CompletionResponse,
+  CompletionTool,
+} from "#src/completion.ts";
 import {
   SOURCE_ELEMENT_ID_ATTRIBUTE,
   annotateSourceElements,
@@ -10,85 +18,18 @@ import {
 } from "#src/source-element-selection.ts";
 import type { AnnotatedSource, SourceElementIds } from "#src/source-element-selection.ts";
 
-export type SelectionTool = {
-  name: string;
-  description: string;
-  parameters: Record<string, unknown>;
-};
-
-type SelectionCompletionRequest = {
-  systemPrompt: string;
-  userPrompt: string;
-  tool: SelectionTool;
-};
-
-export type SelectionCompletionOptions = {
-  reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
-  maxTokens?: number;
-  maxRetries?: number;
-};
-
-type SelectionCompletionCallOptions = SelectionCompletionOptions & {
-  signal?: AbortSignal;
-  apiKey?: string;
-  env?: Record<string, string | undefined>;
-  fetch?: typeof globalThis.fetch;
-  gatewayMetadata?: Record<string, string | number>;
-};
-
-export type SelectionToolCall = {
-  id: string;
-  name: string;
-  arguments: unknown;
-};
-
-export type SelectionCostEstimateBasis = {
-  currency: "USD";
-  inputUsdPerMillionTokens: number;
-  outputUsdPerMillionTokens: number;
-  pricingSource: string;
-};
-
-type SelectionCompletionUsage = {
-  inputTokens: number;
-  outputTokens: number;
-  reasoningTokens?: number;
-  totalTokens: number;
-  cacheReadTokens?: number;
-  cacheWriteTokens?: number;
-  estimatedCostUsd?: number;
-  costEstimateBasis?: SelectionCostEstimateBasis;
-};
-
-export type SelectionCompletionResponse = {
-  provider: string;
-  model: string;
-  responseModel?: string;
-  responseId?: string;
-  toolCalls: readonly SelectionToolCall[];
-  stopReason: "toolUse" | "length" | "stop" | "error" | "aborted";
-  rawStopReason?: string;
-  errorMessage?: string;
-  usage: SelectionCompletionUsage;
-};
-
-export type SelectionCompletion = (
-  request: SelectionCompletionRequest,
-  options?: SelectionCompletionCallOptions,
-) => Promise<SelectionCompletionResponse>;
-
 export type SelectionConfig = {
-  completion: SelectionCompletion;
+  completion: Completion;
   systemPrompt: string;
-  tool: SelectionTool;
-  completionOptions: SelectionCompletionOptions;
+  tool: CompletionTool;
+  completionOptions: CompletionOptions;
 };
 
 export type SelectionResult = {
   selectedElementIds: SourceElementIds;
   selectedSourceMaterialHtml: string;
   chunkCount: number;
-  responses: readonly SelectionCompletionResponse[];
+  responses: readonly CompletionResponse[];
 };
 
 export type NarrationContentSelectionUsage = {
@@ -102,7 +43,7 @@ export type NarrationContentSelectionUsage = {
   cacheReadTokens: number;
   cacheWriteTokens: number;
   estimatedCostUsd?: number;
-  costEstimateBasis?: SelectionCostEstimateBasis;
+  costEstimateBasis?: CompletionCostEstimateBasis;
 };
 
 export type NarrationContentSelectionResult = {
@@ -133,7 +74,7 @@ const SELECTION_CONCURRENCY = 6;
 export type SelectionChunkResult = {
   selectedElementIds: string[];
   responses: Array<
-    Omit<SelectionCompletionResponse, "toolCalls"> & {
+    Omit<CompletionResponse, "toolCalls"> & {
       toolCalls: Array<{ id: string; name: string; arguments: { element_ids: string[] } }>;
     }
   >;
@@ -265,7 +206,7 @@ export async function selectElementIds({
   signal?: AbortSignal;
   gatewayMetadata?: Record<string, string | number>;
 }): Promise<SelectionChunkResult> {
-  const request: SelectionCompletionRequest = {
+  const request: CompletionRequest = {
     systemPrompt: configuration.systemPrompt,
     userPrompt: `<audiobook-source-material-html>\n${prepareSelectionPromptHtml(annotatedSourceMaterial.html)}\n</audiobook-source-material-html>`,
     tool: configuration.tool,
@@ -328,7 +269,7 @@ export async function selectElementIds({
 }
 
 function aggregateSelectionUsage(
-  responses: readonly SelectionCompletionResponse[],
+  responses: readonly CompletionResponse[],
 ): NarrationContentSelectionUsage {
   const firstResponse = responses[0];
 
@@ -376,7 +317,7 @@ function aggregateSelectionUsage(
 }
 
 function sumUsage(
-  responses: readonly SelectionCompletionResponse[],
+  responses: readonly CompletionResponse[],
   field:
     | "inputTokens"
     | "outputTokens"
@@ -531,7 +472,7 @@ function asSourceElementIds(elementIds: string[]): SourceElementIds {
 }
 
 function parseSourceElementIds(
-  response: SelectionCompletionResponse,
+  response: CompletionResponse,
   annotatedSourceMaterial: AnnotatedSource,
   toolName: string,
 ): string[] {

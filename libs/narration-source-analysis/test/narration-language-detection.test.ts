@@ -1,11 +1,8 @@
 import { expect, test } from "vitest";
 
-import type { DeclaredLanguage } from "@cup/narration-source-analysis";
+import type { DeclaredLanguage } from "@cup/prepare-source-material";
 
-import type {
-  SelectionCompletion,
-  SelectionCompletionResponse,
-} from "#src/narration-content-selection.ts";
+import type { Completion, CompletionResponse } from "#src/completion.ts";
 import { createNarrationLanguageDetector } from "#src/narration-language-detection.ts";
 import { PRODUCTION_DETECTION_CONFIG } from "#src/production-narration-language-detection.ts";
 
@@ -70,7 +67,7 @@ test.each([
   ["answers a language name in the language itself", answerWith("Deutsch"), "invalid-tag"],
   ["answers a subtag that names no language", answerWith("xx"), "invalid-tag"],
   ["answers no linguistic content", answerWith("zxx"), "invalid-tag"],
-] as const satisfies ReadonlyArray<readonly [string, SelectionCompletion, string]>)(
+] as const satisfies ReadonlyArray<readonly [string, Completion, string]>)(
   "falls back to the declared language when the detector %s",
   async (_description, completion, fallbackReason) => {
     const detect = createDetector(completion);
@@ -130,7 +127,7 @@ test("keeps only the language subtag of an answer that names a region", async ()
 });
 
 test("asks with the source title, the declared language and the start of the text without HTML", async () => {
-  const requests: Parameters<SelectionCompletion>[] = [];
+  const requests: Parameters<Completion>[] = [];
   const detect = createDetector(async (...request) => {
     requests.push(request);
     return answerWith("de")(...request);
@@ -182,7 +179,7 @@ test("runs the detector call through the supplied runner and falls back when it 
   expect(runs).toEqual([{ language: "de" }]);
 });
 
-function createDetector(completion: SelectionCompletion) {
+function createDetector(completion: Completion) {
   return createNarrationLanguageDetector({ ...PRODUCTION_DETECTION_CONFIG, completion });
 }
 
@@ -194,7 +191,7 @@ function input(declaredLanguage: DeclaredLanguage = {}) {
   };
 }
 
-function answerWith(language: unknown): SelectionCompletion {
+function answerWith(language: unknown): Completion {
   return async () =>
     response({
       toolCalls: [{ id: "call-1", name: "report_narration_language", arguments: { language } }],
@@ -202,7 +199,7 @@ function answerWith(language: unknown): SelectionCompletion {
     });
 }
 
-function response(overrides: Partial<SelectionCompletionResponse>): SelectionCompletionResponse {
+function response(overrides: Partial<CompletionResponse>): CompletionResponse {
   return {
     provider: "faux",
     model: "faux-model",

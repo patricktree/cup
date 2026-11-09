@@ -1,8 +1,5 @@
-import {
-  createContentSelector,
-  type SelectionCompletion,
-  type SelectionConfig,
-} from "#src/narration-content-selection.ts";
+import type { Completion } from "#src/completion.ts";
+import { createContentSelector, type SelectionConfig } from "#src/narration-content-selection.ts";
 import { SOURCE_ELEMENT_ID_ATTRIBUTE } from "#src/source-element-selection.ts";
 
 const TOOL_NAME = "select_narration_content";
@@ -16,7 +13,7 @@ export type FakeNarrationContentSelectorOptions = {
 export function createFakeNarrationContentSelector(
   options: FakeNarrationContentSelectorOptions = {},
 ) {
-  const completion: SelectionCompletion = async (request) => {
+  const completion: Completion = async (request) => {
     if (options.failure) {
       throw options.failure;
     }

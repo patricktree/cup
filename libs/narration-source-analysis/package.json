@@ -38,6 +38,7 @@
     "turbo:test": "pnpm run test"
   },
   "dependencies": {
+    "@cup/prepare-source-material": "workspace:*",
     "openai": "^7.32.0",
     "p-map": "^7.1.0",
     "parse5": "^8.0.1",

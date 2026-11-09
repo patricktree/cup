@@ -6,7 +6,7 @@ Live evals call Gemini through Cloudflare AI Gateway and can incur usage charges
 
 ## Configure credentials
 
-The root [environment setup](../../../../AGENTS.md#environment-setup) creates `.env.evals`. The production candidate uses `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_KEY`. An experimental candidate can supply a different `SelectionCompletion` implementation and its required credentials. The local environment file is optional and ignored by Git; you can instead export the required credentials. Evals do not require the Worker’s environment file.
+The root [environment setup](../../../../AGENTS.md#environment-setup) creates `.env.evals`. The production candidate uses `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_KEY`. An experimental candidate can supply a different `Completion` implementation and its required credentials. The local environment file is optional and ignored by Git; you can instead export the required credentials. Evals do not require the Worker’s environment file.
 
 ## Add an eval case
 

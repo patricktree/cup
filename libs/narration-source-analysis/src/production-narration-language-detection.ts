@@ -1,7 +1,7 @@
 import { z } from "zod";
 
+import type { CompletionTool } from "#src/completion.ts";
 import { completeWithGemini } from "#src/gemini-completion.ts";
-import type { SelectionTool } from "#src/narration-content-selection.ts";
 import {
   createNarrationLanguageDetector,
   DETECTION_ARGS_SCHEMA,
@@ -17,7 +17,7 @@ const TOOL = {
   name: TOOL_NAME,
   description: "Report the narration language as a BCP 47 language subtag, such as de or en.",
   parameters: TOOL_PARAMETERS,
-} satisfies SelectionTool;
+} satisfies CompletionTool;
 
 const SYSTEM_PROMPT = `\
 You decide the narration language of an audiobook: the language its narrator reads it in.

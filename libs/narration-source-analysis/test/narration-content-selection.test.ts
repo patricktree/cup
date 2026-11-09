@@ -2,13 +2,11 @@ import { expect, test } from "vitest";
 
 import { selectNarrationContent as productionSelector } from "@cup/narration-source-analysis";
 
+import type { Completion, CompletionResponse, CompletionToolCall } from "#src/completion.ts";
 import {
   createContentSelector,
   selectElementIds,
-  type SelectionCompletionResponse,
   type SelectionConfig,
-  type SelectionCompletion,
-  type SelectionToolCall,
   type SelectionChunkRunner,
 } from "#src/narration-content-selection.ts";
 import { PRODUCTION_CONFIG } from "#src/production-narration-content-selection.ts";
@@ -665,12 +663,12 @@ test("exports the production narration content selector", () => {
   expect(productionSelector).toBeTypeOf("function");
 });
 
-function createSelector(response: SelectionCompletionResponse) {
+function createSelector(response: CompletionResponse) {
   return createContentSelector(createConfiguration(response));
 }
 
 function createConfiguration(
-  response: SelectionCompletionResponse,
+  response: CompletionResponse,
   overrides: Partial<SelectionConfig> = {},
 ): SelectionConfig {
   return {
@@ -680,14 +678,14 @@ function createConfiguration(
   };
 }
 
-function createCompletion(response: SelectionCompletionResponse): SelectionCompletion {
+function createCompletion(response: CompletionResponse): Completion {
   return async () => response;
 }
 
 function fauxAssistantMessage(
-  content: SelectionToolCall | readonly SelectionToolCall[] | undefined = [],
-  overrides: Partial<SelectionCompletionResponse> = {},
-): SelectionCompletionResponse {
+  content: CompletionToolCall | readonly CompletionToolCall[] | undefined = [],
+  overrides: Partial<CompletionResponse> = {},
+): CompletionResponse {
   const toolCalls = content === undefined ? [] : Array.isArray(content) ? content : [content];
 
   return {
@@ -704,7 +702,7 @@ function fauxAssistantMessage(
   };
 }
 
-function fauxToolCall(name: string, argumentsValue: unknown): SelectionToolCall {
+function fauxToolCall(name: string, argumentsValue: unknown): CompletionToolCall {
   return { id: `call-${name}`, name, arguments: argumentsValue };
 }
 

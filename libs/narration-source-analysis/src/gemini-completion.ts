@@ -1,16 +1,13 @@
 import { OpenAI } from "openai";
 
-import type {
-  SelectionCompletion,
-  SelectionCompletionResponse,
-} from "#src/narration-content-selection.ts";
+import type { Completion, CompletionResponse } from "#src/completion.ts";
 
-export const completeWithGemini: SelectionCompletion = async (request, options = {}) => {
+export const completeWithGemini: Completion = async (request, options = {}) => {
   const environment = options.env ?? process.env;
   const accountId = environment["CLOUDFLARE_ACCOUNT_ID"];
   const apiKey = options.apiKey ?? environment["CLOUDFLARE_API_KEY"];
   if (!accountId || !apiKey) {
-    throw new Error("Narration selection requires Cloudflare account ID and API key");
+    throw new Error("Gemini completion requires Cloudflare account ID and API key");
   }
   const client = new OpenAI({
     apiKey,
@@ -45,9 +42,7 @@ export const completeWithGemini: SelectionCompletion = async (request, options =
   return parseGeminiResponse(response);
 };
 
-function parseGeminiResponse(
-  response: OpenAI.Chat.Completions.ChatCompletion,
-): SelectionCompletionResponse {
+function parseGeminiResponse(response: OpenAI.Chat.Completions.ChatCompletion): CompletionResponse {
   const candidate = response.choices[0];
   const usage = response.usage;
   if (!candidate || !usage) {

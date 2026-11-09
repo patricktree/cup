@@ -1,4 +1,4 @@
-import type { SelectionCompletion } from "#src/narration-content-selection.ts";
+import type { Completion } from "#src/completion.ts";
 import { createNarrationLanguageDetector } from "#src/narration-language-detection.ts";
 import { PRODUCTION_DETECTION_CONFIG } from "#src/production-narration-language-detection.ts";
 
@@ -10,7 +10,7 @@ export type FakeNarrationLanguageDetectorOptions = { answer: string | null } | {
  * fallbacks still apply to its answer.
  */
 export function createFakeNarrationLanguageDetector(options: FakeNarrationLanguageDetectorOptions) {
-  const completion: SelectionCompletion = async (request) => {
+  const completion: Completion = async (request) => {
     if ("failure" in options) {
       throw options.failure;
     }
