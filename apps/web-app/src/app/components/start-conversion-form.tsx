@@ -144,8 +144,10 @@ function ConversionForm({
             border-radius: var(--border-radius-sm);
             box-shadow: none;
 
-            /* DSInput's focus style rounds it into a pill */
             &:focus-visible {
+              /* the design draws no focus ring around the wavy rule; the caret marks the focused field */
+              outline: none;
+              /* DSInput's focus style rounds it into a pill, which would clip the rule's ends */
               border-radius: var(--border-radius-sm);
             }
           `,
