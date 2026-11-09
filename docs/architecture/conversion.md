@@ -86,6 +86,7 @@ Every new conversion gets its [narration language](../GLOSSARY.md#narration-lang
 Deterministic code, not the prompt, turns the answer into the narration language, a canonical BCP 47 tag:
 
 - A region is added only when the valid declared language has the same language subtag with one: `de` with a declared `de-AT` gives `de-AT`, `en` with a declared `de-DE` gives `en`. `<html lang>` wins over `og:locale`, whose underscore form is converted to BCP 47 first.
+- A tag is valid only when its language subtag is a 2–3 letter ISO 639 code that `Intl` can name, so a language name such as `German`, which BCP 47 parses as a long subtag, is an invalid tag, as are `und` and the other special codes. The same rule decides whether a declared language is valid.
 - When the call fails, gives no answer or gives an invalid tag, the valid declared language is used; without one, the conversion has no narration language. Detection never fails a conversion.
 - The call is not retried inside detection; the step runs with the AI step configuration, so transient errors get the workflow's step retries before detection falls back.
 

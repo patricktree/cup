@@ -60,6 +60,10 @@ test.each([
   ["answers malformed arguments", answerWith(42), "no-answer"],
   ["answers an invalid tag", answerWith("not a tag"), "invalid-tag"],
   ["answers the undetermined language", answerWith("und"), "invalid-tag"],
+  ["answers a language name in English", answerWith("German"), "invalid-tag"],
+  ["answers a language name in the language itself", answerWith("Deutsch"), "invalid-tag"],
+  ["answers a subtag that names no language", answerWith("xx"), "invalid-tag"],
+  ["answers no linguistic content", answerWith("zxx"), "invalid-tag"],
 ] as const satisfies ReadonlyArray<readonly [string, SelectionCompletion, string]>)(
   "falls back to the declared language when the detector %s",
   async (_description, completion, fallbackReason) => {
@@ -76,6 +80,7 @@ test.each([
   [{ ogLocale: "de_AT" }, "de-AT"],
   [{ htmlLang: "", ogLocale: "fr_FR" }, "fr-FR"],
   [{ htmlLang: "und", ogLocale: "fr" }, "fr"],
+  [{ htmlLang: "german", ogLocale: "de_AT" }, "de-AT"],
 ] as const)(
   "falls back to a valid og:locale when <html lang> is missing or invalid (%j)",
   async (declaredLanguage, narrationLanguage) => {

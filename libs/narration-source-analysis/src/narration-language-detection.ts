@@ -58,6 +58,9 @@ export const DETECTION_ARGS_SCHEMA = z.object({ language: z.string() }).strict()
 
 const MAX_TEXT_CHARACTERS = 8_000;
 const DETECTION_REQUEST_TIMEOUT_MILLISECONDS = 60_000;
+/** Undetermined, multiple languages, uncoded languages and no linguistic content. */
+const NON_LANGUAGE_SUBTAGS = new Set(["und", "mul", "mis", "zxx"]);
+const LANGUAGE_NAMES = new Intl.DisplayNames(["en"], { type: "language", fallback: "none" });
 
 /** Creates a detector that decides a conversion's narration language and never rejects. */
 export function createNarrationLanguageDetector(configuration: NarrationLanguageDetectionConfig) {
@@ -191,15 +194,34 @@ function toLocale(tag: string | undefined): Intl.Locale | undefined {
     return undefined;
   }
 
+  let locale: Intl.Locale;
   try {
     const [canonical] = Intl.getCanonicalLocales(tag.trim());
     if (canonical === undefined) {
       return undefined;
     }
-    const locale = new Intl.Locale(canonical);
-    // `und` is valid BCP 47 but names no language; some runtimes report its language as absent.
-    return locale.language === undefined || locale.language === "und" ? undefined : locale;
+
+    locale = new Intl.Locale(canonical);
   } catch {
     return undefined;
   }
+
+  return isNamedLanguage(locale.language) ? locale : undefined;
+}
+
+/**
+ * BCP 47 also admits 5–8 letter language subtags, so a language name such as "German" parses as
+ * the tag `german`. Only a 2–3 letter ISO 639 subtag that `Intl` can name is a language, and the
+ * ISO 639 special codes name none.
+ */
+function isNamedLanguage(language: string | undefined): language is string {
+  if (
+    language === undefined ||
+    !/^[a-z]{2,3}$/u.test(language) ||
+    NON_LANGUAGE_SUBTAGS.has(language)
+  ) {
+    return false;
+  }
+
+  return LANGUAGE_NAMES.of(language) !== undefined;
 }
