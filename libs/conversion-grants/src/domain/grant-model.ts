@@ -39,6 +39,8 @@ export type ReadyConversion = Omit<PendingConversion, "status"> & {
   audiobookReference: AudiobookReference;
   /** Recorded only when the audiobook has one, so a replayed outcome without it still matches. */
   hasCoverImage?: true;
+  /** The manifest's narration language (BCP 47); absent when the audiobook has none. */
+  narrationLanguage?: string;
   measurements?: ConversionMeasurements;
   providerUsage?: Record<string, unknown>;
 };
@@ -59,6 +61,7 @@ export type TerminalOutcome =
       title: string;
       audiobookReference: AudiobookReference;
       hasCoverImage?: true;
+      narrationLanguage?: string;
       measurements?: ConversionMeasurements;
       providerUsage?: Record<string, unknown>;
     }

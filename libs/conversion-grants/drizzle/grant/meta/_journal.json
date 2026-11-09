@@ -29,6 +29,13 @@
       "when": 1792074279472,
       "tag": "0003_adopt_duration_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1794227144707,
+      "tag": "0004_narration_language",
+      "breakpoints": true
     }
   ]
 }

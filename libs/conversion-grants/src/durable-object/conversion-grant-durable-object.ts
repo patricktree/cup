@@ -450,6 +450,7 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
       title: string;
       audiobookReference: AudiobookReference;
       hasCoverImage?: true;
+      narrationLanguage?: string;
       measurements?: ConversionMeasurements;
       providerUsage?: Record<string, unknown>;
       completedAtMs?: number;
@@ -464,6 +465,9 @@ export class ConversionGrantDurableObject extends DurableObject<ConversionGrantE
         title: input.title,
         audiobookReference: input.audiobookReference,
         ...(input.hasCoverImage === undefined ? {} : { hasCoverImage: true }),
+        ...(input.narrationLanguage === undefined
+          ? {}
+          : { narrationLanguage: input.narrationLanguage }),
         ...(input.measurements === undefined ? {} : { measurements: input.measurements }),
         ...(input.providerUsage === undefined ? {} : { providerUsage: input.providerUsage }),
       },

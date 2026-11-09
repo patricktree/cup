@@ -18,6 +18,7 @@ const root = path.resolve(import.meta.dirname, "../../..");
 const cliPath = path.join(root, "apps/operator/src/cli.ts");
 const CONVERSION_ID = "f9cc2e59-46a3-4890-b923-bda04d03b4d0";
 const DELETED_CONVERSION_ID = "3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f";
+const PENDING_CONVERSION_ID = "5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b";
 const adjustmentBodies: unknown[] = [];
 const conversionDeletionPaths: string[] = [];
 let server: http.Server;
@@ -186,6 +187,22 @@ describe("actual operator CLI process", () => {
     expect(result.stdout).toContain(`Conversion ID: ${DELETED_CONVERSION_ID}`);
     expect(result.stdout).toMatch(/Deleting since \(epoch ms\): \d+/);
     expect(result.stdout).toContain("Age (minutes): 90");
+  });
+
+  test("shows the narration language of each conversion in an account's history, and none without one", async () => {
+    const result = await runCli("account", "inspect", ACCOUNT_ID);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      [
+        "Narration languages:",
+        `Conversion ID: ${CONVERSION_ID}`,
+        "Narration language: de-AT",
+        "",
+        `Conversion ID: ${PENDING_CONVERSION_ID}`,
+        "Narration language: none",
+        "",
+      ].join("\n"),
+    );
   });
 
   test("reports API refusals with the API error code and message", async () => {
@@ -410,7 +427,41 @@ function accountInspectionFixture() {
       balance,
     },
     accounting: { balance, reconstructed: { available: 1_800_000, reserved: 0 }, entries: 1 },
-    history: { items: [], nextCursor: null },
+    history: {
+      items: [
+        {
+          conversionId: CONVERSION_ID,
+          idempotencyKey: CONVERSION_ID,
+          sourceUrl: "https://example.com/book",
+          createdAtMs: 2,
+          status: "ready",
+          lastStartedPhase: "finalization",
+          completedAtMs: 3,
+          outcome: {
+            status: "ready",
+            title: "Book",
+            audiobookReference: {
+              key: "manifest.json",
+              contentType: "application/json",
+              byteLength: 12,
+              etag: "etag",
+            },
+            narrationLanguage: "de-AT",
+          },
+        },
+        {
+          conversionId: PENDING_CONVERSION_ID,
+          idempotencyKey: PENDING_CONVERSION_ID,
+          sourceUrl: "https://example.com/pending",
+          createdAtMs: 1,
+          status: "pending",
+          lastStartedPhase: "conversion-start",
+          outcome: null,
+          completedAtMs: null,
+        },
+      ],
+      nextCursor: null,
+    },
     writers: [],
     conversionDeletions: [
       // Marked 90 minutes and a few seconds ago, so the age reads 90 minutes despite test latency.

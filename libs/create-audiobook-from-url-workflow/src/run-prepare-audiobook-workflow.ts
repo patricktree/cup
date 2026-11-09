@@ -225,6 +225,7 @@ export async function runPrepareAudiobookWorkflow({
           title: sourceMaterial.title,
           audiobookReference,
           ...(coverImage === undefined ? {} : { hasCoverImage: true as const }),
+          ...(narrationLanguage === undefined ? {} : { narrationLanguage }),
           measurements: {
             narrationTextCharacters,
             narrationChunks: synchronizationUnits.length,
