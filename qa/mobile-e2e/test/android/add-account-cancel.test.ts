@@ -10,6 +10,10 @@ import { pathname, startSignInFromLandingPage } from "#src/journeys.ts";
  */
 const app = useMobileApp();
 
+const GOOGLE_PLAY_SERVICES = "com.google.android.gms";
+/** Google Play services' add-account screen, which loads Google's sign-in page. */
+const ADD_ACCOUNT_ACTIVITY = `${GOOGLE_PLAY_SERVICES}/${GOOGLE_PLAY_SERVICES}.auth.uiflows.minutemaid.MinuteMaidActivity`;
+
 test("cancelling Google's add-account screen returns to a usable landing page", async () => {
   const device = asAndroidAppDevice(app.device);
   await device.launch({ apiOrigin: app.apiOrigin, realGoogleSignIn: true });
@@ -17,10 +21,19 @@ test("cancelling Google's add-account screen returns to a usable landing page", 
   await startSignInFromLandingPage(webView);
 
   await webView.$("button=Continue with Google").click();
-  // With no account on the device, Google's sign-in opens its add-account screen.
+  // With no account on the device, Google's sign-in opens its add-account screen. It first shows
+  // `GoogleSignInActivity`, which then starts the add-account flow on top of itself: a Back pressed
+  // before that start cancels only the trampoline, and the add-account screen opens anyway. So wait
+  // for the add-account screen itself, not for Google Play services' package.
   await expect
-    .poll(() => device.focusedPackage(), { timeout: 30_000, interval: 500 })
-    .toBe("com.google.android.gms");
+    .poll(() => device.focusedActivity(), { timeout: 30_000, interval: 500 })
+    .toBe(ADD_ACCOUNT_ACTIVITY);
+  // The add-account screen shows "Checking info…" while it loads Google's sign-in page. A Back
+  // pressed then can close only the activities beneath it and leave the screen in front, so wait
+  // for a button of the rendered page, such as SKIP on "Sign in with ease".
+  await expect
+    .poll(() => device.showsButton(GOOGLE_PLAY_SERVICES), { timeout: 30_000, interval: 500 })
+    .toBe(true);
   await device.pressBack();
   await expect
     .poll(() => device.focusedPackage(), { timeout: 30_000, interval: 500 })

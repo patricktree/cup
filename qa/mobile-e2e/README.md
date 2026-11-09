@@ -9,7 +9,7 @@ This package drives the debug build of the Android shell on an emulator and of t
   - Android SDK Platform-Tools, Android Emulator, and Android SDK Command-line Tools (latest)
   - SDK platform 36 and the system image `system-images;android-36;google_apis;arm64-v8a`
 - Java 21, with `JAVA_HOME` pointing to it. Android Studio includes one at `/Applications/Android Studio.app/Contents/jbr/Contents/Home`.
-- Xcode that supports the host macOS, with an iOS simulator runtime: install one with `xcodebuild -downloadPlatform iOS` or in Xcode under Settings > Components. Since version 26, Xcode's major version must be at least macOS's: an older Xcode hangs every XCTest runner, WebDriverAgent included. After an Xcode update, restart CoreSimulatorService with `killall -9 com.apple.CoreSimulator.CoreSimulatorService`.
+- Xcode that supports the host macOS, with the iOS simulator runtime of the same version as Xcode's simulator SDK, such as iOS 27.2 for Xcode 27.2: install it with `xcodebuild -downloadPlatform iOS` or in Xcode under Settings > Components. The suite uses that runtime even when newer ones are installed. With the older iOS 26.3.1 runtime on macOS 27.2, WebKit's content process crashed in about one launch in seven and left Cup's WebView blank (2026-11-09); 15 consecutive runs on iOS 27.2 passed. Since version 26, Xcode's major version must be at least macOS's: an older Xcode hangs every XCTest runner, WebDriverAgent included. After an Xcode update, restart CoreSimulatorService with `killall -9 com.apple.CoreSimulator.CoreSimulatorService`.
 - Internet access on the first run, for the Appium driver and Chromedriver downloads, and on every run for the Android add-account test, which opens Google's real sign-in screen through Google Play services
 
 The suite finds the SDK at `ANDROID_HOME`, then `ANDROID_SDK_ROOT`, then Android Studio's default `~/Library/Android/sdk`. A preflight check per platform fails the run before any device starts, naming each missing tool and how to install it, and the Xcode update or CoreSimulatorService restart the iOS run needs.
@@ -61,17 +61,13 @@ The suite never signs in with real Google. Each test's fake auth provider listen
 
 [`src/journeys.ts`](src/journeys.ts) holds the shared WebView journeys: `signInFromLandingPage` starts a conversion from the landing page and signs in with "Continue with Google". The web app signs out only when an account is scheduled for deletion, so the signed-out relaunch test schedules one.
 
-One Android test launches with the real plugin (`realGoogleSignIn: true`) on the account-less emulator, taps "Continue with Google", checks that Google Play services' add-account screen is in front, presses Back and checks that Cup's landing page can start another sign-in.
+One Android test launches with the real plugin (`realGoogleSignIn: true`) on the account-less emulator, taps "Continue with Google", waits until Google Play services' add-account screen is in front and has rendered Google's sign-in page, presses Back and checks that Cup's landing page can start another sign-in.
 
 ## Share intake and the back button (Android)
 
 [`test/android/share.test.ts`](test/android/share.test.ts) shares text to Cup the way another app's Sharesheet does: `AndroidAppDevice.share()` sends an explicit `ACTION_SEND` intent of type `text/plain` with `adb` to Cup's main activity, with the text in `android.intent.extra.TEXT` and the launch arguments as extras, so a share that starts Cup reaches the test Worker too. No real Sharesheet is driven. Signed in, a share fills the Add dialog's URL field whether Cup was force-stopped or running, a second share replaces the first, `&`, `+` and a `#fragment` arrive unchanged, and a URL is picked out of surrounding text; text without a URL and a `cup.audio` link are ignored, which passes when Cup stays on Recents with no form open for a few seconds. Signed out, a share fills the landing page's start form. Every share test checks that the Worker received no request starting a conversion after the share.
 
 [`test/android/back-button.test.ts`](test/android/back-button.test.ts) relaunches a signed-in Cup so Recents is the first screen. Back closes the Add dialog and leaves a track's page for Recents; on Recents, Back puts Cup in the background with its page kept, which the test checks by bringing Cup back to the foreground. The Add dialog focuses its URL field, which opens the on-screen keyboard, and Android's first Back closes an open keyboard instead of reaching Cup, so the test leaves the field and waits for the keyboard to close before pressing Back.
-
-## Known issue: blank WebView on iOS
-
-On macOS 27.2 with Xcode 27.2 and the iOS 26.3.1 runtime, about one iOS run in seven fails with "Cup's WebView rendered no page." (2026-11-09). WebKit's content process crashes at launch with `SIGBUS` inside `dyld_sim` while reading the simulator's dyld shared cache, WebKit fails to relaunch it, and the WebView stays at `about:blank`. Launching the same build with `simctl` outside the suite did not reproduce it in eight launches. The suite does not retry; rerun the suite, and look for a `com.apple.WebKit.WebContent` report in `~/Library/Logs/DiagnosticReports` to confirm the cause.
 
 ## Layout
 

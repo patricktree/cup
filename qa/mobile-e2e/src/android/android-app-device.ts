@@ -43,6 +43,11 @@ export async function openAndroidAppDevice(target: AndroidTarget): Promise<Andro
     "appium:chromedriverPort": chromedriverPort,
     "appium:chromedriverAutodownload": true,
     "appium:newCommandTimeout": 600,
+    // Appium's logcat capture streams the whole log buffer, including the snapshot's boot log, the
+    // moment the session starts and then every new line. That stream made the emulator drop its adb
+    // connection now and then: "device offline" at session start, or a killed UiAutomator2 server
+    // mid-test. No test reads the capture.
+    "appium:skipLogcatCapture": true,
   };
   const driver = await remote({
     hostname: "127.0.0.1",
@@ -165,6 +170,28 @@ export class AndroidAppDevice implements AppDevice {
       10_000,
     );
     await this.driver.switchContext(typeof context === "string" ? context : context.id);
+  }
+
+  /**
+   * The focused activity as `<package>/<fully qualified class>`, which tells apart the screens of
+   * one app, such as Google Play services' sign-in trampoline and its add-account screen.
+   */
+  async focusedActivity(): Promise<string> {
+    await this.driver.switchContext("NATIVE_APP");
+    const [appPackage, activity] = await Promise.all([
+      this.driver.getCurrentPackage(),
+      this.driver.getCurrentActivity(),
+    ]);
+    return `${appPackage}/${activity.startsWith(".") ? `${appPackage}${activity}` : activity}`;
+  }
+
+  /** Whether a button of `appPackage` is on screen, such as one on a page its WebView rendered. */
+  async showsButton(appPackage: string): Promise<boolean> {
+    await this.driver.switchContext("NATIVE_APP");
+    const buttons = await this.driver.$$(
+      `android=new UiSelector().packageName("${appPackage}").className("android.widget.Button")`,
+    );
+    return buttons.length > 0;
   }
 
   /** Presses the system back button. */
