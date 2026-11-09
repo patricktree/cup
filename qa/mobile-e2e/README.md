@@ -61,7 +61,7 @@ The suite never signs in with real Google. Each test's fake auth provider listen
 
 [`src/journeys.ts`](src/journeys.ts) holds the shared WebView journeys: `signInFromLandingPage` starts a conversion from the landing page and signs in with "Continue with Google". The web app signs out only when an account is scheduled for deletion, so the signed-out relaunch test schedules one.
 
-One Android test launches with the real plugin (`realGoogleSignIn: true`) on the account-less emulator, taps "Continue with Google", checks that Google Play services' add-account screen is in front, presses Back and checks that Cup's landing page can start another sign-in.
+One Android test launches with the real plugin (`realGoogleSignIn: true`) on the account-less emulator, taps "Continue with Google", waits until Google Play services' add-account screen is in front and has rendered Google's sign-in page, presses Back and checks that Cup's landing page can start another sign-in.
 
 ## Known issue: blank WebView on iOS
 

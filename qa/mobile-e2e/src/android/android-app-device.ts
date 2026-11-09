@@ -119,6 +119,28 @@ export class AndroidAppDevice implements AppDevice {
     return this.driver.getCurrentPackage();
   }
 
+  /**
+   * The focused activity as `<package>/<fully qualified class>`, which tells apart the screens of
+   * one app, such as Google Play services' sign-in trampoline and its add-account screen.
+   */
+  async focusedActivity(): Promise<string> {
+    await this.driver.switchContext("NATIVE_APP");
+    const [appPackage, activity] = await Promise.all([
+      this.driver.getCurrentPackage(),
+      this.driver.getCurrentActivity(),
+    ]);
+    return `${appPackage}/${activity.startsWith(".") ? `${appPackage}${activity}` : activity}`;
+  }
+
+  /** Whether a button of `appPackage` is on screen, such as one on a page its WebView rendered. */
+  async showsButton(appPackage: string): Promise<boolean> {
+    await this.driver.switchContext("NATIVE_APP");
+    const buttons = await this.driver.$$(
+      `android=new UiSelector().packageName("${appPackage}").className("android.widget.Button")`,
+    );
+    return buttons.length > 0;
+  }
+
   /** Presses the system back button. */
   async pressBack(): Promise<void> {
     await this.adb(["shell", "input", "keyevent", "KEYCODE_BACK"]);
