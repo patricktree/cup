@@ -1,0 +1,11 @@
+[
+  {
+    "declaredLanguage": {
+      "htmlLang": "fr"
+    },
+    "expectedLanguage": "fr"
+  },
+  {
+    "expectedLanguage": "fr"
+  }
+]

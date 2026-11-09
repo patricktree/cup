@@ -1,0 +1,11 @@
+[
+  {
+    "declaredLanguage": {
+      "htmlLang": "en-us"
+    },
+    "expectedLanguage": "en"
+  },
+  {
+    "expectedLanguage": "en"
+  }
+]

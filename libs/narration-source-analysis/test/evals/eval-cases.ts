@@ -13,6 +13,26 @@ const CASE_METADATA_SCHEMA = z
 
 const EXPECTED_SYNCHRONIZATION_UNITS_SCHEMA = z.array(SYNCHRONIZATION_UNIT_SCHEMA).min(1);
 
+const NARRATION_LANGUAGE_SCENARIOS_SCHEMA = z
+  .array(
+    z
+      .object({
+        // As source preparation captures it from the live page; absent when nothing is declared.
+        declaredLanguage: z
+          .object({ htmlLang: z.string().exactOptional(), ogLocale: z.string().exactOptional() })
+          .strict()
+          .exactOptional(),
+        expectedLanguage: z.string().refine(isLanguageSubtag, {
+          message: "Expected a canonical BCP 47 language subtag without a region, such as de",
+        }),
+      })
+      .strict(),
+  )
+  .min(1)
+  .refine((scenarios) => scenarios.some((scenario) => scenario.declaredLanguage === undefined), {
+    message: "Expected a scenario without a declared language",
+  });
+
 class EvalCaseLoadingError extends Error {
   override readonly cause: unknown;
 
@@ -24,6 +44,7 @@ class EvalCaseLoadingError extends Error {
 
 export type CaseMetadata = z.infer<typeof CASE_METADATA_SCHEMA>;
 export type ExpectedSynchronizationUnits = z.infer<typeof EXPECTED_SYNCHRONIZATION_UNITS_SCHEMA>;
+export type NarrationLanguageScenario = z.infer<typeof NARRATION_LANGUAGE_SCENARIOS_SCHEMA>[number];
 
 export type EvalCase = {
   id: string;
@@ -32,6 +53,7 @@ export type EvalCase = {
   inputHtml: string;
   expectedSynchronizationUnits: ExpectedSynchronizationUnits;
   expectedSynchronizationUnitsPath: string;
+  narrationLanguageScenarios: NarrationLanguageScenario[];
   metadata?: CaseMetadata;
 };
 
@@ -64,20 +86,29 @@ async function loadEvalCase(casesDirectory: string, caseId: string): Promise<Eva
   const sourceSubtitlePath = path.join(caseDirectory, "source-subtitle.txt");
   const inputHtmlPath = path.join(caseDirectory, "input.html");
   const expectedSynchronizationUnitsPath = path.join(caseDirectory, "expected.json");
+  const narrationLanguageScenariosPath = path.join(caseDirectory, "narration-language.json");
   const metadataPath = path.join(caseDirectory, "case.json");
 
   await requireFile(sourceTitlePath);
   await requireFile(inputHtmlPath);
   await requireFile(expectedSynchronizationUnitsPath);
+  await requireFile(narrationLanguageScenariosPath);
 
-  const [sourceTitle, sourceSubtitle, inputHtml, expectedSynchronizationUnitsJson, metadata] =
-    await Promise.all([
-      fs.readFile(sourceTitlePath, "utf8"),
-      loadSourceSubtitle(sourceSubtitlePath),
-      fs.readFile(inputHtmlPath, "utf8"),
-      fs.readFile(expectedSynchronizationUnitsPath, "utf8"),
-      loadMetadata(metadataPath, caseId),
-    ]);
+  const [
+    sourceTitle,
+    sourceSubtitle,
+    inputHtml,
+    expectedSynchronizationUnitsJson,
+    narrationLanguageScenariosJson,
+    metadata,
+  ] = await Promise.all([
+    fs.readFile(sourceTitlePath, "utf8"),
+    loadSourceSubtitle(sourceSubtitlePath),
+    fs.readFile(inputHtmlPath, "utf8"),
+    fs.readFile(expectedSynchronizationUnitsPath, "utf8"),
+    fs.readFile(narrationLanguageScenariosPath, "utf8"),
+    loadMetadata(metadataPath, caseId),
+  ]);
 
   const normalizedSourceTitle = sourceTitle.trim();
 
@@ -95,6 +126,10 @@ async function loadEvalCase(casesDirectory: string, caseId: string): Promise<Eva
       caseId,
     ),
     expectedSynchronizationUnitsPath,
+    narrationLanguageScenarios: parseNarrationLanguageScenarios(
+      narrationLanguageScenariosJson,
+      caseId,
+    ),
     ...(metadata ? { metadata } : {}),
   };
 }
@@ -112,6 +147,28 @@ function parseExpectedSynchronizationUnits(
       `Invalid expected synchronization units for eval case ${caseId}`,
       error,
     );
+  }
+}
+
+function parseNarrationLanguageScenarios(
+  narrationLanguageScenariosJson: string,
+  caseId: string,
+): NarrationLanguageScenario[] {
+  try {
+    return NARRATION_LANGUAGE_SCENARIOS_SCHEMA.parse(JSON.parse(narrationLanguageScenariosJson));
+  } catch (error) {
+    throw new EvalCaseLoadingError(
+      `Invalid narration language scenarios for eval case ${caseId}`,
+      error,
+    );
+  }
+}
+
+function isLanguageSubtag(tag: string): boolean {
+  try {
+    return new Intl.Locale(tag).toString() === tag && new Intl.Locale(tag).language === tag;
+  } catch {
+    return false;
   }
 }
 

@@ -1,0 +1,366 @@
+[
+  {
+    "id": "narration-unit-0001",
+    "narrationText": "Sherlock Holmes"
+  },
+  {
+    "id": "narration-unit-0002",
+    "narrationText": "Sherlock Holmes"
+  },
+  {
+    "id": "narration-unit-0003",
+    "narrationText": "Personnage de fiction apparaissant dans\nLes Aventures de Sherlock Holmes."
+  },
+  {
+    "id": "narration-unit-0004",
+    "narrationText": "Sherlock Holmes décrypte le message chiffré transmis par «Porlock», son agent infiltré dans l'organisation criminelle du professeur Moriarty[2].\nIllustration de La Vallée de la peur d'Arthur Conan Doyle, roman policier publié dans The Strand Magazine (septembre 1914 - mai 1915)."
+  },
+  {
+    "id": "narration-unit-0005",
+    "narrationText": "Naissance"
+  },
+  {
+    "id": "narration-unit-0006",
+    "narrationText": "1854"
+  },
+  {
+    "id": "narration-unit-0007",
+    "narrationText": "Origine"
+  },
+  {
+    "id": "narration-unit-0008",
+    "narrationText": "Royaume-Uni"
+  },
+  {
+    "id": "narration-unit-0009",
+    "narrationText": "Sexe"
+  },
+  {
+    "id": "narration-unit-0010",
+    "narrationText": "Masculin"
+  },
+  {
+    "id": "narration-unit-0011",
+    "narrationText": "Sherlock Holmes est un personnage de fiction britannique créé par Sir Arthur Conan Doyle dans le roman policier Une étude en rouge en 1887."
+  },
+  {
+    "id": "narration-unit-0012",
+    "narrationText": "Revendiquant la fonction particulière de «détective privé consultant»[5], il est doté d'une mémoire remarquable pour tout ce qui peut l'aider à résoudre des crimes en général, ainsi que d'une capacité de déduction hors du commun. Lors de ses enquêtes, relatées dans les quatre romans et les cinquante-six nouvelles qui forment ce qu'on appelle le canon, Holmes est fréquemment accompagné du docteur Watson, véritable alter ego qui narre le plus souvent les aventures de son ami."
+  },
+  {
+    "id": "narration-unit-0013",
+    "narrationText": "Personnage très «typé», Sherlock Holmes est devenu l'archétype du «détective privé» pour des générations d'auteurs populaires de roman policier, éclipsant ses ancêtres historiques que furent le chevalier Auguste Dupin d'Edgar Allan Poe et Monsieur Lecoq d'Émile Gaboriau, personnages auxquels Arthur Conan Doyle fait référence dans son œuvre."
+  },
+  {
+    "id": "narration-unit-0014",
+    "narrationText": "Apparaissant tout d'abord dans deux romans au succès discret, Une étude en rouge (1887) et Le Signe des quatre (1890), que Conan Doyle écrit pour des raisons alimentaires, le personnage connaît une popularité phénoménale lorsqu'il devient le protagoniste régulier de nouvelles publiées dans le Strand Magazine. Dépassé par le triomphe populaire de sa créature qui l'empêche de se concentrer sur ses romans historiques, Conan Doyle tue son héros dans Le Dernier Problème (1893)."
+  },
+  {
+    "id": "narration-unit-0015",
+    "narrationText": "En raison de difficultés financières, il devra se résigner à le mettre de nouveau en scène dans Le Chien des Baskerville (1901), qui se déroule avant la mort du détective, puis dans La Maison vide (1903) qui officialise son retour et initie une nouvelle série de nouvelles. La dernière des soixante enquêtes de Sherlock Holmes, L'Aventure de Shoscombe Old Place, paraît en 1927, quarante ans après ses débuts."
+  },
+  {
+    "id": "narration-unit-0016",
+    "narrationText": "La popularité persistante de ces enquêtes, un siècle et demi après leur création, est portée par leur atmosphère victorienne, la mise en scène de l'amitié fusionnelle liant Holmes et Watson, et de nombreux personnages devenus cultes: l'inspecteur Lestrade, la logeuse Mrs Hudson, le frère aîné de Sherlock Mycroft Holmes, l'épouse de Watson Mary Morstan, l'aventurière Irène Adler et le professeur Moriarty, le «Napoléon du crime»."
+  },
+  {
+    "id": "narration-unit-0017",
+    "narrationText": "Cet univers fait l'objet de nombreuses adaptations et réinterprétations dans divers médias. Plusieurs de ces adaptations connaissent elles-mêmes un grand succès, permettant une modernisation permanente du personnage. On peut ainsi citer, dans les exemples récents, le film de 2009, la série Sherlock (2010-2017), ou la série de films Enola Holmes (depuis 2020)."
+  },
+  {
+    "id": "narration-unit-0018",
+    "narrationText": "Historique du développement du personnage\n\nL’ensemble des aventures écrites par Arthur Conan Doyle comporte quatre romans et cinquante-six nouvelles originales. Ces textes originaux recevront le titre d'ouvrages «canoniques», par opposition à l'énorme quantité de suites et d'aventures parallèles écrites par de nombreux auteurs, prenant plus ou moins de liberté avec le personnage original."
+  },
+  {
+    "id": "narration-unit-0019",
+    "narrationText": "Une étude en rouge, 1887: roman"
+  },
+  {
+    "id": "narration-unit-0020",
+    "narrationText": "Le Signe des quatre, 1890: roman"
+  },
+  {
+    "id": "narration-unit-0021",
+    "narrationText": "Les Aventures de Sherlock Holmes, 1892: recueil de nouvelles"
+  },
+  {
+    "id": "narration-unit-0022",
+    "narrationText": "Les Mémoires de Sherlock Holmes, 1894: recueil de nouvelles"
+  },
+  {
+    "id": "narration-unit-0023",
+    "narrationText": "Le Chien des Baskerville, 1902: roman"
+  },
+  {
+    "id": "narration-unit-0024",
+    "narrationText": "Le Retour de Sherlock Holmes, 1905: recueil de nouvelles"
+  },
+  {
+    "id": "narration-unit-0025",
+    "narrationText": "La Vallée de la peur, 1915: roman"
+  },
+  {
+    "id": "narration-unit-0026",
+    "narrationText": "Son dernier coup d’archet, 1917: recueil de nouvelles"
+  },
+  {
+    "id": "narration-unit-0027",
+    "narrationText": "Les Archives de Sherlock Holmes, 1927: recueil de nouvelles"
+  },
+  {
+    "id": "narration-unit-0028",
+    "narrationText": "Conan Doyle écrivit également deux textes parodiques, non inclus dans le canon, dans lesquels apparaît Sherlock Holmes: La Kermesse sportive (1896) et Comment Watson apprit le truc (1924), ainsi que trois pièces de théâtre: Le Diamant de la couronne (1921), Sherlock Holmes et La Bande mouchetée."
+  },
+  {
+    "id": "narration-unit-0029",
+    "narrationText": "Une saynète comique dans laquelle Holmes reste muet lui est parfois attribuée. Il s'agit de Sherlock Holmes en fâcheuse posture. Mais William Gillette, l'acteur qui jouait Sherlock Holmes, en est généralement considéré comme l'auteur."
+  },
+  {
+    "id": "narration-unit-0030",
+    "narrationText": "Conan Doyle laissa également dans ses archives le synopsis d'une aventure, L'Aventure du grand homme, et une aventure complète, Sur la piste du faussaire, qui fut publiée à titre posthume en son nom aux États-Unis; mais une partie des droits d'auteur revint à Arthur Withaker[6]."
+  },
+  {
+    "id": "narration-unit-0031",
+    "narrationText": "L'existence de Sherlock Holmes doit beaucoup au professeur en chirurgie de Conan Doyle, le docteur Joseph Bell. Ses déductions étonnantes sur les patients et leurs maladies l'impressionnèrent beaucoup."
+  },
+  {
+    "id": "narration-unit-0032",
+    "narrationText": "À l'origine, Conan Doyle avait prévu d'appeler son détective Sherrinford Holmes[7]."
+  },
+  {
+    "id": "narration-unit-0033",
+    "narrationText": "Biographie fictive, telle que présentée dans l’œuvre originale\n\nSelon Arthur Conan Doyle, Sherlock Holmes aurait effectué ses premières déductions durant ses années étudiantes, autour de l'année 1875. L'idée d'en faire son métier lui est donnée par M. Trevor, père de l'un de ses camarades de classe."
+  },
+  {
+    "id": "narration-unit-0034",
+    "narrationText": "Il a un frère, nommé Mycroft Holmes. C'est un homme politique faisant partie du gouvernement britannique, qui apparaît pour la première fois dans L'Interprète grec[9]."
+  },
+  {
+    "id": "narration-unit-0035",
+    "narrationText": "Sherlock Holmes est passionné par de nombreux sujets. Violoniste aguerri[10], il est féru de médecine et de science[11]. Ces centres d’intérêt sont régulièrement mis à contribution dans le dénouement de différentes enquêtes et ses enquêtes témoignent du développement de la médecine légale au XIXesiècle. Il fait néanmoins preuve d'une ignorance certaine, qu'il revendique parfois, dans les domaines qui ne lui paraissent pas pouvoir l'aider à mener ses déductions."
+  },
+  {
+    "id": "narration-unit-0036",
+    "narrationText": "Holmes commence son activité professionnelle en 1878. Il rencontre le docteur Watson en 1881, avec lequel il partagera le même appartement jusqu'au mariage de ce dernier. Bien que fusionnels[réf.nécessaire], il arrive que les deux amis soient en désaccord, ou que Holmes fasse preuve d'un certain dédain envers Watson, se moquant souvent de ses tentatives de déduction systématiquement moins bonnes que les siennes et critiquant le style avec lequel il narre ses enquêtes. Watson, d'un tempérament très calme, reste toutefois patient et loyal et ressent une réelle excitation à suivre les aventures de son ami."
+  },
+  {
+    "id": "narration-unit-0037",
+    "narrationText": "Malgré son ton sarcastique, son goût pour la solitude et son rejet des conventions sociales, contrastant avec la sociabilité d'un Watson très bien intégré dans un mode de vie de gentleman, Holmes n'est pas aussi cynique et misanthrope que certaines adaptations le représentent. Il peut être sincèrement troublé par certains événements auxquels ses enquêtes l'amènent à faire face, s'inquiète pour le bien-être de ses clients et fait preuve de compassion. Il est par contre capable d'être très hautain face à ce qu'il perçoit comme un manque de rationalité chez ses interlocuteurs, comme lorsque le docteur Mortimer lui raconte la légende du chien des Baskerville en refusant de rejeter la possibilité d'une créature surnaturelle. Indifférent aux femmes et à l'amour —contrairement à Watson qui quitte rapidement leur colocation pour épouser Mary Morstan— il est toutefois troublé par Irène Adler, l'une de ses rares adversaires à le mettre en échec dans Un scandale en Bohême."
+  },
+  {
+    "id": "narration-unit-0038",
+    "narrationText": "Avec sa disparition en 1891, à la suite de son affrontement avec le professeur Moriarty et la mort de ce dernier dans les chutes du Reichenbach, tout le monde croit Holmes mort (Le Dernier Problème (1891))."
+  },
+  {
+    "id": "narration-unit-0039",
+    "narrationText": "Il refait surface trois ans plus tard (dans La Maison vide). Il raconte qu'au cours de ces années (période appelée le «grand hiatus»), il a pris une fausse identité, celle d'un explorateur norvégien, et s'est rendu à Khartoum, dans le palais même où Gordon Pasha fut assassiné. Holmes justifia sa disparition par le fait que son coup de filet contre le professeur Moriarty laissa un membre dangereux de sa bande en liberté, le colonel Sebastian Moran[12]. Ce dernier, exécuteur des basses œuvres de Moriarty, avait réussi à échapper à toute mise en accusation lors de l’élimination du réseau criminel du professeur. Il avait suivi son mentor aux chutes de Reichenbach. Après avoir été le témoin de la mort de son chef, causée par Holmes, Moran avait essayé de tuer le détective en provoquant une avalanche de roches sur lui. Holmes réussit cependant à y échapper. Moran se jura de tuer Holmes, mais celui-ci fit tomber Moran dans un piège, provoquant son arrestation."
+  },
+  {
+    "id": "narration-unit-0040",
+    "narrationText": "Il retourne habiter à Baker Street avec Watson (dont il a secrètement racheté le cabinet médical afin de le pousser à redevenir son colocataire) et reprend ainsi du service de 1894 à 1903[réf.nécessaire]. Il reçoit la Légion d'honneur en 1894[13], mais refuse le titre de chevalier en 1902."
+  },
+  {
+    "id": "narration-unit-0041",
+    "narrationText": "S'ensuit une retraite à la campagne en 1907, où Holmes passe ses dernières années à étudier les abeilles et à écrire un traité d'apiculture. Il sortira de cette activité pour rendre service à son pays à la veille du premier conflit mondial en déjouant les ruses d'un espion prussien (Son dernier coup d’archet), et enfin pour narrer lui-même quelques aventures (comme La Crinière du lion), n’ayant alors pratiquement plus de contact avec le docteur Watson. Les détails de sa mort ne sont pas connus."
+  },
+  {
+    "id": "narration-unit-0042",
+    "narrationText": "Réception et études holmesiennes\n\nRapidement adopté par le public, dès la publication de ses premières aventures dans The Strand Magazine, Sherlock Holmes est devenu un personnage de légende au point qu'au XXIesiècle, il fait encore l'objet d'une véritable vénération. De nombreuses études lui ont été consacrées et les nouvelles de Conan Doyle ont fait l'objet de nombreuses adaptations télévisées."
+  },
+  {
+    "id": "narration-unit-0043",
+    "narrationText": "Du statut de héros de papier, Sherlock Holmes est très vite passé à celui de figure historique au point que de nos jours encore, des lettres venant du monde entier lui sont encore adressées à son adresse du 221B Baker Street à Londres. Comme un personnage historique, Sherlock Holmes a donc droit à des «biographes» spécialisés, des exégètes de son œuvre et de ses méthodes policières et même à des musées consacrés à sa «vie»."
+  },
+  {
+    "id": "narration-unit-0044",
+    "narrationText": "Le personnage de Sherlock Holmes a même servi de prétexte à un canular littéraire qui dure depuis près d’un siècle: la création d’une science nouvelle, nommée «holmésologie» ou «études holmésiennes». Des centaines d’ouvrages ont été rédigés sur le sujet. Le but avoué de cette discipline est de retracer la vie et l'œuvre du détective à partir des écrits du docteur Watson, ami et hagiographe de Holmes."
+  },
+  {
+    "id": "narration-unit-0045",
+    "narrationText": "Alors que certaines invraisemblances et contradictions dans l'œuvre de Conan Doyle ne s’expliquent que par le fait que celui-ci a écrit ces aventures sur une période de près de 40 ans, la holmésologie prétend trouver dans les écrits de Watson les «véritables» raisons de ces hiatus[réf.nécessaire]."
+  },
+  {
+    "id": "narration-unit-0046",
+    "narrationText": "Exemples de contradictions et d’invraisemblances ayant donné lieu à ces travaux:"
+  },
+  {
+    "id": "narration-unit-0047",
+    "narrationText": "la femme de Watson l’appelle James dans une aventure, alors que son prénom est John;"
+  },
+  {
+    "id": "narration-unit-0048",
+    "narrationText": "dans une aventure, Watson affirme avoir été blessé à la jambe; dans une autre, c’est au bras."
+  },
+  {
+    "id": "narration-unit-0049",
+    "narrationText": "«Élémentaire, mon cher Watson»\n\nBien que la réplique célèbre «Élémentaire, mon cher Watson» soit associée à Sherlock Holmes depuis le début du XXesiècle[14], il ne la prononce dans aucune des histoires écrites par Arthur Conan Doyle, l'auteur utilisant séparément «Élémentaire» et «Mon cher Watson»[15]. La même association entre le personnage et cette citation existe dans la culture populaire anglosaxonne, alors que dans toutes les versions originales des romans, Holmes emploie «Elementary» à deux reprises seulement: une fois dans The Adventure of the Crooked Man paru en 1893 (traduit en français sous le titre Le Tordu), puis dans The Hound of the Baskervilles (Le Chien des Baskerville), publié pour la première fois en 1901."
+  },
+  {
+    "id": "narration-unit-0050",
+    "narrationText": "Cette citation apparaît plus tardivement dans la culture populaire, d'abord dans le film Le Retour de Sherlock Holmes, premier film parlant sur le personnage, sorti en 1929. La même année, elle est reprise dans deux nouvelles d'Agatha Christie: d'abord dans L'affaire de la perle rose — publiée dans le Ellery Queen's Mystery Magazine puis traduite et publiée dans sa version française, Mystère Magazine — et une seconde fois dans l'un des textes constituant le recueil Associés contre le crime qui n'est publié en France qu'en 1972[16]. Ces deux histoires suivent les aventures des deux jeunes détectives Tommy et Tuppence Beresford."
+  },
+  {
+    "id": "narration-unit-0051",
+    "narrationText": "Enfin, on la retrouve dans Les Exploits de Sherlock Holmes, un recueil de nouvelles écrit par Adrian Conan Doyle — le fils de Sir Arthur Conan Doyle — et John Dickson Carr, paru en 1954: la citation figure dans la nouvelle intitulée L'Aventure de la veuve rouge. Tandis que le docteur Watson et Sherlock Holmes parlent de la façon dont le détective a «deviné» les pensées du docteur Watson (à savoir que la misère et la pauvreté engendrent naturellement le crime), quand le docteur Watson dit: «Je confesse que vous avez suivi le cours de mes pensées avec une précision extraordinaire, dis-je. Un beau morceau de logique, Holmes!», Sherlock Holmes répond: «Élémentaire, mon cher Watson!»[17]."
+  },
+  {
+    "id": "narration-unit-0052",
+    "narrationText": "Le titre de la série Elementary, qui met en scène une version alternative des aventures de Sherlock Holmes se déroulant au début du XXIesiècle, fait référence à cette citation."
+  },
+  {
+    "id": "narration-unit-0053",
+    "narrationText": "Postérité, adaptations et pastiches\n\nSherlock Holmes demeure un des personnages les plus repris à l'écrit. En 1990, le Guiness Book of Movies recensait 204 adaptations cinématographiques. Ce qui fait de lui le personnage le plus utilisé de l'histoire du cinéma[18]. Le site internet IMDb référence environ 275 films et séries où le personnage de Sherlock Holmes est présent à l'écran entre 1900 et 2013[19]."
+  },
+  {
+    "id": "narration-unit-0054",
+    "narrationText": "Après la mort de l'auteur, son fils Adrian Conan Doyle reprend le personnage dans un recueil de nouvelles Les Exploits de Sherlock Holmes (The Exploits of Sherlock Holmes) puis, avec l'accord des héritiers, Anthony Horowitz continue avec, en 2011, La Maison de soie (The House of Silk) et en 2013 Moriarty (Moriarty). En 2024, toujours avec l'accord des héritiers, c'est le journaliste et écrivain Gareth Rubin qui publie Holmes and Moriarty[20]."
+  },
+  {
+    "id": "narration-unit-0055",
+    "narrationText": "C'est à l'illustrateur du Strand Magazine Sidney Edward Paget que l'on doit l'image devenue classique et référentielle de Sherlock Holmes et du Dr Watson: deerstalker cap, calabash pipe et manteau à rotonde pour l'un, moustaches soignées et «look» bourgeois pour l'autre. Les aventures de Sherlock Holmes firent l'objet de nombreuses adaptations à la radio, en bande-dessinées en jeux de société et jeux vidéo. Par exemple:"
+  },
+  {
+    "id": "narration-unit-0056",
+    "narrationText": "Sherlock Holmes détective conseil, jeu de société de Gary Grady, Suzanne Goldberg et Raymond Edwards, paru en 1981;"
+  },
+  {
+    "id": "narration-unit-0057",
+    "narrationText": "Sherlock Holmes: La Boucle d'argent, jeu vidéo pour PC développé par Frogwares, sorti en 2004;"
+  },
+  {
+    "id": "narration-unit-0058",
+    "narrationText": "Sherlock Holmes: La nuit des sacrifiés, jeu vidéo pour PC développé par Frogwares, sorti en 2006;"
+  },
+  {
+    "id": "narration-unit-0059",
+    "narrationText": "Sherlock Holmes: Crimes et Châtiments, jeu vidéo développé par Frogwares, sorti en 2014;"
+  },
+  {
+    "id": "narration-unit-0060",
+    "narrationText": "Sherlock Holmes: The Devil's Daughter, jeu vidéo développé par Frogwares, sorti en 2016."
+  },
+  {
+    "id": "narration-unit-0061",
+    "narrationText": "Nombreux sont les auteurs (Alexis Lecaye, June Thomson…) qui écrivirent des œuvres inspirées par le personnage de Conan Doyle; généralement, elles visent plus à rendre hommage au détective qu’à pasticher l'auteur, sauf exception (voir plus bas). La qualité littéraire de chacune est très variable, certaines imitant à s'y méprendre le style de Conan Doyle. D'autres, plus loufoques, s'écartent beaucoup du corpus holmésien original. D'autres encore choisissent pour héros des personnages secondaires comme Mrs Hudson, Mycroft Holmes ou Irène Adler. Par exemple:"
+  },
+  {
+    "id": "narration-unit-0062",
+    "narrationText": "L’Étrange Affaire du chat de Mme Hudson, où le physicien Colin Bruce lui fait redécouvrir par la déduction - et présenter - toute la physique moderne;"
+  },
+  {
+    "id": "narration-unit-0063",
+    "narrationText": "La Liste des sept et Les 6 messies, deux romans fantastiques de Mark Frost, dont le personnage principal est Conan Doyle accompagnant un personnage qui est censé lui avoir inspiré Sherlock Holmes;"
+  },
+  {
+    "id": "narration-unit-0064",
+    "narrationText": "Sherlock Holmes et l'Apicultrice, une série en 3 tomes écrite par Laurie R. King, où Sherlock Holmes rencontre Mary Russell et en fait son apprentie;"
+  },
+  {
+    "id": "narration-unit-0065",
+    "narrationText": "Défi à Sherlock Holmes, un roman de Béatrice Nicodème, où Sherlock Holmes est confronté à un criminel machiavélique qui le défie en lui envoyant des lettres qu'il signe «Le Cancrelat»;"
+  },
+  {
+    "id": "narration-unit-0066",
+    "narrationText": "Sherlock Holmes contre Jack l'Éventreur: plusieurs films et romans ont exploré cet affrontement que Conan Doyle lui-même n'a pas voulu aborder;"
+  },
+  {
+    "id": "narration-unit-0067",
+    "narrationText": "Sherlock Holmes et les Ombres du passé, où Sherlock Holmes retourne sur les lieux de plusieurs affaires."
+  },
+  {
+    "id": "narration-unit-0068",
+    "narrationText": "Divers auteurs russes ont aussi, du vivant de Conan Doyle, adapté Sherlock Holmes aux couleurs locales, par exemple dans la série Sherlock Holmes en Sibérie de P. Orlovets[21]."
+  },
+  {
+    "id": "narration-unit-0069",
+    "narrationText": "Arsène Lupin contre Herlock Sholmès, de Maurice Leblanc."
+  },
+  {
+    "id": "narration-unit-0070",
+    "narrationText": "Musées\n\nSherlock Holmes Museum à Londres, 221b Baker Street"
+  },
+  {
+    "id": "narration-unit-0071",
+    "narrationText": "Musée Sherlock Holmes à Lucens en Suisse, consacré à Conan Doyle et à son univers"
+  },
+  {
+    "id": "narration-unit-0072",
+    "narrationText": "Sherlock Holmes Museum à Meiringen en Suisse"
+  },
+  {
+    "id": "narration-unit-0073",
+    "narrationText": "Voir aussi\n\nArticles connexes\n\nCanon de Sherlock Holmes"
+  },
+  {
+    "id": "narration-unit-0074",
+    "narrationText": "Holmésologie"
+  },
+  {
+    "id": "narration-unit-0075",
+    "narrationText": "Liste des œuvres d'Arthur Conan Doyle"
+  },
+  {
+    "id": "narration-unit-0076",
+    "narrationText": "Harry Dickson («le Sherlock Holmes américain»)"
+  },
+  {
+    "id": "narration-unit-0077",
+    "narrationText": "Bibliographie\n\n(en) Janice M. Allan (dir.) et Christopher Pittard (dir.), The Cambridge Companion to Sherlock Holmes, Cambridge / New York, Cambridge University Press, coll.«The Cambridge Companion to Literature», 2019, XIX-261p. (ISBN978-1-107-15585-5 et 978-1-316-60959-0, DOI10.1017/9781316659274)."
+  },
+  {
+    "id": "narration-unit-0078",
+    "narrationText": "William S. Baring-Gould (trad.de l'anglais par Claude Perjac, préf.René Réouven), Moi, Sherlock Holmes [«Sherlock Holmes of Baker Street: a life of the world's first consulting detective»], Amiens, Encrage, coll.«La bibliothèque holmésienne» (no1), 1992, 222p. (ISBN2-906389-38-2, présentation en ligne)."
+  },
+  {
+    "id": "narration-unit-0079",
+    "narrationText": "Pierre Bayard, L'affaire du chien des Baskerville, Paris, Les Éditions de Minuit, coll.«Double» (no70), 2010 (1reéd. 2007), 190p. (ISBN978-2-7073-2135-0, présentation en ligne), [présentation en ligne]."
+  },
+  {
+    "id": "narration-unit-0080",
+    "narrationText": "(en) Clare Clarke, Late Victorian Crime Fiction in the Shadows of Sherlock, Palgrave Macmillan, coll.«Crime Files», 2014, VIII-221p. (ISBN978-0-230-39053-9 et 978-1-349-35130-5, DOI10.1057/9780230390546)."
+  },
+  {
+    "id": "narration-unit-0081",
+    "narrationText": "Pierre Nordon, Tout ce que vous avez toujours voulu savoir sur Sherlock Holmes sans l'avoir jamais rencontré, Paris, Le Livre de poche, coll.«Biblio essais» (no4199), 1994, 124p. (ISBN2-253-94199-9, présentation en ligne)."
+  },
+  {
+    "id": "narration-unit-0082",
+    "narrationText": "(en) James F. O'Brien, The Scientific Sherlock Holmes: Cracking the Case with Science and Forensics, Oxford, Oxford University Press, 2013, 200p. (ISBN978-0-19-979496-6, présentation en ligne)."
+  },
+  {
+    "id": "narration-unit-0083",
+    "narrationText": "Bernard Oudin, Enquête sur Sherlock Holmes, Pessac, Gallimard, coll.«Découvertes Gallimard / Littératures» (no333), 1997, 96p. (ISBN2-07-053412-X)."
+  },
+  {
+    "id": "narration-unit-0084",
+    "narrationText": "Méryl Pinque, Sherlock Holmes, l'ombre du héros: essai, Descartes, Faustroll, 2004, 67p. (ISBN2-915436-05-3, lire en ligne)."
+  },
+  {
+    "id": "narration-unit-0085",
+    "narrationText": "Thierry Saint-Joanis, Alexis Barquin et Pierre Bannier, Sherlock Holmes, Pézilla-la-Rivière, DLM Éditions, coll.«Héros» (no6), 1997, 128p. (ISBN2-87795-097-2, présentation en ligne sur le site NooSFere)."
+  },
+  {
+    "id": "narration-unit-0086",
+    "narrationText": "Liens externes\n\n«Sherlock Holmes, ce héros qui résiste au temps qui passe» [radio], sur France culture, Concordance des temps, 1er juillet 2017."
+  },
+  {
+    "id": "narration-unit-0087",
+    "narrationText": "Société Sherlock Holmes de France"
+  },
+  {
+    "id": "narration-unit-0088",
+    "narrationText": "(en) Sherlock Holmes Society of London"
+  },
+  {
+    "id": "narration-unit-0089",
+    "narrationText": "(en) Musée de Sherlock Holmes"
+  },
+  {
+    "id": "narration-unit-0090",
+    "narrationText": "(en) The Universal Sherlock Holmes, University of Minnesota Libraries"
+  },
+  {
+    "id": "narration-unit-0091",
+    "narrationText": "Site consacré à Jeremy Brett et Sherlock Holmes"
+  }
+]

@@ -6,7 +6,7 @@ status: accepted
 
 On 2026-09-08, choose `gemini-3.8-flash` through Cloudflare AI Gateway and its stored Google AI Studio credential for production narration content selection. It preserved the expected narration text in every tested case and completed substantially faster than the previous Qwen configuration. Keep the existing selection contract: the model returns source element IDs, and application code reconstructs narration source material from the original elements, preserving wording and structure.
 
-On 2026-11-09 ([patricktree/cup#216](https://github.com/patricktree/cup/issues/216)), this decision also covers narration language detection, which calls the same model through the same adapter at minimal reasoning effort.
+On 2026-11-09 ([patricktree/cup#216](https://github.com/patricktree/cup/issues/216)), this decision also covers narration language detection, which calls the same model through the same adapter at low reasoning effort, the effort selection uses. The model rejects `minimal` effort with HTTP 400, which the detection evals found ([patricktree/cup#219](https://github.com/patricktree/cup/issues/219)).
 
 ## Evidence and alternatives
 
