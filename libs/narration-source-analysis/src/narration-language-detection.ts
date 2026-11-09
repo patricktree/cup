@@ -51,6 +51,20 @@ const DETECTION_REQUEST_TIMEOUT_MILLISECONDS = 60_000;
 /** Undetermined, multiple languages, uncoded languages and no linguistic content. */
 const NON_LANGUAGE_SUBTAGS = new Set(["und", "mul", "mis", "zxx"]);
 const LANGUAGE_NAMES = new Intl.DisplayNames(["en"], { type: "language", fallback: "none" });
+/**
+ * Narration language preferences, keyed by language subtag: the region a language is narrated with,
+ * and whether a region the narration language already has wins over it. A language gets a
+ * preference only when there is evidence that its regional variants sound wrong.
+ */
+const NARRATION_LANGUAGE_PREFERENCES: Record<
+  string,
+  { region: string; shouldKeepOwnRegion: boolean }
+> = {
+  // Narrate all German as German from Germany, whatever region the page declares.
+  de: { region: "DE", shouldKeepOwnRegion: false },
+  // Narrate English without a region as British English.
+  en: { region: "GB", shouldKeepOwnRegion: true },
+};
 
 /** Creates a detector that decides a conversion's narration language and never rejects. */
 export function createNarrationLanguageDetector(configuration: NarrationLanguageDetectionConfig) {
@@ -81,7 +95,11 @@ export function createNarrationLanguageDetector(configuration: NarrationLanguage
       return fallBack(declaredLanguage, "invalid-tag");
     }
 
-    return { narrationLanguage: withDeclaredRegion(language, declaredLanguage) };
+    return {
+      narrationLanguage: withNarrationLanguagePreference(
+        withDeclaredRegion(language, declaredLanguage),
+      ),
+    };
   };
 }
 
@@ -157,18 +175,42 @@ function fallBack(
   fallbackReason: NarrationLanguageFallbackReason,
 ): NarrationLanguageDetectionResult {
   return {
-    ...(declaredLanguage === undefined ? {} : { narrationLanguage: declaredLanguage.toString() }),
+    ...(declaredLanguage === undefined
+      ? {}
+      : { narrationLanguage: withNarrationLanguagePreference(declaredLanguage) }),
     fallbackReason,
   };
 }
 
-/** Adds the declared region only when the declared language has the same language subtag. */
-function withDeclaredRegion(language: string, declaredLanguage: Intl.Locale | undefined): string {
-  if (declaredLanguage?.language !== language || declaredLanguage.region === undefined) {
-    return language;
+/**
+ * Applies the narration language preference for the language subtag of `narrationLanguage`, if any.
+ * A preferred narration language is only a language and a region, like the detector's answer with a
+ * declared region, so a fallback drops the script, variants and extensions of the declared tag.
+ */
+function withNarrationLanguagePreference(narrationLanguage: Intl.Locale): string {
+  const preference = NARRATION_LANGUAGE_PREFERENCES[narrationLanguage.language];
+  if (preference === undefined) {
+    return narrationLanguage.toString();
   }
 
-  return new Intl.Locale(language, { region: declaredLanguage.region }).toString();
+  const region =
+    preference.shouldKeepOwnRegion && narrationLanguage.region !== undefined
+      ? narrationLanguage.region
+      : preference.region;
+
+  return new Intl.Locale(narrationLanguage.language, { region }).toString();
+}
+
+/** Adds the declared region only when the declared language has the same language subtag. */
+function withDeclaredRegion(
+  language: string,
+  declaredLanguage: Intl.Locale | undefined,
+): Intl.Locale {
+  if (declaredLanguage?.language !== language || declaredLanguage.region === undefined) {
+    return new Intl.Locale(language);
+  }
+
+  return new Intl.Locale(language, { region: declaredLanguage.region });
 }
 
 /** `<html lang>` wins over `og:locale`, whose underscore form is converted to BCP 47 first. */

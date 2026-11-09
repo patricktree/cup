@@ -7,10 +7,17 @@ import { createNarrationLanguageDetector } from "#src/narration-language-detecti
 import { PRODUCTION_DETECTION_CONFIG } from "#src/production-narration-language-detection.ts";
 
 test.each([
-  ["de", { htmlLang: "de-AT" }, "de-AT"],
-  ["en", { htmlLang: "de-DE" }, "en"],
-  ["de", {}, "de"],
-  ["de", { htmlLang: "de" }, "de"],
+  ["de", { htmlLang: "de-AT" }, "de-DE"],
+  ["de", { htmlLang: "de-CH" }, "de-DE"],
+  ["de", { htmlLang: "de" }, "de-DE"],
+  ["de", { htmlLang: "de-DE" }, "de-DE"],
+  ["de", {}, "de-DE"],
+  ["en", {}, "en-GB"],
+  ["en", { htmlLang: "en" }, "en-GB"],
+  ["en", { htmlLang: "de-AT" }, "en-GB"],
+  ["en", { htmlLang: "en-US" }, "en-US"],
+  ["en", { htmlLang: "en-AU" }, "en-AU"],
+  ["fr", { htmlLang: "fr-CA" }, "fr-CA"],
 ] as const)(
   "answer %s with declared language %j gives narration language %s",
   async (answer, declaredLanguage, narrationLanguage) => {
@@ -21,41 +28,55 @@ test.each([
 );
 
 test("canonicalizes the answer and the declared region", async () => {
-  const detect = createDetector(answerWith("DE"));
+  const detect = createDetector(answerWith("FR"));
 
-  await expect(detect(input({ htmlLang: "de-at" }))).resolves.toEqual({
-    narrationLanguage: "de-AT",
+  await expect(detect(input({ htmlLang: "fr-ca" }))).resolves.toEqual({
+    narrationLanguage: "fr-CA",
   });
 });
 
 test("takes the region from <html lang> over og:locale", async () => {
-  const detect = createDetector(answerWith("de"));
+  const detect = createDetector(answerWith("fr"));
 
-  await expect(detect(input({ htmlLang: "de-DE", ogLocale: "de_AT" }))).resolves.toEqual({
-    narrationLanguage: "de-DE",
+  await expect(detect(input({ htmlLang: "fr-FR", ogLocale: "fr_CA" }))).resolves.toEqual({
+    narrationLanguage: "fr-FR",
   });
 });
 
 test("takes the region from og:locale in its underscore form when <html lang> is invalid", async () => {
-  const detect = createDetector(answerWith("de"));
+  const detect = createDetector(answerWith("fr"));
 
-  await expect(detect(input({ htmlLang: "not a tag", ogLocale: "de_AT" }))).resolves.toEqual({
-    narrationLanguage: "de-AT",
+  await expect(detect(input({ htmlLang: "not a tag", ogLocale: "fr_CA" }))).resolves.toEqual({
+    narrationLanguage: "fr-CA",
   });
 });
 
-test("falls back to the declared language with the detector's error when the detector fails", async () => {
-  const error = new Error("Gemini unavailable");
-  const detect = createDetector(async () => {
-    throw error;
-  });
+test.each([
+  [{ htmlLang: "de-at" }, "de-DE"],
+  [{ ogLocale: "de_AT" }, "de-DE"],
+  [{ htmlLang: "de-Latn-AT" }, "de-DE"],
+  [{ htmlLang: "de-AT-1996" }, "de-DE"],
+  [{ htmlLang: "de-CH-u-co-phonebk" }, "de-DE"],
+  [{ htmlLang: "en" }, "en-GB"],
+  [{ htmlLang: "en-Latn" }, "en-GB"],
+  [{ htmlLang: "en-Latn-US" }, "en-US"],
+  [{ htmlLang: "en-US" }, "en-US"],
+  [{ htmlLang: "fr-CA" }, "fr-CA"],
+] as const)(
+  "falls back to the declared language %j with the detector's error when the detector fails, giving %s",
+  async (declaredLanguage, narrationLanguage) => {
+    const error = new Error("Gemini unavailable");
+    const detect = createDetector(async () => {
+      throw error;
+    });
 
-  await expect(detect(input({ htmlLang: "de-at" }))).resolves.toEqual({
-    narrationLanguage: "de-AT",
-    fallbackReason: "detector-error",
-    detectorError: error,
-  });
-});
+    await expect(detect(input(declaredLanguage))).resolves.toEqual({
+      narrationLanguage,
+      fallbackReason: "detector-error",
+      detectorError: error,
+    });
+  },
+);
 
 test.each([
   ["calls no tool", async () => response({ stopReason: "length" }), "no-answer"],
@@ -73,17 +94,17 @@ test.each([
     const detect = createDetector(completion);
 
     await expect(detect(input({ htmlLang: "de-at", ogLocale: "en_US" }))).resolves.toEqual({
-      narrationLanguage: "de-AT",
+      narrationLanguage: "de-DE",
       fallbackReason,
     });
   },
 );
 
 test.each([
-  [{ ogLocale: "de_AT" }, "de-AT"],
+  [{ ogLocale: "de_AT" }, "de-DE"],
   [{ htmlLang: "", ogLocale: "fr_FR" }, "fr-FR"],
   [{ htmlLang: "und", ogLocale: "fr" }, "fr"],
-  [{ htmlLang: "german", ogLocale: "de_AT" }, "de-AT"],
+  [{ htmlLang: "german", ogLocale: "de_AT" }, "de-DE"],
 ] as const)(
   "falls back to a valid og:locale when <html lang> is missing or invalid (%j)",
   async (declaredLanguage, narrationLanguage) => {
@@ -111,18 +132,18 @@ test.each([{}, { htmlLang: "not a tag", ogLocale: "_" }])(
 );
 
 test("ignores an invalid declared language when the answer is valid", async () => {
-  const detect = createDetector(answerWith("de"));
+  const detect = createDetector(answerWith("fr"));
 
   await expect(detect(input({ htmlLang: "not a tag" }))).resolves.toEqual({
-    narrationLanguage: "de",
+    narrationLanguage: "fr",
   });
 });
 
 test("keeps only the language subtag of an answer that names a region", async () => {
-  const detect = createDetector(answerWith("de-CH"));
+  const detect = createDetector(answerWith("fr-CH"));
 
   await expect(detect(input({ htmlLang: "en-US" }))).resolves.toEqual({
-    narrationLanguage: "de",
+    narrationLanguage: "fr",
   });
 });
 
@@ -172,7 +193,7 @@ test("runs the detector call through the supplied runner and falls back when it 
       },
     }),
   ).resolves.toEqual({
-    narrationLanguage: "de-AT",
+    narrationLanguage: "de-DE",
     fallbackReason: "detector-error",
     detectorError: new Error("Step retries exhausted"),
   });
