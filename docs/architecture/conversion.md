@@ -81,7 +81,7 @@ Preparation outcomes contain no audio duration or speech-provider usage; generat
 
 ## Narration language
 
-Every new conversion gets its [narration language](../GLOSSARY.md#narration-language) once, in a "detect narration language" step after the narration document is created. [Detection](../../libs/narration-source-analysis/src/narration-language-detection.ts) asks the selection model, at minimal reasoning effort, for the language subtag of the majority of the narrated text. It reads the source title, the start of the narration source material's text, and the declared language as labelled evidence, so a site template that declares the wrong language does not decide it ([ADR 0002](../adr/0002-use-gemini-for-narration-content-selection.md)).
+Every new conversion gets its [narration language](../GLOSSARY.md#narration-language) once, in a "detect narration language" step after the narration document is created. [Detection](../../libs/narration-source-analysis/src/narration-language-detection.ts) asks the selection model, at low reasoning effort, for the language subtag of the majority of the narrated text. It reads the source title, the start of the narration source material's text, and the declared language as labelled evidence, so a site template that declares the wrong language does not decide it ([ADR 0002](../adr/0002-use-gemini-for-narration-content-selection.md)).
 
 Deterministic code, not the prompt, turns the answer into the narration language, a canonical BCP 47 tag:
 

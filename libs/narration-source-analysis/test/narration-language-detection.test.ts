@@ -145,7 +145,7 @@ test("asks with the source title, the declared language and the start of the tex
   expect(text).toHaveLength(8_000);
   expect(request.systemPrompt).toContain("majority of the narrated text");
   expect(options).toMatchObject({
-    reasoningEffort: "minimal",
+    reasoningEffort: "low",
     maxRetries: 0,
     gatewayMetadata: { conversionId: "conversion-1", stage: "narration-language-detection" },
   });
