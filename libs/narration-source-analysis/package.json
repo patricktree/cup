@@ -17,8 +17,8 @@
       "default": "./src/index.ts"
     },
     "./fake": {
-      "types": "./dist/types/narration-content-selection.fake.d.ts",
-      "default": "./src/narration-content-selection.fake.ts"
+      "types": "./dist/types/fake.d.ts",
+      "default": "./src/fake.ts"
     }
   },
   "scripts": {

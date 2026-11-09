@@ -21,14 +21,24 @@ vi.mock("cloudflare:workflows", () => ({
 import { NonRetryableError } from "cloudflare:workflows";
 
 import type { AccountDurableObject } from "@cup/accounts";
-import { loadAudiobook, type SpeechSynthesisAi } from "@cup/audiobook-production";
+import {
+  loadAudiobook,
+  type AudiobookReference,
+  type SpeechSynthesisAi,
+} from "@cup/audiobook-production";
 import { createFakeSpeechSynthesisAi } from "@cup/audiobook-production/fake";
 import type { ConversionGrantDurableObject } from "@cup/conversion-grants";
-import { createFakeNarrationContentSelector } from "@cup/narration-source-analysis/fake";
-import type { CoverImageLoader } from "@cup/prepare-source-material";
+import {
+  createFakeNarrationContentSelector,
+  createFakeNarrationLanguageDetector,
+} from "@cup/narration-source-analysis/fake";
+import type { CoverImageLoader, DeclaredLanguage } from "@cup/prepare-source-material";
 import { createControlledSourceMaterialPreparer } from "@cup/prepare-source-material/fake";
 
-import { runPrepareAudiobookWorkflow } from "#src/run-prepare-audiobook-workflow.ts";
+import {
+  runPrepareAudiobookWorkflow,
+  type PrepareAudiobookWorkflowServices,
+} from "#src/run-prepare-audiobook-workflow.ts";
 import type { AudiobookWorkflowEnvironment } from "#src/workflow-environment.ts";
 
 // The test Worker adds a hook to its owner classes that runs their alarm on demand.
@@ -192,6 +202,64 @@ test.each([
     const audiobook = await loadAudiobook({ bucket: environment.AUDIO_BUCKET, audiobookReference });
     expect(audiobook).not.toHaveProperty("coverImage");
     expect(await owner.hasCoverImage(conversionId)).toBe(false);
+  },
+);
+
+test("a page declaring de-AT that the detector reads as de is narrated in de-AT, without a fallback warning", async () => {
+  const { owner, grantId, accountId, conversionId } = await createOwnedConversion("account");
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+  try {
+    await runConversion(grantId, conversionId, accountId, false, undefined, undefined, {
+      declaredLanguage: { htmlLang: "de-AT" },
+      detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: "de" }),
+    });
+
+    expect(await loadReadyAudiobook(owner, conversionId)).toMatchObject({
+      narrationLanguage: "de-AT",
+    });
+    expect(narrationLanguageFallbackWarnings(warn)).toEqual([]);
+  } finally {
+    warn.mockRestore();
+  }
+});
+
+test.each([
+  [{ htmlLang: "de-AT", ogLocale: "de_DE" }, "de-AT"],
+  [undefined, undefined],
+] as const)(
+  "a conversion whose detector fails with declared language %j becomes ready narrated in %s and logs the fallback",
+  async (declaredLanguage, narrationLanguage) => {
+    const { owner, grantId, accountId, conversionId } = await createOwnedConversion("trial");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      await runConversion(grantId, conversionId, accountId, false, undefined, undefined, {
+        ...(declaredLanguage === undefined ? {} : { declaredLanguage }),
+        detectNarrationLanguage: createFakeNarrationLanguageDetector({
+          failure: new Error("Configured detection failure"),
+        }),
+      });
+
+      expect((await owner.getConversion(conversionId))?.status).toBe("ready");
+      // A manifest without a narration language has no field at all, not a `null` sentinel.
+      const { narrationLanguage: storedLanguage = "(absent)" } = await loadReadyAudiobook(
+        owner,
+        conversionId,
+      );
+      expect(storedLanguage).toBe(narrationLanguage ?? "(absent)");
+      expect(narrationLanguageFallbackWarnings(warn)).toEqual([
+        {
+          event: "narration-language-fallback",
+          conversionId,
+          ...(declaredLanguage === undefined ? {} : { declaredLanguage }),
+          ...(narrationLanguage === undefined ? {} : { narrationLanguage }),
+          reason: "detector-error",
+        },
+      ]);
+    } finally {
+      warn.mockRestore();
+    }
   },
 );
 
@@ -555,6 +623,31 @@ async function createOwnedConversion(kind: "trial" | "account") {
   };
 }
 
+async function loadReadyAudiobook(
+  owner: {
+    getReadyAudiobookReference(conversionId: string): Promise<AudiobookReference | undefined>;
+  },
+  conversionId: string,
+) {
+  const audiobookReference = await owner.getReadyAudiobookReference(conversionId);
+  if (!audiobookReference) {
+    throw new Error("Expected a ready audiobook");
+  }
+  return loadAudiobook({ bucket: environment.AUDIO_BUCKET, audiobookReference });
+}
+
+function narrationLanguageFallbackWarnings(warn: { mock: { calls: unknown[][] } }) {
+  return warn.mock.calls
+    .map(([message]) => (typeof message === "string" ? (JSON.parse(message) as unknown) : message))
+    .filter(
+      (entry) =>
+        typeof entry === "object" &&
+        entry !== null &&
+        "event" in entry &&
+        entry.event === "narration-language-fallback",
+    );
+}
+
 function runConversion(
   grantId: string,
   conversionId: string,
@@ -563,6 +656,13 @@ function runConversion(
   step = createImmediateRetryStep(),
   // Supplying a loader makes the source page declare a cover image.
   loadCoverImage?: CoverImageLoader,
+  {
+    declaredLanguage,
+    detectNarrationLanguage = createFakeNarrationLanguageDetector({ answer: "en" }),
+  }: {
+    declaredLanguage?: DeclaredLanguage;
+    detectNarrationLanguage?: PrepareAudiobookWorkflowServices["detectNarrationLanguage"];
+  } = {},
 ) {
   return runPrepareAudiobookWorkflow({
     env: environment,
@@ -590,6 +690,7 @@ function runConversion(
             url: SOURCE_URL,
             html: "<article><h1>Failure test</h1><p>A short paragraph for narration.</p></article>",
             ...(loadCoverImage ? { coverImage: COVER_IMAGE_DECLARATION } : {}),
+            ...(declaredLanguage === undefined ? {} : { declaredLanguage }),
           }),
       loadCoverImage:
         loadCoverImage ??
@@ -597,6 +698,7 @@ function runConversion(
           throw new Error("No cover image was declared");
         }),
       selectNarrationContent: createFakeNarrationContentSelector(),
+      detectNarrationLanguage,
     },
   });
 }

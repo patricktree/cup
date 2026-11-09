@@ -48,6 +48,39 @@ test("records the stored cover image in the manifest", async () => {
     coverImage,
   });
 });
+test("records the narration language in the manifest, outside the speech configuration", async () => {
+  const { bucket } = createTestBucket();
+  const reference = await storeAudiobook({
+    bucket,
+    conversionId: "conversion-id",
+    title: "Title",
+    originalUrl: "https://example.com",
+    narrationDocument: document,
+    narrationLanguage: "de-AT",
+  });
+
+  await expect(loadAudiobook({ bucket, audiobookReference: reference })).resolves.toMatchObject({
+    narrationLanguage: "de-AT",
+    speechConfig: SPEECH_CONFIG,
+  });
+});
+test.each(["de_AT", "de-at", "not a tag"])(
+  "rejects the non-canonical narration language %s before publishing",
+  async (narrationLanguage) => {
+    const { bucket, storedObjects } = createTestBucket();
+    await expect(
+      storeAudiobook({
+        bucket,
+        conversionId: "conversion-id",
+        title: "Title",
+        originalUrl: "https://example.com",
+        narrationDocument: document,
+        narrationLanguage,
+      }),
+    ).rejects.toThrow("Expected a canonical BCP 47 language tag");
+    expect(storedObjects.size).toBe(0);
+  },
+);
 test("rejects invalid narration before publishing a prepared artifact", async () => {
   const { bucket, storedObjects } = createTestBucket();
   await expect(
