@@ -13,13 +13,14 @@ export type AppiumServer = {
 /** Appium drivers the suite uses, pinned exactly. */
 const APPIUM_DRIVERS = {
   uiautomator2: "appium-uiautomator2-driver@8.7.3",
+  xcuitest: "appium-xcuitest-driver@12.22.8",
 } as const;
 
 export type AppiumDriverName = keyof typeof APPIUM_DRIVERS;
 
 const PACKAGE_ROOT = path.resolve(import.meta.dirname, "..");
 /** Package-local and git-ignored, so `pnpm install` never installs drivers. */
-const APPIUM_HOME = path.join(PACKAGE_ROOT, ".appium");
+export const APPIUM_HOME = path.join(PACKAGE_ROOT, ".appium");
 /** The package's own Appium CLI, run by this Node.js so that stopping the child stops Appium. */
 // Vitest's module runner does not support `import.meta.resolve`.
 const require = nodeModule.createRequire(import.meta.url);
