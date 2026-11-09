@@ -150,6 +150,9 @@ export class NarrationTrackPlayer implements Player {
     if (this.element.readyState < HAVE_METADATA) {
       this.pendingPositionMilliseconds = position;
     } else {
+      // The element can report its metadata before `loadedmetadata` is dispatched, which must
+      // then not apply an earlier seek.
+      this.pendingPositionMilliseconds = null;
       this.element.currentTime = position / 1_000;
     }
 
