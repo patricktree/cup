@@ -8,6 +8,7 @@ import path from "node:path";
 import { Temporal } from "temporal-polyfill";
 import { afterAll, beforeAll, expect, test, vi } from "vitest";
 import { createTestHarness } from "wrangler";
+import { z } from "zod";
 
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {
@@ -23,6 +24,7 @@ import { NonRetryableError } from "cloudflare:workflows";
 import type { AccountDurableObject } from "@cup/accounts";
 import {
   loadAudiobook,
+  produceAudioSegment,
   type AudiobookReference,
   type SpeechSynthesisAi,
 } from "@cup/audiobook-production";
@@ -56,6 +58,12 @@ const COVER_IMAGE_DECLARATION = {
   alternativeText: "A lighthouse at dusk",
 };
 const COVER_IMAGE_BYTES = Uint8Array.of(0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10);
+// The language fields of a Gemini request from before policy 5, as recorded by
+// createRecordingSpeechSynthesisAi.
+const TODAYS_SPEECH_REQUEST = {
+  content: [{ type: "text", text: expect.any(String) }],
+  generationConfig: { speech_config: [{ voice: "Charon" }] },
+};
 const harness = createTestHarness({
   root: path.resolve(import.meta.dirname, ".."),
   workers: [{ configPath: "./wrangler.test.jsonc" }],
@@ -218,7 +226,7 @@ test("a page declaring de-AT that the detector reads as de is narrated in de-AT,
     expect(await loadReadyAudiobook(owner, conversionId)).toMatchObject({
       narrationLanguage: "de-AT",
     });
-    expect(narrationLanguageFallbackWarnings(warn)).toEqual([]);
+    expect(loggedWarnings(warn, "narration-language-fallback")).toEqual([]);
   } finally {
     warn.mockRestore();
   }
@@ -281,7 +289,7 @@ test.each([
         conversionId,
       );
       expect(storedLanguage).toBe(narrationLanguage ?? "(absent)");
-      expect(narrationLanguageFallbackWarnings(warn)).toEqual([
+      expect(loggedWarnings(warn, "narration-language-fallback")).toEqual([
         {
           event: "narration-language-fallback",
           conversionId,
@@ -295,6 +303,226 @@ test.each([
     }
   },
 );
+
+test.each(["trial", "account"] as const)(
+  "a %s de-AT conversion speaks every segment in German and records its synthesis language",
+  async (kind) => {
+    const { owner, grantId, accountId, conversionId, artifactPrefix, segmentOwner } =
+      await createOwnedConversion(kind);
+    await runConversion(grantId, conversionId, accountId, false, undefined, undefined, {
+      declaredLanguage: { htmlLang: "de-AT" },
+      detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: "de" }),
+    });
+    const { ai, speechRequests } = createRecordingSpeechSynthesisAi();
+
+    await runAllSegments(owner, conversionId, segmentOwner, ai);
+
+    const germanStyle = {
+      type: "speech_metadata",
+      style: "Read in German with standard German pronunciation.",
+    };
+    expect(speechRequests()).toEqual([
+      {
+        content: [{ type: "text", text: expect.any(String), annotations: [germanStyle] }],
+        generationConfig: { speech_config: [{ voice: "Charon", language: "de-AT" }] },
+      },
+      {
+        content: [{ type: "text", text: expect.any(String), annotations: [germanStyle] }],
+        generationConfig: { speech_config: [{ voice: "Charon", language: "de-AT" }] },
+      },
+    ]);
+    expect(await storedSynthesisLanguages(artifactPrefix)).toEqual(["de-AT", "de-AT"]);
+  },
+);
+
+test("a conversion without a narration language sends today's requests and records no synthesis language", async () => {
+  const { owner, grantId, conversionId, artifactPrefix, segmentOwner } =
+    await createOwnedConversion("trial");
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    await runConversion(grantId, conversionId, undefined, false, undefined, undefined, {
+      detectNarrationLanguage: createFakeNarrationLanguageDetector({
+        failure: new Error("Configured detection failure"),
+      }),
+    });
+  } finally {
+    warn.mockRestore();
+  }
+  const { ai, speechRequests } = createRecordingSpeechSynthesisAi();
+
+  await runAllSegments(owner, conversionId, segmentOwner, ai);
+
+  expect(speechRequests()).toEqual([TODAYS_SPEECH_REQUEST, TODAYS_SPEECH_REQUEST]);
+  expect(await storedSynthesisLanguages(artifactPrefix)).toEqual([undefined, undefined]);
+});
+
+test("a valid but unspeakable narration language is stored, left out of requests and logged as unspeakable", async () => {
+  const { owner, grantId, accountId, conversionId, artifactPrefix, segmentOwner } =
+    await createOwnedConversion("account");
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    await runConversion(grantId, conversionId, accountId, false, undefined, undefined, {
+      declaredLanguage: { htmlLang: "sv-SE" },
+      detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: "sv" }),
+    });
+
+    expect(await loadReadyAudiobook(owner, conversionId)).toMatchObject({
+      narrationLanguage: "sv-SE",
+    });
+    expect(loggedWarnings(warn, "narration-language-unspeakable")).toEqual([
+      {
+        event: "narration-language-unspeakable",
+        conversionId,
+        narrationLanguage: "sv-SE",
+        provider: "google-ai-studio",
+        model: "gemini-3.8-flash-lite-tts",
+      },
+    ]);
+    expect(loggedWarnings(warn, "narration-language-fallback")).toEqual([]);
+  } finally {
+    warn.mockRestore();
+  }
+  const { ai, speechRequests } = createRecordingSpeechSynthesisAi();
+
+  await runAllSegments(owner, conversionId, segmentOwner, ai);
+
+  expect(speechRequests()).toEqual([TODAYS_SPEECH_REQUEST, TODAYS_SPEECH_REQUEST]);
+  expect(await storedSynthesisLanguages(artifactPrefix)).toEqual(["sv-SE", "sv-SE"]);
+});
+
+test("a fallback to an unspeakable declared language logs both warnings", async () => {
+  const { grantId, conversionId } = await createOwnedConversion("trial");
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    await runConversion(grantId, conversionId, undefined, false, undefined, undefined, {
+      declaredLanguage: { htmlLang: "fi" },
+      detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: null }),
+    });
+
+    expect(loggedWarnings(warn, "narration-language-fallback")).toHaveLength(1);
+    expect(loggedWarnings(warn, "narration-language-unspeakable")).toMatchObject([
+      { conversionId, narrationLanguage: "fi" },
+    ]);
+  } finally {
+    warn.mockRestore();
+  }
+});
+
+test("a retried segment uses the manifest's narration language after the detector's answer changes", async () => {
+  const { grant, grantId, conversionId } = await createConversion();
+  let detectorAnswer = "de";
+  await runConversion(grantId, conversionId, undefined, false, undefined, undefined, {
+    detectNarrationLanguage: (input, options) =>
+      createFakeNarrationLanguageDetector({ answer: detectorAnswer })(input, options),
+  });
+  await expect(
+    runSegment(
+      conversionId,
+      { kind: "trial", grantId },
+      0,
+      createFakeSpeechSynthesisAi({ failureStatus: 503 }),
+    ),
+  ).rejects.toThrow("Configured deterministic speech failure");
+  detectorAnswer = "fr";
+  const segments = await grant.listAudioSegments(conversionId);
+  await grant.startSynthesis(
+    conversionId,
+    segments.map((segment) => segment.narrationTextCharacters),
+  );
+  const { ai, speechRequests } = createRecordingSpeechSynthesisAi();
+
+  await runSegment(conversionId, { kind: "trial", grantId }, 0, ai);
+
+  expect(speechRequests()).toMatchObject([
+    { generationConfig: { speech_config: [{ voice: "Charon", language: "de" }] } },
+  ]);
+});
+
+test.each([
+  [
+    "a policy 4 manifest",
+    (manifest: Record<string, unknown>) => ({
+      ...manifest,
+      speechConfig: {
+        provider: "google-ai-studio",
+        model: "gemini-3.8-flash-lite-tts",
+        voice: "Charon",
+        policyVersion: "4",
+      },
+    }),
+  ],
+  [
+    "a manifest without speechConfig",
+    ({ speechConfig: _, ...manifest }: Record<string, unknown>) => manifest,
+  ],
+] as const)("%s is synthesized with today's requests", async (_, rewriteManifest) => {
+  const { owner, grantId, conversionId, artifactPrefix, segmentOwner } =
+    await createOwnedConversion("trial");
+  // Replace the stored manifest with one prepared before policy 5, keeping its narration language
+  // to show that the request policy, not the missing language, keeps the request unchanged.
+  const step = createImmediateRetryStep();
+  const runStep = step.do.bind(step);
+  step.do = async (name: string, ...rest: unknown[]) => {
+    const result: unknown = await Reflect.apply(runStep, step, [name, ...rest]);
+    if (name !== "store audiobook") {
+      return result;
+    }
+    const key = `${artifactPrefix}audiobook.json`;
+    const stored = await environment.AUDIO_BUCKET.get(key);
+    const manifest = rewriteManifest(z.looseObject({}).parse(await stored?.json()));
+    const body = JSON.stringify(manifest);
+    const rewritten = await environment.AUDIO_BUCKET.put(key, body, {
+      httpMetadata: { contentType: "application/json" },
+    });
+    return {
+      key,
+      contentType: "application/json",
+      byteLength: rewritten.size,
+      etag: rewritten.etag,
+    };
+  };
+  await runConversion(grantId, conversionId, undefined, false, step, undefined, {
+    declaredLanguage: { htmlLang: "de-AT" },
+    detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: "de" }),
+  });
+  const { ai, speechRequests } = createRecordingSpeechSynthesisAi();
+
+  await runAllSegments(owner, conversionId, segmentOwner, ai);
+
+  expect(speechRequests()).toEqual([TODAYS_SPEECH_REQUEST, TODAYS_SPEECH_REQUEST]);
+  const metadata = await environment.AUDIO_BUCKET.head(`${artifactPrefix}audio-segments/0.mp3`);
+  expect(metadata?.customMetadata?.["synthesis-policy-version"]).toBe("4");
+});
+
+test("a stored segment whose synthesis language differs from the manifest is not reused", async () => {
+  const { owner, grantId, conversionId, artifactPrefix, segmentOwner } =
+    await createOwnedConversion("trial");
+  await runConversion(grantId, conversionId, undefined, false, undefined, undefined, {
+    declaredLanguage: { htmlLang: "de-AT" },
+    detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: "de" }),
+  });
+  const audiobook = await loadReadyAudiobook(owner, conversionId);
+  const [unit] = audiobook.narrationDocument.synchronizationUnits;
+  if (!unit) {
+    throw new Error("Expected a synchronization unit");
+  }
+  await produceAudioSegment({
+    ai: createFakeSpeechSynthesisAi(),
+    bucket: environment.AUDIO_BUCKET,
+    conversionId,
+    artifactPrefix,
+    sequence: 0,
+    narrationChunk: { text: unit.narrationText },
+    speechConfig: audiobook.speechConfig,
+    narrationLanguage: "de",
+  });
+  const { ai, speechRequests } = createRecordingSpeechSynthesisAi();
+
+  await expect(runSegment(conversionId, segmentOwner, 0, ai)).rejects.toThrow("identity conflicts");
+
+  expect(speechRequests()).toEqual([]);
+  expect(await storedSynthesisLanguages(artifactPrefix)).toEqual(["de", undefined]);
+});
 
 test("a document exceeding the available duration reserves nothing", async () => {
   const { grant, grantId, conversionId, now } = await createConversion();
@@ -606,6 +834,7 @@ async function createOwnedConversion(kind: "trial" | "account") {
       accountId: undefined,
       conversionId: trialConversionId,
       artifactPrefix: "conversions/" + trialConversionId + "/",
+      segmentOwner: { kind: "trial" as const, grantId },
       owner: {
         getConversion: (conversionId: string) => grant.getConversion(conversionId),
         getReadyAudiobookReference: (conversionId: string) =>
@@ -654,6 +883,7 @@ async function createOwnedConversion(kind: "trial" | "account") {
     accountId,
     conversionId,
     artifactPrefix: "accounts/" + accountId + "/conversions/" + conversionId + "/",
+    segmentOwner: { kind: "account" as const, accountId },
     owner: {
       getConversion: () => account.getConversion(conversionId),
       getReadyAudiobookReference: async () => (await getReadyOutcome())?.audiobookReference,
@@ -676,15 +906,60 @@ async function loadReadyAudiobook(
   return loadAudiobook({ bucket: environment.AUDIO_BUCKET, audiobookReference });
 }
 
-function narrationLanguageFallbackWarnings(warn: { mock: { calls: unknown[][] } }) {
+/** Runs the segment workflow for every synchronization unit of a ready conversion, in order. */
+async function runAllSegments(
+  owner: Parameters<typeof loadReadyAudiobook>[0],
+  conversionId: string,
+  segmentOwner: Parameters<typeof runSegment>[1],
+  ai: SpeechSynthesisAi,
+) {
+  const { narrationDocument } = await loadReadyAudiobook(owner, conversionId);
+  for (const sequence of narrationDocument.synchronizationUnits.keys()) {
+    await runSegment(conversionId, segmentOwner, sequence, ai);
+  }
+}
+
+const GEMINI_REQUEST_SCHEMA = z.object({
+  query: z.object({
+    input: z.tuple([z.object({ content: z.unknown() })]),
+    generation_config: z.unknown(),
+  }),
+});
+
+/** Wraps the fake speech AI to record the language-bearing fields of each Gemini request. */
+function createRecordingSpeechSynthesisAi() {
+  const fakeGateway = createFakeSpeechSynthesisAi().gateway("default");
+  const run = vi.fn<ReturnType<SpeechSynthesisAi["gateway"]>["run"]>(
+    fakeGateway.run.bind(fakeGateway),
+  );
+  const ai: SpeechSynthesisAi = { gateway: () => ({ run }) };
+  const speechRequests = () =>
+    run.mock.calls.map(([request]) => {
+      const { query } = GEMINI_REQUEST_SCHEMA.parse(request);
+      return { content: query.input[0].content, generationConfig: query.generation_config };
+    });
+
+  return { ai, speechRequests };
+}
+
+/** Reads the synthesis-language metadata of the conversion's two audio segments. */
+async function storedSynthesisLanguages(artifactPrefix: string) {
+  return Promise.all(
+    [0, 1].map(async (sequence) => {
+      const segment = await environment.AUDIO_BUCKET.head(
+        artifactPrefix + "audio-segments/" + sequence + ".mp3",
+      );
+      return segment?.customMetadata?.["synthesis-language"];
+    }),
+  );
+}
+
+function loggedWarnings(warn: { mock: { calls: unknown[][] } }, event: string) {
   return warn.mock.calls
     .map(([message]) => (typeof message === "string" ? (JSON.parse(message) as unknown) : message))
     .filter(
       (entry) =>
-        typeof entry === "object" &&
-        entry !== null &&
-        "event" in entry &&
-        entry.event === "narration-language-fallback",
+        typeof entry === "object" && entry !== null && "event" in entry && entry.event === event,
     );
 }
 

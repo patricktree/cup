@@ -38,4 +38,6 @@ export type SynthesisOptions = {
   synthesisAttempt: number;
   synthesisResponseMode: NarrationSynthesisResponseMode;
   speechConfig: SpeechConfig;
+  /** The manifest's canonical BCP 47 narration language, absent when the conversion has none. */
+  narrationLanguage?: string | undefined;
 };
