@@ -16,12 +16,15 @@ test("Back from the Add dialog and from a track returns to Recents", async () =>
   await addDialog.waitForDisplayed({ timeout: 30_000 });
   // The dialog focuses its URL field, which opens the on-screen keyboard, and Android's Back closes
   // an open keyboard instead of reaching Cup. Leave the field first, as tapping outside it does.
+  // The keyboard can appear seconds after the field got focus, such as the first time after the
+  // emulator booted, and then still shows after the field is left; wait for it to show and close.
+  await device.waitForKeyboard("shown");
   await webView.execute(() => {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
   });
-  await device.waitForKeyboardHidden();
+  await device.waitForKeyboard("hidden");
   await device.pressBack();
   await addDialog.waitForExist({ reverse: true, timeout: 10_000 });
   await waitForRecents(webView, 1);
