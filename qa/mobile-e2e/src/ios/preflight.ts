@@ -69,8 +69,19 @@ type SimulatorRuntime = {
   supportedDeviceTypes: { identifier: string; name: string; productFamily: string }[];
 };
 
-/** Returns the newest available iOS simulator runtime. */
+/**
+ * Returns the iOS simulator runtime of the same version as Xcode's simulator SDK, rather than the
+ * newest one installed. Device-specific runtimes of that version are skipped. An older runtime on a
+ * newer macOS is not enough: on macOS 27.2, WebKit's content process crashed under the iOS 26.3.1
+ * runtime in about one launch in seven.
+ */
 async function findIosRuntime(): Promise<SimulatorRuntime> {
+  const sdkVersion = (
+    await run("xcrun", ["--sdk", "iphonesimulator", "--show-sdk-version"])
+  ).stdout.trim();
+  // The plain identifier, such as `com.apple.CoreSimulator.SimRuntime.iOS-27-2`; device-specific
+  // runtimes of the same version carry a suffix.
+  const identifier = `com.apple.CoreSimulator.SimRuntime.iOS-${sdkVersion.replaceAll(".", "-")}`;
   let result;
   try {
     result = await run("xcrun", ["simctl", "list", "runtimes", "--json"]);
@@ -82,16 +93,15 @@ async function findIosRuntime(): Promise<SimulatorRuntime> {
   if (/CoreSimulator/i.test(result.stderr)) {
     failWithSimulatorServiceHint(result.stderr);
   }
-  const runtimes = parseIosRuntimes(result.stdout).toSorted((left, right) =>
-    right.version.localeCompare(left.version, undefined, { numeric: true }),
+  const runtime = parseIosRuntimes(result.stdout).find(
+    (candidate) => candidate.identifier === identifier,
   );
-  const [newest] = runtimes;
-  if (newest === undefined) {
+  if (runtime === undefined) {
     fail(
-      `No iOS simulator runtime is installed. Install one with \`xcodebuild -downloadPlatform iOS\`, or in Xcode under Settings > Components. If one is installed, restart CoreSimulatorService with \`${RESTART_CORE_SIMULATOR}\`.`,
+      `The iOS ${sdkVersion} simulator runtime, which matches Xcode's simulator SDK, is not installed. Install it with \`xcodebuild -downloadPlatform iOS\`, or in Xcode under Settings > Components. If it is installed, restart CoreSimulatorService with \`${RESTART_CORE_SIMULATOR}\`.`,
     );
   }
-  return newest;
+  return runtime;
 }
 
 /** Returns the available iOS runtimes of `simctl list runtimes --json`. */
