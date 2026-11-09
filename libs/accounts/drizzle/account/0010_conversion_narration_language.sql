@@ -1,0 +1,1 @@
+ALTER TABLE `account_conversions` ADD `narration_language` text;

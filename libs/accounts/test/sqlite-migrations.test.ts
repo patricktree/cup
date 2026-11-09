@@ -424,6 +424,38 @@ test("adding the conversion deletion marker keeps conversions unmarked", () => {
   }
 });
 
+test("adding the narration language leaves existing conversions without one", () => {
+  const database = new sqlite.DatabaseSync(":memory:");
+  try {
+    const { key, earlierKeys } = findMigration("conversion_narration_language");
+    applyMigrations(database, earlierKeys);
+    database.exec(`INSERT INTO account_conversions
+      (conversion_id, idempotency_key, source_url, created_at_ms, status, last_started_phase, completed_at_ms, title, audiobook_reference_json, has_cover_image)
+      VALUES
+      ('pending', 'key-pending', 'https://example.com/p', 1, 'pending', 'conversion-start', NULL, NULL, NULL, NULL),
+      ('ready', 'key-ready', 'https://example.com/r', 2, 'ready', 'finalization', 3, 'Ready', '{}', 1)`);
+    const conversions = database
+      .prepare("SELECT * FROM account_conversions ORDER BY created_at_ms")
+      .all();
+
+    applyMigrations(database, [key]);
+
+    expect(
+      database.prepare("SELECT * FROM account_conversions ORDER BY created_at_ms").all(),
+    ).toEqual(conversions.map((row) => ({ ...row, narration_language: null })));
+    database.exec(
+      "UPDATE account_conversions SET narration_language = 'de-AT' WHERE conversion_id = 'ready'",
+    );
+    expect(
+      database
+        .prepare("SELECT narration_language FROM account_conversions WHERE conversion_id = 'ready'")
+        .all(),
+    ).toEqual([{ narration_language: "de-AT" }]);
+  } finally {
+    database.close();
+  }
+});
+
 /**
  * Finds a migration by its journal tag without its number prefix, so renumbering it after a rebase
  * keeps the test valid; also returns the keys of all migrations that run before it.

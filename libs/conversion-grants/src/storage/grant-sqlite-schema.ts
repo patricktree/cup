@@ -79,6 +79,9 @@ export const conversions = sqliteTable(
     }).$type<AudiobookReference>(),
     // Set only for a ready conversion whose audiobook has a cover image; null otherwise.
     hasCoverImage: integer("has_cover_image", { mode: "boolean" }),
+    // The manifest's narration language, copied when the conversion became ready; null when the
+    // audiobook has none or was prepared before narration languages were recorded.
+    narrationLanguage: text("narration_language"),
     measurements: text("measurements_json", { mode: "json" }).$type<ConversionMeasurements>(),
     providerUsage: text("provider_usage_json", { mode: "json" }).$type<Record<string, unknown>>(),
     failureCategory: text("failure_category", { enum: FAILURE_CATEGORIES }),

@@ -111,7 +111,21 @@ account
       );
       output(result, () => {
         const { conversionDeletions, ...rest } = result;
-        process.stdout.write(`${JSON.stringify(rest, null, 2)}\n\nConversion deletions:\n`);
+        process.stdout.write(`${JSON.stringify(rest, null, 2)}\n\nNarration languages:\n`);
+        if (rest.history.items.length === 0) {
+          process.stdout.write("none\n\n");
+        }
+        for (const item of rest.history.items) {
+          writeFields([
+            ["Conversion ID", item.conversionId],
+            [
+              "Narration language",
+              (item.outcome?.status === "ready" ? item.outcome.narrationLanguage : undefined) ??
+                "none",
+            ],
+          ]);
+        }
+        process.stdout.write("Conversion deletions:\n");
         if (conversionDeletions.length === 0) {
           process.stdout.write("none\n");
         }

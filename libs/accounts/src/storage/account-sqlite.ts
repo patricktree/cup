@@ -685,13 +685,19 @@ export class AccountSqlite {
 type ConversionRow = typeof accountConversions.$inferSelect;
 type OutcomeColumns = Pick<
   ConversionRow,
-  "title" | "audiobookReference" | "hasCoverImage" | "failureCategory" | "explanation"
+  | "title"
+  | "audiobookReference"
+  | "hasCoverImage"
+  | "narrationLanguage"
+  | "failureCategory"
+  | "explanation"
 >;
 
 const EMPTY_OUTCOME_COLUMNS = {
   title: null,
   audiobookReference: null,
   hasCoverImage: null,
+  narrationLanguage: null,
   failureCategory: null,
   explanation: null,
 } satisfies OutcomeColumns;
@@ -703,6 +709,7 @@ function toOutcomeColumns(outcome: AccountConversionOutcome): OutcomeColumns {
       title: outcome.title,
       audiobookReference: outcome.audiobookReference,
       hasCoverImage: outcome.hasCoverImage ?? null,
+      narrationLanguage: outcome.narrationLanguage ?? null,
     };
   }
   return {
@@ -724,6 +731,7 @@ function toOutcome(row: ConversionRow): AccountConversionOutcome | null {
           title: row.title,
           audiobookReference: row.audiobookReference,
           ...(row.hasCoverImage === true ? { hasCoverImage: true } : {}),
+          ...(row.narrationLanguage === null ? {} : { narrationLanguage: row.narrationLanguage }),
         }
       : { status: "failed", failureCategory: row.failureCategory, explanation: row.explanation },
   );

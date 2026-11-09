@@ -199,6 +199,10 @@ pnpm operator account inspect "ACCOUNT_ID"
 
 The history reports each conversion's status as account history does: a prepared conversion shows the [state of its audio](../../docs/architecture/conversion.md#whole-document-synthesis-and-accounting) next to its stored outcome. The history leaves out conversions that are being deleted. The account defines the shapes of this response in its [contracts](../../libs/accounts/src/domain/account-contracts.ts).
 
+#### Narration languages
+
+The "Narration languages" section after the JSON lists each history entry's conversion ID with its [narration language](../../docs/GLOSSARY.md#narration-language), the BCP 47 tag copied from its audiobook manifest, to answer why an audiobook sounds the way it does. `none` means the conversion has no narration language: it is not ready yet, it failed, detection found none and the page declared none, or it was prepared before narration languages were recorded. With `--json`, the language is the optional `narrationLanguage` of each ready `outcome` in `history.items`. Trial conversions store their narration language too, but `grant inspect` lists no conversions, so it does not show it.
+
 #### Conversion deletions
 
 The "Conversion deletions" section after the JSON lists each conversion whose [deletion](#delete-a-conversion) is still cleaning up, with the epoch milliseconds since which it is deleting (`deleting_since_ms`) and its age in minutes; `none` means no cleanup is owed. With `--json`, the same entries are in `conversionDeletions`. Cleanup normally finishes within a few minutes, after which the conversion leaves the list.

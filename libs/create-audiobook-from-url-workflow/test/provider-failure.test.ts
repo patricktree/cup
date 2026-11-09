@@ -232,6 +232,39 @@ test("a page declaring de-AT that the detector reads as de is narrated in de-AT,
   }
 });
 
+test.each(["account", "trial"] as const)(
+  "a %s conversion's ready outcome stores the manifest's narration language",
+  async (kind) => {
+    const { owner, grantId, accountId, conversionId } = await createOwnedConversion(kind);
+
+    await runConversion(grantId, conversionId, accountId, false, undefined, undefined, {
+      declaredLanguage: { htmlLang: "de-AT" },
+      detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: "de" }),
+    });
+
+    expect(await owner.readyNarrationLanguage(conversionId)).toBe("de-AT");
+  },
+);
+
+test.each(["account", "trial"] as const)(
+  "a %s conversion without a narration language stores none on its ready outcome",
+  async (kind) => {
+    const { owner, grantId, accountId, conversionId } = await createOwnedConversion(kind);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      await runConversion(grantId, conversionId, accountId, false, undefined, undefined, {
+        detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: null }),
+      });
+    } finally {
+      warn.mockRestore();
+    }
+
+    expect(await owner.getReadyAudiobookReference(conversionId)).toBeDefined();
+    expect(await owner.readyNarrationLanguage(conversionId)).toBeUndefined();
+  },
+);
+
 test.each([
   [{ htmlLang: "de-AT", ogLocale: "de_DE" }, "de-AT"],
   [undefined, undefined],
@@ -815,6 +848,12 @@ async function createOwnedConversion(kind: "trial" | "account") {
             conversion.hasCoverImage === true
           );
         },
+        readyNarrationLanguage: async (conversionId: string) => {
+          const conversion = await grant.getConversion(conversionId);
+          return conversion !== undefined && "narrationLanguage" in conversion
+            ? conversion.narrationLanguage
+            : undefined;
+        },
       },
     };
   }
@@ -849,6 +888,7 @@ async function createOwnedConversion(kind: "trial" | "account") {
       getConversion: () => account.getConversion(conversionId),
       getReadyAudiobookReference: async () => (await getReadyOutcome())?.audiobookReference,
       hasCoverImage: async () => (await getReadyOutcome())?.hasCoverImage === true,
+      readyNarrationLanguage: async () => (await getReadyOutcome())?.narrationLanguage,
     },
   };
 }
