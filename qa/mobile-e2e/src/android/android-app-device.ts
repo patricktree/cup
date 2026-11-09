@@ -1,7 +1,7 @@
 import { remote } from "webdriverio";
 
 import type { AppDevice, LaunchArguments } from "#src/app-device.ts";
-import { reservePort, run, waitFor } from "#src/host.ts";
+import { reservePort, run, waitFor, type CommandResult } from "#src/host.ts";
 
 /** What the Android global setup hands each spec file: the run's device and Appium server. */
 export type AndroidTarget = {
@@ -48,6 +48,14 @@ export async function openAndroidAppDevice(target: AndroidTarget): Promise<Andro
     // connection now and then: "device offline" at session start, or a killed UiAutomator2 server
     // mid-test. No test reads the capture.
     "appium:skipLogcatCapture": true,
+    // By default, listing contexts sends an HTTP request through `adb forward` to the devtools
+    // socket of every app's WebView, Cup's or not. An app that Android's cached-apps freezer has
+    // frozen, such as the Google app in the background, never accepts those
+    // connections; once its socket's listen backlog is full, adbd blocks connecting to it and every
+    // later adb call on the emulator hangs. Contexts are then listed from `/proc/net/unix` alone,
+    // and Chromedriver attaches to Cup's WebView only.
+    "appium:ensureWebviewsHavePages": false,
+    "appium:enableWebviewDetailsCollection": false,
   };
   const driver = await remote({
     hostname: "127.0.0.1",
@@ -123,6 +131,26 @@ export class AndroidAppDevice implements AppDevice {
     if (this.lastLaunchArguments === undefined) {
       throw new Error("Cup has not been launched in this spec file, so it cannot be relaunched.");
     }
+    // Leave Cup first, as a listener does before Android ends it. Secure Storage writes the account
+    // session to SharedPreferences with `apply()`, which reaches the disk later; force-stopping Cup
+    // in the foreground right after a sign-in or sign-out lost that write in about one relaunch in
+    // three (2026-11-10). Android waits for such writes before it reports the activity stopped.
+    await this.background();
+    await waitFor(
+      "Cup's activity to stop",
+      async () => {
+        const { stdout } = await this.adb([
+          "shell",
+          "dumpsys",
+          "activity",
+          "-p",
+          APP_PACKAGE,
+          "activities",
+        ]);
+        return /\bstate=STOPPED\b/u.test(stdout) ? true : undefined;
+      },
+      10_000,
+    );
     await this.launch(this.lastLaunchArguments);
   }
 
@@ -158,18 +186,24 @@ export class AndroidAppDevice implements AppDevice {
   }
 
   /**
-   * Waits until the on-screen keyboard is closed, which the system back button would otherwise
-   * close first. The session stays in the context it was in.
+   * Waits until the on-screen keyboard is on screen, or until it has left the screen, which the
+   * system back button would otherwise close first.
+   *
+   * It reads the window manager's `mImeShowing`, which stays true until the keyboard's closing
+   * animation ends. The input method's `mInputShown`, which `isKeyboardShown()` reads, turns false
+   * as soon as a close is requested, and it never turned true when a field lost focus before the
+   * keyboard had appeared: the keyboard then showed and closed over the next two seconds and took
+   * the next Back press (2026-11-10).
    */
-  async waitForKeyboardHidden(): Promise<void> {
-    const context = await this.driver.getContext();
-    await this.driver.switchContext("NATIVE_APP");
+  async waitForKeyboard(state: "shown" | "hidden"): Promise<void> {
     await waitFor(
-      "the on-screen keyboard to close",
-      async () => ((await this.driver.isKeyboardShown()) ? undefined : true),
+      state === "shown" ? "the on-screen keyboard to show" : "the on-screen keyboard to close",
+      async () => {
+        const { stdout } = await this.adb(["shell", "dumpsys", "window"]);
+        return /\bmImeShowing=true\b/u.test(stdout) === (state === "shown") ? true : undefined;
+      },
       10_000,
     );
-    await this.driver.switchContext(typeof context === "string" ? context : context.id);
   }
 
   /**
@@ -219,12 +253,12 @@ export class AndroidAppDevice implements AppDevice {
     await this.driver.deleteSession();
   }
 
-  private async adb(args: readonly string[]): Promise<void> {
+  private adb(args: readonly string[]): Promise<CommandResult> {
     // `adb shell` joins its arguments into one command line for the device's shell, so each one is
     // quoted for that shell, such as shared text with spaces, `&` or `#`.
     const deviceArgs =
       args[0] === "shell" ? ["shell", ...args.slice(1).map(quoteForDeviceShell)] : args;
-    await run(this.target.adb, ["-s", this.target.serial, ...deviceArgs]);
+    return run(this.target.adb, ["-s", this.target.serial, ...deviceArgs]);
   }
 }
 
