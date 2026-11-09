@@ -19,7 +19,7 @@ The suite finds the SDK at `ANDROID_HOME`, then `ANDROID_SDK_ROOT`, then Android
 There is none to do by hand. The first run on a Mac takes several minutes longer and says so in its output:
 
 - It installs the pinned Appium drivers into the git-ignored `qa/mobile-e2e/.appium`. Later runs find it there; an interrupted installation is redone.
-- It creates the suite's own emulator, `cup-mobile-e2e-api36`, in `~/Library/Caches/cup-mobile-e2e/avd`, boots it once and saves its Quick Boot snapshot. Every later run, in any checkout, boots a read-only instance from that snapshot in a few seconds. Delete the folder to rebuild the emulator, for example after a system image update.
+- It creates the suite's own emulator, `cup-mobile-e2e-api36-ram4g` with 4 GB of RAM, in `~/Library/Caches/cup-mobile-e2e/avd`, boots it once and saves its Quick Boot snapshot. The Pixel 8 profile's default 2 GB made the guest swap constantly during the full suite until adbd stopped answering. A Mac that still has the earlier 2 GB `cup-mobile-e2e-api36` creates the new emulator and its snapshot on its next run; the old folder is no longer used and can be deleted. Every later run, in any checkout, boots a read-only instance from that snapshot in a few seconds. Delete the folder to rebuild the emulator, for example after a system image update.
 - It builds the XCUITest driver's WebDriverAgent for the simulator into `~/Library/Caches/cup-mobile-e2e/wda`, in a folder named after the WebDriverAgent version and Xcode's build version. Every later run, in any checkout, starts that build with `xcodebuild test-without-building` and never rebuilds it; a new driver or Xcode version builds a new folder.
 
 ## Run the tests

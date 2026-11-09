@@ -20,7 +20,17 @@ export type Emulator = {
  * the checkout and Android Studio's AVD folder.
  */
 const AVD_HOME = path.join(os.homedir(), "Library", "Caches", "cup-mobile-e2e", "avd");
-const AVD_NAME = "cup-mobile-e2e-api36";
+/**
+ * Named after its RAM, which its Quick Boot snapshot fixes: a machine with an AVD of another RAM
+ * size, such as the earlier 2 GB `cup-mobile-e2e-api36`, creates this one and its snapshot anew.
+ */
+const AVD_NAME = "cup-mobile-e2e-api36-ram4g";
+/**
+ * The guest's RAM in MB; the emulator ignores a unit suffix and falls back to the profile's 2048.
+ * The Pixel 8 profile's 2 GB drove the guest into constant zram swapping during the full suite
+ * until adbd stopped answering (2026-11-09).
+ */
+const RAM_SIZE = "4096";
 /** Written once the Quick Boot snapshot is saved, so an interrupted preparation is redone. */
 const SNAPSHOT_READY_MARKER = path.join(AVD_HOME, `${AVD_NAME}.snapshot-ready`);
 const PREPARATION_LOCK = path.join(AVD_HOME, `${AVD_NAME}.lock`);
@@ -84,6 +94,7 @@ async function prepareSnapshot(host: AndroidHost): Promise<void> {
       ],
       { env: androidEnvironment(host) },
     );
+    await setAvdConfig("hw.ramSize", RAM_SIZE);
     const { serial, process: emulatorProcess } = await startEmulator(host, ["-no-snapshot-load"]);
     try {
       await waitForBoot(host, serial, emulatorProcess);
@@ -197,6 +208,18 @@ async function waitForBoot(
       return result?.stdout.trim() === "1" ? true : undefined;
     },
     BOOT_TIMEOUT_MS,
+  );
+}
+
+/** Sets one key of the AVD's `config.ini`, replacing the value `avdmanager` wrote. */
+async function setAvdConfig(key: string, value: string): Promise<void> {
+  const configPath = path.join(AVD_HOME, `${AVD_NAME}.avd`, "config.ini");
+  const lines = (await fs.readFile(configPath, "utf8"))
+    .split("\n")
+    .filter((line) => !line.startsWith(`${key} `) && !line.startsWith(`${key}=`));
+  await fs.writeFile(
+    configPath,
+    [...lines.filter((line) => line !== ""), `${key} = ${value}`, ""].join("\n"),
   );
 }
 
