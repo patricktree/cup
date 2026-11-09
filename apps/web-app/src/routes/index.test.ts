@@ -11,6 +11,11 @@ test("renders landing", async ({ mount }) => {
   await expect(component).toHaveScreenshot("landing.png");
 });
 
+test("renders landing when served from the iOS app's capacitor:// origin", async ({ mount }) => {
+  const component = await mount("routes/index/LandingPageInIosApp");
+  await expect(component.getByRole("heading", { name: "Just listen." })).toBeVisible();
+});
+
 test("the focused URL input shows only its wavy rule, without a focus ring", async ({ mount }) => {
   const component = await mount("routes/index/LandingPage");
   const input = component.getByRole("textbox", { name: "URL" });
