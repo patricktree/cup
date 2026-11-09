@@ -13,6 +13,15 @@ export function LandingPage(): React.ReactNode {
   return <GlobalProviders router={router} />;
 }
 
+/** The iOS app serves the web app from `capacitor://localhost`, a scheme without a URL origin. */
+const iosAppRouter = createAppRouter(createMemoryHistory({ initialEntries: ["/app/"] }), {
+  pageOrigin: "capacitor://localhost",
+});
+
+export function LandingPageInIosApp(): React.ReactNode {
+  return <GlobalProviders router={iosAppRouter} />;
+}
+
 export const SignIn = {
   // The landing page's route component is split into its own chunk. Loading the route before
   // mounting keeps the page from rendering empty while that chunk downloads, which can take longer

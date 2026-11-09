@@ -17,10 +17,14 @@ import { routeTree } from "#src/routeTree.gen.js";
  */
 const addDialogMask = createRouteMask({ routeTree, from: "/recent/add", to: "/recent" });
 
-export function createAppRouter(history?: RouterHistory) {
+export function createAppRouter(
+  history?: RouterHistory,
+  { pageOrigin = window.origin }: { pageOrigin?: string } = {},
+) {
   const router = createRouter({
     basepath: "/app",
     ...(history && { history }),
+    origin: routerOrigin(pageOrigin),
     context: {
       queryClient,
     },
@@ -81,4 +85,18 @@ export function GlobalProviders({
       </Toast.Provider>
     </QueryClientProvider>
   );
+}
+
+/**
+ * The iOS app serves the web app from `capacitor://localhost`. The router resolves every path
+ * against its origin and treats a URL as external unless it is HTTP(S) with that same origin; a
+ * `capacitor:` URL is neither, and its origin parses as "null". So every in-app location would
+ * count as external, and the router, which blocks document navigation to schemes outside its
+ * allowlist, would drop the first navigation silently and render no route. Any HTTP(S) origin keeps
+ * in-app paths internal; the router uses it only to parse and compare paths.
+ */
+function routerOrigin(pageOrigin: string): string {
+  // A sandboxed document reports the origin "null", which is no URL to parse.
+  const isHttpOrigin = pageOrigin.startsWith("http://") || pageOrigin.startsWith("https://");
+  return isHttpOrigin ? pageOrigin : "http://localhost";
 }

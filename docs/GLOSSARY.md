@@ -198,6 +198,12 @@ The structured document presentation of narration text that accompanies narratio
 
 _Avoid_: transcript, source page, narration source material
 
+## narration language
+
+The language an audiobook is narrated in, decided once per conversion while its narration document is prepared. A passage clearly in another language, such as an English correspondent's name in a German article, is still spoken in its own language without changing the narration language. The source page's declared language is evidence for it, not the narration language itself. When it cannot be decided, a conversion has no narration language and speech is synthesized without one.
+
+_Avoid_: source language, page language, locale
+
 ## narration block
 
 A semantically coherent portion of narration text intended to be spoken continuously.

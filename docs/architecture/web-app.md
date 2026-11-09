@@ -54,6 +54,8 @@ Every route whose screen shows server data or branches on auth loads in the rout
 
 **A cold start or deep link shows the app's background until auth settles, then the route's `pendingComponent`, then its content.** The router shows no pending UI while a `beforeLoad` runs, so there is no router-wide pending component and no splash screen.
 
+**The router resolves paths against an HTTP(S) origin, `http://localhost` when the page has none.** The iOS app serves the web app from `capacitor://localhost`; against that origin TanStack Router treats every in-app location as external, blocks the navigation and renders no route ([`createAppRouter`](../../apps/web-app/src/app/global-providers.tsx)).
+
 Code splitting puts a route's `component` into a separate chunk, while its `pendingComponent` and `errorComponent` stay in the eagerly loaded route module, so an error thrown during render, such as a refetch that drops shown data, shows the error screen at once instead of suspending on a chunk. Linaria styles in code the chunk and the route module share do not load, so shared styled pieces live in `src/app/components/`.
 
 ## Loading states
