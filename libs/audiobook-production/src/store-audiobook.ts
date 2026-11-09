@@ -14,6 +14,8 @@ export type Audiobook = {
   originalUrl: string;
   narrationDocument: NarrationDocument;
   speechConfig: SpeechConfig;
+  /** The canonical BCP 47 narration language, absent when the conversion has none. */
+  narrationLanguage?: string | undefined;
   /** Present only when a cover image is stored beside the manifest. */
   coverImage?: CoverImage | undefined;
 };
@@ -58,6 +60,7 @@ export type StoreOptions = {
   originalUrl: string;
   narrationDocument: NarrationDocument;
   speechConfig?: SpeechConfig;
+  narrationLanguage?: string;
   coverImage?: CoverImage;
 };
 
@@ -82,6 +85,10 @@ export const audiobookSchema = z.object({
       policyVersion: z.string().min(1),
     })
     .default(SPEECH_CONFIG),
+  narrationLanguage: z
+    .string()
+    .refine(isCanonicalLanguageTag, "Expected a canonical BCP 47 language tag")
+    .optional(),
   coverImage: coverImageSchema.optional(),
 });
 
@@ -94,6 +101,7 @@ export async function storeAudiobook({
   originalUrl,
   narrationDocument,
   speechConfig = SPEECH_CONFIG,
+  narrationLanguage,
   coverImage,
 }: StoreOptions): Promise<AudiobookReference> {
   const audiobook = audiobookSchema.parse({
@@ -101,6 +109,7 @@ export async function storeAudiobook({
     originalUrl,
     narrationDocument,
     speechConfig,
+    narrationLanguage,
     coverImage,
   });
   const body = JSON.stringify(audiobook);
@@ -143,4 +152,12 @@ export async function loadAudiobook({
   }
 
   return audiobookSchema.parse(JSON.parse(await storedManifest.text()));
+}
+
+function isCanonicalLanguageTag(tag: string): boolean {
+  try {
+    return Intl.getCanonicalLocales(tag)[0] === tag;
+  } catch {
+    return false;
+  }
 }

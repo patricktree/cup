@@ -22,7 +22,7 @@ type SelectionCompletionRequest = {
   tool: SelectionTool;
 };
 
-type SelectionCompletionOptions = {
+export type SelectionCompletionOptions = {
   reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
   maxTokens?: number;
   maxRetries?: number;
