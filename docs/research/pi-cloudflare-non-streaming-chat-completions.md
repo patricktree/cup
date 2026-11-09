@@ -2,7 +2,7 @@
 
 Research date: 2026-08-27
 
-Historical research: this note describes the Pi/Workers AI implementation and alternatives evaluated at that date. Its repository-specific recommendations are superseded by [the Gemini selection decision](../adr/0002-use-gemini-for-narration-content-selection.md). Production narration selection now uses the OpenAI SDK with Google AI Studio through Cloudflare AI Gateway in `libs/narration-content-selection/src/gemini-completion.ts`.
+Historical research: this note describes the Pi/Workers AI implementation and alternatives evaluated at that date. Its repository-specific recommendations are superseded by [the Gemini selection decision](../adr/0002-use-gemini-for-narration-content-selection.md). Production narration selection now uses the OpenAI SDK with Google AI Studio through Cloudflare AI Gateway in `libs/narration-source-analysis/src/gemini-completion.ts`.
 
 ## Question
 
@@ -16,7 +16,7 @@ No. Cloudflare supports non-streaming Chat Completions, but Pi's built-in text g
 
 Pi's `complete()` and `completeSimple()` methods can sound like non-streaming APIs because callers receive one final `AssistantMessage`. Internally, however, they call `stream()` or `streamSimple()` and await the accumulated stream result. The OpenAI Chat Completions adapter always sends `stream: true`.
 
-The custom adapter in `libs/narration-content-selection/src/production-narration-content-selection.ts` is therefore necessary if this application must use a non-SSE request with Pi's current model and message abstractions. Switching between Pi's built-in Cloudflare Workers AI and Cloudflare AI Gateway providers does not remove that need.
+The custom adapter in `libs/narration-source-analysis/src/production-narration-content-selection.ts` is therefore necessary if this application must use a non-SSE request with Pi's current model and message abstractions. Switching between Pi's built-in Cloudflare Workers AI and Cloudflare AI Gateway providers does not remove that need.
 
 ## Versions checked
 

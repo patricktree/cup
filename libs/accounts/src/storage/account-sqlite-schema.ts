@@ -51,6 +51,9 @@ export const accountConversions = sqliteTable(
     }).$type<AudiobookReference>(),
     // Set only for a ready conversion whose audiobook has a cover image; null otherwise.
     hasCoverImage: integer("has_cover_image", { mode: "boolean" }),
+    // The manifest's narration language, copied when the conversion became ready; null when the
+    // audiobook has none or was prepared before narration languages were recorded.
+    narrationLanguage: text("narration_language"),
     failureCategory: text("failure_category"),
     explanation: text(),
     // The conversion deletion marker: set when deletion was requested, it fences the conversion

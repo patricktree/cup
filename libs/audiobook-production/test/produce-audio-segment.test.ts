@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import {
   PermanentNarrationSynthesisError,
@@ -6,7 +6,10 @@ import {
   type ProduceOptions,
   type SpeechSynthesisAi,
 } from "#src/produce-audio-segment.ts";
-import { GEMINI_SPEECH_CONFIG, LEGACY_GEMINI_SPEECH_CONFIG } from "#src/speech-synthesis-config.ts";
+import {
+  GEMINI_SPEECH_CONFIG,
+  LEGACY_GEMINI_V3_SPEECH_CONFIG,
+} from "#src/speech-synthesis-config.ts";
 
 const CONVERSION_ID = "018f4d80-5b9e-7a43-9cf4-8e192b37cbd8";
 type SpeechSynthesisRun = ReturnType<SpeechSynthesisAi["gateway"]>["run"];
@@ -109,7 +112,7 @@ test.each(["streaming", "non-streaming"] as const)(
     };
 
     const segment = await produceAudioSegment({
-      speechConfig: LEGACY_GEMINI_SPEECH_CONFIG,
+      speechConfig: LEGACY_GEMINI_V3_SPEECH_CONFIG,
       ai: createSpeechSynthesisAi(run),
       bucket: createAudioSegmentBucket(),
       conversionId: CONVERSION_ID,
@@ -118,7 +121,7 @@ test.each(["streaming", "non-streaming"] as const)(
       synthesisResponseMode,
     });
 
-    expect(segment.speechConfig).toEqual(LEGACY_GEMINI_SPEECH_CONFIG);
+    expect(segment.speechConfig).toEqual(LEGACY_GEMINI_V3_SPEECH_CONFIG);
     expect(gatewayRequest).toMatchObject({
       query: {
         model: "gemini-3.1-flash-tts-preview",
@@ -248,6 +251,77 @@ test("marks invalid requests and unsupported audio formats as permanent", async 
   }).catch((caughtError: unknown) => caughtError);
 
   expect(unsupportedFormatError).toBeInstanceOf(PermanentNarrationSynthesisError);
+});
+
+test.each([
+  ["de-AT", "de-AT"],
+  // An unspeakable language is left out of the request but is still the narration language.
+  ["sv", "sv"],
+  [undefined, undefined],
+] as const)(
+  "records the narration language %s as the segment's synthesis language",
+  async (narrationLanguage, synthesisLanguage) => {
+    const bucket = createAudioSegmentBucket();
+    const put = vi.spyOn(bucket, "put");
+
+    await produceAudioSegment({
+      speechConfig: GEMINI_SPEECH_CONFIG,
+      ai: createSpeechSynthesisAi(async () => createAudioResponse()),
+      bucket,
+      conversionId: CONVERSION_ID,
+      sequence: 0,
+      narrationChunk: { text: "Gerald John, Alicia Prager, Sandra Schieder" },
+      ...(narrationLanguage === undefined ? {} : { narrationLanguage }),
+    });
+
+    expect(put.mock.calls[0]?.[2].customMetadata["synthesis-language"]).toBe(synthesisLanguage);
+  },
+);
+
+test.each([
+  ["de-AT", "de"],
+  ["de-AT", undefined],
+  [undefined, "de-AT"],
+] as const)(
+  "does not reuse a stored segment synthesized in %s for the narration language %s",
+  async (storedLanguage, narrationLanguage) => {
+    const options = {
+      speechConfig: GEMINI_SPEECH_CONFIG,
+      ai: createSpeechSynthesisAi(async () => createAudioResponse()),
+      bucket: createAudioSegmentBucket(),
+      conversionId: CONVERSION_ID,
+      sequence: 0,
+      narrationChunk: { text: "Gerald John, Alicia Prager, Sandra Schieder" },
+    };
+    await produceAudioSegment({
+      ...options,
+      ...(storedLanguage === undefined ? {} : { narrationLanguage: storedLanguage }),
+    });
+
+    await expect(
+      produceAudioSegment({
+        ...options,
+        ...(narrationLanguage === undefined ? {} : { narrationLanguage }),
+      }),
+    ).rejects.toThrow("identity conflicts");
+  },
+);
+
+test("reuses a stored segment synthesized in the same narration language", async () => {
+  const run = vi.fn<SpeechSynthesisRun>(async () => createAudioResponse());
+  const options = {
+    speechConfig: GEMINI_SPEECH_CONFIG,
+    ai: createSpeechSynthesisAi(run),
+    bucket: createAudioSegmentBucket(),
+    conversionId: CONVERSION_ID,
+    sequence: 0,
+    narrationChunk: { text: "Gerald John, Alicia Prager, Sandra Schieder" },
+    narrationLanguage: "de-AT",
+  };
+  const segment = await produceAudioSegment(options);
+
+  await expect(produceAudioSegment(options)).resolves.toEqual(segment);
+  expect(run).toHaveBeenCalledTimes(1);
 });
 
 function createSpeechSynthesisAi(run: SpeechSynthesisRun): SpeechSynthesisAi {

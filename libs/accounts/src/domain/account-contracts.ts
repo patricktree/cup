@@ -127,6 +127,8 @@ export const accountOutcomeSchema = z.discriminatedUnion("status", [
         .strict(),
       /** Recorded only when the audiobook has one, so outcomes without it keep their fingerprint. */
       hasCoverImage: z.literal(true).optional(),
+      /** The manifest's narration language (BCP 47), recorded only when the audiobook has one. */
+      narrationLanguage: z.string().min(1).optional(),
     })
     .strict(),
   z

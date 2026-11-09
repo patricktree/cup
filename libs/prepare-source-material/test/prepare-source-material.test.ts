@@ -130,7 +130,10 @@ test("waits for rendered narration content without requiring an h1", async () =>
             vi.unstubAllGlobals();
           }
         },
-        locator: () => ({ innerHTML: () => Promise.resolve(bodyHtml) }),
+        locator: () => ({
+          innerHTML: () => Promise.resolve(bodyHtml),
+          getAttribute: () => Promise.resolve(null),
+        }),
         title: () => Promise.resolve(documentTitle),
         close: () => Promise.resolve(),
       }),
@@ -537,7 +540,10 @@ test.each([
         },
         evaluate: async () => {},
         waitForFunction: async () => {},
-        locator: () => ({ innerHTML: async () => "<p>Source content</p>" }),
+        locator: () => ({
+          innerHTML: async () => "<p>Source content</p>",
+          getAttribute: async () => null,
+        }),
         title: async () => "Source title",
         close: async () => {},
       };
@@ -688,6 +694,7 @@ test("reads the metadata descriptions from the loaded page's head and body", asy
               <meta itemprop="description" content="Microdata meta description">
               <p itemprop="description">Microdata <b>text</b> description</p>
             `,
+        getAttribute: async () => null,
       }),
       title: async () => "Source title",
       close: async () => {},
@@ -724,6 +731,7 @@ test("reads the cover image declaration from the loaded page's head", async () =
           selector === "head"
             ? '<meta property="og:image" content="https://cdn.publisher.example/cover.jpg">'
             : "<p>Source content</p>",
+        getAttribute: async () => null,
       }),
       title: async () => "Source title",
       close: async () => {},
@@ -739,4 +747,98 @@ test("reads the cover image declaration from the loaded page's head", async () =
     coverImage: { url: "https://cdn.publisher.example/cover.jpg" },
     responseStatus: 200,
   });
+});
+
+function createDeclaringBrowser({
+  htmlLang,
+  headHtml,
+}: {
+  htmlLang: string | null;
+  headHtml: string;
+}): Browser {
+  return {
+    newPage: async () => ({
+      route: async () => {},
+      context: () => ({ addCookies: async () => {} }),
+      goto: async () => ({ status: () => 200 }),
+      evaluate: async () => {},
+      waitForFunction: async () => {},
+      locator: (selector) => ({
+        innerHTML: async () => (selector === "head" ? headHtml : "<p>Source content</p>"),
+        getAttribute: async (name) => (selector === "html" && name === "lang" ? htmlLang : null),
+      }),
+      title: async () => "Source title",
+      close: async () => {},
+    }),
+  };
+}
+
+test.each([
+  {
+    description: "both values",
+    htmlLang: "de-AT",
+    headHtml: '<meta property="og:locale" content="de_AT">',
+    declaredLanguage: { htmlLang: "de-AT", ogLocale: "de_AT" },
+  },
+  {
+    description: "only the html lang",
+    htmlLang: "en",
+    headHtml: '<meta property="og:title" content="A title">',
+    declaredLanguage: { htmlLang: "en" },
+  },
+  {
+    description: "only the og:locale",
+    htmlLang: null,
+    headHtml: '<meta property="og:locale" content="fr_FR">',
+    declaredLanguage: { ogLocale: "fr_FR" },
+  },
+  {
+    description: "malformed values unchanged",
+    htmlLang: "not a language!",
+    headHtml: '<meta property="og:locale" content="xx-YY_zz">',
+    declaredLanguage: { htmlLang: "not a language!", ogLocale: "xx-YY_zz" },
+  },
+])(
+  "reads the declared language from the loaded page: $description",
+  async ({ htmlLang, headHtml, declaredLanguage }) => {
+    const sourceMaterial = await prepareSourceMaterial({
+      browser: createDeclaringBrowser({ htmlLang, headHtml }),
+      url: SOURCE_URL,
+    });
+
+    expect(sourceMaterial.declaredLanguage).toEqual(declaredLanguage);
+  },
+);
+
+test.each([
+  { description: "no declarations", htmlLang: null, headHtml: "" },
+  {
+    description: "empty declarations",
+    htmlLang: "",
+    headHtml: '<meta property="og:locale" content="">',
+  },
+])("declares no language for a page with $description", async ({ htmlLang, headHtml }) => {
+  const sourceMaterial = await prepareSourceMaterial({
+    browser: createDeclaringBrowser({ htmlLang, headHtml }),
+    url: SOURCE_URL,
+  });
+
+  expect(sourceMaterial).toEqual({ html: "<p>Source content</p>", title: "Source title" });
+});
+
+test("takes the declared language from the source page load it keeps", async () => {
+  const sourceMaterial = await prepareSourceMaterial({
+    browser: UNUSED_BROWSER,
+    url: SOURCE_URL,
+    loadSourcePage: async ({ javaScriptEnabled }) => ({
+      bodyHtml: javaScriptEnabled
+        ? "<main><h1 data-cup-visible-headline>Source title</h1><p>Short.</p></main>"
+        : "<main><h1 data-cup-visible-headline>Source title</h1><p>The complete and much longer source text.</p></main>",
+      documentTitle: "Source title | Publisher",
+      declaredLanguage: { htmlLang: javaScriptEnabled ? "en-US" : "de-AT" },
+      responseStatus: 200,
+    }),
+  });
+
+  expect(sourceMaterial.declaredLanguage).toEqual({ htmlLang: "de-AT" });
 });

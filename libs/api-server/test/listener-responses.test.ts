@@ -100,7 +100,13 @@ const readyAccountConversion = {
   status: "ready",
   lastStartedPhase: "finalization",
   completedAtMs: 3_000,
-  outcome: { status: "ready", title: "A document", audiobookReference, hasCoverImage: true },
+  outcome: {
+    status: "ready",
+    title: "A document",
+    audiobookReference,
+    hasCoverImage: true,
+    narrationLanguage: "de-AT",
+  },
 };
 const failedAccountConversion = {
   conversionId: failedConversionId,
@@ -417,6 +423,13 @@ test("history leaves out internal outcome fields and signs cover URLs only for c
     { status: "failed", explanation: "The page could not be loaded." },
     null,
   ]);
+});
+
+test("history leaves out the narration language that operators see", async () => {
+  const response = await request("/api/account/conversions");
+
+  expect(response.status).toBe(200);
+  expect(await response.text()).not.toContain("narrationLanguage");
 });
 
 test("only a pending history item reports its preparation phase", async () => {

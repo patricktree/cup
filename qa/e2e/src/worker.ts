@@ -10,7 +10,10 @@ import {
   runPrepareAudiobookWorkflow,
   runAudioSegmentWorkflow,
 } from "@cup/create-audiobook-from-url-workflow";
-import { createFakeNarrationContentSelector } from "@cup/narration-content-selection/fake";
+import {
+  createFakeNarrationContentSelector,
+  createFakeNarrationLanguageDetector,
+} from "@cup/narration-source-analysis/fake";
 import { createControlledSourceMaterialPreparer } from "@cup/prepare-source-material/fake";
 import { RegistryDurableObject } from "@cup/registry";
 
@@ -58,6 +61,7 @@ export class PrepareAudiobookQaWorkflow extends WorkflowEntrypoint<Env, Conversi
             ? { failure: new NonRetryableError("Selection failed.") }
             : {},
         ),
+        detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: "en" }),
       },
     });
   }

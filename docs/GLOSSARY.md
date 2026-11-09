@@ -204,6 +204,12 @@ The language an audiobook is narrated in, decided once per conversion while its 
 
 _Avoid_: source language, page language, locale
 
+## declared language
+
+The language a source page declares for itself in its markup, through `<html lang>` and `og:locale`, taken as declared and possibly malformed or wrong. It is evidence for the narration language, not the narration language itself.
+
+_Avoid_: page language, source language, locale
+
 ## narration block
 
 A semantically coherent portion of narration text intended to be spoken continuously.

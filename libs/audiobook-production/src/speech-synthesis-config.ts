@@ -5,15 +5,24 @@ export type SpeechConfig = {
   policyVersion: string;
 };
 
+/** Policy 5 sends the narration language with every segment, when the model can speak it. */
 export const GEMINI_SPEECH_CONFIG = {
+  provider: "google-ai-studio",
+  model: "gemini-3.8-flash-lite-tts",
+  voice: "Charon",
+  policyVersion: "5",
+} as const satisfies SpeechConfig;
+
+// Resumed conversions retain the model and request policy they started with: policy 4 sends no
+// narration language, and policy 3 also wraps the text in a transcript instruction.
+export const LEGACY_GEMINI_V4_SPEECH_CONFIG = {
   provider: "google-ai-studio",
   model: "gemini-3.8-flash-lite-tts",
   voice: "Charon",
   policyVersion: "4",
 } as const satisfies SpeechConfig;
 
-// Resumed conversions retain the model and request policy they started with.
-export const LEGACY_GEMINI_SPEECH_CONFIG = {
+export const LEGACY_GEMINI_V3_SPEECH_CONFIG = {
   provider: "google-ai-studio",
   model: "gemini-3.1-flash-tts-preview",
   voice: "Charon",
@@ -27,6 +36,27 @@ export const ELEVENLABS_SPEECH_CONFIG = {
   voice: "ktkP7Nsj67dw2zcplQYt",
   policyVersion: "1",
 } as const satisfies SpeechConfig;
+
+/** Every speech configuration a stored audiobook manifest or audio segment may record. */
+export const KNOWN_SPEECH_CONFIGS = [
+  GEMINI_SPEECH_CONFIG,
+  LEGACY_GEMINI_V4_SPEECH_CONFIG,
+  LEGACY_GEMINI_V3_SPEECH_CONFIG,
+  ELEVENLABS_SPEECH_CONFIG,
+] as const satisfies readonly SpeechConfig[];
+
+/**
+ * Tells whether two speech configurations are the same by every field, as audio segment reuse
+ * compares them.
+ */
+export function isSameSpeechConfig(left: SpeechConfig, right: SpeechConfig): boolean {
+  return (
+    left.provider === right.provider &&
+    left.model === right.model &&
+    left.voice === right.voice &&
+    left.policyVersion === right.policyVersion
+  );
+}
 
 /** Change this assignment and redeploy to switch the backend provider. */
 export const SPEECH_CONFIG: SpeechConfig = { ...GEMINI_SPEECH_CONFIG };

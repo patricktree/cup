@@ -1,0 +1,17 @@
+[
+  {
+    "declaredLanguage": {
+      "htmlLang": "en"
+    },
+    "expectedLanguage": "en"
+  },
+  {
+    "expectedLanguage": "en"
+  },
+  {
+    "declaredLanguage": {
+      "htmlLang": "de-DE"
+    },
+    "expectedLanguage": "en"
+  }
+]

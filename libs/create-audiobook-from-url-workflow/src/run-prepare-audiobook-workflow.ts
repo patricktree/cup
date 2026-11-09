@@ -4,6 +4,7 @@ import { Temporal } from "temporal-polyfill";
 
 import {
   countNarrationTextCharactersBySegment,
+  getNarrationLanguageSupport,
   SPEECH_CONFIG,
   storeAudiobook,
   storeCoverImage,
@@ -17,11 +18,14 @@ import {
   type ConversionParams,
 } from "@cup/conversion-contracts";
 import { findRootCauseDescription } from "@cup/errors";
+import { createNarrationDocument } from "@cup/narration-document-creation";
 import type {
   NarrationContentSelectionResult,
+  NarrationLanguageDetectionInput,
+  NarrationLanguageDetectionResult,
+  NarrationLanguageDetectionRunner,
   SelectionChunkRunner,
-} from "@cup/narration-content-selection";
-import { createNarrationDocument } from "@cup/narration-document-creation";
+} from "@cup/narration-source-analysis";
 import type {
   CoverImageDeclaration,
   SourceMaterialPreparer,
@@ -85,6 +89,10 @@ export type PrepareAudiobookWorkflowServices = {
     sourceMaterialHtml: string,
     options: { conversionId: string; runChunk: SelectionChunkRunner },
   ): Promise<NarrationContentSelectionResult>;
+  detectNarrationLanguage: (
+    input: NarrationLanguageDetectionInput,
+    options: { conversionId: string; runDetection: NarrationLanguageDetectionRunner },
+  ) => Promise<NarrationLanguageDetectionResult>;
 };
 
 /** Runs a conversion through durable steps using explicitly supplied provider services. */
@@ -178,6 +186,19 @@ export async function runPrepareAudiobookWorkflow({
         throw new ContentLimitError();
       }
 
+      const { narrationLanguage } = await detectNarrationLanguage({
+        conversionId,
+        detect: services.detectNarrationLanguage,
+        input: {
+          sourceTitle: sourceMaterial.title,
+          sourceMaterialHtml: selectedSourceMaterialHtml,
+          ...(sourceMaterial.declaredLanguage === undefined
+            ? {}
+            : { declaredLanguage: sourceMaterial.declaredLanguage }),
+        },
+        step,
+      });
+
       const coverImage = await coverImagePromise;
       const audiobookReference = await step.do(
         "store audiobook",
@@ -192,6 +213,7 @@ export async function runPrepareAudiobookWorkflow({
             originalUrl: sourceUrl,
             narrationDocument,
             speechConfig: SPEECH_CONFIG,
+            ...(narrationLanguage === undefined ? {} : { narrationLanguage }),
             ...(coverImage === undefined ? {} : { coverImage }),
           });
         },
@@ -204,6 +226,7 @@ export async function runPrepareAudiobookWorkflow({
           title: sourceMaterial.title,
           audiobookReference,
           ...(coverImage === undefined ? {} : { hasCoverImage: true as const }),
+          ...(narrationLanguage === undefined ? {} : { narrationLanguage }),
           measurements: {
             narrationTextCharacters,
             narrationChunks: synchronizationUnits.length,
@@ -323,6 +346,63 @@ async function storeDeclaredCoverImage({
   }
 
   return undefined;
+}
+
+/**
+ * Decides the narration language in one retryable step. Detection never rejects: when the step's
+ * retries are exhausted, or the answer is unusable, it falls back to the declared language or to
+ * none, and the fallback is logged. A narration language the speech model cannot speak stays the
+ * narration language and is logged on its own, also when it came from a fallback; a speech provider
+ * that ignores the narration language, such as ElevenLabs, logs nothing.
+ */
+async function detectNarrationLanguage({
+  conversionId,
+  detect,
+  input,
+  step,
+}: {
+  conversionId: string;
+  detect: PrepareAudiobookWorkflowServices["detectNarrationLanguage"];
+  input: NarrationLanguageDetectionInput;
+  step: WorkflowStep;
+}): Promise<NarrationLanguageDetectionResult> {
+  const result = await detect(input, {
+    conversionId,
+    runDetection: (detectLanguage) =>
+      step.do("detect narration language", AI_STEP_CONFIG, detectLanguage),
+  });
+
+  if (result.fallbackReason !== undefined) {
+    console.warn(
+      JSON.stringify({
+        event: "narration-language-fallback",
+        conversionId,
+        declaredLanguage: input.declaredLanguage,
+        narrationLanguage: result.narrationLanguage,
+        reason: result.fallbackReason,
+        ...(result.fallbackReason === "detector-error"
+          ? { error: findRootCauseDescription(result.detectorError) }
+          : {}),
+      }),
+    );
+  }
+
+  if (
+    result.narrationLanguage !== undefined &&
+    getNarrationLanguageSupport(result.narrationLanguage, SPEECH_CONFIG) === "unspeakable"
+  ) {
+    console.warn(
+      JSON.stringify({
+        event: "narration-language-unspeakable",
+        conversionId,
+        narrationLanguage: result.narrationLanguage,
+        provider: SPEECH_CONFIG.provider,
+        model: SPEECH_CONFIG.model,
+      }),
+    );
+  }
+
+  return result;
 }
 
 function logMissingCoverImage(conversionId: string, reason: string) {

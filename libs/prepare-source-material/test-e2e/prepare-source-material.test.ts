@@ -7,6 +7,7 @@ import type { DefaultTreeAdapterMap } from "parse5";
 import { type CoverImageBrowser, loadCoverImage } from "#src/load-cover-image.ts";
 import {
   type Browser as SourceMaterialBrowser,
+  type DeclaredLanguage,
   prepareLoadedSourcePage,
   prepareSourceMaterial,
   loadPublicSourcePage,
@@ -14,6 +15,8 @@ import {
 
 type SourcePageFixture = {
   coverImage: { url: string; alternativeText?: string };
+  // The declared language of the kept load, as the page declares it; undefined when it declares none.
+  declaredLanguage: DeclaredLanguage | undefined;
   snapshotFilename: string;
   stabilizeSourceMaterial: (html: string) => string;
   // The source subtitle that preparation detects and removes from the source material, if any.
@@ -34,6 +37,7 @@ const SOURCE_PAGES: readonly SourcePageFixture[] = [
       url: "https://www-cdn.anthropic.com/images/4zrzovbb/website/412be842c5c6bae6b4bcd515c191b0aa5015e05f-2400x1260.png",
       alternativeText: "Demystifying evals for AI agents",
     },
+    declaredLanguage: { htmlLang: "en" },
     snapshotFilename: "anthropic.html",
     subtitle:
       "The capabilities that make agents useful also make them difficult to evaluate. The strategies that work across deployments combine techniques to match the complexity of the systems they measure.",
@@ -50,6 +54,7 @@ const SOURCE_PAGES: readonly SourcePageFixture[] = [
     coverImage: {
       url: "https://blog.cloudflare.com/_emdash/api/media/file/01KZBWYMKT77FDVB07PHA3R5WM.png",
     },
+    declaredLanguage: { htmlLang: "en-us" },
     snapshotFilename: "cloudflare.html",
     stabilizeSourceMaterial: (html: string) => html,
     title:
@@ -61,6 +66,8 @@ const SOURCE_PAGES: readonly SourcePageFixture[] = [
     coverImage: {
       url: "https://images.gatesnotes.com/12514eb8-7b51-008e-41a9-512542cf683b/f93f0cc8-be6d-4e33-870b-ab6d546576f1/AI-Article-08.19.2026-Share-Image-1200x630.jpg",
     },
+    // Only the rendered head declares a language.
+    declaredLanguage: { ogLocale: "en_US" },
     snapshotFilename: "gates-notes.html",
     subtitle: "We need a plan to ensure that the good outweighs the bad.",
     stabilizeSourceMaterial: (html: string) =>
@@ -76,6 +83,7 @@ const SOURCE_PAGES: readonly SourcePageFixture[] = [
     coverImage: {
       url: "https://i.ds.at/kJMDLg/rs:fill:1200:600/plain/lido-images/2026/10/27/4e361b46-b4dd-454e-a75b-335dbb5ac943.jpg",
     },
+    declaredLanguage: { htmlLang: "de-AT" },
     snapshotFilename: "derstandard.html",
     subtitle:
       "Medienberichten zufolge wird das Modell der Tochtermarke Yangwang Anfang November in Dubai präsentiert",
@@ -97,6 +105,7 @@ const SOURCE_PAGES: readonly SourcePageFixture[] = [
       url: "https://developers.openai.com/images/blog/maintaining-software-with-the-gpt-6-family/cover.webp",
       alternativeText: "Maintaining software with the GPT-6 family | OpenAI Developers",
     },
+    declaredLanguage: { htmlLang: "en" },
     snapshotFilename: "openai-developers.html",
     subtitle:
       "How OpenAI’s Core Experimentation team uses Codex to remove unused code, clean up stale experiments, and improve CI.",
@@ -109,6 +118,7 @@ const SOURCE_PAGES: readonly SourcePageFixture[] = [
     coverImage: {
       url: "https://www.washingtonpost.com/wp-apps/imrs.php?src=https://cloudfront-us-east-1.images.arcpublishing.com/wapo/FDOM3ZHHDNC5HBXBMB3JHXI5JU.png&w=1440",
     },
+    declaredLanguage: { htmlLang: "en" },
     snapshotFilename: "washington-post.html",
     subtitle:
       "Polls show tight races in a handful of states, making it hard to tell whether Democrats or Republicans will prevail next week.",
@@ -127,6 +137,7 @@ const SOURCE_PAGES: readonly SourcePageFixture[] = [
     coverImage: {
       url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b8/Kitesurfing_Sotavento.jpg/960px-Kitesurfing_Sotavento.jpg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=thumbnail",
     },
+    declaredLanguage: { htmlLang: "en" },
     snapshotFilename: "wikipedia.html",
     stabilizeSourceMaterial: (html: string) => html,
     title: "Kiteboarding",
@@ -138,6 +149,7 @@ const SOURCE_PAGES: readonly SourcePageFixture[] = [
 
 for (const {
   coverImage,
+  declaredLanguage,
   snapshotFilename,
   stabilizeSourceMaterial,
   subtitle,
@@ -159,6 +171,7 @@ for (const {
       expect(staticPage.documentTitle).toBe("");
       // The shell declares no metadata; the cover image exists only in the rendered head.
       expect(staticPage.coverImage).toBeUndefined();
+      expect(staticPage.declaredLanguage).toBeUndefined();
     }
 
     const sourceMaterial = await prepareSourceMaterial({ browser, url });
@@ -172,6 +185,7 @@ for (const {
       ),
     ).toEqual([]);
     expect(sourceMaterial.coverImage).toEqual(coverImage);
+    expect(sourceMaterial.declaredLanguage).toEqual(declaredLanguage);
     expect(sourceMaterial.title).toBe(title);
     expect(sourceMaterial.subtitle).toBe(subtitle);
     if (subtitle !== undefined) {

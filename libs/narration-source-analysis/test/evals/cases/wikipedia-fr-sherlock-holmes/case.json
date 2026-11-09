@@ -1,0 +1,4 @@
+{
+  "description": "Selects the article from the prepared https://fr.wikipedia.org/wiki/Sherlock_Holmes source page, captured 2026-11-09, cut before its Notes et références and Voir aussi sections. A third narration language, the counterpart to the English Sherlock Holmes case.",
+  "tags": ["long-form", "wikipedia", "narration-language"]
+}

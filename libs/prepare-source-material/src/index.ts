@@ -2,6 +2,7 @@ export {
   type SourcePageCookie,
   type Browser,
   type CoverImageDeclaration,
+  type DeclaredLanguage,
   type SourceMaterial,
   type SourceMaterialPreparer,
   type LoadSourcePageOptions,
