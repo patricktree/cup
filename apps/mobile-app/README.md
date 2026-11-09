@@ -40,7 +40,7 @@ adb shell am start -n audio.cup.app/.MainActivity
 
 The debug APK is written to `apps/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk`. Confirm the landing page renders and the app can close and reopen without a crash.
 
-The [mobile E2E tests](../../qa/mobile-e2e/README.md) launch the debug build on their own emulator against a local test Worker and check that it launches to the landing page, signs in, keeps or ends the session across a relaunch, and handles a cancelled Google sign-in.
+The [mobile E2E tests](../../qa/mobile-e2e/README.md) launch the debug build on their own emulator against a local test Worker and check that it launches to the landing page, signs in, keeps or ends the session across a relaunch, handles a cancelled Google sign-in, fills a conversion form from a shared URL, and handles the back button. Cup's presence in the Android Sharesheet when sharing from another app stays a manual check: the tests send the share intent directly.
 
 ### Debug launch arguments
 

@@ -90,12 +90,32 @@ export class AndroidAppDevice implements AppDevice {
       "-S",
       "-n",
       MAIN_ACTIVITY,
+      ...launchArgumentExtras(launchArguments),
+    ]);
+  }
+
+  /**
+   * Shares `text` to Cup as another app's Sharesheet does: an explicit `ACTION_SEND` intent of type
+   * `text/plain` to Cup's main activity, with the text in `android.intent.extra.TEXT`. A running
+   * Cup receives it as a new intent; otherwise the intent starts Cup with the launch arguments.
+   */
+  async share(text: string, launchArguments: AndroidLaunchArguments): Promise<void> {
+    this.lastLaunchArguments = launchArguments;
+    await this.adb([
+      "shell",
+      "am",
+      "start",
+      "-W",
+      "-n",
+      MAIN_ACTIVITY,
+      "-a",
+      "android.intent.action.SEND",
+      "-t",
+      "text/plain",
       "--es",
-      API_ORIGIN_EXTRA,
-      launchArguments.apiOrigin,
-      ...(launchArguments.realGoogleSignIn === true
-        ? ["--ez", REAL_GOOGLE_SIGN_IN_EXTRA, "true"]
-        : []),
+      "android.intent.extra.TEXT",
+      text,
+      ...launchArgumentExtras(launchArguments),
     ]);
   }
 
@@ -122,6 +142,34 @@ export class AndroidAppDevice implements AppDevice {
   async focusedPackage(): Promise<string> {
     await this.driver.switchContext("NATIVE_APP");
     return this.driver.getCurrentPackage();
+  }
+
+  /** Whether Cup's process runs and whether it is in the foreground. */
+  async appState(): Promise<AndroidAppState> {
+    await this.driver.switchContext("NATIVE_APP");
+    const state = await this.driver.queryAppState(APP_PACKAGE);
+    return APP_STATES[state] ?? `unknown (${String(state)})`;
+  }
+
+  /** Brings a running Cup back to the foreground, as tapping its launcher icon does. */
+  async bringToForeground(): Promise<void> {
+    await this.driver.switchContext("NATIVE_APP");
+    await this.driver.activateApp(APP_PACKAGE);
+  }
+
+  /**
+   * Waits until the on-screen keyboard is closed, which the system back button would otherwise
+   * close first. The session stays in the context it was in.
+   */
+  async waitForKeyboardHidden(): Promise<void> {
+    const context = await this.driver.getContext();
+    await this.driver.switchContext("NATIVE_APP");
+    await waitFor(
+      "the on-screen keyboard to close",
+      async () => ((await this.driver.isKeyboardShown()) ? undefined : true),
+      10_000,
+    );
+    await this.driver.switchContext(typeof context === "string" ? context : context.id);
   }
 
   /**
@@ -172,8 +220,37 @@ export class AndroidAppDevice implements AppDevice {
   }
 
   private async adb(args: readonly string[]): Promise<void> {
-    await run(this.target.adb, ["-s", this.target.serial, ...args]);
+    // `adb shell` joins its arguments into one command line for the device's shell, so each one is
+    // quoted for that shell, such as shared text with spaces, `&` or `#`.
+    const deviceArgs =
+      args[0] === "shell" ? ["shell", ...args.slice(1).map(quoteForDeviceShell)] : args;
+    await run(this.target.adb, ["-s", this.target.serial, ...deviceArgs]);
   }
+}
+
+export type AndroidAppState = "not running" | "background" | "foreground" | `unknown (${string})`;
+
+/** Appium's `queryAppState` values that UiAutomator2 reports. */
+const APP_STATES: Partial<Record<number, AndroidAppState>> = {
+  1: "not running",
+  3: "background",
+  4: "foreground",
+};
+
+function launchArgumentExtras(launchArguments: AndroidLaunchArguments): string[] {
+  return [
+    "--es",
+    API_ORIGIN_EXTRA,
+    launchArguments.apiOrigin,
+    ...(launchArguments.realGoogleSignIn === true
+      ? ["--ez", REAL_GOOGLE_SIGN_IN_EXTRA, "true"]
+      : []),
+  ];
+}
+
+/** Leaves plain words as they are and wraps anything else in single quotes. */
+function quoteForDeviceShell(arg: string): string {
+  return /^[\w%+=:,./-]+$/u.test(arg) ? arg : `'${arg.replaceAll("'", String.raw`'\''`)}'`;
 }
 
 /** For platform-only specs in `test/android/`, which run on the Android project only. */

@@ -63,6 +63,12 @@ The suite never signs in with real Google. Each test's fake auth provider listen
 
 One Android test launches with the real plugin (`realGoogleSignIn: true`) on the account-less emulator, taps "Continue with Google", waits until Google Play services' add-account screen is in front and has rendered Google's sign-in page, presses Back and checks that Cup's landing page can start another sign-in.
 
+## Share intake and the back button (Android)
+
+[`test/android/share.test.ts`](test/android/share.test.ts) shares text to Cup the way another app's Sharesheet does: `AndroidAppDevice.share()` sends an explicit `ACTION_SEND` intent of type `text/plain` with `adb` to Cup's main activity, with the text in `android.intent.extra.TEXT` and the launch arguments as extras, so a share that starts Cup reaches the test Worker too. No real Sharesheet is driven. Signed in, a share fills the Add dialog's URL field whether Cup was force-stopped or running, a second share replaces the first, `&`, `+` and a `#fragment` arrive unchanged, and a URL is picked out of surrounding text; text without a URL and a `cup.audio` link are ignored, which passes when Cup stays on Recents with no form open for a few seconds. Signed out, a share fills the landing page's start form. Every share test checks that the Worker received no request starting a conversion after the share.
+
+[`test/android/back-button.test.ts`](test/android/back-button.test.ts) relaunches a signed-in Cup so Recents is the first screen. Back closes the Add dialog and leaves a track's page for Recents; on Recents, Back puts Cup in the background with its page kept, which the test checks by bringing Cup back to the foreground. The Add dialog focuses its URL field, which opens the on-screen keyboard, and Android's first Back closes an open keyboard instead of reaching Cup, so the test leaves the field and waits for the keyboard to close before pressing Back.
+
 ## Layout
 
 - [`src/app-device.ts`](src/app-device.ts): the device-control interface every spec uses. Platform-only steps live on the platform's class, such as [`AndroidAppDevice`](src/android/android-app-device.ts).
