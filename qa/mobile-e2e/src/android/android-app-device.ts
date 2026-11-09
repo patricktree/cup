@@ -14,7 +14,17 @@ const APP_PACKAGE = "audio.cup.app";
 const MAIN_ACTIVITY = `${APP_PACKAGE}/.MainActivity`;
 /** Read only by the debug build's `TestApiOrigin`. */
 const API_ORIGIN_EXTRA = "cupTestApiOrigin";
+/** Read only by the debug build's `DebugApplication`. */
+const REAL_GOOGLE_SIGN_IN_EXTRA = "cupTestRealGoogleSignIn";
 const WEBVIEW_CONTEXT = `WEBVIEW_${APP_PACKAGE}`;
+
+export type AndroidLaunchArguments = LaunchArguments & {
+  /**
+   * Keeps the real Google sign-in plugin, which opens Google's own screens, instead of the debug
+   * build's fake that signs in against the fake auth provider.
+   */
+  readonly realGoogleSignIn?: boolean;
+};
 
 /** Opens an Appium session on the run's emulator, addressed by serial, without launching Cup. */
 export async function openAndroidAppDevice(target: AndroidTarget): Promise<AndroidAppDevice> {
@@ -49,7 +59,7 @@ export class AndroidAppDevice implements AppDevice {
   readonly platform = "android";
   private readonly target: AndroidTarget;
   private readonly driver: WebdriverIO.Browser;
-  private lastLaunchArguments: LaunchArguments | undefined;
+  private lastLaunchArguments: AndroidLaunchArguments | undefined;
 
   constructor(target: AndroidTarget, driver: WebdriverIO.Browser) {
     this.target = target;
@@ -64,7 +74,7 @@ export class AndroidAppDevice implements AppDevice {
     await this.adb(["reverse", "--remove", `tcp:${port}`]);
   }
 
-  async launch(launchArguments: LaunchArguments): Promise<void> {
+  async launch(launchArguments: AndroidLaunchArguments): Promise<void> {
     this.lastLaunchArguments = launchArguments;
     // `-S` force-stops a running Cup first, so every launch is a cold start.
     await this.adb([
@@ -78,6 +88,9 @@ export class AndroidAppDevice implements AppDevice {
       "--es",
       API_ORIGIN_EXTRA,
       launchArguments.apiOrigin,
+      ...(launchArguments.realGoogleSignIn === true
+        ? ["--ez", REAL_GOOGLE_SIGN_IN_EXTRA, "true"]
+        : []),
     ]);
   }
 
@@ -88,12 +101,27 @@ export class AndroidAppDevice implements AppDevice {
     await this.launch(this.lastLaunchArguments);
   }
 
+  async clearAppData(): Promise<void> {
+    await this.adb(["shell", "pm", "clear", APP_PACKAGE]);
+  }
+
   async terminate(): Promise<void> {
     await this.adb(["shell", "am", "force-stop", APP_PACKAGE]);
   }
 
   async background(): Promise<void> {
     await this.adb(["shell", "input", "keyevent", "KEYCODE_HOME"]);
+  }
+
+  /** The package of the app in the foreground, such as Google Play services over Cup. */
+  async focusedPackage(): Promise<string> {
+    await this.driver.switchContext("NATIVE_APP");
+    return this.driver.getCurrentPackage();
+  }
+
+  /** Presses the system back button. */
+  async pressBack(): Promise<void> {
+    await this.adb(["shell", "input", "keyevent", "KEYCODE_BACK"]);
   }
 
   async webView(): Promise<WebdriverIO.Browser> {
@@ -119,4 +147,12 @@ export class AndroidAppDevice implements AppDevice {
   private async adb(args: readonly string[]): Promise<void> {
     await run(this.target.adb, ["-s", this.target.serial, ...args]);
   }
+}
+
+/** For platform-only specs in `test/android/`, which run on the Android project only. */
+export function asAndroidAppDevice(device: AppDevice): AndroidAppDevice {
+  if (!(device instanceof AndroidAppDevice)) {
+    throw new Error(`Expected the Android device, got ${device.platform}.`);
+  }
+  return device;
 }

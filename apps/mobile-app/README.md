@@ -40,7 +40,7 @@ adb shell am start -n audio.cup.app/.MainActivity
 
 The debug APK is written to `apps/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk`. Confirm the landing page renders and the app can close and reopen without a crash.
 
-The [mobile E2E tests](../../qa/mobile-e2e/README.md) launch the debug build on their own emulator against a local test Worker and check that it launches to the landing page.
+The [mobile E2E tests](../../qa/mobile-e2e/README.md) launch the debug build on their own emulator against a local test Worker and check that it launches to the landing page, signs in, keeps or ends the session across a relaunch, and handles a cancelled Google sign-in.
 
 ### Debug launch arguments
 
@@ -53,6 +53,16 @@ adb shell am start -n audio.cup.app/.MainActivity --es cupTestApiOrigin http://l
 The value must be exactly `http://localhost:<port>`; any other value stops the app at launch with an `IllegalArgumentException` naming the argument, so a broken test setup never reaches production. Without the extra, a debug build uses `https://cup.audio` as before. Use `adb reverse tcp:<port> tcp:<port>` to make a port on your Mac reachable at `localhost` on the device.
 
 Only the debug source set (`android/app/src/debug`) handles the argument: before Capacitor loads the page, it sets the global `window.cupTestApiOrigin` that the web app's `apiOrigin()` reads, and lets the `https://localhost` page load `http://localhost` media. The same source set allows plain HTTP to `localhost` and nowhere else. The argument needs Android 10 (API 29) or later, where activity pre-creation callbacks exist. Release builds contain none of this.
+
+With the test origin, the debug build also replaces the native Google sign-in plugin with a fake of the same name (`FakeGoogleSignInPlugin`, debug sources only). Its `signIn` asks the test Worker's fake auth provider, found as the `supabaseUrl` of the Worker's auth configuration, for an ID token carrying the hashed nonce it was given, so the web app's unchanged sign-in, Secure Storage and the Worker's token check run without Google. A debug build launched without the test origin keeps the real plugin and signs in with real Google.
+
+The second launch argument, the boolean extra `cupTestRealGoogleSignIn`, keeps the real plugin under the test origin, so a test can open Google's real add-account screen:
+
+```sh
+adb shell am start -n audio.cup.app/.MainActivity --es cupTestApiOrigin http://localhost:8787 --ez cupTestRealGoogleSignIn true
+```
+
+It has no effect without `cupTestApiOrigin`.
 
 ## iOS
 

@@ -9,7 +9,7 @@ This package drives the debug build of the Android shell on an emulator with App
   - Android SDK Platform-Tools, Android Emulator, and Android SDK Command-line Tools (latest)
   - SDK platform 36 and the system image `system-images;android-36;google_apis;arm64-v8a`
 - Java 21, with `JAVA_HOME` pointing to it. Android Studio includes one at `/Applications/Android Studio.app/Contents/jbr/Contents/Home`.
-- Internet access on the first run, for the Appium driver and Chromedriver downloads
+- Internet access on the first run, for the Appium driver and Chromedriver downloads, and on every run for the Android add-account test, which opens Google's real sign-in screen through Google Play services
 
 The suite finds the SDK at `ANDROID_HOME`, then `ANDROID_SDK_ROOT`, then Android Studio's default `~/Library/Android/sdk`. A preflight check fails the run before any device starts, naming each missing tool and how to install it.
 
@@ -47,6 +47,14 @@ The suite launches the installed debug build with the intent extra `cupTestApiOr
 ## Cost and network boundary
 
 The [test Worker's cost and network boundary](../test-worker/README.md#cost-and-network-boundary) applies to this suite. The fake auth provider stands in for Google and Supabase sign-in.
+
+## Sign-in
+
+The suite never signs in with real Google. Each test's fake auth provider listens at `http://localhost:<port>` on both loopback addresses and issues tokens for that origin, which the test Worker gets as its `SUPABASE_URL`; `adb reverse` makes its port reachable on the emulator. On Android, the debug build replaces the Google sign-in plugin with a [fake](../../apps/mobile-app/README.md#debug-launch-arguments) that asks the fake auth provider for an ID token, so the sign-in tests cover the Android adapter, Secure Storage and the Worker's token check, not Google. The Worker's `LOCAL_TEST_ACCOUNT_*` stay empty ([ADR 0012](../../docs/adr/0012-offer-a-local-test-account-instead-of-google-in-development.md)'s account stays out).
+
+[`src/journeys.ts`](src/journeys.ts) holds the shared WebView journeys: `signInFromLandingPage` starts a conversion from the landing page and signs in with "Continue with Google". The web app signs out only when an account is scheduled for deletion, so the signed-out relaunch test schedules one.
+
+One Android test launches with the real plugin (`realGoogleSignIn: true`) on the account-less emulator, taps "Continue with Google", checks that Google Play services' add-account screen is in front, presses Back and checks that Cup's landing page can start another sign-in.
 
 ## Layout
 
