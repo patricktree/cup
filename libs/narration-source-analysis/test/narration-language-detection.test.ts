@@ -54,7 +54,12 @@ test("takes the region from og:locale in its underscore form when <html lang> is
 test.each([
   [{ htmlLang: "de-at" }, "de-DE"],
   [{ ogLocale: "de_AT" }, "de-DE"],
+  [{ htmlLang: "de-Latn-AT" }, "de-DE"],
+  [{ htmlLang: "de-AT-1996" }, "de-DE"],
+  [{ htmlLang: "de-CH-u-co-phonebk" }, "de-DE"],
   [{ htmlLang: "en" }, "en-GB"],
+  [{ htmlLang: "en-Latn" }, "en-GB"],
+  [{ htmlLang: "en-Latn-US" }, "en-US"],
   [{ htmlLang: "en-US" }, "en-US"],
   [{ htmlLang: "fr-CA" }, "fr-CA"],
 ] as const)(
