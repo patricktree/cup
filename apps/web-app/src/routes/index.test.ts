@@ -11,6 +11,15 @@ test("renders landing", async ({ mount }) => {
   await expect(component).toHaveScreenshot("landing.png");
 });
 
+test("the focused URL input shows only its wavy rule, without a focus ring", async ({ mount }) => {
+  const component = await mount("routes/index/LandingPage");
+  const input = component.getByRole("textbox", { name: "URL" });
+  await input.focus();
+  await expect(input).toBeFocused();
+  await expect(input).toHaveCSS("outline-style", "none");
+  await expect(component).toHaveScreenshot("landing-url-input-focused.png");
+});
+
 test("renders sign-in dialog", async ({ mount, page }) => {
   await mount("routes/index/SignIn");
   await expect(
