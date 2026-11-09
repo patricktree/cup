@@ -1,4 +1,4 @@
 {
-  "description": "Selects the article from the full prepared https://de.wikipedia.org/wiki/Ich_bin_ein_Berliner source page, captured 2026-11-09. German prose quoting whole English sentences; its narration language is German.",
+  "description": "Selects the article from the prepared https://de.wikipedia.org/wiki/Ich_bin_ein_Berliner source page, captured 2026-11-09, cut before its Literatur, Weblinks and Anmerkungen sections. German prose quoting whole English sentences; its narration language is German.",
   "tags": ["long-form", "wikipedia", "narration-language", "mixed-language"]
 }

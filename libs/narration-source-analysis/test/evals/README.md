@@ -26,6 +26,8 @@ Put the title returned by source material preparation in `source-title.txt` and 
 
 `input.html` has the prepared shape that content selection receives in production. When the page has a visible headline, preparation cuts everything before the headline, the headline itself, and the source subtitle element, so `input.html` contains none of them. Derive a new case's `input.html` from what `prepareLoadedSourcePage` in `libs/prepare-source-material` returns for the page.
 
+A golden must be the output the production candidate gives on every run. When selection wavers over a part of the page the case is not about, cut that part from `input.html` and say so in the case's `case.json` description. The German and French Wikipedia cases test narration language detection, so their back matter (bibliography, external links, references) is cut: selection included it in some runs and left it out in others.
+
 Put the best synchronization units in `expected.json`. The golden is a JSON array containing each unit's `id` and `narrationText`. It opens with the source title as unit `narration-unit-0001`; with a source subtitle, the source subtitle follows as unit `narration-unit-0002` and the selected content starts at `narration-unit-0003`.
 
 Put the case's narration language scenarios in `narration-language.json`, as described in [narration language scenarios](#narration-language-scenarios).
