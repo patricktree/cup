@@ -104,6 +104,8 @@ The iOS app bundles `CupShare.appex`, displayed as **Cup** in Safari and Chrome'
 
 The handoff uses `audio.cup.app://share?url=<encoded-url>`, the app's only URL scheme. The URL prefills a conversion form as on [Android](#links-and-sharing), and Cup links are ignored there too; a URL still pending in memory is discarded when the app closes.
 
+The app uses the UIScene lifecycle, which iOS 27 requires: an app built with the iOS 27 SDK that keeps the app-delegate lifecycle stops at launch. [`SceneDelegate`](ios/App/App/SceneDelegate.swift) receives incoming URLs, both at a cold start and while Cup runs, and hands them to Capacitor's `SceneDelegateProxy`, which passes them on to the App plugin's `appUrlOpen` event and launch URL.
+
 The extension uses the same responder-chain URL-opening approach as Chromium, calling `openURL:options:completionHandler:` dynamically. Apple does not support this handoff from Share Extensions; test it after iOS updates. A failed handoff stays in the extension with an error and retry button. The extension does not start conversions or access session cookies.
 
 Build the App scheme with a local `DEVELOPMENT_TEAM` override; it builds, signs, and embeds the extension. Both bundle identifiers need provisioning: `audio.cup.app` and `audio.cup.app.share`. Verify Safari and Chrome sharing with Cup terminated and already running, cancellation, repeated shares, URLs containing `&`, `+`, or fragments, and that a shared trial link is ignored. If Cup is hidden, look under More in the Share Sheet's app row.
