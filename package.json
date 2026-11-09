@@ -42,7 +42,7 @@
     "test:e2e:update": "docker pull mcr.microsoft.com/playwright:v1.65.0-noble && pnpm run build && pnpm --filter '@cup/e2e' test:e2e:update",
     "test:resend-live": "pnpm --filter '@cup/resend-stub' test:resend-live",
     "validate": "pnpm run validate:fast && pnpm run validate:extended",
-    "validate:evals": "pnpm --filter '@cup/narration-content-selection' eval",
+    "validate:evals": "pnpm --filter '@cup/narration-source-analysis' eval",
     "validate:extended": "pnpm run brand-assets:check && pnpm run zizmor && pnpm run test:e2e",
     "validate:fast": "pnpm run env:check && pnpm run submodule:check && pnpm run format:check && pnpm run docs:check && pnpm run boundaries && turbo run turbo:build turbo:lint turbo:test --output-logs=errors-only && pnpm run declutter",
     "validate:update-snapshots": "pnpm run env:check && pnpm run submodule:check && pnpm run format:check && pnpm run docs:check && pnpm run boundaries && turbo run turbo:build turbo:lint && pnpm run declutter && turbo run turbo:test --filter='!@cup/web-app' && pnpm --filter '@cup/web-app' test:components:update && pnpm run brand-assets:check && pnpm run zizmor && pnpm run test:e2e:update && pnpm run test:e2e:source-material",

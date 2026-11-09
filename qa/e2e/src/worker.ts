@@ -10,7 +10,7 @@ import {
   runPrepareAudiobookWorkflow,
   runAudioSegmentWorkflow,
 } from "@cup/create-audiobook-from-url-workflow";
-import { createFakeNarrationContentSelector } from "@cup/narration-content-selection/fake";
+import { createFakeNarrationContentSelector } from "@cup/narration-source-analysis/fake";
 import { createControlledSourceMaterialPreparer } from "@cup/prepare-source-material/fake";
 import { RegistryDurableObject } from "@cup/registry";
 

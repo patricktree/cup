@@ -24,7 +24,7 @@ import type { AccountDurableObject } from "@cup/accounts";
 import { loadAudiobook, type SpeechSynthesisAi } from "@cup/audiobook-production";
 import { createFakeSpeechSynthesisAi } from "@cup/audiobook-production/fake";
 import type { ConversionGrantDurableObject } from "@cup/conversion-grants";
-import { createFakeNarrationContentSelector } from "@cup/narration-content-selection/fake";
+import { createFakeNarrationContentSelector } from "@cup/narration-source-analysis/fake";
 import type { CoverImageLoader } from "@cup/prepare-source-material";
 import { createControlledSourceMaterialPreparer } from "@cup/prepare-source-material/fake";
 
