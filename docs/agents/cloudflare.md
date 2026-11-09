@@ -16,7 +16,7 @@ Narration selection and speech synthesis use Google AI Studio through AI Gateway
 
 ## Provider rate limits
 
-AI Gateway authenticates to Google with a Google AI Studio key stored in the gateway, so the limits of that key’s Google project apply. Google counts them per project, across every Cup user, as requests per minute, input tokens per minute, and requests per day, plus a spend limit per rolling 10 minutes on paid tiers. The gateway adds limits only if rate limiting is configured on it.
+AI Gateway authenticates to Google with a Google AI Studio key stored in the gateway, so the limits of that key’s Google project apply. Google counts them per project, across every Cup user, as requests per minute, input tokens per minute, and requests per day, plus a spend limit per rolling 10 minutes on paid tiers. Terraform declares the gateway with a spend limit of 30 USD per rolling 30 days and a rate limit set ten times above Google's, so the rate limit never applies before Google's does; see the [Terraform guide](../../terraform/README.md#cloudflare).
 
 Google publishes each model’s limits only in the [AI Studio rate-limit dashboard](https://aistudio.google.com/rate-limit), which requires Patrick’s Google login: ask him for the current values, naming the model from the [speech configuration](../../libs/audiobook-production/src/speech-synthesis-config.ts). The public [rate-limit page](https://ai.google.dev/gemini-api/docs/rate-limits) explains tiers but omits the TTS models. [ADR 0008](../adr/0008-synthesize-the-whole-narration-document.md) records the values observed on 2026-10-11, and that the displayed project was not confirmed to own the stored key.
 

@@ -151,3 +151,42 @@ output "operator_access_audience" {
   description = "The Access application's AUD tag; must equal OPERATOR_ACCESS_AUDIENCE in the Worker configuration."
   value       = cloudflare_zero_trust_access_application.operator_api.aud
 }
+
+# The AI Gateway that narration content selection and speech synthesis call, in development and
+# production alike. The Google AI Studio key it uses lives in its key store and is not managed here.
+resource "cloudflare_ai_gateway" "default" {
+  account_id                 = local.cloudflare_account_id
+  id                         = "default"
+  authentication             = true
+  cache_invalidate_on_update = false
+  cache_ttl                  = 0
+  collect_logs               = true
+  log_management             = 100000
+  log_management_strategy    = "DELETE_OLDEST"
+
+  # The provider requires a rate limit, but Cup wants none from the gateway: Google limits the
+  # project (1,000 requests per minute for speech on 2026-10-11, ADR 0008) and the application waits
+  # out its rejections. This ceiling is ten times that limit, so Google's always applies first.
+  rate_limiting_interval  = 60
+  rate_limiting_limit     = 10000
+  rate_limiting_technique = "sliding"
+
+  # Caps runaway cost: 30 USD per rolling 30 days.
+  spend_limits = {
+    enabled = true
+    rules = [
+      {
+        id         = "8ff62c21"
+        enabled    = true
+        limit_type = "cost"
+        limit      = 30
+        technique  = "sliding"
+        window     = 2592000
+      },
+    ]
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}

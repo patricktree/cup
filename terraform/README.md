@@ -2,10 +2,10 @@
 
 Run each root independently from the repository root.
 
-| Root                             | Managed resources                                                                                                                 | GCS state prefix |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| [bootstrap](bootstrap/main.tf)   | Infrastructure project and state bucket                                                                                           | bootstrap        |
-| [production](production/main.tf) | Existing cup-production GCP project and Terraform-created Supabase project; Cloudflare R2 bucket, DNS and Access (import pending) | production       |
+| Root                             | Managed resources                                                                                                                             | GCS state prefix |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| [bootstrap](bootstrap/main.tf)   | Infrastructure project and state bucket                                                                                                       | bootstrap        |
+| [production](production/main.tf) | Existing cup-production GCP project and Terraform-created Supabase project; Cloudflare R2 bucket, DNS, Access and AI Gateway (import pending) | production       |
 
 Both roots use `cup-infrastructure-646301813623-tfstate` in Frankfurt (`europe-west3`).
 The bootstrap project uses Cup Billing (`01EF28-40C66E-325909`).
@@ -87,14 +87,14 @@ The [Cloudflare configuration](production/cloudflare.tf) declares:
 - The R2 bucket `create-audiobook-from-url-audio`, the Worker's `AUDIO_BUCKET`, in location `eeur`, with `prevent_destroy`.
 - The hand-made DNS records of `cup.audio` and `cup-audio.com`: Resend's DKIM, `send` and `rsend` records, and on both zones a null MX, `v=spf1 -all` and a `p=reject` DMARC policy. The proxied AAAA records for the Worker's custom domains belong to Wrangler and stay out.
 - The Access application and its reusable allow policy that protect `cup.audio/api/operator/*` (see the [operator runbook](../apps/operator/README.md#configure-cloudflare-access)). The output `operator_access_audience` is the AUD tag the Worker's `OPERATOR_ACCESS_AUDIENCE` must equal.
+- The AI Gateway `default`, which development and production share, with a spend limit of 30 USD per rolling 30 days and `prevent_destroy`. The Google AI Studio key in its key store is not managed here. Cup wants no rate limit from the gateway, because Google limits the project and the application waits out its rejections ([ADR 0008](../docs/adr/0008-synthesize-the-whole-narration-document.md)). Provider 5.28.1 requires one, so the configuration sets a ceiling of 10,000 requests per sliding 60 seconds, ten times the 1,000 requests per minute Google allowed for speech on 2026-10-11. If Google's limit rises toward the ceiling, raise the ceiling too.
 
-Terraform generated the configuration from the live resources on 2026-11-09, and the plan then reported 12 imports and no changes. The import blocks in [cloudflare-imports.tf](production/cloudflare-imports.tf) adopt them on the next apply. Apply only from `main`, after this configuration is merged: state that holds these resources while a checkout's configuration lacks them makes that checkout's plan propose destroying them. After the apply, the blocks are no-ops; delete the file.
+Terraform generated the configuration from the live resources on 2026-11-09. The plan then reported 13 imports and one in-place change: the gateway's rate limit, which was unset, takes the ceiling above. The import blocks in [cloudflare-imports.tf](production/cloudflare-imports.tf) adopt them on the next apply. Apply only from `main`, after this configuration is merged: state that holds these resources while a checkout's configuration lacks them makes that checkout's plan propose destroying them. After the apply, the blocks are no-ops; delete the file.
 
 The provider reads `CLOUDFLARE_API_TOKEN`. Store a Cloudflare API token under that name in `terraform/.env.local`, with Zone Read and DNS Edit for `cup.audio` and `cup-audio.com`, and the account permissions Workers R2 Storage Edit, Access: Apps and Policies Edit, and AI Gateway Edit. Wrangler's OAuth login cannot serve as this token: it expires within hours and cannot request DNS, Access or AI Gateway permissions. Keep `CLOUDFLARE_API_KEY` out of the Terraform shell, because the provider treats that name as a global API key; the development token in `apps/cloudflare-worker/.env.local` uses it.
 
 Not managed here:
 
-- The AI Gateway `default`, which development and production share, with a spend limit of 30 USD per 30 days. Provider 5.28.1 requires `rate_limiting_interval` and `rate_limiting_limit`, and the gateway has no rate limiting, so adoption would set both from unset to a value. Adopt it once that decision is made.
 - The bucket's default rule that aborts incomplete multipart uploads after seven days.
 - The Resend records are copied from the Resend dashboard; when Resend changes them, update them here.
 

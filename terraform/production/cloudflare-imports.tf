@@ -60,3 +60,8 @@ import {
   to = cloudflare_zero_trust_access_application.operator_api
   id = "accounts/a7648178b6a63bb8a13f0c9de89d253f/03cb3ac7-c250-44fa-8460-7844fd936226"
 }
+
+import {
+  to = cloudflare_ai_gateway.default
+  id = "a7648178b6a63bb8a13f0c9de89d253f/default"
+}
