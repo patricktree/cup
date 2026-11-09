@@ -30,9 +30,30 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
       },
     },
+    {
+      name: "mobile-webkit",
+      use: {
+        ...devices["iPhone 15 Pro"],
+      },
+    },
+    {
+      name: "desktop-webkit",
+      use: {
+        ...devices["Desktop Safari"],
+      },
+    },
   ],
   use: {
     ...dockerConfig.use,
+    ...(dockerConfig.use?.connectOptions && {
+      connectOptions: {
+        ...dockerConfig.use.connectOptions,
+        // The browsers reach the gallery through the connection to the Playwright Server: on Docker
+        // Desktop for macOS some new connections from the container to the host never complete,
+        // and WebKit, unlike Chromium, opens no second connection, so its page loads stalled.
+        exposeNetwork: "<loopback>",
+      },
+    }),
     baseURL: `http://127.0.0.1:${galleryPort}/ui-gallery/index.html?canvas=1`,
     serviceWorkers: "allow",
     colorScheme: "light",
