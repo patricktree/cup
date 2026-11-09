@@ -71,7 +71,10 @@ function watchForOrphan(udid: string): childProcess.ChildProcess {
   return watcher;
 }
 
-/** Matches the `xcodebuild` processes that run WebDriverAgent on this simulator only. */
+/**
+ * Matches the `xcodebuild` processes that run WebDriverAgent on this simulator only. The bracket
+ * keeps the pattern from matching the watcher, whose own arguments contain it.
+ */
 function xcodebuildPattern(udid: string): string {
-  return `xcodebuild .*-destination id=${udid}`;
+  return `[x]codebuild .*-destination id=${udid}`;
 }

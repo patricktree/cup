@@ -65,7 +65,7 @@ One Android test launches with the real plugin (`realGoogleSignIn: true`) on the
 
 ## Known issue: blank WebView on iOS
 
-On macOS 27.2 with Xcode 27.2 and the iOS 26.3.1 runtime, about one iOS run in seven fails with "Cup's WebView rendered no page." (2026-11-09). WebKit's content process crashes at launch with `SIGBUS` inside `dyld_sim` while reading the simulator's dyld shared cache, WebKit fails to relaunch it, and the WebView stays at `about:blank`. Launching the same build with `simctl` outside the suite did not reproduce it in eight launches. The suite does not retry; rerun the suite, and look for a `com.apple.WebKit.WebContent` report in `~/Library/Logs/DiagnosticReports` to confirm the cause.
+On macOS 27.2 with Xcode 27.2 and the iOS 26.3.1 runtime, about one iOS run in seven fails with "Cup's WebView rendered no page." (2026-11-09). A second or two into running Cup's JavaScript, WebKit's content process crashes with `KERN_PROTECTION_FAILURE` in JavaScriptCore, at an address inside the region the host labels "Dyld Private Memory". Each process WebKit starts to replace it crashes in `dyld_sim` while reading the simulator's dyld shared cache, so the WebView stays blank. Each crashed process had the accessibility runtime loading, which WebDriverAgent enables. Without WebDriverAgent, 12 launches on fresh simulators all rendered, and 60 later launches within one WebDriverAgent session all rendered. Every crash seen so far was the first launch after WebDriverAgent started on a fresh simulator. The suspected cause is the iOS 26.3.1 runtime running on a macOS 27.2 host. The suite does not retry; rerun it, and look for `com.apple.WebKit.WebContent` reports in `~/Library/Logs/DiagnosticReports`.
 
 ## Layout
 
