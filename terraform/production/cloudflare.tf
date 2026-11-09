@@ -25,7 +25,7 @@ resource "cloudflare_r2_bucket" "audio" {
 # DNS records. The proxied AAAA records for the Worker's custom domains belong to Wrangler and stay
 # out of Terraform.
 
-# Resend sending records for cup.audio; they must match resend_domain.cup_audio.
+# Resend sending records for cup.audio; they must match the domain's records in the Resend dashboard.
 resource "cloudflare_dns_record" "cup_audio_resend_dkim" {
   zone_id = local.cup_audio_zone_id
   name    = "resend._domainkey.cup.audio"

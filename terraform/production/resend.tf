@@ -1,13 +1,9 @@
-provider "resend" {}
-
-resource "resend_domain" "cup_audio" {
-  name           = "cup.audio"
-  region         = "eu-west-1"
-  open_tracking  = false
-  click_tracking = false
-  tls            = "opportunistic"
+# The Resend domain cup.audio is no longer managed by Terraform. This block forgets it from state on
+# the next apply without deleting it in Resend; delete this file after that apply.
+removed {
+  from = resend_domain.cup_audio
 
   lifecycle {
-    prevent_destroy = true
+    destroy = false
   }
 }

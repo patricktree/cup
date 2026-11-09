@@ -1,6 +1,6 @@
 # Production configuration
 
-Use this guide to supply the production Worker's configuration and the provider settings that Terraform does not manage, to find those it does, and to deploy. The [authentication](architecture/authentication.md) and [account deletion](architecture/account-deletion.md) pages explain the behavior this configuration enables. The [Terraform guide](../terraform/README.md) covers infrastructure state, the Supabase project, the Resend domain, Supabase's Google provider, and the Cloudflare R2 bucket, DNS records and operator Access application. Apple sign-in and native iOS account support are deferred.
+Use this guide to supply the production Worker's configuration and the provider settings that Terraform does not manage, to find those it does, and to deploy. The [authentication](architecture/authentication.md) and [account deletion](architecture/account-deletion.md) pages explain the behavior this configuration enables. The [Terraform guide](../terraform/README.md) covers infrastructure state, the Supabase project, Supabase's Google provider, the Resend domain's settings and DNS records, and the Cloudflare R2 bucket, DNS records and operator Access application. Apple sign-in and native iOS account support are deferred.
 
 ## Worker configuration
 
@@ -26,7 +26,7 @@ Register the Android OAuth client for package `audio.cup.app` and its signing ce
 
 ## Email
 
-Deletion notices go to the Resend API at the `RESEND_BASE_URL` variable, `https://api.resend.com`, from the Resend domain declared in the [Terraform guide](../terraform/README.md#resend-domain). Inspect notification outcomes with the [operator CLI](../apps/operator/README.md#list-account-deletions); provider acceptance is not proof of inbox delivery.
+Deletion notices go to the Resend API at the `RESEND_BASE_URL` variable, `https://api.resend.com`, from the Resend domain described in the [Terraform guide](../terraform/README.md#resend-domain). Inspect notification outcomes with the [operator CLI](../apps/operator/README.md#list-account-deletions); provider acceptance is not proof of inbox delivery.
 
 ## Deploy
 
