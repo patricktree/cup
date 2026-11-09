@@ -21,7 +21,7 @@ export type CompletionOptions = {
   maxRetries?: number;
 };
 
-export type CompletionCallOptions = CompletionOptions & {
+type CompletionCallOptions = CompletionOptions & {
   signal?: AbortSignal;
   apiKey?: string;
   env?: Record<string, string | undefined>;
@@ -42,7 +42,7 @@ export type CompletionCostEstimateBasis = {
   pricingSource: string;
 };
 
-export type CompletionUsage = {
+type CompletionUsage = {
   inputTokens: number;
   outputTokens: number;
   reasoningTokens?: number;
