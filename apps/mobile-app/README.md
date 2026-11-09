@@ -40,6 +40,20 @@ adb shell am start -n audio.cup.app/.MainActivity
 
 The debug APK is written to `apps/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk`. Confirm the landing page renders and the app can close and reopen without a crash.
 
+The [mobile E2E tests](../../qa/mobile-e2e/README.md) launch the debug build on their own emulator against a local test Worker and check that it launches to the landing page.
+
+### Debug launch arguments
+
+The debug build reads the backend origin from the intent extra `cupTestApiOrigin`, which the mobile E2E suite sets to its test Worker:
+
+```sh
+adb shell am start -n audio.cup.app/.MainActivity --es cupTestApiOrigin http://localhost:8787
+```
+
+The value must be exactly `http://localhost:<port>`; any other value stops the app at launch with an `IllegalArgumentException` naming the argument, so a broken test setup never reaches production. Without the extra, a debug build uses `https://cup.audio` as before. Use `adb reverse tcp:<port> tcp:<port>` to make a port on your Mac reachable at `localhost` on the device.
+
+Only the debug source set (`android/app/src/debug`) handles the argument: before Capacitor loads the page, it sets the global `window.cupTestApiOrigin` that the web app's `apiOrigin()` reads, and lets the `https://localhost` page load `http://localhost` media. The same source set allows plain HTTP to `localhost` and nowhere else. The argument needs Android 10 (API 29) or later, where activity pre-creation callbacks exist. Release builds contain none of this.
+
 ## iOS
 
 After building, open `apps/mobile-app/ios/App/App.xcodeproj` in Xcode and choose a simulator or configure signing for a device. The project uses Swift Package Manager, matching Content Relay.
@@ -52,7 +66,7 @@ The Android app accepts shared plain text containing an HTTP or HTTPS URL and fi
 
 ## Backend access and grant sessions
 
-Mobile API requests use ordinary `fetch` calls patched by `CapacitorHttp` to use native networking. The backend origin is `https://cup.audio`. Browser requests continue using the browser's same-origin fetch.
+Mobile API requests use ordinary `fetch` calls patched by `CapacitorHttp` to use native networking. The backend origin is `https://cup.audio`, except in a debug build launched with a [test origin](#debug-launch-arguments). Browser requests continue using the browser's same-origin fetch.
 
 The browser exchanges trial credentials for persistent Secure, HttpOnly cookies. The apps open no trials ([ADR 0017](../../docs/adr/0017-keep-trial-links-out-of-the-mobile-apps.md)), so their private account requests rely on the signed-in user's bearer token; Capacitor's native cookie manager still stores any server-issued cookies and sends them on later requests. The `CapacitorCookies` document.cookie patch (<https://capacitorjs.com/docs/apis/cookies>) is not enabled.
 

@@ -86,10 +86,26 @@ const apiServer = createApiServer({
 
 export default {
   async fetch(request, env, context) {
+    logRequest(request);
     const control = await handleSpeechControl(request, env.AUDIO_BUCKET);
     return control ?? apiServer.fetch(request, env, context);
   },
 } satisfies ExportedHandler<Env>;
+
+/**
+ * Writes one line per request to Wrangler's output, which the harness reads back as the request
+ * log. The prefix must match `REQUEST_LOG_PREFIX` in `src/test-worker.ts`.
+ */
+function logRequest(request: Request): void {
+  const url = new URL(request.url);
+  console.log(
+    `[test-worker:request] ${JSON.stringify({
+      method: request.method,
+      path: url.pathname + url.search,
+      headers: Object.fromEntries(request.headers),
+    })}`,
+  );
+}
 
 type QaScenario = "success" | "tts-failure" | "speech-gated" | "preparation-failure";
 

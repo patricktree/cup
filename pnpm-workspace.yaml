@@ -19,7 +19,12 @@ packages:
 
 allowBuilds:
   '@google/genai': true
+  # The mobile E2E suite installs its Appium drivers on its first run, never at install time.
+  appium: false
+  # WebdriverIO pulls in desktop browser drivers (edgedriver, geckodriver) the mobile suite never uses.
+  edgedriver: false
   esbuild: true
+  geckodriver: false
   msgpackr-extract: true
   msw: false
   protobufjs: true

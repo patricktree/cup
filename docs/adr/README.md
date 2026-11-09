@@ -21,5 +21,6 @@ ADRs preserve decisions, alternatives, rationale, and consequences. Read them al
 | [0015](0015-fence-conversion-deletion-with-a-durable-marker-on-the-account-conversion-row.md)                       | Fence conversion deletion with a durable marker on the account conversion row                       |
 | [0016](0016-keep-the-query-cache-for-the-page-lifetime-and-load-screens-in-route-loaders.md)                        | Keep the query cache for the page lifetime and load screens in route loaders                        |
 | [0017](0017-keep-trial-links-out-of-the-mobile-apps.md)                                                             | Keep trial links out of the mobile apps                                                             |
+| [0018](0018-test-the-mobile-apps-with-appium-through-webdriverio-on-host-owned-emulators-and-simulators.md)         | Test the mobile apps with Appium through WebdriverIO on host-owned emulators and simulators         |
 
 Each decision's frontmatter records its status. For a substantive reversal, add a superseding ADR and link it from the previous decision while retaining the old rationale. The [wiki schema](../agents/domain.md#record-decisions-and-evidence) describes how decisions, implementation gaps, and research relate.
