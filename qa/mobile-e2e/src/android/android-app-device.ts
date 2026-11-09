@@ -43,6 +43,11 @@ export async function openAndroidAppDevice(target: AndroidTarget): Promise<Andro
     "appium:chromedriverPort": chromedriverPort,
     "appium:chromedriverAutodownload": true,
     "appium:newCommandTimeout": 600,
+    // Appium's logcat capture streams the whole log buffer, including the snapshot's boot log, the
+    // moment the session starts and then every new line. That stream made the emulator drop its adb
+    // connection now and then: "device offline" at session start, or a killed UiAutomator2 server
+    // mid-test. No test reads the capture.
+    "appium:skipLogcatCapture": true,
   };
   const driver = await remote({
     hostname: "127.0.0.1",
