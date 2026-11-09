@@ -4,5 +4,5 @@
     "@patricktree-stack/config-typescript/tsconfig.cloudflare-workers.json",
     "@patricktree-stack/config-typescript/tsconfig.typescript-execution-via-type-stripping.json"
   ],
-  "include": ["src/**/*", "worker-configuration.d.ts"]
+  "include": ["worker/**/*", "worker-configuration.d.ts"]
 }

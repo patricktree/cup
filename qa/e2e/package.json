@@ -3,37 +3,26 @@
   "private": true,
   "type": "module",
   "imports": {
-    "#src/*.ts": "./src/*.ts",
-    "#src/*": "./src/*",
     "#test-vitest/*.ts": "./test-vitest/*.ts",
     "#test-vitest/*": "./test-vitest/*",
     "#test-e2e/*.ts": "./test-e2e/*.ts",
     "#test-e2e/*": "./test-e2e/*"
   },
   "scripts": {
-    "cf-typegen": "wrangler types",
     "clean": "del-cli --dot=true \"*.tsbuildinfo\" \"playwright-output\"",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:update": "playwright test --update-snapshots",
     "turbo:build": "tsc --build ./tsconfig.json",
-    "turbo:cf-typegen": "pnpm run cf-typegen",
     "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
     "turbo:lint:fix": "pnpm run turbo:lint --fix",
     "turbo:test": "vitest run"
   },
   "dependencies": {
-    "@cup/accounts": "workspace:*",
-    "@cup/api-server": "workspace:*",
     "@cup/audiobook-production": "workspace:*",
-    "@cup/cloudflare-worker": "workspace:*",
     "@cup/conversion-contracts": "workspace:*",
-    "@cup/conversion-grants": "workspace:*",
-    "@cup/create-audiobook-from-url-workflow": "workspace:*",
     "@cup/listener-api.routes": "workspace:*",
-    "@cup/narration-content-selection": "workspace:*",
-    "@cup/prepare-source-material": "workspace:*",
-    "@cup/registry": "workspace:*"
+    "@cup/test-worker": "workspace:*"
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",
@@ -46,10 +35,8 @@
     "@typescript/native": "catalog:",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
-    "temporal-polyfill": "^1.0.5",
     "typescript": "catalog:",
     "vite": "catalog:",
-    "vitest": "catalog:",
-    "wrangler": "catalog:"
+    "vitest": "catalog:"
   }
 }

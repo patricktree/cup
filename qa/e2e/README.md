@@ -2,7 +2,7 @@
 
 This package tests the complete local conversion path through the web app, Worker, Durable Objects, Workflow, and R2. It prepares the narration document, then produces and validates real MP3 segments for the whole document without calling a paid AI service or a public website.
 
-The test-only Worker supplies deterministic fakes for source-material preparation, narration selection, and speech synthesis. Each fake belongs to the production library whose boundary it implements. The remaining application code is the production code.
+The tests run against the [test Worker](../test-worker/README.md), which supplies deterministic fakes for source-material preparation, narration selection, and speech synthesis, and a fake auth provider. The remaining application code is the production code.
 
 ## Prerequisites
 
@@ -59,4 +59,4 @@ To stream the child Wrangler logs while a test runs, add `E2E_STREAM_WRANGLER=1`
 
 ## Cost and network boundary
 
-The QA Worker has no Cloudflare AI binding. The harness also removes Cloudflare account credentials from each Wrangler child process and rejects unexpected browser requests. Do not add a paid-provider binding or a real provider call to this package. A local deterministic fake is the required test seam, even when it gives less confidence than a paid integration test.
+The [test Worker's cost and network boundary](../test-worker/README.md#cost-and-network-boundary) applies to this suite. In addition, the Playwright fixture rejects every browser request to a host other than the test Worker and the fake auth provider.
