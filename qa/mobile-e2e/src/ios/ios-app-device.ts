@@ -18,6 +18,8 @@ export type IosTarget = {
 const BUNDLE_ID = "audio.cup.app";
 /** Read only by the debug build's `TestApiOrigin`. */
 const API_ORIGIN_ARGUMENT = "-cupTestApiOrigin";
+/** Where Capacitor serves the bundled web app. */
+const CUP_PAGE_ORIGIN = "capacitor://localhost";
 
 /** Opens an Appium session on the run's simulator, addressed by UDID, without launching Cup. */
 export async function openIosAppDevice(target: IosTarget): Promise<IosAppDevice> {
@@ -108,14 +110,19 @@ export class IosAppDevice implements AppDevice {
   async webView(): Promise<WebdriverIO.Browser> {
     // A relaunch gives the WebView a new context, named after Cup's new process.
     await this.driver.switchContext("NATIVE_APP");
+    // When WebKit's content process crashes at launch, the WebView stays at `about:blank`, and
+    // Appium hangs for minutes when asked to attach to it. Wait for rendered text instead, which
+    // also keeps Web Inspector away from a page still loading.
+    await this.driver
+      .$("-ios class chain:**/XCUIElementTypeWebView/**/XCUIElementTypeStaticText[1]")
+      .waitForExist({ timeout: 60_000, timeoutMsg: "Cup's WebView rendered no page." });
     const webViewContext = await waitFor(
-      "Cup's WebView",
+      "Cup's WebView context",
       async () => {
-        const contexts = await this.driver.getContexts();
-        const ids = contexts.map((context) => (typeof context === "string" ? context : context.id));
-        return ids.findLast((id) => id.startsWith("WEBVIEW_"));
+        const contexts: unknown = await this.driver.execute("mobile: getContexts");
+        return Array.isArray(contexts) ? contexts.findLast(isCupPage)?.id : undefined;
       },
-      60_000,
+      30_000,
     );
     await this.driver.switchContext(webViewContext);
     return this.driver;
@@ -125,4 +132,17 @@ export class IosAppDevice implements AppDevice {
     await Promise.all([...this.relays.keys()].map((port) => this.unexposeHostPort(port)));
     await this.driver.deleteSession();
   }
+}
+
+function isCupPage(context: unknown): context is { id: string } {
+  return (
+    typeof context === "object" &&
+    context !== null &&
+    "id" in context &&
+    typeof context.id === "string" &&
+    context.id.startsWith("WEBVIEW_") &&
+    "url" in context &&
+    typeof context.url === "string" &&
+    context.url.startsWith(CUP_PAGE_ORIGIN)
+  );
 }

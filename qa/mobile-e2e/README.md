@@ -63,6 +63,10 @@ The suite never signs in with real Google. Each test's fake auth provider listen
 
 One Android test launches with the real plugin (`realGoogleSignIn: true`) on the account-less emulator, taps "Continue with Google", checks that Google Play services' add-account screen is in front, presses Back and checks that Cup's landing page can start another sign-in.
 
+## Known issue: blank WebView on iOS
+
+On macOS 27.2 with Xcode 27.2 and the iOS 26.3.1 runtime, about one iOS run in seven fails with "Cup's WebView rendered no page." (2026-11-09). WebKit's content process crashes at launch with `SIGBUS` inside `dyld_sim` while reading the simulator's dyld shared cache, WebKit fails to relaunch it, and the WebView stays at `about:blank`. Launching the same build with `simctl` outside the suite did not reproduce it in eight launches. The suite does not retry; rerun the suite, and look for a `com.apple.WebKit.WebContent` report in `~/Library/Logs/DiagnosticReports` to confirm the cause.
+
 ## Layout
 
 - [`src/app-device.ts`](src/app-device.ts): the device-control interface every spec uses. Platform-only steps live on the platform's class, such as [`AndroidAppDevice`](src/android/android-app-device.ts).
