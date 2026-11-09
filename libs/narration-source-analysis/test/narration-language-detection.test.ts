@@ -47,14 +47,20 @@ test("takes the region from og:locale in its underscore form when <html lang> is
   });
 });
 
+test("falls back to the declared language with the detector's error when the detector fails", async () => {
+  const error = new Error("Gemini unavailable");
+  const detect = createDetector(async () => {
+    throw error;
+  });
+
+  await expect(detect(input({ htmlLang: "de-at" }))).resolves.toEqual({
+    narrationLanguage: "de-AT",
+    fallbackReason: "detector-error",
+    detectorError: error,
+  });
+});
+
 test.each([
-  [
-    "fails",
-    async () => {
-      throw new Error("Gemini unavailable");
-    },
-    "detector-error",
-  ],
   ["calls no tool", async () => response({ stopReason: "length" }), "no-answer"],
   ["answers an empty subtag", answerWith(""), "no-answer"],
   ["answers malformed arguments", answerWith(42), "no-answer"],
@@ -102,6 +108,7 @@ test.each([{}, { htmlLang: "not a tag", ogLocale: "_" }])(
 
     await expect(detect(input(declaredLanguage))).resolves.toEqual({
       fallbackReason: "detector-error",
+      detectorError: new Error("Gemini unavailable"),
     });
   },
 );
@@ -167,7 +174,11 @@ test("runs the detector call through the supplied runner and falls back when it 
         throw new Error("Step retries exhausted");
       },
     }),
-  ).resolves.toEqual({ narrationLanguage: "de-AT", fallbackReason: "detector-error" });
+  ).resolves.toEqual({
+    narrationLanguage: "de-AT",
+    fallbackReason: "detector-error",
+    detectorError: new Error("Step retries exhausted"),
+  });
   expect(runs).toEqual([{ language: "de" }]);
 });
 

@@ -40,6 +40,10 @@ test("can fail on every attempt", async () => {
         }
       },
     }),
-  ).resolves.toEqual({ narrationLanguage: "de-AT", fallbackReason: "detector-error" });
+  ).resolves.toEqual({
+    narrationLanguage: "de-AT",
+    fallbackReason: "detector-error",
+    detectorError: new Error("Configured detection failure"),
+  });
   expect(attempts).toEqual([new Error("Configured detection failure")]);
 });

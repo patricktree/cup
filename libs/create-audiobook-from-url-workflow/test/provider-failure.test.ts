@@ -296,6 +296,7 @@ test.each([
           ...(declaredLanguage === undefined ? {} : { declaredLanguage }),
           ...(narrationLanguage === undefined ? {} : { narrationLanguage }),
           reason: "detector-error",
+          error: "Error: Configured detection failure",
         },
       ]);
     } finally {

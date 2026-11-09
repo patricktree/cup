@@ -41,6 +41,8 @@ export type NarrationLanguageDetectionResult = {
   narrationLanguage?: string;
   /** Present only when detection fell back. */
   fallbackReason?: NarrationLanguageFallbackReason;
+  /** Why the detector call failed; present only when detection fell back with `detector-error`. */
+  detectorError?: unknown;
 };
 
 /** The detector's raw, unvalidated answer; `null` when it gave none. */
@@ -78,13 +80,14 @@ export function createNarrationLanguageDetector(configuration: NarrationLanguage
       answer = await runDetection(() =>
         requestAnswer(configuration, input, conversionId === undefined ? {} : { conversionId }),
       );
-    } catch {
-      return fallBack(declaredLanguage, "detector-error");
+    } catch (error) {
+      return { ...fallBack(declaredLanguage, "detector-error"), detectorError: error };
     }
 
     if (answer.language === null) {
       return fallBack(declaredLanguage, "no-answer");
     }
+
     const language = toLanguageSubtag(answer.language);
     if (language === undefined) {
       return fallBack(declaredLanguage, "invalid-tag");

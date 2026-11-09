@@ -370,6 +370,7 @@ async function detectNarrationLanguage({
     runDetection: (detectLanguage) =>
       step.do("detect narration language", AI_STEP_CONFIG, detectLanguage),
   });
+
   if (result.fallbackReason !== undefined) {
     console.warn(
       JSON.stringify({
@@ -378,9 +379,13 @@ async function detectNarrationLanguage({
         declaredLanguage: input.declaredLanguage,
         narrationLanguage: result.narrationLanguage,
         reason: result.fallbackReason,
+        ...(result.fallbackReason === "detector-error"
+          ? { error: findRootCauseDescription(result.detectorError) }
+          : {}),
       }),
     );
   }
+
   if (
     result.narrationLanguage !== undefined &&
     !isNarrationLanguageSpeakable(result.narrationLanguage, SPEECH_CONFIG)
