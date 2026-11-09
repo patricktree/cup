@@ -7,6 +7,10 @@ terraform {
   }
 
   required_providers {
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "5.28.1"
+    }
     resend = {
       source  = "y0n0zawa/resend"
       version = "1.0.1"

@@ -2,10 +2,10 @@
 
 Run each root independently from the repository root.
 
-| Root                             | Managed resources                                                                         | GCS state prefix |
-| -------------------------------- | ----------------------------------------------------------------------------------------- | ---------------- |
-| [bootstrap](bootstrap/main.tf)   | Infrastructure project and state bucket                                                   | bootstrap        |
-| [production](production/main.tf) | Existing cup-production GCP project and Terraform-created Supabase project; Resend domain | production       |
+| Root                             | Managed resources                                                                                                                                  | GCS state prefix |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| [bootstrap](bootstrap/main.tf)   | Infrastructure project and state bucket                                                                                                            | bootstrap        |
+| [production](production/main.tf) | Existing cup-production GCP project and Terraform-created Supabase project; Resend domain; Cloudflare R2 audio bucket (import pending)             | production       |
 
 Both roots use `cup-infrastructure-646301813623-tfstate` in Frankfurt (`europe-west3`).
 The bootstrap project uses Cup Billing (`01EF28-40C66E-325909`).
@@ -82,6 +82,14 @@ The provider preserves tracking/TLS state rather than reading live values, so pl
 The custom return path is left unspecified; DNS records and sending API keys are not managed here. That the Worker's sending-only key may send from the domain is unverified.
 
 The former sending domain `cup-audio.com` (f4b08144-5f30-4792-9491-3cac68af01b4) was deleted in the Resend dashboard on 2026-10-12 after the application moved to `cup.audio`, then removed from this configuration and from Terraform state.
+
+## Cloudflare
+
+The [Cloudflare configuration](production/cloudflare.tf) declares the R2 bucket `create-audiobook-from-url-audio`, the Worker's `AUDIO_BUCKET`, with `prevent_destroy`. Its location (`eeur`), jurisdiction and storage class were read with `wrangler r2 bucket info` on 2026-11-09. An `import` block adopts the bucket on the next apply; on 2026-11-09 the plan reported one import and no changes. Apply it only from `main`, after this configuration is merged: state that holds the bucket while a checkout's configuration lacks it makes that checkout's plan propose destroying the bucket. After the apply, the block is a no-op and may be removed.
+
+The provider reads `CLOUDFLARE_API_TOKEN`. Store a Cloudflare API token with the account permission Workers R2 Storage Edit under that name in `terraform/.env.local`. Wrangler's OAuth login cannot serve as this token: it expires within hours and cannot request DNS, Access or AI Gateway permissions. Keep `CLOUDFLARE_API_KEY` out of the Terraform shell, because the provider treats that name as a global API key; the development token in `apps/cloudflare-worker/.env.local` uses it.
+
+The bucket's default rule that aborts incomplete multipart uploads after seven days is not managed here. DNS records, the Access application that protects the operator API, and the AI Gateway `default` remain outside Terraform; adopting them needs the token to also hold Zone Read and DNS Edit for `cup.audio` and `cup-audio.com`, and the account permissions Access: Apps and Policies Edit and AI Gateway Edit. Leave out the DNS records Wrangler creates for the Worker's custom domains. Development and production share the `default` gateway.
 
 ## Google sign-in configuration
 
