@@ -2,11 +2,8 @@ import { createConversionArtifactPrefix } from "@cup/conversion-contracts";
 
 import { AUDIO_FORMAT, AUDIOBOOK_CONTENT_TYPE } from "#src/audio-format.ts";
 import {
+  KNOWN_SPEECH_CONFIGS,
   SPEECH_CONFIG,
-  GEMINI_SPEECH_CONFIG,
-  LEGACY_GEMINI_V3_SPEECH_CONFIG,
-  LEGACY_GEMINI_V4_SPEECH_CONFIG,
-  ELEVENLABS_SPEECH_CONFIG,
   type SpeechConfig,
 } from "#src/speech-synthesis-config.ts";
 
@@ -218,12 +215,9 @@ function hasExpectedFixedSynthesisMetadata(
   speechConfig?: SpeechConfig,
 ): boolean {
   if (!speechConfig) {
-    return [
-      GEMINI_SPEECH_CONFIG,
-      LEGACY_GEMINI_V4_SPEECH_CONFIG,
-      LEGACY_GEMINI_V3_SPEECH_CONFIG,
-      ELEVENLABS_SPEECH_CONFIG,
-    ].some((config) => hasExpectedFixedSynthesisMetadata(metadata, config));
+    return KNOWN_SPEECH_CONFIGS.some((config) =>
+      hasExpectedFixedSynthesisMetadata(metadata, config),
+    );
   }
   return (
     metadata[SEGMENT_METADATA_KEYS.channelCount] === AUDIO_FORMAT.channelCount.toString() &&

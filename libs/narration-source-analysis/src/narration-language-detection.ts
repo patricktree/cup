@@ -2,35 +2,23 @@ import { parseFragment } from "parse5";
 import type { DefaultTreeAdapterMap } from "parse5";
 import { z } from "zod";
 
-import type {
-  SelectionCompletion,
-  SelectionCompletionOptions,
-  SelectionTool,
-} from "#src/narration-content-selection.ts";
+import type { DeclaredLanguage } from "@cup/prepare-source-material";
 
-/**
- * The language a source page declares for itself, each value exactly as declared and absent when
- * the page does not declare it. Values may be malformed; detection validates them.
- */
-export type DeclaredLanguage = {
-  /** The `lang` attribute of the page's `<html>` element. */
-  htmlLang?: string;
-  /** The `og:locale` metadata, often in underscore form such as `de_AT`. */
-  ogLocale?: string;
-};
+import type { Completion, CompletionOptions, CompletionTool } from "#src/completion.ts";
 
 export type NarrationLanguageDetectionInput = {
   sourceTitle: string;
   /** The narration source material: the HTML that narration content selection kept. */
   sourceMaterialHtml: string;
+  /** The declared language as source preparation extracted it; detection validates its values. */
   declaredLanguage?: DeclaredLanguage;
 };
 
 export type NarrationLanguageDetectionConfig = {
-  completion: SelectionCompletion;
+  completion: Completion;
   systemPrompt: string;
-  tool: SelectionTool;
-  completionOptions: SelectionCompletionOptions;
+  tool: CompletionTool;
+  completionOptions: CompletionOptions;
 };
 
 /** Why detection fell back from the detector's answer to the declared language or to none. */
@@ -41,6 +29,8 @@ export type NarrationLanguageDetectionResult = {
   narrationLanguage?: string;
   /** Present only when detection fell back. */
   fallbackReason?: NarrationLanguageFallbackReason;
+  /** Why the detector call failed; present only when detection fell back with `detector-error`. */
+  detectorError?: unknown;
 };
 
 /** The detector's raw, unvalidated answer; `null` when it gave none. */
@@ -58,6 +48,9 @@ export const DETECTION_ARGS_SCHEMA = z.object({ language: z.string() }).strict()
 
 const MAX_TEXT_CHARACTERS = 8_000;
 const DETECTION_REQUEST_TIMEOUT_MILLISECONDS = 60_000;
+/** Undetermined, multiple languages, uncoded languages and no linguistic content. */
+const NON_LANGUAGE_SUBTAGS = new Set(["und", "mul", "mis", "zxx"]);
+const LANGUAGE_NAMES = new Intl.DisplayNames(["en"], { type: "language", fallback: "none" });
 
 /** Creates a detector that decides a conversion's narration language and never rejects. */
 export function createNarrationLanguageDetector(configuration: NarrationLanguageDetectionConfig) {
@@ -75,13 +68,14 @@ export function createNarrationLanguageDetector(configuration: NarrationLanguage
       answer = await runDetection(() =>
         requestAnswer(configuration, input, conversionId === undefined ? {} : { conversionId }),
       );
-    } catch {
-      return fallBack(declaredLanguage, "detector-error");
+    } catch (error) {
+      return { ...fallBack(declaredLanguage, "detector-error"), detectorError: error };
     }
 
     if (answer.language === null) {
       return fallBack(declaredLanguage, "no-answer");
     }
+
     const language = toLanguageSubtag(answer.language);
     if (language === undefined) {
       return fallBack(declaredLanguage, "invalid-tag");
@@ -191,15 +185,34 @@ function toLocale(tag: string | undefined): Intl.Locale | undefined {
     return undefined;
   }
 
+  let locale: Intl.Locale;
   try {
     const [canonical] = Intl.getCanonicalLocales(tag.trim());
     if (canonical === undefined) {
       return undefined;
     }
-    const locale = new Intl.Locale(canonical);
-    // `und` is valid BCP 47 but names no language; some runtimes report its language as absent.
-    return locale.language === undefined || locale.language === "und" ? undefined : locale;
+
+    locale = new Intl.Locale(canonical);
   } catch {
     return undefined;
   }
+
+  return isNamedLanguage(locale.language) ? locale : undefined;
+}
+
+/**
+ * BCP 47 also admits 5–8 letter language subtags, so a language name such as "German" parses as the
+ * tag `german`. Only a 2–3 letter ISO 639 subtag that `Intl` can name is a language, and the ISO
+ * 639 special codes name none.
+ */
+function isNamedLanguage(language: string | undefined): language is string {
+  if (
+    language === undefined ||
+    !/^[a-z]{2,3}$/u.test(language) ||
+    NON_LANGUAGE_SUBTAGS.has(language)
+  ) {
+    return false;
+  }
+
+  return LANGUAGE_NAMES.of(language) !== undefined;
 }

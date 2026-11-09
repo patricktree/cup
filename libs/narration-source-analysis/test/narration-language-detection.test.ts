@@ -1,11 +1,8 @@
 import { expect, test } from "vitest";
 
-import type { DeclaredLanguage } from "@cup/narration-source-analysis";
+import type { DeclaredLanguage } from "@cup/prepare-source-material";
 
-import type {
-  SelectionCompletion,
-  SelectionCompletionResponse,
-} from "#src/narration-content-selection.ts";
+import type { Completion, CompletionResponse } from "#src/completion.ts";
 import { createNarrationLanguageDetector } from "#src/narration-language-detection.ts";
 import { PRODUCTION_DETECTION_CONFIG } from "#src/production-narration-language-detection.ts";
 
@@ -47,20 +44,30 @@ test("takes the region from og:locale in its underscore form when <html lang> is
   });
 });
 
+test("falls back to the declared language with the detector's error when the detector fails", async () => {
+  const error = new Error("Gemini unavailable");
+  const detect = createDetector(async () => {
+    throw error;
+  });
+
+  await expect(detect(input({ htmlLang: "de-at" }))).resolves.toEqual({
+    narrationLanguage: "de-AT",
+    fallbackReason: "detector-error",
+    detectorError: error,
+  });
+});
+
 test.each([
-  [
-    "fails",
-    async () => {
-      throw new Error("Gemini unavailable");
-    },
-    "detector-error",
-  ],
   ["calls no tool", async () => response({ stopReason: "length" }), "no-answer"],
   ["answers an empty subtag", answerWith(""), "no-answer"],
   ["answers malformed arguments", answerWith(42), "no-answer"],
   ["answers an invalid tag", answerWith("not a tag"), "invalid-tag"],
   ["answers the undetermined language", answerWith("und"), "invalid-tag"],
-] as const satisfies ReadonlyArray<readonly [string, SelectionCompletion, string]>)(
+  ["answers a language name in English", answerWith("German"), "invalid-tag"],
+  ["answers a language name in the language itself", answerWith("Deutsch"), "invalid-tag"],
+  ["answers a subtag that names no language", answerWith("xx"), "invalid-tag"],
+  ["answers no linguistic content", answerWith("zxx"), "invalid-tag"],
+] as const satisfies ReadonlyArray<readonly [string, Completion, string]>)(
   "falls back to the declared language when the detector %s",
   async (_description, completion, fallbackReason) => {
     const detect = createDetector(completion);
@@ -76,6 +83,7 @@ test.each([
   [{ ogLocale: "de_AT" }, "de-AT"],
   [{ htmlLang: "", ogLocale: "fr_FR" }, "fr-FR"],
   [{ htmlLang: "und", ogLocale: "fr" }, "fr"],
+  [{ htmlLang: "german", ogLocale: "de_AT" }, "de-AT"],
 ] as const)(
   "falls back to a valid og:locale when <html lang> is missing or invalid (%j)",
   async (declaredLanguage, narrationLanguage) => {
@@ -97,6 +105,7 @@ test.each([{}, { htmlLang: "not a tag", ogLocale: "_" }])(
 
     await expect(detect(input(declaredLanguage))).resolves.toEqual({
       fallbackReason: "detector-error",
+      detectorError: new Error("Gemini unavailable"),
     });
   },
 );
@@ -118,7 +127,7 @@ test("keeps only the language subtag of an answer that names a region", async ()
 });
 
 test("asks with the source title, the declared language and the start of the text without HTML", async () => {
-  const requests: Parameters<SelectionCompletion>[] = [];
+  const requests: Parameters<Completion>[] = [];
   const detect = createDetector(async (...request) => {
     requests.push(request);
     return answerWith("de")(...request);
@@ -162,11 +171,15 @@ test("runs the detector call through the supplied runner and falls back when it 
         throw new Error("Step retries exhausted");
       },
     }),
-  ).resolves.toEqual({ narrationLanguage: "de-AT", fallbackReason: "detector-error" });
+  ).resolves.toEqual({
+    narrationLanguage: "de-AT",
+    fallbackReason: "detector-error",
+    detectorError: new Error("Step retries exhausted"),
+  });
   expect(runs).toEqual([{ language: "de" }]);
 });
 
-function createDetector(completion: SelectionCompletion) {
+function createDetector(completion: Completion) {
   return createNarrationLanguageDetector({ ...PRODUCTION_DETECTION_CONFIG, completion });
 }
 
@@ -178,7 +191,7 @@ function input(declaredLanguage: DeclaredLanguage = {}) {
   };
 }
 
-function answerWith(language: unknown): SelectionCompletion {
+function answerWith(language: unknown): Completion {
   return async () =>
     response({
       toolCalls: [{ id: "call-1", name: "report_narration_language", arguments: { language } }],
@@ -186,7 +199,7 @@ function answerWith(language: unknown): SelectionCompletion {
     });
 }
 
-function response(overrides: Partial<SelectionCompletionResponse>): SelectionCompletionResponse {
+function response(overrides: Partial<CompletionResponse>): CompletionResponse {
   return {
     provider: "faux",
     model: "faux-model",

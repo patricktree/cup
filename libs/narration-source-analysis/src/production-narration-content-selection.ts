@@ -1,11 +1,11 @@
 import { z } from "zod";
 
+import type { CompletionTool } from "#src/completion.ts";
 import { completeWithGemini } from "#src/gemini-completion.ts";
 import {
   createContentSelector,
   SELECTION_ARGS_SCHEMA,
   type SelectionConfig,
-  type SelectionTool,
 } from "#src/narration-content-selection.ts";
 import { SOURCE_ELEMENT_ID_ATTRIBUTE } from "#src/source-element-selection.ts";
 
@@ -18,7 +18,7 @@ const TOOL = {
   name: TOOL_NAME,
   description: "Return the source element IDs that should be narrated, in document order.",
   parameters: TOOL_PARAMETERS,
-} satisfies SelectionTool;
+} satisfies CompletionTool;
 
 const SYSTEM_PROMPT = `\
 You select HTML elements from the primary work at a source URL for conversion to an audiobook.

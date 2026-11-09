@@ -118,11 +118,7 @@ account
         for (const item of rest.history.items) {
           writeFields([
             ["Conversion ID", item.conversionId],
-            [
-              "Narration language",
-              (item.outcome?.status === "ready" ? item.outcome.narrationLanguage : undefined) ??
-                "none",
-            ],
+            ["Narration language", describeNarrationLanguage(item.outcome)],
           ]);
         }
         process.stdout.write("Conversion deletions:\n");
@@ -413,6 +409,13 @@ function writeFields(fields: ReadonlyArray<readonly [string, string | number]>):
   }
   process.stdout.write("\n");
 }
+/** The narration language a history entry's ready outcome records, or "none". */
+function describeNarrationLanguage(
+  outcome: { status: string; narrationLanguage?: string | undefined } | null,
+): string {
+  return (outcome?.status === "ready" ? outcome.narrationLanguage : undefined) ?? "none";
+}
+
 function parseUuid(value: string): string {
   return uuidV4Schema.parse(value);
 }

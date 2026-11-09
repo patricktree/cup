@@ -1,8 +1,10 @@
 import { z } from "zod";
 
 import { AUDIO_FORMAT } from "#src/audio-format.ts";
-import { isNarrationLanguageSpeakable } from "#src/narration-language-speakability.ts";
+import { toLanguageSubtag } from "#src/language-tag.ts";
+import { getNarrationLanguageSupport } from "#src/narration-language-speakability.ts";
 import {
+  isSameSpeechConfig,
   LEGACY_GEMINI_V3_SPEECH_CONFIG,
   LEGACY_GEMINI_V4_SPEECH_CONFIG,
   type SpeechConfig,
@@ -127,7 +129,7 @@ export async function synthesizeGeminiAudio({
   narrationLanguage,
 }: SynthesisOptions): Promise<Uint8Array> {
   const isStreaming = synthesisResponseMode === "streaming";
-  const isLegacyGemini = speechConfig.model === LEGACY_GEMINI_V3_SPEECH_CONFIG.model;
+  const isLegacyGemini = isSameSpeechConfig(speechConfig, LEGACY_GEMINI_V3_SPEECH_CONFIG);
   const spokenLanguage = selectSpokenLanguage(speechConfig, narrationLanguage);
   const response = await ai.gateway(SPEECH_GATEWAY_ID).run(
     {
@@ -234,18 +236,18 @@ function selectSpokenLanguage(
   const isPolicyWithoutLanguage = [
     LEGACY_GEMINI_V3_SPEECH_CONFIG,
     LEGACY_GEMINI_V4_SPEECH_CONFIG,
-  ].some((config) => config.policyVersion === speechConfig.policyVersion);
+  ].some((config) => isSameSpeechConfig(config, speechConfig));
   if (
     isPolicyWithoutLanguage ||
     narrationLanguage === undefined ||
-    !isNarrationLanguageSpeakable(narrationLanguage, speechConfig)
+    getNarrationLanguageSupport(narrationLanguage, speechConfig) !== "speakable"
   ) {
     return undefined;
   }
 
   // The style names the language without its region: "German" for de-AT.
   const englishName = new Intl.DisplayNames(["en"], { type: "language" }).of(
-    new Intl.Locale(narrationLanguage).language,
+    toLanguageSubtag(narrationLanguage),
   );
   if (englishName === undefined) {
     throw new Error(`No English name for the narration language ${narrationLanguage}`);
