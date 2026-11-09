@@ -2,6 +2,8 @@ import { css } from "@linaria/core";
 import { useRouterState } from "@tanstack/react-router";
 import React from "react";
 
+import { useHasViewTransitionStarted } from "#src/app/cover-transition.js";
+
 /** A navigation that resolves sooner shows no progress bar. */
 const SHOW_DELAY_MS = 100;
 
@@ -16,9 +18,12 @@ export function NavigationProgressBar(): React.ReactNode {
   const isNavigationPending = useRouterState({
     select: (state) => state.status === "pending" && state.resolvedLocation !== undefined,
   });
+  const pendingLocation = useRouterState({ select: (state) => state.location });
+  // The router waits on the browser to capture a View Transition after the next screen has loaded.
+  const isWaitingOnViewTransition = useHasViewTransitionStarted(pendingLocation);
 
   // Mounting it per navigation restarts its delay.
-  return isNavigationPending ? <DelayedProgressBar /> : null;
+  return isNavigationPending && !isWaitingOnViewTransition ? <DelayedProgressBar /> : null;
 }
 
 function DelayedProgressBar(): React.ReactNode {

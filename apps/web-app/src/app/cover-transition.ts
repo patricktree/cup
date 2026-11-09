@@ -1,4 +1,5 @@
 import type { AnyRouter, ParsedLocation } from "@tanstack/react-router";
+import React from "react";
 
 import {
   TRACK_COVER_ATTRIBUTE,
@@ -24,6 +25,10 @@ const DETAIL_ROUTE_ID = "/_shell/audiobooks/$conversionId" satisfies keyof FileR
 
 let coverNameRule: CSSStyleSheet | undefined;
 let isPopStateVisualTransition = false;
+
+/** The location of the last navigation the router started a View Transition for. */
+let viewTransitionLocation: ParsedLocation | undefined;
+const viewTransitionLocationListeners = new Set<() => void>();
 
 /**
  * The router's view transition setting: a transition for Recents to a detail view and back, none
@@ -77,6 +82,7 @@ export function createCoverViewTransition(router: Pick<AnyRouter, "getMatchedRou
       const coverSelector = `[${TRACK_COVER_ATTRIBUTE}="${CSS.escape(conversionId)}"]`;
       // The router asks before it commits the navigation, so this finds the old screen's cover.
       if (isOpenedFromMiniPlayer || !isInViewport(document.querySelector(coverSelector))) {
+        recordViewTransitionStart(toLocation);
         return [SCREEN_FADE_TYPE];
       }
 
@@ -85,9 +91,36 @@ export function createCoverViewTransition(router: Pick<AnyRouter, "getMatchedRou
           view-transition-name: ${TRACK_COVER_TRANSITION_NAME};
         }`,
       );
+      recordViewTransitionStart(toLocation);
       return [COVER_TRANSITION_TYPE];
     },
   };
+}
+
+/**
+ * Whether the router has started a View Transition for the navigation to `location`. It starts one
+ * only once the next screen has loaded, but stays pending until the browser has captured the old
+ * screen, which can take longer than the navigation progress bar's delay; that wait is not
+ * loading.
+ */
+export function useHasViewTransitionStarted(location: ParsedLocation): boolean {
+  const startedLocation = React.useSyncExternalStore(
+    subscribeToViewTransitionLocation,
+    () => viewTransitionLocation,
+  );
+  return startedLocation === location;
+}
+
+function recordViewTransitionStart(location: ParsedLocation): void {
+  viewTransitionLocation = location;
+  for (const listener of viewTransitionLocationListeners) {
+    listener();
+  }
+}
+
+function subscribeToViewTransitionLocation(listener: () => void): () => void {
+  viewTransitionLocationListeners.add(listener);
+  return () => viewTransitionLocationListeners.delete(listener);
 }
 
 /** Marks a cover as the given conversion's, to move when its detail view opens or closes. */
