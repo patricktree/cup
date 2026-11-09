@@ -76,6 +76,8 @@ export async function runAudioSegmentWorkflow({
             sequence,
             narrationChunk: { text: unit.narrationText },
             speechConfig: audiobook.speechConfig,
+            // Only the loaded manifest decides the language, so retries keep the stored one.
+            narrationLanguage: audiobook.narrationLanguage,
             synthesisAttempt: attempt,
             synthesisResponseMode: attempt === 1 ? "streaming" : "non-streaming",
           });

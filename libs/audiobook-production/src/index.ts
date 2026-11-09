@@ -25,6 +25,7 @@ export {
 } from "#src/store-audiobook.ts";
 
 export { SPEECH_CONFIG, type SpeechConfig } from "#src/speech-synthesis-config.ts";
+export { isNarrationLanguageSpeakable } from "#src/narration-language-speakability.ts";
 export { getStoredSpeechConfig, createAudioSegmentKey } from "#src/audio-segment-storage.ts";
 export {
   createCoverImageKey,
