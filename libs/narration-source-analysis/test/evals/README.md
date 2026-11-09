@@ -1,6 +1,6 @@
-# Run narration content selection evals
+# Run narration source analysis evals
 
-These evals compare the synchronization units produced by narration content selection candidates against committed input and best-output pairs. Each candidate's selected HTML passes through the same narration document creation used by the production workflow. The production candidate is a regression gate. Experimental candidate mismatches are recorded as scores without failing the run.
+These evals cover both parts of narration source analysis in one suite. The narration content selection evals compare the synchronization units produced by narration content selection candidates against committed input and best-output pairs. Each candidate's selected HTML passes through the same narration document creation used by the production workflow. The [narration language detection evals](#narration-language-scenarios) compare the language a detection candidate decides for each case against a hand-authored expected language. In both, the production candidate is a regression gate. Experimental candidate mismatches are recorded as scores without failing the run.
 
 Live evals call Gemini through Cloudflare AI Gateway and can incur usage charges. They run separately from the package's unit tests and repository validation.
 
@@ -18,6 +18,7 @@ Create a descriptive directory under `test/evals/cases/` with this structure:
   source-subtitle.txt  # optional
   input.html
   expected.json
+  narration-language.json
   case.json            # optional
 ```
 
@@ -26,6 +27,8 @@ Put the title returned by source material preparation in `source-title.txt` and 
 `input.html` has the prepared shape that content selection receives in production. When the page has a visible headline, preparation cuts everything before the headline, the headline itself, and the source subtitle element, so `input.html` contains none of them. Derive a new case's `input.html` from what `prepareLoadedSourcePage` in `libs/prepare-source-material` returns for the page.
 
 Put the best synchronization units in `expected.json`. The golden is a JSON array containing each unit's `id` and `narrationText`. It opens with the source title as unit `narration-unit-0001`; with a source subtitle, the source subtitle follows as unit `narration-unit-0002` and the selected content starts at `narration-unit-0003`.
+
+Put the case's narration language scenarios in `narration-language.json`, as described in [narration language scenarios](#narration-language-scenarios).
 
 Optional `case.json` metadata accepts only `description` and `tags`:
 
@@ -36,7 +39,23 @@ Optional `case.json` metadata accepts only `description` and `tags`:
 }
 ```
 
-Missing partner files, invalid metadata, and an empty eval case set fail during suite discovery.
+Missing partner files, invalid metadata or narration language scenarios, and an empty eval case set fail during suite discovery. The package's unit tests load the committed cases too, so `pnpm validate:fast` catches an invalid case without a paid run.
+
+## Narration language scenarios
+
+`narration-language.json` is a JSON array of scenarios. Each scenario has an optional `declaredLanguage` with the raw `htmlLang` and `ogLocale` values, as source preparation captures them, and the `expectedLanguage` as a language subtag alone, such as `de`, never `de-AT`. The region rule and the fallback chain are deterministic code with unit tests, so the evals check only the subtag the detector decides:
+
+```json
+[
+  { "declaredLanguage": { "htmlLang": "de-AT" }, "expectedLanguage": "de" },
+  { "expectedLanguage": "de" },
+  { "declaredLanguage": { "htmlLang": "en-US" }, "expectedLanguage": "de" }
+]
+```
+
+Every case has a scenario with the declared language recorded from the live page when the case is added, and a "nothing declared" scenario without `declaredLanguage`; the loader rejects a case without the latter. A contradicting scenario declares a wrong language, as a site template around an article in another language does: derStandard declared `en-US`, and the English "Ich bin ein Berliner" declared `de-DE`.
+
+The detector reads the case's source title and the narration source material rebuilt from the committed `expected.json` without its source title and source subtitle units, not a live selection run, so a selection regression cannot fail detection. A detection that falls back, for example because the call failed, scores 0 even when the fallback language matches. Expected languages are hand-authored facts: `eval:update` never changes `narration-language.json`.
 
 ## Run and update evals
 
@@ -46,15 +65,15 @@ From the repository root, run `pnpm validate:evals`. This paid check is excluded
 pnpm eval
 ```
 
-The production candidate must match every committed golden. Other candidates receive exact-match scores without gating the command. Runs execute sequentially without retries.
+The production selection candidate must match every committed golden, and the production detection candidate every expected language. Other candidates receive exact-match scores without gating the command. Runs execute sequentially without retries.
 
-Update goldens from only the production candidate:
+Update selection goldens from only the production selection candidate:
 
 ```sh
 pnpm eval:update
 ```
 
-Review changed `expected.json` files with Git before accepting them. To run one case, pass its ID to Vitest:
+Selection scores never gate the run; the file snapshot of `expected.json` gates the production candidate, so `eval:update` rewrites a golden that differs. Review changed `expected.json` files with Git before accepting them. To run one case, pass its ID to Vitest:
 
 ```sh
 pnpm eval -t <case-id>
@@ -68,7 +87,7 @@ pnpm eval:report
 
 ## Add an experimental candidate
 
-Add a named candidate to `CANDIDATES` in `test/evals/narration-content-selection.eval.ts`. Each candidate owns the complete AI strategy: its model-backed completion function, system prompt, tool definition, and completion options such as reasoning effort, token limit, and retries.
+Selection and detection have separate candidate lists, so an experiment varies one without the other. Add a named selection candidate to `CANDIDATES` in `test/evals/narration-content-selection.eval.ts`. Each candidate owns the complete AI strategy: its model-backed completion function, system prompt, tool definition, and completion options such as reasoning effort, token limit, and retries.
 
 Start experiments by spreading the production configuration and overriding only the variables under test:
 
@@ -90,3 +109,5 @@ Start experiments by spreading the production configuration and overriding only 
 ```
 
 Every candidate still runs through the same HTML identification, Zod response validation, ordering, filtering, narration document creation, and synchronization-unit chunking implementation. The repository-owned harness runs that complete workflow and normalizes its transcript, usage, timing, and artifacts for `vitest-evals`.
+
+Add a named detection candidate to `DETECTION_CANDIDATES` in the same file, spreading `PRODUCTION_DETECTION_CONFIG` from `src/production-narration-language-detection.ts` the same way. It runs through the same validation, canonicalization and region rule as production detection.

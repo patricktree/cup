@@ -165,15 +165,15 @@ function createTranscriptEvents(
   ];
 }
 
-function asJsonRecord(value: unknown): Record<string, JsonValue> {
+export function asJsonRecord(value: unknown): Record<string, JsonValue> {
   const jsonValue = toJsonValue(value);
 
   if (jsonValue === undefined) {
-    throw new Error("Expected selection tool arguments to be JSON-serializable");
+    throw new Error("Expected tool arguments to be JSON-serializable");
   }
 
   if (jsonValue === null || typeof jsonValue !== "object" || Array.isArray(jsonValue)) {
-    throw new Error("Expected selection tool arguments to be a JSON object");
+    throw new Error("Expected tool arguments to be a JSON object");
   }
 
   return jsonValue;
