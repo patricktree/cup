@@ -102,7 +102,10 @@ type SourcePage = {
     options: { timeout: number },
   ): Promise<unknown>;
   evaluate(pageFunction: (attributeName: string) => void, attributeName: string): Promise<unknown>;
-  locator(selector: "body" | "head"): { innerHTML(): Promise<string> };
+  locator(selector: "body" | "head" | "html"): {
+    innerHTML(): Promise<string>;
+    getAttribute(name: string): Promise<string | null>;
+  };
   title(): Promise<string>;
   close(): Promise<void>;
 };
@@ -124,14 +127,26 @@ export type CoverImageDeclaration = {
 };
 
 /**
+ * The language a source page declares for itself, each value exactly as declared and absent when
+ * the page does not declare it. Narration language detection validates the values.
+ */
+export type DeclaredLanguage = {
+  /** The `lang` attribute of the page's `<html>` element. */
+  htmlLang?: string;
+  /** The `og:locale` metadata, often in underscore form such as `de_AT`. */
+  ogLocale?: string;
+};
+
+/**
  * Cleaned source HTML, the title used to begin narration, the source subtitle when the page has
- * one, and the declared cover image.
+ * one, the declared cover image, and the declared language.
  */
 export type SourceMaterial = {
   html: string;
   title: string;
   subtitle?: string;
   coverImage?: CoverImageDeclaration;
+  declaredLanguage?: DeclaredLanguage;
 };
 
 /** Prepares source material from a URL through a supplied transport. */
@@ -155,6 +170,7 @@ export type LoadedSourcePage = {
    */
   metadataDescriptions?: readonly string[];
   coverImage?: CoverImageDeclaration;
+  declaredLanguage?: DeclaredLanguage;
   responseStatus: number;
 };
 
@@ -184,7 +200,8 @@ export async function prepareSourceMaterial({
 
   if (sourceMaterials.length > 0) {
     // Each load detects its own source subtitle, so it always belongs to the selected HTML.
-    const { html, title, subtitle } = selectBetterSourceMaterial(sourceMaterials);
+    // The declared language comes from the load whose source material is kept.
+    const { html, title, subtitle, declaredLanguage } = selectBetterSourceMaterial(sourceMaterials);
     // Independent of which load has more text: `SOURCE_PAGE_JAVASCRIPT_MODES` puts the rendered
     // load last, and its metadata is the fuller declaration because a static shell often carries
     // none or only a site-wide image.
@@ -195,6 +212,7 @@ export async function prepareSourceMaterial({
       title,
       ...(subtitle === undefined ? {} : { subtitle }),
       ...(coverImage === undefined ? {} : { coverImage }),
+      ...(declaredLanguage === undefined ? {} : { declaredLanguage }),
     };
   }
 
@@ -254,6 +272,9 @@ export function prepareLoadedSourcePage(sourcePage: LoadedSourcePage): SourceMat
     title,
     ...(subtitle === undefined ? {} : { subtitle }),
     ...(sourcePage.coverImage === undefined ? {} : { coverImage: sourcePage.coverImage }),
+    ...(sourcePage.declaredLanguage === undefined
+      ? {}
+      : { declaredLanguage: sourcePage.declaredLanguage }),
   };
 }
 
@@ -336,6 +357,10 @@ export async function loadPublicSourcePage({
 
     const headHtml = await page.locator("head").innerHTML();
     const coverImage = extractCoverImageDeclaration(headHtml, url);
+    const declaredLanguage = extractDeclaredLanguage(
+      await page.locator("html").getAttribute("lang"),
+      headHtml,
+    );
     // The mark must be in the DOM before the body is serialized below.
     await page.evaluate(markVisibleHeadline, VISIBLE_HEADLINE_ATTRIBUTE);
     const bodyHtml = await page.locator("body").innerHTML();
@@ -346,6 +371,7 @@ export async function loadPublicSourcePage({
       // `bodyHtml` lacks the head, and cleanup in `prepareLoadedSourcePage` drops body scripts.
       metadataDescriptions: extractMetadataDescriptions(`${headHtml}${bodyHtml}`),
       ...(coverImage === undefined ? {} : { coverImage }),
+      ...(declaredLanguage === undefined ? {} : { declaredLanguage }),
       responseStatus: response.status(),
     };
   } finally {
@@ -408,6 +434,20 @@ export function extractCoverImageDeclaration(
   }
 
   return undefined;
+}
+
+/** Reads `<html lang>` and `og:locale`; an empty declaration declares nothing. */
+function extractDeclaredLanguage(
+  htmlLang: string | null,
+  headHtml: string,
+): DeclaredLanguage | undefined {
+  const ogLocale = findMetadataContent(collectMetadata(parseFragment(headHtml)), "og:locale");
+  const declaredLanguage: DeclaredLanguage = {
+    ...(htmlLang === null || htmlLang.trim().length === 0 ? {} : { htmlLang }),
+    ...(ogLocale === undefined ? {} : { ogLocale }),
+  };
+
+  return Object.keys(declaredLanguage).length > 0 ? declaredLanguage : undefined;
 }
 
 function resolveCoverImageUrl(

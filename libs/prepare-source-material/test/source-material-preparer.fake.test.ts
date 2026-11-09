@@ -30,6 +30,18 @@ test("prepares controlled HTML with production cleanup, its first headline as th
   expect(html).not.toContain("<footer");
 });
 
+test("passes on the configured declared language", async () => {
+  const prepareSourceMaterial = createControlledSourceMaterialPreparer({
+    url: CONTROLLED_URL,
+    html: "<h1>Fixture</h1><p>Narration content.</p>",
+    declaredLanguage: { htmlLang: "de-AT", ogLocale: "de_AT" },
+  });
+
+  await expect(prepareSourceMaterial(CONTROLLED_URL)).resolves.toMatchObject({
+    declaredLanguage: { htmlLang: "de-AT", ogLocale: "de_AT" },
+  });
+});
+
 test("rejects a source URL other than the controlled fixture URL", async () => {
   const prepareSourceMaterial = createControlledSourceMaterialPreparer({
     url: CONTROLLED_URL,
