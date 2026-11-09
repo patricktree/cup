@@ -168,8 +168,8 @@ catalogs:
       specifier: ^1.3.6
       version: 1.3.6
     '@playwright/test':
-      specifier: 1.64.0
-      version: 1.64.0
+      specifier: 1.65.0
+      version: 1.65.0
     '@types/node':
       specifier: ^26.6.5
       version: 26.6.5
@@ -389,7 +389,7 @@ importers:
     dependencies:
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.0
+        version: 1.65.0
 
   .patricktree-stack/tooling/config-stylelint:
     dependencies:
@@ -769,7 +769,7 @@ importers:
         version: link:../../.patricktree-stack/tooling/config-wyw-in-js
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.0
+        version: 1.65.0
       '@tanstack/router-plugin':
         specifier: catalog:web-app
         version: 1.168.43(@tanstack/react-router@1.170.42(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(vite@8.3.4(@types/node@26.6.5))
@@ -1690,7 +1690,7 @@ importers:
         version: link:../../.patricktree-stack/tooling/config-vitest
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.0
+        version: 1.65.0
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.5
@@ -1879,7 +1879,7 @@ importers:
         version: link:../../.patricktree-stack/tooling/config-vitest
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.0
+        version: 1.65.0
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.5
@@ -1927,7 +1927,7 @@ importers:
         version: link:../../.patricktree-stack/tooling/config-typescript
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.0
+        version: 1.65.0
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.5
@@ -1964,7 +1964,7 @@ importers:
         version: link:../../.patricktree-stack/tooling/config-typescript
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.0
+        version: 1.65.0
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.5
@@ -4461,8 +4461,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@playwright/test@1.64.0':
-    resolution: {integrity: sha512-oTN9FNYuN6bqQMwiho6jJKLCG2/QOYCixGXuCjRmzOq23eODeukuY2XiAVoVpAECbuezMt1MHQjAiQxK8F+Y+g==}
+  '@playwright/test@1.65.0':
+    resolution: {integrity: sha512-iGURLGuKDLakSEl7Pgfv8h7f+XLT+V861Wfhz0zlEl5nyFuKUopdkFBPKqTllTUp06aOwPuH8iuUEb3yp3MpbQ==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -6711,13 +6711,13 @@ packages:
   pino-std-serializers@7.1.0:
     resolution: {integrity: sha512-BndPH67/JxGExRgiX1dX0w1FvZck5Wa4aal9198SrRhZjH3GxKQUKIBnYJTdj2HDN3UQAS06HlfcSbQj2OHmaw==}
 
-  playwright-core@1.64.0:
-    resolution: {integrity: sha512-T9r+MZkTECl2+oUcZ26YgZzTrYidTsIhYYkJix+6iDOymOb1FB2RLLSOxRGnZGv5DStt+aduIVbt+E8WygXYpg==}
+  playwright-core@1.65.0:
+    resolution: {integrity: sha512-vNSKgH6YqtN7cdT/L334zo0a+YwkrpicyrHJlWWPIm/Q+Nn2SWInil01oT0mbu96U4GgoRtCYQD9CzJQgju+lA==}
     engines: {node: '>=20'}
     hasBin: true
 
-  playwright@1.64.0:
-    resolution: {integrity: sha512-kVzTnYFYEyQ9RGzBjNCd2+yEqWmVbxl3AHPynv3qQ6JTjv4a+kwRcnqQwIpuP3NnrnIrE/Q6wWAIAvMfIE2/Yg==}
+  playwright@1.65.0:
+    resolution: {integrity: sha512-F3AMWcR44qMBt4kq+6Kb6mX7bjGXshktKFOPULd7reED6ZJWevjbNRqysP7q+AATE9kdPEZBibex1BYsvpVoeA==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -9002,9 +9002,9 @@ snapshots:
   '@oxlint/binding-win32-x64-msvc@1.87.0':
     optional: true
 
-  '@playwright/test@1.64.0':
+  '@playwright/test@1.65.0':
     dependencies:
-      playwright: 1.64.0
+      playwright: 1.65.0
 
   '@poppinss/colors@4.1.6':
     dependencies:
@@ -11247,11 +11247,11 @@ snapshots:
 
   pino-std-serializers@7.1.0: {}
 
-  playwright-core@1.64.0: {}
+  playwright-core@1.65.0: {}
 
-  playwright@1.64.0:
+  playwright@1.65.0:
     dependencies:
-      playwright-core: 1.64.0
+      playwright-core: 1.65.0
 
   plist@3.1.1:
     dependencies:
