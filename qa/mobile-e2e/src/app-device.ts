@@ -1,5 +1,5 @@
 /** The platforms the suite runs on; each is a Vitest project of the same name. */
-export type MobilePlatform = "android";
+export type MobilePlatform = "android" | "ios";
 
 export type LaunchArguments = {
   /** The test Worker's origin, always `http://localhost:<port>`. */
