@@ -11,14 +11,14 @@ const INPUT = {
 test("answers the configured language subtag", async () => {
   const detect = createFakeNarrationLanguageDetector({ answer: "de" });
 
-  await expect(detect(INPUT)).resolves.toEqual({ narrationLanguage: "de-AT" });
+  await expect(detect(INPUT)).resolves.toEqual({ narrationLanguage: "de-DE" });
 });
 
 test("can answer nothing", async () => {
   const detect = createFakeNarrationLanguageDetector({ answer: null });
 
   await expect(detect(INPUT)).resolves.toEqual({
-    narrationLanguage: "de-AT",
+    narrationLanguage: "de-DE",
     fallbackReason: "no-answer",
   });
 });
@@ -41,7 +41,7 @@ test("can fail on every attempt", async () => {
       },
     }),
   ).resolves.toEqual({
-    narrationLanguage: "de-AT",
+    narrationLanguage: "de-DE",
     fallbackReason: "detector-error",
     detectorError: new Error("Configured detection failure"),
   });

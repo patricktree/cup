@@ -51,6 +51,18 @@ const DETECTION_REQUEST_TIMEOUT_MILLISECONDS = 60_000;
 /** Undetermined, multiple languages, uncoded languages and no linguistic content. */
 const NON_LANGUAGE_SUBTAGS = new Set(["und", "mul", "mis", "zxx"]);
 const LANGUAGE_NAMES = new Intl.DisplayNames(["en"], { type: "language", fallback: "none" });
+/**
+ * Narration language preferences, keyed by language subtag: the region a language is narrated with,
+ * and whether a region the narration language already has wins over it. A language gets a
+ * preference only when there is evidence that its regional variants sound wrong.
+ */
+const NARRATION_LANGUAGE_PREFERENCES: Record<string, { region: string; keepsOwnRegion: boolean }> =
+  {
+    // Narrate all German as German from Germany, whatever region the page declares.
+    de: { region: "DE", keepsOwnRegion: false },
+    // Narrate English without a region as British English.
+    en: { region: "GB", keepsOwnRegion: true },
+  };
 
 /** Creates a detector that decides a conversion's narration language and never rejects. */
 export function createNarrationLanguageDetector(configuration: NarrationLanguageDetectionConfig) {
@@ -81,7 +93,11 @@ export function createNarrationLanguageDetector(configuration: NarrationLanguage
       return fallBack(declaredLanguage, "invalid-tag");
     }
 
-    return { narrationLanguage: withDeclaredRegion(language, declaredLanguage) };
+    return {
+      narrationLanguage: withNarrationLanguagePreference(
+        withDeclaredRegion(language, declaredLanguage),
+      ),
+    };
   };
 }
 
@@ -157,9 +173,22 @@ function fallBack(
   fallbackReason: NarrationLanguageFallbackReason,
 ): NarrationLanguageDetectionResult {
   return {
-    ...(declaredLanguage === undefined ? {} : { narrationLanguage: declaredLanguage.toString() }),
+    ...(declaredLanguage === undefined
+      ? {}
+      : { narrationLanguage: withNarrationLanguagePreference(declaredLanguage.toString()) }),
     fallbackReason,
   };
+}
+
+/** Applies the narration language preference for the language subtag of `narrationLanguage`, if any. */
+function withNarrationLanguagePreference(narrationLanguage: string): string {
+  const locale = new Intl.Locale(narrationLanguage);
+  const preference = NARRATION_LANGUAGE_PREFERENCES[locale.language];
+  if (preference === undefined || (preference.keepsOwnRegion && locale.region !== undefined)) {
+    return narrationLanguage;
+  }
+
+  return new Intl.Locale(locale, { region: preference.region }).toString();
 }
 
 /** Adds the declared region only when the declared language has the same language subtag. */

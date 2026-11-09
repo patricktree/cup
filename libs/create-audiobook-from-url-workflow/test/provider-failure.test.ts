@@ -213,7 +213,7 @@ test.each([
   },
 );
 
-test("a page declaring de-AT that the detector reads as de is narrated in de-AT, without a fallback warning", async () => {
+test("a page declaring de-AT that the detector reads as de is narrated in de-DE, without a fallback warning", async () => {
   const { owner, grantId, accountId, conversionId } = await createOwnedConversion("account");
   const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -224,7 +224,7 @@ test("a page declaring de-AT that the detector reads as de is narrated in de-AT,
     });
 
     expect(await loadReadyAudiobook(owner, conversionId)).toMatchObject({
-      narrationLanguage: "de-AT",
+      narrationLanguage: "de-DE",
     });
     expect(loggedWarnings(warn, "narration-language-fallback")).toEqual([]);
   } finally {
@@ -242,7 +242,7 @@ test.each(["account", "trial"] as const)(
       detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: "de" }),
     });
 
-    expect(await owner.readyNarrationLanguage(conversionId)).toBe("de-AT");
+    expect(await owner.readyNarrationLanguage(conversionId)).toBe("de-DE");
   },
 );
 
@@ -266,7 +266,7 @@ test.each(["account", "trial"] as const)(
 );
 
 test.each([
-  [{ htmlLang: "de-AT", ogLocale: "de_DE" }, "de-AT"],
+  [{ htmlLang: "de-AT", ogLocale: "de_DE" }, "de-DE"],
   [undefined, undefined],
 ] as const)(
   "a conversion whose detector fails with declared language %j becomes ready narrated in %s and logs the fallback",
@@ -306,7 +306,7 @@ test.each([
 );
 
 test.each(["trial", "account"] as const)(
-  "a %s de-AT conversion speaks every segment in German and records its synthesis language",
+  "a %s conversion of a page declaring de-AT speaks every segment in de-DE and records its synthesis language",
   async (kind) => {
     const { owner, grantId, accountId, conversionId, artifactPrefix, segmentOwner } =
       await createOwnedConversion(kind);
@@ -325,16 +325,31 @@ test.each(["trial", "account"] as const)(
     expect(speechRequests()).toEqual([
       {
         content: [{ type: "text", text: expect.any(String), annotations: [germanStyle] }],
-        generationConfig: { speech_config: [{ voice: "Charon", language: "de-AT" }] },
+        generationConfig: { speech_config: [{ voice: "Charon", language: "de-DE" }] },
       },
       {
         content: [{ type: "text", text: expect.any(String), annotations: [germanStyle] }],
-        generationConfig: { speech_config: [{ voice: "Charon", language: "de-AT" }] },
+        generationConfig: { speech_config: [{ voice: "Charon", language: "de-DE" }] },
       },
     ]);
-    expect(await storedSynthesisLanguages(artifactPrefix)).toEqual(["de-AT", "de-AT"]);
+    expect(await storedSynthesisLanguages(artifactPrefix)).toEqual(["de-DE", "de-DE"]);
   },
 );
+
+test("a conversion of a page declaring no language that the detector reads as en speaks every segment in en-GB", async () => {
+  const { owner, grantId, conversionId, segmentOwner } = await createOwnedConversion("trial");
+  await runConversion(grantId, conversionId, undefined, false, undefined, undefined, {
+    detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: "en" }),
+  });
+  const { ai, speechRequests } = createRecordingSpeechSynthesisAi();
+
+  await runAllSegments(owner, conversionId, segmentOwner, ai);
+
+  expect(speechRequests()).toMatchObject([
+    { generationConfig: { speech_config: [{ voice: "Charon", language: "en-GB" }] } },
+    { generationConfig: { speech_config: [{ voice: "Charon", language: "en-GB" }] } },
+  ]);
+});
 
 test("a conversion without a narration language sends today's requests and records no synthesis language", async () => {
   const { owner, grantId, conversionId, artifactPrefix, segmentOwner } =
@@ -435,7 +450,7 @@ test("a retried segment uses the manifest's narration language after the detecto
   await runSegment(conversionId, { kind: "trial", grantId }, 0, ai);
 
   expect(speechRequests()).toMatchObject([
-    { generationConfig: { speech_config: [{ voice: "Charon", language: "de" }] } },
+    { generationConfig: { speech_config: [{ voice: "Charon", language: "de-DE" }] } },
   ]);
 });
 
