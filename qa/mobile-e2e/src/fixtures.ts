@@ -42,11 +42,12 @@ export function useMobileApp(): MobileApp {
 
   beforeEach(async () => {
     const openedDevice = requireDefined(device, "The device session");
-    const authProvider = await startAuthProvider();
+    // Each test starts signed out, whatever the previous test stored.
+    await openedDevice.clearAppData();
+    // Its origin and token issuer are `http://localhost:<port>`, as the app and the Worker see it.
+    const authProvider = await startAuthProvider({ hostname: "localhost" });
     const authProviderPort = portOf(authProvider.origin);
-    const worker = await startTestWorker({
-      authProviderOrigin: localhostOrigin(authProviderPort),
-    });
+    const worker = await startTestWorker({ authProviderOrigin: authProvider.origin });
     const workerPort = portOf(worker.origin);
     await openedDevice.exposeHostPort(workerPort);
     await openedDevice.exposeHostPort(authProviderPort);

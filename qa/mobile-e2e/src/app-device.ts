@@ -20,6 +20,8 @@ export type AppDevice = {
   launch(launchArguments: LaunchArguments): Promise<void>;
   /** Stops the app and launches it again with the arguments of the last launch. */
   relaunch(): Promise<void>;
+  /** Stops the app and erases what it stored, such as the account session, as a reinstall would. */
+  clearAppData(): Promise<void>;
   /** Stops the app's process. */
   terminate(): Promise<void>;
   /** Sends the app to the background, as the home button does. */
