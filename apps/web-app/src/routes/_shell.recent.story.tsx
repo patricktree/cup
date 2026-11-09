@@ -10,10 +10,7 @@ import {
   readFailedStoryResponse,
   waitWhileHeld,
 } from "#src/ui-gallery/held-responses.js";
-import {
-  createStoryNarrationTrack,
-  storyNarrationTrackHandler,
-} from "#src/ui-gallery/narration-track.js";
+import { createStoryNarrationTrack } from "#src/ui-gallery/narration-track.js";
 import type { Story } from "#src/ui-gallery/story.js";
 
 const ADDED_CONVERSION_ID = "c1d0f6a2-3b4e-4f5a-8b6c-7d8e9f0a1b2c";
@@ -173,7 +170,6 @@ function createMiniPlayerStory({ hasCover }: { hasCover: boolean }): Story {
           narrationTrack: createStoryNarrationTrack([30_000, 30_000]),
         } satisfies Audiobook),
       ),
-      storyNarrationTrackHandler,
       http.put(
         `/api/audiobooks/${LOADED_CONVERSION_ID}/position`,
         () => new HttpResponse(null, { status: 204 }),
@@ -334,7 +330,6 @@ export const RevisitingScreens = accountStory({
         canGenerate: true,
       } satisfies Audiobook);
     }),
-    storyNarrationTrackHandler,
   ],
 });
 

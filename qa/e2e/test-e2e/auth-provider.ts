@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
-import http from "node:http";
+import type http from "node:http";
+import https from "node:https";
 import { Temporal } from "temporal-polyfill";
 
 const SUBJECT = "880ce5b5-6542-40fd-8f2d-380f3066e98a";
@@ -11,8 +12,12 @@ const READER_NAME = "Reader Doe";
 const OTHER_SUBJECT = "70fcf2d9-63c5-48be-b897-d3670f24ed43";
 const nowSeconds = () => Math.floor(Temporal.Now.instant().epochMilliseconds / 1000);
 
-/** Local identity boundary: real PKCE, signed access tokens and JWKS, with no Google traffic. */
-export async function startAuthProvider() {
+/**
+ * Local identity boundary: real PKCE, signed access tokens and JWKS, with no Google traffic. It
+ * serves HTTPS with the Worker's certificate, because WebKit blocks an HTTPS page from calling
+ * HTTP.
+ */
+export async function startAuthProvider(tls: { key: Buffer; cert: Buffer }) {
   const pair = crypto.generateKeyPairSync("ec", { namedCurve: "prime256v1" });
   const publicKey = {
     ...pair.publicKey.export({ format: "jwk" }),
@@ -108,7 +113,7 @@ export async function startAuthProvider() {
       }),
     );
   };
-  const server = http.createServer((request, response) => {
+  const server = https.createServer(tls, (request, response) => {
     response.setHeader("Access-Control-Allow-Origin", "*");
     response.setHeader(
       "Access-Control-Allow-Headers",
@@ -158,7 +163,7 @@ export async function startAuthProvider() {
   if (!address || typeof address === "string") {
     throw new Error("No identity port");
   }
-  origin = `http://127.0.0.1:${address.port}`;
+  origin = `https://127.0.0.1:${address.port}`;
   return {
     origin,
     otherToken: () => tokenFor(OTHER_SUBJECT),
