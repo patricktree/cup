@@ -14,11 +14,22 @@ export type CreatedGrant = {
   trialLink: string;
 };
 
+/** A request the test Worker received, as its entry logged it. */
+export type RecordedRequest = {
+  readonly method: string;
+  /** The path with its query string. */
+  readonly path: string;
+  /** Header names are lowercase. */
+  readonly headers: Readonly<Record<string, string>>;
+};
+
 export type TestWorker = {
   readonly origin: string;
   readonly persistenceDirectory: string;
   /** Wrangler's output so far, with a line for each start. */
   readonly logs: readonly string[];
+  /** Every request the Worker received so far, oldest first, across restarts. */
+  requests(): RecordedRequest[];
   /** Creates a conversion grant through the operator API, authorized by the fake access check. */
   createGrant(label?: string): Promise<CreatedGrant>;
   /** Restarts Wrangler with another scenario, keeping the port and persisted storage. */
@@ -34,6 +45,9 @@ type StartTestWorkerOptions = {
   /** Writes Wrangler's output to stderr while it runs. */
   streamLogs?: boolean;
 };
+
+/** Must match the prefix the Worker entry writes in `logRequest`. */
+const REQUEST_LOG_PREFIX = "[test-worker:request] ";
 
 const PACKAGE_ROOT = path.resolve(import.meta.dirname, "..");
 
@@ -92,6 +106,7 @@ export async function startTestWorker(options: StartTestWorkerOptions = {}): Pro
     origin,
     persistenceDirectory,
     logs,
+    requests: () => parseRequestLog(logs),
     createGrant: (label = "Trial") => createGrant(origin, label),
     async restart(scenario) {
       await stopProcess(workerProcess);
@@ -106,6 +121,33 @@ export async function startTestWorker(options: StartTestWorkerOptions = {}): Pro
       }
     },
   };
+}
+
+function parseRequestLog(logs: readonly string[]): RecordedRequest[] {
+  return logs
+    .join("")
+    .split("\n")
+    .flatMap((line) => {
+      const start = line.indexOf(REQUEST_LOG_PREFIX);
+      if (start === -1) {
+        return [];
+      }
+      const entry: unknown = JSON.parse(line.slice(start + REQUEST_LOG_PREFIX.length));
+      if (
+        !isRecord(entry) ||
+        typeof entry["method"] !== "string" ||
+        typeof entry["path"] !== "string" ||
+        !isRecord(entry["headers"])
+      ) {
+        throw new Error(`The test Worker logged an invalid request: ${line}`);
+      }
+      const headers = Object.fromEntries(
+        Object.entries(entry["headers"]).filter(
+          (header): header is [string, string] => typeof header[1] === "string",
+        ),
+      );
+      return [{ method: entry["method"], path: entry["path"], headers }];
+    });
 }
 
 async function createGrant(origin: string, label: string): Promise<CreatedGrant> {

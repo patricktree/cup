@@ -26,6 +26,7 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 | [Web application](../apps/web-app/README.md)                                          | Develop, build, and manually verify the shared UI; run component tests                                                 |
 | [Worker development and integration tests](../apps/cloudflare-worker/AGENTS.md)       | Run the Worker locally and test it without external services                                                           |
 | [Application E2E tests](../qa/e2e/README.md)                                          | Run the complete local conversion path and update screenshots                                                          |
+| [Mobile E2E tests](../qa/mobile-e2e/README.md)                                        | Run the debug Android shell on its own emulator against a local test Worker                                            |
 | [Test Worker](../qa/test-worker/README.md)                                            | The test-only Worker with deterministic fakes, its Wrangler harness, the fake auth provider, and the E2E cost boundary |
 | [Recorded source pages](../libs/prepare-source-material/test-e2e/fixtures/README.md)  | Replay source-page fixtures in source-material E2E tests                                                               |
 | [Narration selection evals](../libs/narration-content-selection/test/evals/README.md) | Run the paid narration content selection evals                                                                         |
