@@ -2,6 +2,9 @@ import { WorkflowEntrypoint } from "cloudflare:workers";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
 
+import sourceHtml from "#worker/fixtures/source.html";
+import { createTrackedSpeechProvider, handleSpeechControl } from "#worker/speech-controls.ts";
+
 import { AccountDurableObject } from "@cup/accounts";
 import { createApiServer } from "@cup/api-server";
 import { type ConversionParams, type SegmentWorkflowParams } from "@cup/conversion-contracts";
@@ -13,9 +16,6 @@ import {
 import { createFakeNarrationContentSelector } from "@cup/narration-content-selection/fake";
 import { createControlledSourceMaterialPreparer } from "@cup/prepare-source-material/fake";
 import { RegistryDurableObject } from "@cup/registry";
-
-import sourceHtml from "#src/fixtures/source.html";
-import { createTrackedSpeechProvider, handleSpeechControl } from "#src/speech-controls.ts";
 
 const CONTROLLED_SOURCE_URL = "https://source.example.test/fixture";
 const CONTROLLED_COVER_IMAGE = {

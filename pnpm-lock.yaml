@@ -1828,39 +1828,18 @@ importers:
 
   qa/e2e:
     dependencies:
-      '@cup/accounts':
-        specifier: workspace:*
-        version: link:../../libs/accounts
-      '@cup/api-server':
-        specifier: workspace:*
-        version: link:../../libs/api-server
       '@cup/audiobook-production':
         specifier: workspace:*
         version: link:../../libs/audiobook-production
-      '@cup/cloudflare-worker':
-        specifier: workspace:*
-        version: link:../../apps/cloudflare-worker
       '@cup/conversion-contracts':
         specifier: workspace:*
         version: link:../../libs/conversion-contracts
-      '@cup/conversion-grants':
-        specifier: workspace:*
-        version: link:../../libs/conversion-grants
-      '@cup/create-audiobook-from-url-workflow':
-        specifier: workspace:*
-        version: link:../../libs/create-audiobook-from-url-workflow
       '@cup/listener-api.routes':
         specifier: workspace:*
         version: link:../../libs/listener-api.routes
-      '@cup/narration-content-selection':
+      '@cup/test-worker':
         specifier: workspace:*
-        version: link:../../libs/narration-content-selection
-      '@cup/prepare-source-material':
-        specifier: workspace:*
-        version: link:../../libs/prepare-source-material
-      '@cup/registry':
-        specifier: workspace:*
-        version: link:../../libs/registry
+        version: link:../test-worker
     devDependencies:
       '@cup/config-oxlint':
         specifier: workspace:*
@@ -1892,9 +1871,6 @@ importers:
       oxlint-tsgolint:
         specifier: 'catalog:'
         version: 7.0.2004
-      temporal-polyfill:
-        specifier: ^1.0.5
-        version: 1.0.5
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
@@ -1904,9 +1880,6 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.11(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5))
-      wrangler:
-        specifier: 'catalog:'
-        version: 4.144.0(@types/node@26.6.5)
 
   qa/fidelity-check:
     devDependencies:
@@ -2020,6 +1993,70 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.11(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5))
+
+  qa/test-worker:
+    dependencies:
+      '@cup/accounts':
+        specifier: workspace:*
+        version: link:../../libs/accounts
+      '@cup/api-server':
+        specifier: workspace:*
+        version: link:../../libs/api-server
+      '@cup/audiobook-production':
+        specifier: workspace:*
+        version: link:../../libs/audiobook-production
+      '@cup/cloudflare-worker':
+        specifier: workspace:*
+        version: link:../../apps/cloudflare-worker
+      '@cup/conversion-contracts':
+        specifier: workspace:*
+        version: link:../../libs/conversion-contracts
+      '@cup/conversion-grants':
+        specifier: workspace:*
+        version: link:../../libs/conversion-grants
+      '@cup/create-audiobook-from-url-workflow':
+        specifier: workspace:*
+        version: link:../../libs/create-audiobook-from-url-workflow
+      '@cup/narration-content-selection':
+        specifier: workspace:*
+        version: link:../../libs/narration-content-selection
+      '@cup/prepare-source-material':
+        specifier: workspace:*
+        version: link:../../libs/prepare-source-material
+      '@cup/registry':
+        specifier: workspace:*
+        version: link:../../libs/registry
+      temporal-polyfill:
+        specifier: ^1.0.5
+        version: 1.0.5
+      wrangler:
+        specifier: 'catalog:'
+        version: 4.144.0(@types/node@26.6.5)
+    devDependencies:
+      '@cup/config-oxlint':
+        specifier: workspace:*
+        version: link:../../tooling/config-oxlint
+      '@cup/prepare-declaration-build':
+        specifier: workspace:*
+        version: link:../../tooling/prepare-declaration-build
+      '@patricktree-stack/config-typescript':
+        specifier: workspace:*
+        version: link:../../.patricktree-stack/tooling/config-typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.5
+      '@typescript/native':
+        specifier: 'catalog:'
+        version: typescript@7.0.2
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.87.0(oxlint-tsgolint@7.0.2004)
+      oxlint-tsgolint:
+        specifier: 'catalog:'
+        version: 7.0.2004
+      typescript:
+        specifier: 'catalog:'
+        version: '@typescript/typescript6@6.0.2'
 
   qa/workspace-checks:
     devDependencies:

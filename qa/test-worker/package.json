@@ -1,0 +1,57 @@
+{
+  "name": "@cup/test-worker",
+  "private": true,
+  "description": "The test-only Worker with deterministic fakes, the helper that starts it under Wrangler for one test, and the fake auth provider; shared by the E2E suites",
+  "files": [
+    "src/**",
+    "worker/**",
+    "wrangler.jsonc"
+  ],
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*",
+    "#worker/*": "./worker/*"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "turbo run turbo:build",
+    "cf-typegen": "wrangler types",
+    "clean": "del-cli --dot=true \"dist\" \"*.tsbuildinfo\"",
+    "lint": "turbo run turbo:lint",
+    "lint:fix": "turbo run turbo:lint:fix",
+    "turbo:build": "prepare-declaration-build --declaration-output-dir ./dist/types --build-info-file ./dist/tsconfig.build.tsbuildinfo --source-package-json ./src/package.json && tsc --build ./tsconfig.json",
+    "turbo:cf-typegen": "pnpm run cf-typegen",
+    "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
+    "turbo:lint:fix": "pnpm run turbo:lint --fix"
+  },
+  "dependencies": {
+    "@cup/accounts": "workspace:*",
+    "@cup/api-server": "workspace:*",
+    "@cup/audiobook-production": "workspace:*",
+    "@cup/cloudflare-worker": "workspace:*",
+    "@cup/conversion-contracts": "workspace:*",
+    "@cup/conversion-grants": "workspace:*",
+    "@cup/create-audiobook-from-url-workflow": "workspace:*",
+    "@cup/narration-content-selection": "workspace:*",
+    "@cup/prepare-source-material": "workspace:*",
+    "@cup/registry": "workspace:*",
+    "temporal-polyfill": "^1.0.5",
+    "wrangler": "catalog:"
+  },
+  "devDependencies": {
+    "@cup/config-oxlint": "workspace:*",
+    "@cup/prepare-declaration-build": "workspace:*",
+    "@patricktree-stack/config-typescript": "workspace:*",
+    "@types/node": "catalog:",
+    "@typescript/native": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "typescript": "catalog:"
+  }
+}

@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "create-audiobook-from-url-e2e",
-  "main": "src/worker.ts",
+  "main": "worker/worker.ts",
   "compatibility_flags": ["nodejs_compat"],
   "compatibility_date": "2026-08-18",
   "rules": [{ "type": "Text", "globs": ["**/*.html"], "fallthrough": true }],

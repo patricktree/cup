@@ -61,7 +61,7 @@ const config: KnipConfig = {
         "cloudflare",
       ],
     },
-    "qa/e2e": {
+    "qa/test-worker": {
       /* These dependencies express the built-app test dependency graph. */
       ignoreDependencies: [
         "@cup/cloudflare-worker",
