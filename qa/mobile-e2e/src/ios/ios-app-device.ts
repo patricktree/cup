@@ -9,6 +9,8 @@ export type IosTarget = {
   readonly udid: string;
   readonly platformVersion: string;
   readonly appiumPort: number;
+  /** The debug app the global setup built, reinstalled to clear its data. */
+  readonly appPath: string;
   /** The derived data folder of the prebuilt WebDriverAgent. */
   readonly webDriverAgentDerivedData: string;
 };
@@ -46,16 +48,18 @@ export async function openIosAppDevice(target: IosTarget): Promise<IosAppDevice>
     connectionRetryTimeout: 180_000,
     capabilities,
   });
-  return new IosAppDevice(driver);
+  return new IosAppDevice(target, driver);
 }
 
 export class IosAppDevice implements AppDevice {
   readonly platform = "ios";
+  private readonly target: IosTarget;
   private readonly driver: WebdriverIO.Browser;
   private readonly relays = new Map<number, LoopbackRelay>();
   private lastLaunchArguments: LaunchArguments | undefined;
 
-  constructor(driver: WebdriverIO.Browser) {
+  constructor(target: IosTarget, driver: WebdriverIO.Browser) {
+    this.target = target;
     this.driver = driver;
   }
 
@@ -84,6 +88,13 @@ export class IosAppDevice implements AppDevice {
       throw new Error("Cup has not been launched in this spec file, so it cannot be relaunched.");
     }
     await this.launch(this.lastLaunchArguments);
+  }
+
+  async clearAppData(): Promise<void> {
+    // iOS has no command that clears one app's data; a reinstall erases its container, including
+    // the WebView's localStorage that holds the account session.
+    await this.driver.execute("mobile: removeApp", { bundleId: BUNDLE_ID });
+    await this.driver.execute("mobile: installApp", { app: this.target.appPath });
   }
 
   async terminate(): Promise<void> {

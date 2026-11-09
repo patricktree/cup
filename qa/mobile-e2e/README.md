@@ -10,7 +10,7 @@ This package drives the debug build of the Android shell on an emulator and of t
   - SDK platform 36 and the system image `system-images;android-36;google_apis;arm64-v8a`
 - Java 21, with `JAVA_HOME` pointing to it. Android Studio includes one at `/Applications/Android Studio.app/Contents/jbr/Contents/Home`.
 - Xcode that supports the host macOS, with an iOS simulator runtime: install one with `xcodebuild -downloadPlatform iOS` or in Xcode under Settings > Components. Since version 26, Xcode's major version must be at least macOS's: an older Xcode hangs every XCTest runner, WebDriverAgent included. After an Xcode update, restart CoreSimulatorService with `killall -9 com.apple.CoreSimulator.CoreSimulatorService`.
-- Internet access on the first run, for the Appium driver and Chromedriver downloads
+- Internet access on the first run, for the Appium driver and Chromedriver downloads, and on every run for the Android add-account test, which opens Google's real sign-in screen through Google Play services
 
 The suite finds the SDK at `ANDROID_HOME`, then `ANDROID_SDK_ROOT`, then Android Studio's default `~/Library/Android/sdk`. A preflight check per platform fails the run before any device starts, naming each missing tool and how to install it, and the Xcode update or CoreSimulatorService restart the iOS run needs.
 
@@ -45,7 +45,7 @@ Runs in several checkouts can go at once. Each run boots its own emulator, which
 
 Each iOS run creates its own simulator, named `cup-mobile-e2e-<random>`, in the default simulator set, because WebDriverAgent starts through `xcodebuild`, which sees no other set. The run deletes it afterwards, also when it fails. A detached watcher deletes it when the run is killed. WebDriverAgent and its MJPEG stream listen on ports the operating system assigns.
 
-The simulator shares the Mac's loopback, and on iOS 26.3.1 it connects to `localhost` over `::1` first: a probe with servers on `127.0.0.1` and `::1` at the same port saw the app's request arrive on `::1`, and with only `127.0.0.1` listening it fell back there without a noticeable delay (2026-11-09). The test Worker and the fake auth provider listen on `127.0.0.1` alone, so each test relays `[::1]:<port>` to them; otherwise another process holding the same port on `::1` would receive the app's requests.
+The simulator shares the Mac's loopback, and on iOS 26.3.1 it connects to `localhost` over `::1` first: a probe with servers on `127.0.0.1` and `::1` at the same port saw the app's request arrive on `::1`, and with only `127.0.0.1` listening it fell back there without a noticeable delay (2026-11-09). The fake auth provider listens on both loopbacks. Wrangler binds one address, so the test Worker listens on `127.0.0.1` alone and each iOS test relays `[::1]:<port>` to it; otherwise another process holding the same port on `::1` would receive the app's requests.
 
 ## How the app reaches the test Worker
 
@@ -54,6 +54,14 @@ The suite launches the installed debug build with the test Worker's origin, alwa
 ## Cost and network boundary
 
 The [test Worker's cost and network boundary](../test-worker/README.md#cost-and-network-boundary) applies to this suite. The fake auth provider stands in for Google and Supabase sign-in.
+
+## Sign-in
+
+The suite never signs in with real Google. Each test's fake auth provider listens at `http://localhost:<port>` on both loopback addresses and issues tokens for that origin, which the test Worker gets as its `SUPABASE_URL`; `adb reverse` makes its port reachable on the emulator. On Android, the debug build replaces the Google sign-in plugin with a [fake](../../apps/mobile-app/README.md#debug-launch-arguments) that asks the fake auth provider for an ID token, so the sign-in tests cover the Android adapter, Secure Storage and the Worker's token check, not Google. The Worker's `LOCAL_TEST_ACCOUNT_*` stay empty ([ADR 0012](../../docs/adr/0012-offer-a-local-test-account-instead-of-google-in-development.md)'s account stays out).
+
+[`src/journeys.ts`](src/journeys.ts) holds the shared WebView journeys: `signInFromLandingPage` starts a conversion from the landing page and signs in with "Continue with Google". The web app signs out only when an account is scheduled for deletion, so the signed-out relaunch test schedules one.
+
+One Android test launches with the real plugin (`realGoogleSignIn: true`) on the account-less emulator, taps "Continue with Google", checks that Google Play services' add-account screen is in front, presses Back and checks that Cup's landing page can start another sign-in.
 
 ## Layout
 

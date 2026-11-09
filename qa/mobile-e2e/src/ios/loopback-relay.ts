@@ -1,14 +1,17 @@
 import net from "node:net";
 
+import { run } from "#src/host.ts";
+
 export type LoopbackRelay = {
   close(): Promise<void>;
 };
 
 /**
- * Relays `[::1]:<port>` to `127.0.0.1:<port>`. The iOS simulator shares the host's loopback and
- * connects to `localhost` over `::1` first, falling back to `127.0.0.1` only when nothing listens
- * on `::1`. The test Worker and the fake auth provider listen on `127.0.0.1` alone, so without the
- * relay another process holding the same port on `::1` would receive the app's requests.
+ * Relays `[::1]:<port>` to `127.0.0.1:<port>`, unless this process already listens there. The iOS
+ * simulator shares the host's loopback and connects to `localhost` over `::1` first, falling back
+ * to `127.0.0.1` only when nothing listens on `::1`. The test Worker listens on `127.0.0.1` alone,
+ * so without the relay another process holding the same port on `::1` would receive the app's
+ * requests. The fake auth provider listens on both loopbacks itself.
  */
 export async function startLoopbackRelay(port: number): Promise<LoopbackRelay> {
   const sockets = new Set<net.Socket>();
@@ -25,12 +28,17 @@ export async function startLoopbackRelay(port: number): Promise<LoopbackRelay> {
     client.pipe(upstream).pipe(client);
   });
 
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", (error) =>
-      reject(new Error(`Another process listens on [::1]:${port}.`, { cause: error })),
-    );
-    server.listen(port, "::1", resolve);
-  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(port, "::1", resolve);
+    });
+  } catch (error) {
+    if (await isListeningInThisProcess(port)) {
+      return { close: () => Promise.resolve() };
+    }
+    throw new Error(`Another process listens on [::1]:${port}.`, { cause: error });
+  }
   return {
     close: () =>
       new Promise<void>((resolve, reject) => {
@@ -40,4 +48,15 @@ export async function startLoopbackRelay(port: number): Promise<LoopbackRelay> {
         server.close((error) => (error === undefined ? resolve() : reject(error)));
       }),
   };
+}
+
+async function isListeningInThisProcess(port: number): Promise<boolean> {
+  const { stdout } = await run("lsof", [
+    "-nP",
+    "-a",
+    `-iTCP@[::1]:${port}`,
+    "-sTCP:LISTEN",
+    "-t",
+  ]).catch(() => ({ stdout: "" }));
+  return stdout.split("\n").includes(String(process.pid));
 }

@@ -49,6 +49,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
       udid: simulator.value.udid,
       platformVersion: host.runtime.version,
       appiumPort: webDriverAgent.value.appiumPort,
+      appPath: app.value,
       webDriverAgentDerivedData: webDriverAgent.value.derivedData,
     });
   } catch (error) {
