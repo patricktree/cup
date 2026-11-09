@@ -68,6 +68,20 @@ It has no effect without `cupTestApiOrigin`.
 
 After building, open `apps/mobile-app/ios/App/App.xcodeproj` in Xcode and choose a simulator or configure signing for a device. The project uses Swift Package Manager, matching Content Relay.
 
+The [mobile E2E tests](../../qa/mobile-e2e/README.md) launch the debug build on their own simulator against a local test Worker and check that it launches to the landing page.
+
+### iOS debug launch arguments
+
+The debug build reads the backend origin from the process arguments `-cupTestApiOrigin <origin>`, which the mobile E2E suite sets to its test Worker:
+
+```sh
+xcrun simctl launch <simulator> audio.cup.app -cupTestApiOrigin http://localhost:8787
+```
+
+In Xcode, add the arguments under the App scheme's Run action, Arguments Passed On Launch. As on [Android](#debug-launch-arguments), the value must be exactly `http://localhost:<port>`; any other value stops the app at launch with a fatal error naming the argument, and without the arguments a debug build uses `https://cup.audio`. The simulator shares the Mac's loopback, so `localhost` needs no port forwarding.
+
+Only `#if DEBUG` code in [`MainViewController.swift`](ios/App/App/MainViewController.swift) handles the arguments: before Capacitor loads the page, it adds a document-start script that sets the global `window.cupTestApiOrigin`. App Transport Security's built-in exemption for `localhost` allows the plain HTTP, so `Info.plist` is unchanged. Release builds contain none of this.
+
 ## Links and sharing
 
 The apps intentionally don't support trial links ([ADR 0017](../../docs/adr/0017-keep-trial-links-out-of-the-mobile-apps.md)). Neither app claims web links, so tapping a link to `cup.audio`, such as a trial link, opens the browser, and share intake ignores URLs on Cup's hostnames.

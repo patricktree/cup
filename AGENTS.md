@@ -34,7 +34,7 @@ Git hooks run no validation, so deciding when to validate is up to you. Prefer t
 
 The root `package.json` defines each group. `pnpm validate:fast` covers static checks, build, lint, and tests including browser component tests; `pnpm validate:extended` covers the brand-assets check, online zizmor, both web E2E suites, and the mobile E2E suite; `pnpm validate` runs fast, then extended. `pnpm validate:update-snapshots` runs both while updating the component and app E2E screenshot baselines. `pnpm validate:evals` runs the paid narration-content-selection evals; invoke it only explicitly.
 
-The groups are independent and stop on failure; extended does not run the fast group. Both free groups require Docker; extended also needs internet access, `uvx`, GitHub CLI authentication for zizmor, and Android Studio with Java 21 for the [mobile E2E suite](qa/mobile-e2e/README.md#prerequisites). Fast validation requires the configured environment files but invokes no paid AI service. Declutter runs after the build because Knip loads the Worker's Vite config, which requires the built web app.
+The groups are independent and stop on failure; extended does not run the fast group. Both free groups require Docker; extended also needs internet access, `uvx`, GitHub CLI authentication for zizmor, and Android Studio with Java 21 and Xcode for the [mobile E2E suite](qa/mobile-e2e/README.md#prerequisites). Fast validation requires the configured environment files but invokes no paid AI service. Declutter runs after the build because Knip loads the Worker's Vite config, which requires the built web app.
 
 Test suites can run concurrently in several checkouts. Each run starts its own servers on ports the operating system assigns and never attaches to a server that is already running, so keep fixed ports and `reuseExistingServer` out of test configuration. The one exception is the Playwright Server container from the shared Playwright configuration: all runs of one Playwright version share it, and it stops itself when idle (see the [shared configuration](.patricktree-stack/tooling/config-playwright/README.md#shared-playwright-server-container)).
 
@@ -42,7 +42,7 @@ Tests are never retried: leave Vitest `retry` and Playwright `retries` at their 
 
 Tests that exercise Resend use the [Resend stub](qa/resend-stub/README.md). Its live contract test, `pnpm test:resend-live`, sends real email, so only the operator runs it.
 
-Use `pnpm test:e2e:app` or `pnpm test:e2e:source-material` to rerun a single E2E suite. `pnpm test:e2e` runs both. `pnpm test:e2e:mobile` runs the mobile suite; add `--project android` to run one platform. Builds use checked-in brand assets; after changing their sources, run `pnpm brand-assets:sync` and review the generated changes. `pnpm brand-assets:check` reports stale files without modifying them.
+Use `pnpm test:e2e:app` or `pnpm test:e2e:source-material` to rerun a single E2E suite. `pnpm test:e2e` runs both. `pnpm test:e2e:mobile` runs the mobile suite; add `--project android` or `--project ios` to run one platform. Builds use checked-in brand assets; after changing their sources, run `pnpm brand-assets:sync` and review the generated changes. `pnpm brand-assets:check` reports stale files without modifying them.
 
 When you commit a new kind of generated file, mark its path `linguist-generated=true` in `.gitattributes`. GitHub then collapses it in pull request diffs, and agent code reviews leave it out of the diff they read (`git diff -- . ':(exclude,attr:linguist-generated=true)'`).
 

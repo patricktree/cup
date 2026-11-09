@@ -23,6 +23,15 @@ export default mergeConfig(
             provide: { mobilePlatform: "android" },
           },
         },
+        {
+          extends: true,
+          test: {
+            name: "ios",
+            include: [SHARED_SPECS, "test/ios/**/*.test.ts"],
+            globalSetup: ["src/ios/global-setup.ts"],
+            provide: { mobilePlatform: "ios" },
+          },
+        },
       ],
     },
   }),
