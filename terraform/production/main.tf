@@ -7,9 +7,9 @@ terraform {
   }
 
   required_providers {
-    resend = {
-      source  = "y0n0zawa/resend"
-      version = "1.0.1"
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "5.28.1"
     }
     supabase = {
       source  = "supabase/supabase"

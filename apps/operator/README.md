@@ -16,6 +16,8 @@ Run all commands from the repository root.
 The public trial application and its API must remain accessible without a Cloudflare login. Protect only the operator API path.
 Do not use the Worker's **Protect this Worker behind Access** action because it protects the whole Worker, including trial links.
 
+Terraform declares the existing Access application and its allow policy in the [Cloudflare configuration](../../terraform/production/cloudflare.tf); change them there rather than in the dashboard, and take the AUD tag from its `operator_access_audience` output (see the [Terraform guide](../../terraform/README.md#cloudflare)). The steps below record how the application was first created.
+
 1. In Cloudflare Zero Trust, go to **Access controls** > **Applications**.
 2. Select **Create new application** > **Self-hosted and private**.
 3. Select **Add public hostname**.
