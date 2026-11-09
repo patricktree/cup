@@ -31,7 +31,7 @@
     "@cup/conversion-grants": "workspace:*",
     "@cup/create-audiobook-from-url-workflow": "workspace:*",
     "@cup/listener-api.routes": "workspace:*",
-    "@cup/narration-content-selection": "workspace:*",
+    "@cup/narration-source-analysis": "workspace:*",
     "@cup/prepare-source-material": "workspace:*",
     "@cup/registry": "workspace:*"
   },

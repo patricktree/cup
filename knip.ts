@@ -71,7 +71,7 @@ const config: KnipConfig = {
         "cloudflare",
       ],
     },
-    "libs/narration-content-selection": {
+    "libs/narration-source-analysis": {
       /* Live evals use separate Vitest discovery, so Knip cannot infer these entry points */
       entry: ["vitest.evals.config.ts", "test/evals/**/*.eval.ts"],
     },

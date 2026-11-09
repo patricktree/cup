@@ -1,5 +1,5 @@
 {
-  "name": "@cup/narration-content-selection",
+  "name": "@cup/narration-source-analysis",
   "private": true,
   "files": [
     "src/**"

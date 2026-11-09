@@ -7,7 +7,7 @@ cd "${checkout_dir}"
 
 if [ -f node_modules/.modules.yaml ] &&
     [ -f apps/cloudflare-worker/.env.local ] &&
-    [ -f libs/narration-content-selection/.env.evals ]; then
+    [ -f libs/narration-source-analysis/.env.evals ]; then
     exit 0
 fi
 

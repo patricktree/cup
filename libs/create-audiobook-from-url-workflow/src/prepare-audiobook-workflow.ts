@@ -3,7 +3,7 @@ import { WorkflowEntrypoint } from "cloudflare:workers";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 import type { ConversionParams } from "@cup/conversion-contracts";
-import { selectNarrationContent } from "@cup/narration-content-selection";
+import { selectNarrationContent } from "@cup/narration-source-analysis";
 import { prepareSourceMaterial, loadCoverImage } from "@cup/prepare-source-material";
 
 import { runPrepareAudiobookWorkflow } from "#src/run-prepare-audiobook-workflow.ts";
