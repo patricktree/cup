@@ -51,6 +51,8 @@ type AudioSegmentBucket = {
 /** Supplies synthesis, storage, ownership, and sequence data for one narration segment. */
 export type ProduceOptions = {
   speechConfig?: SpeechConfig;
+  /** The manifest's canonical BCP 47 narration language, absent when the conversion has none. */
+  narrationLanguage?: string | undefined;
   artifactPrefix?: string;
   ai: SpeechSynthesisAi;
   bucket: AudioSegmentBucket;
@@ -66,6 +68,7 @@ export async function produceAudioSegment({
   artifactPrefix,
   ai,
   speechConfig = SPEECH_CONFIG,
+  narrationLanguage,
   bucket,
   conversionId,
   sequence,
@@ -86,6 +89,7 @@ export async function produceAudioSegment({
     undefined,
     undefined,
     speechConfig,
+    narrationLanguage,
   );
   const existingAudioObject = await bucket.head(key);
 
@@ -96,6 +100,7 @@ export async function produceAudioSegment({
   const synthesize = speechProviderToSynthesizeMap[speechConfig.provider];
   const providerAudio = await synthesize({
     speechConfig,
+    narrationLanguage,
     ai,
     conversionId,
     narrationText: narrationChunk.text,
@@ -114,6 +119,7 @@ export async function produceAudioSegment({
     durationMilliseconds,
     calculateCrc32(audio),
     speechConfig,
+    narrationLanguage,
   );
 
   const audioObject = await bucket.put(key, audio, {

@@ -5,7 +5,11 @@ import { SYNCHRONIZATION_UNIT_SCHEMA } from "@cup/narration-document-creation";
 import type { NarrationDocument } from "@cup/narration-document-creation";
 
 import { AUDIOBOOK_MANIFEST_CONTENT_TYPE } from "#src/audio-format.ts";
-import { SPEECH_CONFIG, type SpeechConfig } from "#src/speech-synthesis-config.ts";
+import {
+  LEGACY_GEMINI_V4_SPEECH_CONFIG,
+  SPEECH_CONFIG,
+  type SpeechConfig,
+} from "#src/speech-synthesis-config.ts";
 import { coverImageSchema, type CoverImage } from "#src/store-cover-image.ts";
 
 /** Prepared narration; individual audio segments are published independently. */
@@ -84,7 +88,8 @@ export const audiobookSchema = z.object({
       voice: z.string().min(1),
       policyVersion: z.string().min(1),
     })
-    .default(SPEECH_CONFIG),
+    // Manifests from before speechConfig was recorded keep the requests they were prepared with.
+    .default(LEGACY_GEMINI_V4_SPEECH_CONFIG),
   narrationLanguage: z
     .string()
     .refine(isCanonicalLanguageTag, "Expected a canonical BCP 47 language tag")

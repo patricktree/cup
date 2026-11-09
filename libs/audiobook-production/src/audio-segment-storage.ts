@@ -4,7 +4,8 @@ import { AUDIO_FORMAT, AUDIOBOOK_CONTENT_TYPE } from "#src/audio-format.ts";
 import {
   SPEECH_CONFIG,
   GEMINI_SPEECH_CONFIG,
-  LEGACY_GEMINI_SPEECH_CONFIG,
+  LEGACY_GEMINI_V3_SPEECH_CONFIG,
+  LEGACY_GEMINI_V4_SPEECH_CONFIG,
   ELEVENLABS_SPEECH_CONFIG,
   type SpeechConfig,
 } from "#src/speech-synthesis-config.ts";
@@ -17,6 +18,7 @@ const SEGMENT_METADATA_KEYS = {
   crc32: "audio-crc32",
   durationMilliseconds: "audio-duration-milliseconds",
   encoding: "audio-encoding",
+  language: "synthesis-language",
   model: "synthesis-model",
   narrationText: "narration-text",
   policyVersion: "synthesis-policy-version",
@@ -59,6 +61,7 @@ export function createAudioSegmentMetadata(
   durationMilliseconds?: number,
   crc32?: number,
   speechConfig: SpeechConfig = SPEECH_CONFIG,
+  narrationLanguage?: string,
 ): Record<string, string> {
   if ((durationMilliseconds === undefined) !== (crc32 === undefined)) {
     throw new Error("Audio segment duration and CRC-32 metadata must be provided together");
@@ -85,6 +88,10 @@ export function createAudioSegmentMetadata(
     [SEGMENT_METADATA_KEYS.provider]: speechConfig.provider,
     [SEGMENT_METADATA_KEYS.sampleRate]: AUDIO_FORMAT.sampleRate.toString(),
     [SEGMENT_METADATA_KEYS.voice]: speechConfig.voice,
+    // The manifest's narration language, also when synthesis left it out as unspeakable.
+    ...(narrationLanguage === undefined
+      ? {}
+      : { [SEGMENT_METADATA_KEYS.language]: narrationLanguage }),
     ...(durationMilliseconds === undefined
       ? {}
       : {
@@ -211,9 +218,12 @@ function hasExpectedFixedSynthesisMetadata(
   speechConfig?: SpeechConfig,
 ): boolean {
   if (!speechConfig) {
-    return [GEMINI_SPEECH_CONFIG, LEGACY_GEMINI_SPEECH_CONFIG, ELEVENLABS_SPEECH_CONFIG].some(
-      (config) => hasExpectedFixedSynthesisMetadata(metadata, config),
-    );
+    return [
+      GEMINI_SPEECH_CONFIG,
+      LEGACY_GEMINI_V4_SPEECH_CONFIG,
+      LEGACY_GEMINI_V3_SPEECH_CONFIG,
+      ELEVENLABS_SPEECH_CONFIG,
+    ].some((config) => hasExpectedFixedSynthesisMetadata(metadata, config));
   }
   return (
     metadata[SEGMENT_METADATA_KEYS.channelCount] === AUDIO_FORMAT.channelCount.toString() &&
@@ -231,9 +241,11 @@ function hasSameSynthesisMetadata(
   actual: Readonly<Record<string, string>>,
   expected: Readonly<Record<string, string>>,
 ): boolean {
-  const expectedKeys = Object.keys(expected);
+  // The synthesis language is compared even when it is expected to be absent, so a segment
+  // synthesized in a narration language is not reused for a conversion without one.
+  const expectedKeys = new Set([...Object.keys(expected), SEGMENT_METADATA_KEYS.language]);
 
-  return expectedKeys.every((key) => actual[key] === expected[key]);
+  return [...expectedKeys].every((key) => actual[key] === expected[key]);
 }
 
 function assertValidAudioSegmentByteLength(byteLength: number): void {
