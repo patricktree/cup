@@ -123,6 +123,7 @@ Build the App scheme with a local `DEVELOPMENT_TEAM` override; it builds, signs,
 The [mobile E2E tests](../../qa/mobile-e2e/README.md) run the debug build of each shell on an emulator or simulator against a local test Worker, in `pnpm validate:extended`. They cover:
 
 - **Both platforms**: launch to the landing page, loaded from the test Worker.
+- **Android smoke journey**: launch, sign in from the landing page and see Recents loaded from the test Worker ([`test/android/sign-in.test.ts`](../../qa/mobile-e2e/test/android/sign-in.test.ts)). iOS has no smoke journey, because iOS sign-in does not work in the app yet ([CUP-60](https://linear.app/cup-audio/issue/CUP-60)).
 - **Android**: sign-in through the native adapter with a fake of the Google sign-in plugin, the session in Secure Storage across a relaunch after signing in and after signing out, cancelling Google's real add-account screen, share intake through `ACTION_SEND` intents (Cup stopped or running, repeated shares, `&`, `+` and fragments, a URL inside text, text without a URL and `cup.audio` links ignored, signed out), the back button, and native networking: bearer-token requests and an Origin-less mutation through `CapacitorHttp`.
 - **iOS, signed out**: share links into the landing page's start form (repeated shares, `cup.audio` and malformed links ignored), and sharing from Safari through the Share Sheet and `CupShare` with Cup terminated or running and a cancelled share.
 

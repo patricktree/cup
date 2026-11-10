@@ -1,6 +1,7 @@
 import childProcess from "node:child_process";
 import nodeModule from "node:module";
 import path from "node:path";
+import { remote } from "webdriverio";
 
 import { reservePort, run, stopChild, waitFor } from "#src/host.ts";
 
@@ -9,6 +10,9 @@ export type AppiumServer = {
   readonly logs: readonly string[];
   stop(): Promise<void>;
 };
+
+/** Whether an app runs and whether it is in the foreground, as `queryAppState` reports it. */
+export type AppiumAppState = "not running" | "background" | "foreground";
 
 /** Appium drivers the suite uses, pinned exactly. */
 const APPIUM_DRIVERS = {
@@ -77,6 +81,39 @@ export async function startAppium(options: {
     throw error;
   }
   return { port, logs, stop: () => stopChild(server) };
+}
+
+/** Opens a session with `capabilities` on the run's Appium server. */
+export async function openAppiumSession(
+  appiumPort: number,
+  capabilities: WebdriverIO.Capabilities,
+): Promise<WebdriverIO.Browser> {
+  return remote({
+    hostname: "127.0.0.1",
+    port: appiumPort,
+    logLevel: "warn",
+    connectionRetryCount: 0,
+    connectionRetryTimeout: 180_000,
+    capabilities,
+  });
+}
+
+/**
+ * Maps Appium's `queryAppState` value, the same on both platforms (`XCUIApplicationState` on iOS):
+ * 1 not running, 2 suspended, 3 in the background, 4 in the foreground.
+ */
+export function toAppiumAppState(state: unknown, app: string): AppiumAppState {
+  switch (state) {
+    case 1:
+      return "not running";
+    case 2:
+    case 3:
+      return "background";
+    case 4:
+      return "foreground";
+    default:
+      throw new Error(`Unexpected app state of ${app}: ${String(state)}`);
+  }
 }
 
 async function ensureDriver(

@@ -1,6 +1,5 @@
-import { remote } from "webdriverio";
-
 import type { AppDevice, LaunchArguments } from "#src/app-device.ts";
+import { openAppiumSession, toAppiumAppState, type AppiumAppState } from "#src/appium.ts";
 import { appiumFailureArtifacts, type FailureArtifact } from "#src/failure-artifacts.ts";
 import { reservePort, run, waitFor } from "#src/host.ts";
 import { startLoopbackRelay, type LoopbackRelay } from "#src/ios/loopback-relay.ts";
@@ -33,9 +32,6 @@ const DEVICE_LOG_PREDICATE = [
 ].join(" OR ");
 /** Where Capacitor serves the bundled web app. */
 const CUP_PAGE_ORIGIN = "capacitor://localhost";
-
-/** What `mobile: queryAppState` reports for an app. */
-export type AppState = "not running" | "background" | "foreground";
 
 /** The apps a share from Safari involves. */
 export type ShareApp = "cup" | "safari";
@@ -75,14 +71,7 @@ export async function openIosAppDevice(target: IosTarget): Promise<IosAppDevice>
     "appium:webviewConnectTimeout": 20_000,
     "appium:newCommandTimeout": 600,
   };
-  const driver = await remote({
-    hostname: "127.0.0.1",
-    port: target.appiumPort,
-    logLevel: "warn",
-    connectionRetryCount: 0,
-    connectionRetryTimeout: 180_000,
-    capabilities,
-  });
+  const driver = await openAppiumSession(target.appiumPort, capabilities);
   return new IosAppDevice(target, driver);
 }
 
@@ -208,22 +197,11 @@ export class IosAppDevice implements AppDevice {
   }
 
   /** Whether `shareApp` runs, and whether in the foreground. */
-  async appState(shareApp: ShareApp): Promise<AppState> {
+  async appState(shareApp: ShareApp): Promise<AppiumAppState> {
     const state: unknown = await this.driver.execute("mobile: queryAppState", {
       bundleId: shareApp === "cup" ? BUNDLE_ID : SAFARI_BUNDLE_ID,
     });
-    // XCUIApplicationState: 1 not running, 2 suspended, 3 in the background, 4 in the foreground.
-    switch (state) {
-      case 1:
-        return "not running";
-      case 2:
-      case 3:
-        return "background";
-      case 4:
-        return "foreground";
-      default:
-        throw new Error(`Unexpected app state of ${shareApp}: ${String(state)}`);
-    }
+    return toAppiumAppState(state, shareApp);
   }
 
   async webView(): Promise<WebdriverIO.Browser> {
@@ -237,10 +215,7 @@ export class IosAppDevice implements AppDevice {
       .waitForExist({ timeout: 60_000, timeoutMsg: "Cup's WebView rendered no page." });
     const webViewContext = await waitFor(
       "Cup's WebView context",
-      async () => {
-        const contexts: unknown = await this.driver.execute("mobile: getContexts");
-        return Array.isArray(contexts) ? contexts.findLast(isCupPage)?.id : undefined;
-      },
+      () => this.findCupPageContext(),
       30_000,
     );
     await this.driver.switchContext(webViewContext);
@@ -254,11 +229,7 @@ export class IosAppDevice implements AppDevice {
   failureArtifacts(): FailureArtifact[] {
     return appiumFailureArtifacts({
       driver: this.driver,
-      // Only a page Cup rendered: Appium hangs for minutes when asked to attach to a blank WebView.
-      findWebViewContext: async () => {
-        const contexts: unknown = await this.driver.execute("mobile: getContexts");
-        return Array.isArray(contexts) ? contexts.findLast(isCupPage)?.id : undefined;
-      },
+      findWebViewContext: () => this.findCupPageContext(),
       // The simulator's unified log over the whole minutes since the test started, as `log show`
       // takes durations in minutes at the finest. Unfiltered, the first minute of a new simulator
       // logged 450,000 lines (86 MB), and its errors alone 50,000, nearly all of system daemons
@@ -284,15 +255,24 @@ export class IosAppDevice implements AppDevice {
     });
   }
 
+  async close(): Promise<void> {
+    await Promise.all([...this.relays.keys()].map((port) => this.unexposeHostPort(port)));
+    await this.driver.deleteSession();
+  }
+
+  /**
+   * The context of the latest page Cup rendered, never a blank WebView: Appium hangs for minutes
+   * when asked to attach to one.
+   */
+  private async findCupPageContext(): Promise<string | undefined> {
+    const contexts: unknown = await this.driver.execute("mobile: getContexts");
+    return Array.isArray(contexts) ? contexts.findLast(isCupPage)?.id : undefined;
+  }
+
   private async tap(predicate: string, description: string): Promise<void> {
     const element = this.driver.$(`-ios predicate string:${predicate}`);
     await element.waitForDisplayed({ timeout: 10_000, timeoutMsg: `${description} did not show.` });
     await element.click();
-  }
-
-  async close(): Promise<void> {
-    await Promise.all([...this.relays.keys()].map((port) => this.unexposeHostPort(port)));
-    await this.driver.deleteSession();
   }
 }
 

@@ -1,6 +1,5 @@
-import { remote } from "webdriverio";
-
 import type { AppDevice, LaunchArguments } from "#src/app-device.ts";
+import { openAppiumSession, toAppiumAppState, type AppiumAppState } from "#src/appium.ts";
 import { appiumFailureArtifacts, type FailureArtifact } from "#src/failure-artifacts.ts";
 import { reservePort, run, waitFor, type CommandResult } from "#src/host.ts";
 
@@ -11,14 +10,6 @@ export type AndroidTarget = {
   readonly appiumPort: number;
 };
 
-const APP_PACKAGE = "audio.cup.app";
-const MAIN_ACTIVITY = `${APP_PACKAGE}/.MainActivity`;
-/** Read only by the debug build's `TestApiOrigin`. */
-const API_ORIGIN_EXTRA = "cupTestApiOrigin";
-/** Read only by the debug build's `DebugApplication`. */
-const REAL_GOOGLE_SIGN_IN_EXTRA = "cupTestRealGoogleSignIn";
-const WEBVIEW_CONTEXT = `WEBVIEW_${APP_PACKAGE}`;
-
 export type AndroidLaunchArguments = LaunchArguments & {
   /**
    * Keeps the real Google sign-in plugin, which opens Google's own screens, instead of the debug
@@ -26,6 +17,14 @@ export type AndroidLaunchArguments = LaunchArguments & {
    */
   readonly realGoogleSignIn?: boolean;
 };
+
+const APP_PACKAGE = "audio.cup.app";
+const MAIN_ACTIVITY = `${APP_PACKAGE}/.MainActivity`;
+/** Read only by the debug build's `TestApiOrigin`. */
+const API_ORIGIN_EXTRA = "cupTestApiOrigin";
+/** Read only by the debug build's `DebugApplication`. */
+const REAL_GOOGLE_SIGN_IN_EXTRA = "cupTestRealGoogleSignIn";
+const WEBVIEW_CONTEXT = `WEBVIEW_${APP_PACKAGE}`;
 
 /** Opens an Appium session on the run's emulator, addressed by serial, without launching Cup. */
 export async function openAndroidAppDevice(target: AndroidTarget): Promise<AndroidAppDevice> {
@@ -58,14 +57,7 @@ export async function openAndroidAppDevice(target: AndroidTarget): Promise<Andro
     "appium:ensureWebviewsHavePages": false,
     "appium:enableWebviewDetailsCollection": false,
   };
-  const driver = await remote({
-    hostname: "127.0.0.1",
-    port: target.appiumPort,
-    logLevel: "warn",
-    connectionRetryCount: 0,
-    connectionRetryTimeout: 180_000,
-    capabilities,
-  });
+  const driver = await openAppiumSession(target.appiumPort, capabilities);
   return new AndroidAppDevice(target, driver);
 }
 
@@ -144,10 +136,19 @@ export class AndroidAppDevice implements AppDevice {
     if (this.lastLaunchArguments === undefined) {
       throw new Error("Cup has not been launched in this spec file, so it cannot be relaunched.");
     }
-    // Leave Cup first, as a listener does before Android ends it. Secure Storage writes the account
-    // session to SharedPreferences with `apply()`, which reaches the disk later; force-stopping Cup
-    // in the foreground right after a sign-in or sign-out lost that write in about one relaunch in
-    // three (2026-11-10). Android waits for such writes before it reports the activity stopped.
+    await this.leaveAndTerminate();
+    await this.launch(this.lastLaunchArguments);
+  }
+
+  /**
+   * Sends Cup home, waits until Android reports its activity stopped, then force-stops it, as
+   * Android ends a listener's app that has left the screen. Secure Storage writes the account
+   * session to SharedPreferences with `apply()`, which reaches the disk later; force-stopping Cup
+   * in the foreground right after a sign-in or sign-out lost that write in about one relaunch in
+   * three (2026-11-10). Android waits for such writes before it reports the activity stopped.
+   * `terminate()` force-stops at once, for the teardown, where Cup may not run at all.
+   */
+  async leaveAndTerminate(): Promise<void> {
     await this.background();
     await waitFor(
       "Cup's activity to stop",
@@ -164,7 +165,7 @@ export class AndroidAppDevice implements AppDevice {
       },
       10_000,
     );
-    await this.launch(this.lastLaunchArguments);
+    await this.terminate();
   }
 
   async clearAppData(): Promise<void> {
@@ -186,10 +187,9 @@ export class AndroidAppDevice implements AppDevice {
   }
 
   /** Whether Cup's process runs and whether it is in the foreground. */
-  async appState(): Promise<AndroidAppState> {
+  async appState(): Promise<AppiumAppState> {
     await this.driver.switchContext("NATIVE_APP");
-    const state = await this.driver.queryAppState(APP_PACKAGE);
-    return APP_STATES[state] ?? `unknown (${String(state)})`;
+    return toAppiumAppState(await this.driver.queryAppState(APP_PACKAGE), APP_PACKAGE);
   }
 
   /** Brings a running Cup back to the foreground, as tapping its launcher icon does. */
@@ -249,15 +249,7 @@ export class AndroidAppDevice implements AppDevice {
   async webView(): Promise<WebdriverIO.Browser> {
     // A relaunch replaces the WebView's process, so attach to it anew.
     await this.driver.switchContext("NATIVE_APP");
-    await waitFor(
-      "Cup's WebView",
-      async () => {
-        const contexts = await this.driver.getContexts();
-        const ids = contexts.map((context) => (typeof context === "string" ? context : context.id));
-        return ids.includes(WEBVIEW_CONTEXT) ? true : undefined;
-      },
-      60_000,
-    );
+    await waitFor("Cup's WebView", () => this.findWebViewContext(), 60_000);
     await this.driver.switchContext(WEBVIEW_CONTEXT);
     return this.driver;
   }
@@ -270,11 +262,7 @@ export class AndroidAppDevice implements AppDevice {
   failureArtifacts(): FailureArtifact[] {
     return appiumFailureArtifacts({
       driver: this.driver,
-      findWebViewContext: async () => {
-        const contexts = await this.driver.getContexts();
-        const ids = contexts.map((context) => (typeof context === "string" ? context : context.id));
-        return ids.includes(WEBVIEW_CONTEXT) ? WEBVIEW_CONTEXT : undefined;
-      },
+      findWebViewContext: () => this.findWebViewContext(),
       // A one-off dump of the log buffer since the test started. Appium's logcat capture stays off;
       // see `skipLogcatCapture`.
       readDeviceLog: async () => {
@@ -294,6 +282,13 @@ export class AndroidAppDevice implements AppDevice {
     await this.driver.deleteSession();
   }
 
+  /** Cup's WebView context, once Appium lists it. */
+  private async findWebViewContext(): Promise<string | undefined> {
+    const contexts = await this.driver.getContexts();
+    const ids = contexts.map((context) => (typeof context === "string" ? context : context.id));
+    return ids.includes(WEBVIEW_CONTEXT) ? WEBVIEW_CONTEXT : undefined;
+  }
+
   private adb(args: readonly string[]): Promise<CommandResult> {
     // `adb shell` joins its arguments into one command line for the device's shell, so each one is
     // quoted for that shell, such as shared text with spaces, `&` or `#`.
@@ -303,14 +298,13 @@ export class AndroidAppDevice implements AppDevice {
   }
 }
 
-export type AndroidAppState = "not running" | "background" | "foreground" | `unknown (${string})`;
-
-/** Appium's `queryAppState` values that UiAutomator2 reports. */
-const APP_STATES: Partial<Record<number, AndroidAppState>> = {
-  1: "not running",
-  3: "background",
-  4: "foreground",
-};
+/** For platform-only specs in `test/android/`, which run on the Android project only. */
+export function asAndroidAppDevice(device: AppDevice): AndroidAppDevice {
+  if (!(device instanceof AndroidAppDevice)) {
+    throw new Error(`Expected the Android device, got ${device.platform}.`);
+  }
+  return device;
+}
 
 function launchArgumentExtras(launchArguments: AndroidLaunchArguments): string[] {
   return [
@@ -326,12 +320,4 @@ function launchArgumentExtras(launchArguments: AndroidLaunchArguments): string[]
 /** Leaves plain words as they are and wraps anything else in single quotes. */
 function quoteForDeviceShell(arg: string): string {
   return /^[\w%+=:,./-]+$/u.test(arg) ? arg : `'${arg.replaceAll("'", String.raw`'\''`)}'`;
-}
-
-/** For platform-only specs in `test/android/`, which run on the Android project only. */
-export function asAndroidAppDevice(device: AppDevice): AndroidAppDevice {
-  if (!(device instanceof AndroidAppDevice)) {
-    throw new Error(`Expected the Android device, got ${device.platform}.`);
-  }
-  return device;
 }

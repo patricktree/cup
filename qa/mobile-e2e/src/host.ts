@@ -3,6 +3,7 @@ import { once } from "node:events";
 import net from "node:net";
 
 export type CommandResult = {
+  readonly exitCode: number;
   readonly stdout: string;
   readonly stderr: string;
 };
@@ -10,9 +11,11 @@ export type CommandResult = {
 type RunOptions = {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
+  /** The exit codes that count as success; only 0 by default. */
+  successExitCodes?: readonly number[];
 };
 
-/** Runs a command to completion and throws with its output when it exits with a non-zero code. */
+/** Runs a command to completion and throws with its output when it exits with another code. */
 export async function run(
   command: string,
   args: readonly string[],
@@ -33,12 +36,12 @@ export async function run(
     child.on("error", reject);
     child.on("close", resolve);
   });
-  if (exitCode !== 0) {
+  if (exitCode === null || !(options.successExitCodes ?? [0]).includes(exitCode)) {
     throw new Error(
       `\`${[command, ...args].join(" ")}\` exited with ${String(exitCode)}.\n${stdout}${stderr}`,
     );
   }
-  return { stdout, stderr };
+  return { exitCode, stdout, stderr };
 }
 
 /** Asks the operating system for a free port on the loopback interface. */
