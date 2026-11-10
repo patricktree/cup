@@ -1,7 +1,9 @@
 /**
  * Listener journeys inside the WebView that several specs share. Each takes the session switched
- * into the WebView, as `AppDevice.webView()` returns it.
+ * into the WebView, as `AppDevice.webView()` returns it; one that passes through the platform's own
+ * screens, such as signing in, takes the device too.
  */
+import type { AppDevice } from "#src/app-device.ts";
 
 /** The source URL the test Worker's fake source preparation accepts. */
 export const SOURCE_URL = "https://source.example.test/fixture";
@@ -10,11 +12,15 @@ const SIGN_IN_TIMEOUT_MS = 60_000;
 
 /**
  * From the signed-out landing page, starts a conversion of `SOURCE_URL` and signs in with "Continue
- * with Google", which the platform's sign-in fake answers. Ends on the new audiobook's page.
+ * with Google", which the test's fake auth provider answers. Ends on the new audiobook's page.
  */
-export async function signInFromLandingPage(webView: WebdriverIO.Browser): Promise<void> {
+export async function signInFromLandingPage(
+  device: AppDevice,
+  webView: WebdriverIO.Browser,
+): Promise<void> {
   await startSignInFromLandingPage(webView);
   await webView.$("button=Continue with Google").click();
+  await device.continueGoogleSignIn();
   await webView.waitUntil(async () => (await pathname(webView)).startsWith("/app/audiobooks/"), {
     timeout: SIGN_IN_TIMEOUT_MS,
     timeoutMsg: "Signing in did not open the new audiobook.",

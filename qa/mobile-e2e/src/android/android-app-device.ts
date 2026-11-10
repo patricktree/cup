@@ -246,6 +246,10 @@ export class AndroidAppDevice implements AppDevice {
     await this.adb(["shell", "input", "keyevent", "KEYCODE_BACK"]);
   }
 
+  async continueGoogleSignIn(): Promise<void> {
+    // The debug build's sign-in fake answers without showing anything.
+  }
+
   async webView(): Promise<WebdriverIO.Browser> {
     // A relaunch replaces the WebView's process, so attach to it anew.
     await this.driver.switchContext("NATIVE_APP");

@@ -1,18 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** Prepares storage for the account session, which is kept under `storageKeys`. */
-export async function initializeAuthStorage(storageKeys: readonly string[]) {
-  const storage = (await import("@aparajita/capacitor-secure-storage")).SecureStorage;
-  return {
-    storage,
-    detectSessionInUrl: false,
-    clearStoredSession: async () => {
-      for (const key of storageKeys) {
-        await storage.removeItem(key);
-      }
-    },
-  };
-}
+export { initializeAuthStorage } from "#src/platform/account-auth.native.js";
+
 export async function signInWithGoogle(
   client: SupabaseClient,
   googleClientId: string | undefined,

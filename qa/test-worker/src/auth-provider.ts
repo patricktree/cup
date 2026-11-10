@@ -14,6 +14,8 @@ const OTHER_SUBJECT = "70fcf2d9-63c5-48be-b897-d3670f24ed43";
 /** The issuer of the Google ID tokens that the Android debug build's sign-in fake asks for. */
 const GOOGLE_ISSUER = "https://accounts.google.com";
 const GOOGLE_SUBJECT = "qa-google";
+/** Where the iOS app's sign-in sheet returns to Cup, as Supabase's redirect allow-list holds it. */
+const IOS_AUTH_CALLBACK_URL = "audio.cup.app://auth/callback";
 const nowSeconds = () => Math.floor(Temporal.Now.instant().epochMilliseconds / 1000);
 
 type StartAuthProviderOptions = {
@@ -110,7 +112,7 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
     if (
       url.searchParams.get("provider") !== "google" ||
       url.searchParams.get("code_challenge_method")?.toLowerCase() !== "s256" ||
-      redirect.hostname !== "127.0.0.1"
+      !isAllowedRedirect(redirect)
     ) {
       throw new Error("Invalid QA OAuth request");
     }
@@ -275,6 +277,17 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
       await Promise.all(servers.map(close));
     },
   };
+}
+
+/**
+ * The redirects the provider sends a code to: a page of the web suite's app on `127.0.0.1`, or the
+ * iOS app's callback URL, which its `ASWebAuthenticationSession` catches.
+ */
+function isAllowedRedirect(redirect: URL): boolean {
+  return (
+    redirect.hostname === "127.0.0.1" ||
+    `${redirect.protocol}//${redirect.host}${redirect.pathname}` === IOS_AUTH_CALLBACK_URL
+  );
 }
 
 async function readJson(request: http.IncomingMessage): Promise<unknown> {
