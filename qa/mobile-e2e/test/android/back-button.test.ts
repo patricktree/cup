@@ -57,7 +57,7 @@ test("Back on the first screen puts Cup in the background without finishing it",
 /** Signs in, then relaunches Cup, so Recents is the first screen of a fresh history. */
 async function openRecentsAsFirstScreen(device: AndroidAppDevice): Promise<WebdriverIO.Browser> {
   await device.launch({ apiOrigin: app.apiOrigin });
-  await signInFromLandingPage(await device.webView());
+  await signInFromLandingPage(device, await device.webView());
   await device.relaunch();
   const webView = await device.webView();
   await waitForRecents(webView, 1);

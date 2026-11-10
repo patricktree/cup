@@ -2,8 +2,9 @@ import { expect, test } from "vitest";
 
 import { useMobileApp } from "#src/fixtures.ts";
 import { asIosAppDevice, type IosAppDevice } from "#src/ios/ios-app-device.ts";
-import { waitForLandingPage } from "#src/journeys.ts";
+import { signInFromLandingPage, waitForLandingPage, waitForRecents } from "#src/journeys.ts";
 import {
+  addDialogUrl,
   conversionStartsSince,
   expectShareIgnored,
   expectStartFormUrl,
@@ -11,9 +12,9 @@ import {
 
 /**
  * Share intake through `audio.cup.app://share?url=…` links, as the Share Extension hands a share to
- * Cup. Each test opens the link in a running, signed-out Cup and checks the landing page's start
- * form and that the share started no conversion. Signed-in cases stay out until signing in works on
- * iOS.
+ * Cup. Signed out, each test opens the link in a Cup that is running or started by the link and
+ * checks the landing page's start form; signed in, the Add dialog over Recents. Every test checks
+ * that the share started no conversion.
  */
 const app = useMobileApp();
 
@@ -25,6 +26,19 @@ test("a share fills the landing page's start form", async () => {
   await device.openUrl(shareLink(SHARED_URL));
 
   await expectStartFormUrl(await device.webView(), SHARED_URL);
+  expect(conversionStartsSince(app.worker, 0)).toEqual([]);
+});
+
+test("a share that starts Cup fills the landing page's start form", async () => {
+  const device = await prepareColdStart();
+
+  await device.openUrl(shareLink(SHARED_URL));
+
+  await expectStartFormUrl(await device.webView(), SHARED_URL);
+  // The web app asks for the auth configuration at startup, here from the test Worker.
+  expect(app.worker.requests()).toContainEqual(
+    expect.objectContaining({ method: "GET", path: "/api/auth/config" }),
+  );
   expect(conversionStartsSince(app.worker, 0)).toEqual([]);
 });
 
@@ -50,6 +64,15 @@ test("a shared cup.audio link is ignored", async () => {
   expect(conversionStartsSince(app.worker, 0)).toEqual([]);
 });
 
+test("a shared cup.audio link that starts Cup is ignored", async () => {
+  const device = await prepareColdStart();
+
+  await device.openUrl(shareLink("https://cup.audio/trials/fixture-grant"));
+
+  await expectShareIgnored(await device.webView(), "landing page");
+  expect(conversionStartsSince(app.worker, 0)).toEqual([]);
+});
+
 test.each([
   { problem: "no url", link: "audio.cup.app://share" },
   { problem: "a url that is no URL", link: "audio.cup.app://share?url=not%20a%20link" },
@@ -66,11 +89,56 @@ test.each([
   expect(conversionStartsSince(app.worker, 0)).toEqual([]);
 });
 
+test("a signed-in share while Cup is running opens the Add dialog with the URL", async () => {
+  const device = await signIn();
+
+  const requestCount = app.worker.requests().length;
+  await device.openUrl(shareLink(SHARED_URL));
+
+  expect(await addDialogUrl(await device.webView())).toBe(SHARED_URL);
+  expect(conversionStartsSince(app.worker, requestCount)).toEqual([]);
+});
+
+test("a signed-in share that starts Cup opens the Add dialog with the URL", async () => {
+  const device = await signIn();
+  // A share that starts Cup passes no launch arguments.
+  await device.storeApiOrigin(app.apiOrigin);
+  await device.terminate();
+
+  const requestCount = app.worker.requests().length;
+  await device.openUrl(shareLink(SHARED_URL));
+
+  expect(await addDialogUrl(await device.webView())).toBe(SHARED_URL);
+  expect(conversionStartsSince(app.worker, requestCount)).toEqual([]);
+});
+
+/** Launches Cup, signs in from the landing page and ends on Recents, which lists one conversion. */
+async function signIn(): Promise<IosAppDevice> {
+  const device = asIosAppDevice(app.device);
+  await device.launch({ apiOrigin: app.apiOrigin });
+  const webView = await device.webView();
+  await signInFromLandingPage(device, webView);
+  await webView.$('a[aria-label="Back"]').click();
+  await waitForRecents(webView, 1);
+  return device;
+}
+
 /** Launches Cup with the launch arguments, which a URL that starts Cup would not pass. */
 async function launchToLandingPage(): Promise<IosAppDevice> {
   const device = asIosAppDevice(app.device);
   await device.launch({ apiOrigin: app.apiOrigin });
   await waitForLandingPage(await device.webView());
+  return device;
+}
+
+/**
+ * Leaves Cup not running, as every test starts it, and stores the test Worker's origin, which a
+ * link that starts Cup cannot pass as launch arguments.
+ */
+async function prepareColdStart(): Promise<IosAppDevice> {
+  const device = asIosAppDevice(app.device);
+  expect(await device.appState("cup")).toBe("not running");
+  await device.storeApiOrigin(app.apiOrigin);
   return device;
 }
 

@@ -48,7 +48,7 @@ An effort planned with the `wayfinder` skill (a map with decision tickets, often
 3. Decisions: write an ADR for each decision that passes the ADR test. Every other decision is visible in the code, explained on an architecture page, or no longer matters.
 4. Current state: describe what was built on the architecture pages, verified against the code rather than the spec. Spec content that was not built becomes a labelled plan on the page it affects, or is dropped.
 5. Vocabulary: check every term the effort introduced against the glossary.
-6. Retire the planning material: close the map issue with a comment linking the landing change, or, for a local map, delete `.scratch/<effort>/` in the same change (git keeps it). Repoint every reference to it in `AGENTS.md`, package docs and code comments.
+6. Retire the planning material: make the landing change close the map issue, with a closing keyword (`Closes #<map>`) in its pull request description so merging the landing closes the map, or, for a local map, delete `.scratch/<effort>/` in the same change (git keeps it). Leave the map open until the landing merges. Repoint every reference to it in `AGENTS.md`, package docs and code comments.
 
 Landing is done when every line of the map's Decisions so far is accounted for (ADR, architecture page, or dropped, each listed in the commit or PR description), every research file is indexed, and nothing in the repository still references the retired planning material.
 

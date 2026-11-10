@@ -7,7 +7,7 @@ Supabase establishes identity; Cup decides whether that identity may access a pa
 ```mermaid
 sequenceDiagram
     actor User
-    participant Client as Web or Android client
+    participant Client as Web, Android or iOS client
     participant Google
     participant Auth as Supabase Auth
     participant API as Worker API
@@ -15,11 +15,11 @@ sequenceDiagram
     participant Account as Account DO
     User->>Client: Choose Google sign-in
     Client->>API: Load public auth configuration
-    alt Web
+    alt Web, or iOS in a system browser sheet
         Client->>Auth: Start OAuth with PKCE
         Auth->>Google: Authenticate user
         Google-->>Auth: OAuth result
-        Auth-->>Client: Redirect with authorization code
+        Auth-->>Client: Redirect with authorization code (iOS: audio.cup.app://auth/callback)
         Client->>Auth: Exchange code using verifier
     else Android
         Client->>Google: Native sign-in with hashed nonce
@@ -39,9 +39,9 @@ sequenceDiagram
     Account-->>Client: Account response through API
 ```
 
-[Open this diagram in Mermaid Live](https://mermaid.live/view#pako:eJyFVNtu2zAM_RVCTxvQ_IAfAgS9DNmGNUi3FRjywsiMTVQRPYlKb9i_D7JiJ20yzE-6HB0eHpJ-NVZqMpWJ9DuRt3TF2ATcrjwAAFqVAD8ihbLvMChb7tArXDomr4AR7mkNEmDm6yBcg-0vTh98EmkcnZ7PkraZ5i51uMZI_cEZ2GLeB5PwQCHvTiFLajhqeM64cX11e4bLWklF_LAcYDnZyXRasqvgshWJtNcOkRs_YV-QBTKZTmeLeQVfBWvo0tqxBcwZWfEbblJAZdm_QKfZrLJ5S5G0reBOMSjc9oY8sraw-HJ5fUDn88l0WrRU_Za8skUlSGON8lcgk5G4UAaKyek7vqNcl1RzIKsldk5CAr_0-iF3yT91Xz_ZFn1DPQpSZN_AjgJveBBFLte1NMgZmiGlb6i8G20uOlqMLdXgxVs6l-Ggfl-i-RWoPJD_v9gBCehrkMANe3THccjvtb43auzUSDGO1X3bD0NfhTxXce_pmjBQALSWYjzWOVvMh4c_s3HP8Pn-e-8DagrUS7QOeRuP8UOPV3DDvgauczvoM2yx69g3BSqdwg2HqLlH8pwmv2HPvaldkB3nDEZ0_gba0bK9pJGfnjhqhA-bA613zx_PMxQfKph7VkbHL5TzL-Pna3gkZ2VLgM7JI76p8YmOJdmW7MNByJo2kt2xyrujOTsUrtg6SFgS1mPwqHlusoSh0wmko-N53T88Lv2hrLETHwm0DZKaNocyF2ZLYYtcm8q8ZoqV0Za2tDIVrEygOj1NrDgJK7Pyf8yFSV2NOvxyTaUh0YVpQiYo6w79L5Hxqg9lqg26SH_-AgwM67o)
+[Open this diagram in Mermaid Live](https://mermaid.live/view#pako:eNqFVMtu2zAQ_JUFTwlgN3cdDBh5FG6L2rDbBih8WVNraWGKZPlw4gT594KiJDuxi-rEx3B2dnZXr0KakkQhPP2JpCXdMVYOm7UGAEAZjIOfnlzeW3SBJVvUAW4Vkw6AHh5pM4KpLp3hEowDnq9Atrfnrz4bUyk6P5_GUCeuVbS4QU_twQXYYtZGNG5HLu3OIUuq2Ad3SLhhfTe_wCWliTmDftnDUsbjySSnWMBtbYynTjt4rvSYdUZmyHgymS5mBXwzWIKNG8USMGUkjd5yFR0GNt0LVCE71jnFGhD8wQdqYOPMkycHvibqzHsfJIa6gFVAF2DeWvbEoYbF19v7IzqdjyeTrLZot6QDSwwEcShl-jJkPBBnSkc-qvCB78SNJZXsSIYcO6VpHL-0GUJqJrji-aoAjCWbTzLaT2htcXOTgDcSldqg3F3_M7n7Z1mjrihTRc-6gj053nKvnFRqj9xuF2j6vL9j4P1QrSy2Rl9TCdpoSZds6FPsKj27g2B2pP8vtkcC6jQCXLFGdRqHdKf1o5tDw3vyfmiS923Vt6dLM-o74zeEjhyglOT9qc7pYtY__JWMO8CXxx-tDxiio1aiVMiNP8X3o1LAA-sSuEw9Ew7QoLWsqww1NsADOx9SI6UGjnrLmltTrTN7ThkM6PT1tINlnaSBn57ZBw9X2yOtVofrywzZhwJmmgOj4hdK-ecp1iU8kZKmIUClzBO-q_GZjiXJmuTuKGRDW5PckYH3J-N6LFy2tZewJCyH4D6k4UoS-nEgMJZOx757eFr6Y1m9NdoThNqZWNUplBiJhlyDXIpCvCaKtQg1NbQWBayFozI-j6VRxq3FWr-JkYi2xND_vkURXKSRqFwiyGuL-rcxw1UbShRbVJ7e_gK54gWF)
 
-On the web, the Supabase SDK persists the session and PKCE verifier in browser local storage and handles the OAuth return. Android uses native Google sign-in bound to a nonce, exchanges its ID token with Supabase, and persists the Supabase session in secure storage. Dedicated iOS account support is deferred; its adapter reuses web behavior and is not evidence of a validated native login flow. In the iOS app that web flow does not work: Capacitor opens the auth page in Safari, which cannot follow the redirect back to `capacitor://localhost` ([CUP-60](https://linear.app/cup-audio/issue/CUP-60)). The [mobile E2E tests](../../qa/mobile-e2e/README.md) therefore run iOS signed out, and iOS sign-in stays a manual check in [CUP-44](https://linear.app/cup-audio/issue/CUP-44/test-the-android-and-ios-apps-native-functionality-on-physical-devices).
+On the web, the Supabase SDK persists the session and PKCE verifier in browser local storage and handles the OAuth return. Android uses native Google sign-in bound to a nonce, exchanges its ID token with Supabase, and persists the Supabase session in secure storage. iOS runs the web's OAuth flow with PKCE in an `ASWebAuthenticationSession`, a system browser sheet over Cup that shares Safari's cookies, through the app's own `WebAuthentication` plugin ([ADR 0019](../adr/0019-sign-in-on-ios-through-supabase-oauth-in-a-system-browser-sheet.md)): the WebView cannot host it, because Google refuses OAuth in embedded WebViews, and Safari cannot return to `capacitor://localhost` ([CUP-60](https://linear.app/cup-audio/issue/CUP-60)). Supabase redirects to `audio.cup.app://auth/callback`, which the sheet hands back to the adapter; the adapter exchanges the code with the stored verifier and keeps the session in secure storage, as Android does. Supabase's redirect allow-list holds that callback URL ([Terraform guide](../../terraform/README.md#google-sign-in-configuration)). The [mobile E2E tests](../../qa/mobile-e2e/README.md#sign-in) sign in on both platforms against a fake auth provider; real Google stays a manual check in [CUP-44](https://linear.app/cup-audio/issue/CUP-44/test-the-android-and-ios-apps-native-functionality-on-physical-devices).
 
 The API verifies Supabase JWTs locally against the issuer's signing keys and their claims, and admits only identities whose provider is Google, whatever providers the Supabase project enables ([`account-auth.test.ts`](../../libs/api-server/test/account-auth.test.ts)); the [account authentication use case](../../libs/api-server/src/use-cases/authenticate-account.ts) then resolves the Cup account. First use provisions a separate Cup account ID through the registry. Provisioning is persisted and retried, and checks the provider identity before activation; ingress limits constrain new account creation. The account initializes its welcome duration allowance once; [`authenticate-account.test.ts`](../../libs/api-server/test/authenticate-account.test.ts) and the registry's [`accounts.test.ts`](../../libs/registry/test/accounts.test.ts) cover provisioning. Subsequent operations consult Cup lifecycle state in addition to token validity.
 
@@ -51,7 +51,7 @@ The web client sends its API requests through one [request module](../../apps/we
 
 Local development offers one more sign-in, so that the web app can be tested, also from a phone, without a Google OAuth client ([ADR 0012](../adr/0012-offer-a-local-test-account-instead-of-google-in-development.md)). [`pnpm dev:services`](../local-development.md) creates an email and password identity in the local Supabase stack. Only while `LOCAL_DEVELOPMENT` is `"true"`, the Worker advertises its credentials in the public auth configuration and accepts its tokens; it refuses every other non-Google identity. The web client signs in with the password and shows the option only when the configuration offers it, and omits Google when the configuration names no Google client. Provisioning, ownership, and lifecycle checks treat the test account like any other account.
 
-Sources: [web adapter](../../apps/web-app/src/platform/account-auth.web.ts), [Android adapter](../../apps/web-app/src/platform/account-auth.android.ts), [iOS adapter](../../apps/web-app/src/platform/account-auth.ios.ts), [token verification](../../libs/api-server/src/http/account-auth.ts), and [registry provisioning](../../libs/registry/src/durable-object/registry-durable-object.ts).
+Sources: [web adapter](../../apps/web-app/src/platform/account-auth.web.ts), [Android adapter](../../apps/web-app/src/platform/account-auth.android.ts), [iOS adapter](../../apps/web-app/src/platform/account-auth.ios.ts) and its [sheet plugin](../../apps/mobile-app/ios/App/App/WebAuthenticationPlugin.swift), [token verification](../../libs/api-server/src/http/account-auth.ts), and [registry provisioning](../../libs/registry/src/durable-object/registry-durable-object.ts).
 
 ## Client session lifecycle
 
@@ -90,14 +90,14 @@ The machine's comments hold the transition rules. It guarantees the following; [
 
 - A session read never resolves to another account's session: starting a sign-in or sign-out, or replacing the signed-in subject, ends the read's scope.
 - Only one OAuth flow runs at a time, because concurrent flows would overwrite each other's PKCE code verifier. A sign-in interrupted by a sign-out still settles with the provider's outcome, because the provider call cannot be recalled.
-- Sign-out stops and unloads audio, signs out of Supabase locally, clears the stored session and the remembered trial, and ends the platform's own Google sign-in on Android. It completes locally even when Supabase could not confirm server revocation, and reports the failure; if initialization failed, the UI shows the auth error because the stored session could not be cleared.
+- Sign-out stops and unloads audio, signs out of Supabase locally, clears the stored session and the remembered trial, and ends the platform's own Google sign-in on Android. On iOS, Safari's Google sign-in, which the sheet shares, stays. It completes locally even when Supabase could not confirm server revocation, and reports the failure; if initialization failed, the UI shows the auth error because the stored session could not be cleared.
 - When account auth cannot initialize and no account is signed in, requests that accept either authorization continue with the grant session alone.
 
 ## Resuming a conversion after sign-in
 
 When a reader submits a source URL for an account conversion on the home page, the client saves one pending request, the normalized source URL and an idempotency key, in `sessionStorage` before starting the conversion or asking the reader to sign in. This carries the submission through the OAuth redirect and reloads without putting it in the callback URL or keeping a long-lived draft; it is separate from the Supabase session and establishes neither identity nor authorization.
 
-Once a signed-in session is available, the client resumes a stored submitted request automatically, reusing its idempotency key so retries refer to the same server request; the [submission use case](../../apps/web-app/src/app/use-cases/account-conversions.ts) holds which outcomes clear, keep or resubmit it. Response handlers check the current account and request key before changing stored state, so a late response cannot clear or disable a newer request ([`account-conversions.test.ts`](../../apps/web-app/src/data-fetching/account-conversions.test.ts)). Android's native sign-in shares this submission code. A signed-in visit to the home page redirects to Recents unless such a request is stored, so a submission resumed after OAuth, or waiting out a rate limit, finishes on the home page and opens the reader.
+Once a signed-in session is available, the client resumes a stored submitted request automatically, reusing its idempotency key so retries refer to the same server request; the [submission use case](../../apps/web-app/src/app/use-cases/account-conversions.ts) holds which outcomes clear, keep or resubmit it. Response handlers check the current account and request key before changing stored state, so a late response cannot clear or disable a newer request ([`account-conversions.test.ts`](../../apps/web-app/src/data-fetching/account-conversions.test.ts)). The native sign-ins of Android and iOS share this submission code. A signed-in visit to the home page redirects to Recents unless such a request is stored, so a submission resumed after OAuth, or waiting out a rate limit, finishes on the home page and opens the reader.
 
 Only the home page stores this request. The Add dialog keeps its request, with the same reuse of the idempotency key, only while it is open, so its starts never prefill or resume the home form or a later dialog, and never stop the home page's redirect.
 
@@ -158,4 +158,4 @@ Sources: [operator guide](../../apps/operator/README.md), [Access verification, 
 
 ## Historical evidence and deferred work
 
-The [auth service comparison](../research/social-signup/auth-saas-research.md) and [native sign-in investigation](../research/social-signup/native-social-sso-research.md) preserve the provider evaluation. The [session-revocation investigation](../research/social-signup/supabase-session-revocation-research.md) describes an online validation alternative; this checkout uses local JWT verification instead. The [Apple/iOS handoff](../research/social-signup/deferred-apple-ios.md) records deferred integration questions, not a validated flow or launch commitment.
+The [auth service comparison](../research/social-signup/auth-saas-research.md) and [native sign-in investigation](../research/social-signup/native-social-sso-research.md) preserve the provider evaluation. The [session-revocation investigation](../research/social-signup/supabase-session-revocation-research.md) describes an online validation alternative; this checkout uses local JWT verification instead. The [Apple/iOS handoff](../research/social-signup/deferred-apple-ios.md) records deferred integration questions, not a validated flow or launch commitment; iOS Google sign-in has since been built differently, see [ADR 0019](../adr/0019-sign-in-on-ios-through-supabase-oauth-in-a-system-browser-sheet.md).

@@ -50,6 +50,12 @@ const SHARE_SHEET = {
   cancel: 'type == "XCUIElementTypeButton" AND label == "Cancel"',
 } as const;
 
+/**
+ * The Continue button of the prompt `ASWebAuthenticationSession` shows before its sheet opens:
+ * "“Cup” Wants to Use “localhost” to Sign In".
+ */
+const SIGN_IN_PROMPT_CONTINUE = 'type == "XCUIElementTypeButton" AND label == "Continue"';
+
 /** Opens an Appium session on the run's simulator, addressed by UDID, without launching Cup. */
 export async function openIosAppDevice(target: IosTarget): Promise<IosAppDevice> {
   // WebDriverAgent listens on these ports of the host's loopback; reserve them like every other port.
@@ -122,9 +128,11 @@ export class IosAppDevice implements AppDevice {
   }
 
   async clearAppData(): Promise<void> {
-    // iOS has no command that clears one app's data; a reinstall erases its container, including
-    // the WebView's localStorage that holds the account session.
+    // iOS has no command that clears one app's data; a reinstall erases its container. The account
+    // session is in the Keychain, which outlives a reinstall, so the run's own simulator's Keychain
+    // is reset too.
     await this.driver.execute("mobile: removeApp", { bundleId: BUNDLE_ID });
+    await run("xcrun", ["simctl", "keychain", this.target.udid, "reset"]);
     await this.driver.execute("mobile: installApp", { app: this.target.appPath });
   }
 
@@ -202,6 +210,19 @@ export class IosAppDevice implements AppDevice {
       bundleId: shareApp === "cup" ? BUNDLE_ID : SAFARI_BUNDLE_ID,
     });
     return toAppiumAppState(state, shareApp);
+  }
+
+  async continueGoogleSignIn(): Promise<void> {
+    await this.driver.switchContext("NATIVE_APP");
+    await this.tap(SIGN_IN_PROMPT_CONTINUE, "The prompt to sign in with localhost");
+    // The sheet then loads the fake auth provider, which redirects to Cup's callback URL at once,
+    // and the sheet closes.
+    await this.driver.$(`-ios predicate string:${SIGN_IN_PROMPT_CONTINUE}`).waitForExist({
+      reverse: true,
+      timeout: 10_000,
+      timeoutMsg: "The prompt to sign in with localhost stayed open.",
+    });
+    await this.webView();
   }
 
   async webView(): Promise<WebdriverIO.Browser> {

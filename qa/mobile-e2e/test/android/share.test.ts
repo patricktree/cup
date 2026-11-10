@@ -120,7 +120,7 @@ test("a share while signed out fills the landing page's start form", async () =>
 async function signIn(): Promise<WebdriverIO.Browser> {
   await app.device.launch({ apiOrigin: app.apiOrigin });
   const webView = await app.device.webView();
-  await signInFromLandingPage(webView);
+  await signInFromLandingPage(app.device, webView);
   await webView.$('a[aria-label="Back"]').click();
   await waitForRecents(webView, 1);
   return webView;
