@@ -2,6 +2,9 @@ import { WorkflowEntrypoint } from "cloudflare:workers";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
 
+import sourceHtml from "#worker/fixtures/source.html";
+import { createTrackedSpeechProvider, handleSpeechControl } from "#worker/speech-controls.ts";
+
 import { AccountDurableObject } from "@cup/accounts";
 import { createApiServer } from "@cup/api-server";
 import { type ConversionParams, type SegmentWorkflowParams } from "@cup/conversion-contracts";
@@ -16,9 +19,6 @@ import {
 } from "@cup/narration-source-analysis/fake";
 import { createControlledSourceMaterialPreparer } from "@cup/prepare-source-material/fake";
 import { RegistryDurableObject } from "@cup/registry";
-
-import sourceHtml from "#src/fixtures/source.html";
-import { createTrackedSpeechProvider, handleSpeechControl } from "#src/speech-controls.ts";
 
 const CONTROLLED_SOURCE_URL = "https://source.example.test/fixture";
 const CONTROLLED_COVER_IMAGE = {
@@ -90,10 +90,26 @@ const apiServer = createApiServer({
 
 export default {
   async fetch(request, env, context) {
+    logRequest(request);
     const control = await handleSpeechControl(request, env.AUDIO_BUCKET);
     return control ?? apiServer.fetch(request, env, context);
   },
 } satisfies ExportedHandler<Env>;
+
+/**
+ * Writes one line per request to Wrangler's output, which the harness reads back as the request
+ * log. The prefix must match `REQUEST_LOG_PREFIX` in `src/test-worker.ts`.
+ */
+function logRequest(request: Request): void {
+  const url = new URL(request.url);
+  console.log(
+    `[test-worker:request] ${JSON.stringify({
+      method: request.method,
+      path: url.pathname + url.search,
+      headers: Object.fromEntries(request.headers),
+    })}`,
+  );
+}
 
 type QaScenario = "success" | "tts-failure" | "speech-gated" | "preparation-failure";
 

@@ -1,0 +1,33 @@
+{
+  "name": "@cup/mobile-e2e",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#src/*.ts": "./src/*.ts",
+    "#src/*": "./src/*"
+  },
+  "scripts": {
+    "clean": "del-cli --dot=true \"*.tsbuildinfo\"",
+    "test:e2e": "vitest run",
+    "turbo:build": "tsc --build ./tsconfig.json",
+    "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
+    "turbo:lint:fix": "pnpm run turbo:lint --fix"
+  },
+  "dependencies": {
+    "@cup/test-worker": "workspace:*",
+    "appium": "3.9.0",
+    "webdriverio": "10.1.0"
+  },
+  "devDependencies": {
+    "@cup/config-oxlint": "workspace:*",
+    "@patricktree-stack/config-typescript": "workspace:*",
+    "@patricktree-stack/config-vitest": "workspace:*",
+    "@types/node": "catalog:",
+    "@typescript/native": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

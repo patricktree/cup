@@ -40,9 +40,53 @@ adb shell am start -n audio.cup.app/.MainActivity
 
 The debug APK is written to `apps/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk`. Confirm the landing page renders and the app can close and reopen without a crash.
 
+The [mobile E2E tests](../../qa/mobile-e2e/README.md) launch the debug build on their own emulator against a local test Worker; [automated and manual checks](#automated-and-manual-checks) lists what they cover.
+
+### Debug launch arguments
+
+The debug build reads the backend origin from the intent extra `cupTestApiOrigin`, which the mobile E2E suite sets to its test Worker:
+
+```sh
+adb shell am start -n audio.cup.app/.MainActivity --es cupTestApiOrigin http://localhost:8787
+```
+
+The value must be exactly `http://localhost:<port>`; any other value stops the app at launch with an `IllegalArgumentException` naming the argument, so a broken test setup never reaches production. Without the extra, a debug build uses `https://cup.audio` as before. Use `adb reverse tcp:<port> tcp:<port>` to make a port on your Mac reachable at `localhost` on the device.
+
+Only the debug source set (`android/app/src/debug`) handles the argument: before Capacitor loads the page, it sets the global `window.cupTestApiOrigin` that the web app's `apiOrigin()` reads, and lets the `https://localhost` page load `http://localhost` media. The same source set allows plain HTTP to `localhost` and nowhere else. The argument needs Android 10 (API 29) or later, where activity pre-creation callbacks exist. Release builds contain none of this.
+
+With the test origin, the debug build also replaces the native Google sign-in plugin with a fake of the same name (`FakeGoogleSignInPlugin`, debug sources only). Its `signIn` asks the test Worker's fake auth provider, found as the `supabaseUrl` of the Worker's auth configuration, for an ID token carrying the hashed nonce it was given, so the web app's unchanged sign-in, Secure Storage and the Worker's token check run without Google. A debug build launched without the test origin keeps the real plugin and signs in with real Google.
+
+The second launch argument, the boolean extra `cupTestRealGoogleSignIn`, keeps the real plugin under the test origin, so a test can open Google's real add-account screen:
+
+```sh
+adb shell am start -n audio.cup.app/.MainActivity --es cupTestApiOrigin http://localhost:8787 --ez cupTestRealGoogleSignIn true
+```
+
+It has no effect without `cupTestApiOrigin`.
+
 ## iOS
 
 After building, open `apps/mobile-app/ios/App/App.xcodeproj` in Xcode and choose a simulator or configure signing for a device. The project uses Swift Package Manager, matching Content Relay.
+
+The [mobile E2E tests](../../qa/mobile-e2e/README.md) launch the debug build on their own simulator against a local test Worker; [automated and manual checks](#automated-and-manual-checks) lists what they cover.
+
+### iOS debug launch arguments
+
+The debug build reads the backend origin from the process arguments `-cupTestApiOrigin <origin>`, which the mobile E2E suite sets to its test Worker:
+
+```sh
+xcrun simctl launch <simulator> audio.cup.app -cupTestApiOrigin http://localhost:8787
+```
+
+In Xcode, add the arguments under the App scheme's Run action, Arguments Passed On Launch. The arguments set the defaults key `cupTestApiOrigin` for one launch, and the build reads that key. A launch without arguments, such as one a shared URL starts, reads the key from the app's own defaults, which the E2E suite writes before such a launch and a reinstall erases:
+
+```sh
+xcrun simctl spawn <simulator> defaults write audio.cup.app cupTestApiOrigin http://localhost:8787
+```
+
+As on [Android](#debug-launch-arguments), the value must be exactly `http://localhost:<port>`; any other value stops the app at launch with a fatal error naming the key, and without the key a debug build uses `https://cup.audio`. The simulator shares the Mac's loopback, so `localhost` needs no port forwarding.
+
+Only `#if DEBUG` code in [`MainViewController.swift`](ios/App/App/MainViewController.swift) handles the key: before Capacitor loads the page, it adds a document-start script that sets the global `window.cupTestApiOrigin`. App Transport Security's built-in exemption for `localhost` allows the plain HTTP, so `Info.plist` is unchanged. Release builds contain none of this.
 
 ## Links and sharing
 
@@ -52,11 +96,11 @@ The Android app accepts shared plain text containing an HTTP or HTTPS URL and fi
 
 ## Backend access and grant sessions
 
-Mobile API requests use ordinary `fetch` calls patched by `CapacitorHttp` to use native networking. The backend origin is `https://cup.audio`. Browser requests continue using the browser's same-origin fetch.
+Mobile API requests use ordinary `fetch` calls patched by `CapacitorHttp` to use native networking. The backend origin is `https://cup.audio`, except in a debug build launched with a [test origin](#debug-launch-arguments). Browser requests continue using the browser's same-origin fetch.
 
 The browser exchanges trial credentials for persistent Secure, HttpOnly cookies. The apps open no trials ([ADR 0017](../../docs/adr/0017-keep-trial-links-out-of-the-mobile-apps.md)), so their private account requests rely on the signed-in user's bearer token; Capacitor's native cookie manager still stores any server-issued cookies and sends them on later requests. The `CapacitorCookies` document.cookie patch (<https://capacitorjs.com/docs/apis/cookies>) is not enabled.
 
-Native mutations omit Origin and must include the existing custom request header and JSON content type. Browser mutations must have a matching Origin; cross-site Fetch Metadata is rejected. No cross-origin browser CORS access is enabled.
+Native mutations omit Origin and must include the existing custom request header and JSON content type. Browser mutations must have a matching Origin; cross-site Fetch Metadata is rejected. No cross-origin browser CORS access is enabled. The mobile suite's [native networking test](../../qa/mobile-e2e/README.md#native-networking-android) checks the native mutation on Android.
 
 Capacitor's native HTTP response headers can expose Set-Cookie to JavaScript, so HttpOnly does not provide the same isolation as browser networking.
 
@@ -66,9 +110,34 @@ The iOS app bundles `CupShare.appex`, displayed as **Cup** in Safari and Chrome'
 
 The handoff uses `audio.cup.app://share?url=<encoded-url>`, the app's only URL scheme. The URL prefills a conversion form as on [Android](#links-and-sharing), and Cup links are ignored there too; a URL still pending in memory is discarded when the app closes.
 
+The app uses the UIScene lifecycle, which iOS 27 requires: an app built with the iOS 27 SDK that keeps the app-delegate lifecycle stops at launch. [`SceneDelegate`](ios/App/App/SceneDelegate.swift) receives incoming URLs, both at a cold start and while Cup runs, and hands them to Capacitor's `SceneDelegateProxy`, which passes them on to the App plugin's `appUrlOpen` event and launch URL.
+
 The extension uses the same responder-chain URL-opening approach as Chromium, calling `openURL:options:completionHandler:` dynamically. Apple does not support this handoff from Share Extensions; test it after iOS updates. A failed handoff stays in the extension with an error and retry button. The extension does not start conversions or access session cookies.
 
-Build the App scheme with a local `DEVELOPMENT_TEAM` override; it builds, signs, and embeds the extension. Both bundle identifiers need provisioning: `audio.cup.app` and `audio.cup.app.share`. Verify Safari and Chrome sharing with Cup terminated and already running, cancellation, repeated shares, URLs containing `&`, `+`, or fragments, and that a shared trial link is ignored. If Cup is hidden, look under More in the Share Sheet's app row.
+The [mobile E2E tests](../../qa/mobile-e2e/README.md#share-intake-ios) cover what the app does with a share link once it arrives, and a share from Safari through the real Share Sheet and this extension on a simulator; sharing from Chrome and the handoff on a physical iPhone stay [manual](#automated-and-manual-checks).
+
+Build the App scheme with a local `DEVELOPMENT_TEAM` override; it builds, signs, and embeds the extension. Both bundle identifiers need provisioning: `audio.cup.app` and `audio.cup.app.share`. If Cup is hidden in the Share Sheet, look under More in its app row.
+
+## Automated and manual checks
+
+The [mobile E2E tests](../../qa/mobile-e2e/README.md) run the debug build of each shell on an emulator or simulator against a local test Worker, in `pnpm validate:extended`. They cover:
+
+- **Both platforms**: launch to the landing page, loaded from the test Worker.
+- **Android smoke journey**: launch, sign in from the landing page and see Recents loaded from the test Worker ([`test/android/sign-in.test.ts`](../../qa/mobile-e2e/test/android/sign-in.test.ts)). iOS has no smoke journey, because iOS sign-in does not work in the app yet ([CUP-60](https://linear.app/cup-audio/issue/CUP-60)).
+- **Android**: sign-in through the native adapter with a fake of the Google sign-in plugin, the session in Secure Storage across a relaunch after signing in and after signing out, cancelling Google's real add-account screen, share intake through `ACTION_SEND` intents (Cup stopped or running, repeated shares, `&`, `+` and fragments, a URL inside text, text without a URL and `cup.audio` links ignored, signed out), the back button, and native networking: bearer-token requests and an Origin-less mutation through `CapacitorHttp`.
+- **iOS, signed out**: share links into the landing page's start form (repeated shares, `cup.audio` and malformed links ignored), and sharing from Safari through the Share Sheet and `CupShare` with Cup terminated or running and a cancelled share.
+
+iOS sign-in does not work in the app yet ([CUP-60](https://linear.app/cup-audio/issue/CUP-60)), so no iOS test signs in, and the iOS session across a relaunch and iOS native networking are untested until it does.
+
+The rest stays manual on physical devices with release-signed builds, listed in [CUP-44](https://linear.app/cup-audio/issue/CUP-44/test-the-android-and-ios-apps-native-functionality-on-physical-devices):
+
+1. Playback through a locked device, lock-screen, notification and headset controls, audio focus, and the narration track's signed URL from the shells' origins.
+2. Release-signed builds: install and run, reach `https://cup.audio` through `CapacitorHttp`, and carry no debug override, cleartext exception or sign-in fake.
+3. Real Google sign-in: the Android account picker with a real account, switching accounts after signing out, and iOS Google sign-in.
+4. iOS sign-in in the app, its session across a relaunch and its native networking, until CUP-60 is fixed.
+5. Sharing from real apps: Cup in the Android Sharesheet, sharing from Chrome on iOS, and the `CupShare` handoff on a physical iPhone after each iOS update.
+6. App shell: icons and splash screen, and a tapped `cup.audio` link opening the browser, not the app.
+7. Navigation without loading flashes.
 
 ## Brand assets
 

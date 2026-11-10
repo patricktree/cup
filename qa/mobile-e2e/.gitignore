@@ -1,0 +1,4 @@
+# Appium drivers, installed on the suite's first run
+/.appium
+# Failure artifacts, one folder per failed test of each platform's last run
+/test-output

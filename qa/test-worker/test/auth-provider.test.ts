@@ -1,0 +1,85 @@
+import crypto from "node:crypto";
+import { afterAll, beforeAll, expect, test } from "vitest";
+
+import { startAuthProvider } from "#src/auth-provider.ts";
+
+let authProvider: Awaited<ReturnType<typeof startAuthProvider>> | undefined;
+
+beforeAll(async () => {
+  authProvider = await startAuthProvider({ hostname: "localhost" });
+});
+
+afterAll(async () => {
+  await authProvider?.close();
+});
+
+test("is reachable at localhost over IPv4 and IPv6 and issues its tokens there", async () => {
+  const { origin } = startedAuthProvider();
+  expect(origin).toMatch(/^http:\/\/localhost:\d+$/);
+  const { port } = new URL(origin);
+  for (const loopback of ["127.0.0.1", "[::1]"]) {
+    const response = await fetch(`http://${loopback}:${port}/auth/v1/.well-known/jwks.json`);
+    expect(response.status).toBe(200);
+  }
+
+  const session = await exchangeIdToken(await googleIdToken(hash("the nonce")), "the nonce");
+  expect(session.status).toBe(200);
+  expect(issuerOf(await session.json())).toBe(`${origin}/auth/v1`);
+});
+
+test("rejects an ID token exchange whose nonce does not match the token's", async () => {
+  const idToken = await googleIdToken(hash("the nonce"));
+
+  const response = await exchangeIdToken(idToken, "another nonce");
+
+  expect(response.status).toBe(400);
+});
+
+function startedAuthProvider() {
+  if (authProvider === undefined) {
+    throw new Error("The fake auth provider has not started.");
+  }
+  return authProvider;
+}
+
+/** What the Android debug build's sign-in fake asks for, with the hashed nonce it was given. */
+async function googleIdToken(hashedNonce: string): Promise<string> {
+  const response = await fetch(`${startedAuthProvider().origin}/qa/google-id-token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nonce: hashedNonce }),
+  });
+  expect(response.status).toBe(200);
+  const body: unknown = await response.json();
+  if (!isRecord(body) || typeof body["idToken"] !== "string") {
+    throw new Error("The fake auth provider returned no ID token.");
+  }
+  return body["idToken"];
+}
+
+/** The request supabase-js `signInWithIdToken` sends, with the raw nonce. */
+function exchangeIdToken(idToken: string, nonce: string): Promise<Response> {
+  return fetch(`${startedAuthProvider().origin}/auth/v1/token?grant_type=id_token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider: "google", id_token: idToken, nonce }),
+  });
+}
+
+function hash(nonce: string): string {
+  return crypto.createHash("sha256").update(nonce).digest("hex");
+}
+
+function issuerOf(session: unknown): unknown {
+  if (!isRecord(session) || typeof session["access_token"] !== "string") {
+    throw new Error("The exchange returned no access token.");
+  }
+  const payload: unknown = JSON.parse(
+    Buffer.from(session["access_token"].split(".")[1] ?? "", "base64url").toString(),
+  );
+  return isRecord(payload) ? payload["iss"] : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
