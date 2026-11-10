@@ -3,9 +3,20 @@
   "extends": ["//", "@patricktree-stack/config-turbo-typescript"],
   "tasks": {
     /* Worker types are generated, not committed: every task that typechecks the tests waits for them. */
-    "turbo:build": { "dependsOn": ["$TURBO_EXTENDS$", "turbo:cf-typegen"] },
+    "turbo:build": {
+      "dependsOn": ["$TURBO_EXTENDS$", "turbo:cf-typegen"],
+      /*
+       * The Cloudflare Vite plugin copies the Git-ignored .env.local into this file. It holds secrets
+       * and goes stale, so it stays out of the cache; `wrangler deploy` does not upload it.
+       */
+      "outputs": ["$TURBO_EXTENDS$", "!dist/**/.dev.vars"],
+    },
     "turbo:lint": { "dependsOn": ["$TURBO_EXTENDS$", "turbo:cf-typegen"] },
     "turbo:lint:fix": { "dependsOn": ["$TURBO_EXTENDS$", "turbo:cf-typegen"] },
-    "turbo:test": { "dependsOn": ["$TURBO_EXTENDS$", "turbo:cf-typegen"] },
+    "turbo:test": {
+      "dependsOn": ["$TURBO_EXTENDS$", "turbo:cf-typegen"],
+      /* wrangler-config.test.ts checks the Supabase site URL in this Terraform file, outside the package. */
+      "inputs": ["$TURBO_EXTENDS$", "$TURBO_ROOT$/terraform/production/supabase.tf"],
+    },
   },
 }

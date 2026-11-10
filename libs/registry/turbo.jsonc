@@ -6,6 +6,10 @@
     "turbo:build": { "dependsOn": ["$TURBO_EXTENDS$", "turbo:cf-typegen"] },
     "turbo:lint": { "dependsOn": ["$TURBO_EXTENDS$", "turbo:cf-typegen"] },
     "turbo:lint:fix": { "dependsOn": ["$TURBO_EXTENDS$", "turbo:cf-typegen"] },
-    "turbo:test": { "dependsOn": ["$TURBO_EXTENDS$", "turbo:cf-typegen"] },
+    "turbo:test": {
+      "dependsOn": ["$TURBO_EXTENDS$", "turbo:cf-typegen"],
+      /* sqlite-migrations.test.ts checks the schema diagram on this page, outside the package. */
+      "inputs": ["$TURBO_EXTENDS$", "$TURBO_ROOT$/docs/architecture/durable-object-storage.md"],
+    },
   },
 }
