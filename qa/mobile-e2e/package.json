@@ -8,10 +8,13 @@
   },
   "scripts": {
     "clean": "del-cli --dot=true \"*.tsbuildinfo\"",
+    "devices:clean": "node src/clean-devices.ts",
+    "test": "vitest run --config vitest.unit.config.ts",
     "test:e2e": "vitest run",
     "turbo:build": "tsc --build ./tsconfig.json",
     "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
-    "turbo:lint:fix": "pnpm run turbo:lint --fix"
+    "turbo:lint:fix": "pnpm run turbo:lint --fix",
+    "turbo:test": "pnpm run test"
   },
   "dependencies": {
     "@cup/test-worker": "workspace:*",

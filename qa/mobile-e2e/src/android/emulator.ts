@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import { SYSTEM_IMAGE_PACKAGE, type AndroidHost } from "#src/android/preflight.ts";
 import { run, stopChild, waitFor } from "#src/host.ts";
@@ -13,6 +14,13 @@ export type Emulator = {
   readonly serial: string;
   /** Kills this emulator only; its read-only run leaves the snapshot unchanged. */
   stop(): Promise<void>;
+};
+
+/** A process as `ps` lists it. */
+export type ListedProcess = {
+  readonly pid: number;
+  readonly ppid: number;
+  readonly command: string;
 };
 
 /**
@@ -25,6 +33,10 @@ const AVD_HOME = path.join(os.homedir(), "Library", "Caches", "cup-mobile-e2e", 
  * size, such as the earlier 2 GB `cup-mobile-e2e-api36`, creates this one and its snapshot anew.
  */
 const AVD_NAME = "cup-mobile-e2e-api36-ram4g";
+/** How an emulator process of the suite's AVD shows up in `ps`; `startEmulator` passes it. */
+const AVD_ARGUMENT = `-avd ${AVD_NAME} `;
+/** `launchd` adopts the processes whose parent has died. */
+const LAUNCHD_PID = 1;
 /**
  * The guest's RAM in MB; the emulator ignores a unit suffix and falls back to the profile's 2048.
  * The Pixel 8 profile's 2 GB drove the guest into constant zram swapping during the full suite
@@ -63,6 +75,84 @@ export async function bootEmulator(host: AndroidHost): Promise<Emulator> {
     throw error;
   }
   return { serial, stop };
+}
+
+/**
+ * Picks the processes of the suite's emulators whose run no longer runs, which a run killed before
+ * its teardown leaves behind. An emulator's launcher is the run's child, so once the run dies it
+ * belongs to `launchd` (process 1); its own children, such as QEMU, go with it. Emulators of runs
+ * still going, such as in another checkout, still have their run as parent and are kept.
+ */
+export function findOrphanedEmulators(processes: readonly ListedProcess[]): number[] {
+  const emulatorProcesses = processes.filter(({ command }) => command.includes(AVD_ARGUMENT));
+  const emulatorByPid = new Map(emulatorProcesses.map((listed) => [listed.pid, listed]));
+
+  const isOrphaned = (listed: ListedProcess): boolean => {
+    // Walks up past this emulator's own processes to the process that started them.
+    let parent = listed.ppid;
+    for (let ancestor = emulatorByPid.get(parent); ancestor; ancestor = emulatorByPid.get(parent)) {
+      parent = ancestor.ppid;
+    }
+    return parent === LAUNCHD_PID;
+  };
+  return emulatorProcesses.filter((listed) => isOrphaned(listed)).map(({ pid }) => pid);
+}
+
+/**
+ * Stops the emulators that killed runs left behind. Their read-only runs leave the snapshot
+ * unchanged, so a signal is enough; a killed preparation never wrote its marker and is redone.
+ */
+export async function stopOrphanedEmulators(): Promise<void> {
+  const orphaned = findOrphanedEmulators(await listProcesses());
+  if (orphaned.length === 0) {
+    return;
+  }
+
+  process.stderr.write(
+    `Stopping emulator processes ${orphaned.join(", ")}, left behind by a run that no longer runs.\n`,
+  );
+  signalAll(orphaned, "SIGTERM");
+  // Only processes the listing still shows as left-behind emulators get SIGKILL: an ID freed in the
+  // meantime may belong to another process by now.
+  const remaining = await waitForOrphansToQuit(orphaned, 15_000);
+  if (remaining.length === 0) {
+    return;
+  }
+  signalAll(remaining, "SIGKILL");
+  const survivors = await waitForOrphansToQuit(remaining, 5000);
+  if (survivors.length > 0) {
+    throw new Error(`The left-behind emulator processes ${survivors.join(", ")} survived SIGKILL.`);
+  }
+}
+
+/** Waits until none of `pids` is a left-behind emulator any more; returns those still left. */
+async function waitForOrphansToQuit(pids: readonly number[], timeoutMs: number): Promise<number[]> {
+  const deadline = performance.now() + timeoutMs;
+  for (;;) {
+    const remaining = findOrphanedEmulators(await listProcesses()).filter((pid) =>
+      pids.includes(pid),
+    );
+    if (remaining.length === 0 || performance.now() > deadline) {
+      return remaining;
+    }
+    await sleep(250);
+  }
+}
+
+async function listProcesses(): Promise<ListedProcess[]> {
+  // `-ww` keeps `ps` from cutting long command lines, such as QEMU's, to the terminal width.
+  const { stdout } = await run("ps", ["-ww", "-axo", "pid=,ppid=,command="]);
+  return stdout
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => {
+      const match = /^\s*(\d+)\s+(\d+)\s+(.*)$/u.exec(line);
+      if (match === null) {
+        throw new TypeError(`\`ps\` printed a line without a process ID and parent: ${line}`);
+      }
+      const [, pid, ppid, command = ""] = match;
+      return { pid: Number(pid), ppid: Number(ppid), command };
+    });
 }
 
 /** Creates the AVD and its Quick Boot snapshot once per Mac; later runs find the marker. */
@@ -282,4 +372,17 @@ async function exists(filePath: string): Promise<boolean> {
     () => true,
     () => false,
   );
+}
+
+/** Signals each process, skipping those that have quit in the meantime. */
+function signalAll(pids: readonly number[], signal: NodeJS.Signals): void {
+  for (const pid of pids) {
+    try {
+      process.kill(pid, signal);
+    } catch (error) {
+      if (!isErrorWithCode(error, "ESRCH")) {
+        throw error;
+      }
+    }
+  }
 }

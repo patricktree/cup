@@ -1,7 +1,7 @@
 import type { TestProject } from "vitest/node";
 
 import { buildAndroidDebugApp } from "#src/android/build.ts";
-import { bootEmulator, type Emulator } from "#src/android/emulator.ts";
+import { bootEmulator, stopOrphanedEmulators, type Emulator } from "#src/android/emulator.ts";
 import { checkAndroidHost } from "#src/android/preflight.ts";
 import { startAppium, type AppiumServer } from "#src/appium.ts";
 import { clearFailureArtifacts } from "#src/failure-artifacts.ts";
@@ -14,6 +14,8 @@ import { run } from "#src/host.ts";
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
   const host = await checkAndroidHost();
   await clearFailureArtifacts("android");
+  // A run killed before its teardown, such as with its whole process tree, leaves its emulator running.
+  await stopOrphanedEmulators();
 
   const started: { emulator?: Emulator; appium?: AppiumServer } = {};
   const teardown = async (): Promise<void> => {
