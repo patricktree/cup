@@ -2,7 +2,7 @@ import React from "react";
 
 /*
  * The icons drawn for the Recents and detail-view designs, exported from Figma as SVG (see
- * https://github.com/patricktree/cup/tree/7587d6e172e94b5a844a8dba0b4d4f0b51e0d3b5/docs/research/recents-design-tokens/icons),
+ * docs/research/recents-design-tokens/icons),
  * and for the conversion screens (https://www.figma.com/design/Mud3jhH7Lliuv0jIbCS63R/cup?node-id=403-11619).
  * They paint in `currentColor` and are decorative: the control or text
  * beside one carries the accessible name. The export's full-size clip paths are left out
