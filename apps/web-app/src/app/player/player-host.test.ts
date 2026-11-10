@@ -590,6 +590,23 @@ test("skipping before metadata is loaded skips from the restored position once i
   expect(element.calls).toEqual([`src:${FIRST_TRACK_URL}`, "currentTime:7"]);
 });
 
+test("a seek after the metadata is read but before its event replaces an earlier seek", () => {
+  const { host, element, player } = createHost();
+  host.showConversion("first", FIRST);
+  host.loadShown();
+  player().seekTo(14_000);
+
+  // Browsers update `readyState` before the queued `loadedmetadata` event is dispatched.
+  element.readyState = HAVE_METADATA;
+  element.duration = 15;
+  player().seekTo(0);
+  element.fire("durationchange");
+  element.fire("loadedmetadata");
+
+  expect(element.calls).toEqual([`src:${FIRST_TRACK_URL}`, "currentTime:0"]);
+  expect(player().getSnapshot().positionMilliseconds).toBe(0);
+});
+
 test("a refused save is shown as the player's error", async () => {
   const { host, element, player } = createHost({
     subject: "user-1",

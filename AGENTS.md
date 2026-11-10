@@ -19,20 +19,20 @@ pnpm install
 
 If the submodule is missing, the preinstall check initializes it and fails; retry `pnpm install`, because pnpm scanned the workspace before the submodule's packages existed. Claude Code sessions run both commands at session start through `.claude/hooks/session-start.sh`.
 
-Cloudflare credentials are required for application development, including AI calls. The postinstall check fails until `apps/cloudflare-worker/.env.local` and `libs/narration-content-selection/.env.evals` contain matching `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_KEY` values. In a linked worktree, postinstall creates missing files from the main checkout's `apps/cloudflare-worker/.env.local`. In a main checkout, configure them after the initial installation attempt and retry:
+Cloudflare credentials are required for application development, including AI calls. The postinstall check fails until `apps/cloudflare-worker/.env.local` and `libs/narration-source-analysis/.env.evals` contain matching `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_KEY` values. In a linked worktree, postinstall creates missing files from the main checkout's `apps/cloudflare-worker/.env.local`. In a main checkout, configure them after the initial installation attempt and retry:
 
 ```sh
 node tooling/env-setup/src/cli.ts setup --from /absolute/path/to/existing.env
 pnpm install
 ```
 
-Use an existing credentials file or another checkout’s env file as the source. Alternatively, export `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_KEY` and run setup without `--from`. Setup preserves existing files; both files are ignored by Git. Use Node for this bootstrap step because pnpm can trigger installation before setup. `pnpm env:check` checks that both files are configured and match; postinstall and fast validation also run it. This checks local configuration without making paid API calls.
+Use an existing credentials file or another checkout’s env file as the source. Alternatively, export `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_KEY` and run setup without `--from`. Setup preserves existing files; both files are ignored by Git. Setup, which postinstall runs when needed, also moves an `.env.evals` left at the library's former path `libs/narration-content-selection/`. Use Node for this bootstrap step because pnpm can trigger installation before setup. `pnpm env:check` checks that both files are configured and match; postinstall and fast validation also run it. This checks local configuration without making paid API calls.
 
 ## Validation
 
 Git hooks run no validation, so deciding when to validate is up to you. Prefer the narrowest check that covers a change while iterating, such as one package's tests, lint, or typecheck, or `pnpm docs:check` for documentation-only edits. Run `pnpm validate:fast` before committing a change that touches code, configuration, or dependencies. Shipping to production means pushing to `main`, the default branch; run `pnpm validate` on the changes being shipped before that push. The only hook is pre-push, which rejects pushed commits that move a submodule pointer backwards (see the [submodule check](.patricktree-stack/tooling/submodule-check/README.md)).
 
-The root `package.json` defines each group. `pnpm validate:fast` covers static checks, build, lint, and tests including browser component tests; `pnpm validate:extended` covers the brand-assets check, online zizmor, both web E2E suites, and the mobile E2E suite; `pnpm validate` runs fast, then extended. `pnpm validate:update-snapshots` runs both while updating the component and app E2E screenshot baselines. `pnpm validate:evals` runs the paid narration-content-selection evals; invoke it only explicitly.
+The root `package.json` defines each group. `pnpm validate:fast` covers static checks, build, lint, and tests including browser component tests; `pnpm validate:extended` covers the brand-assets check, online zizmor, both web E2E suites, and the mobile E2E suite; `pnpm validate` runs fast, then extended. `pnpm validate:update-snapshots` runs both while updating the component and app E2E screenshot baselines. `pnpm validate:evals` runs the paid narration content selection and narration language detection evals; invoke it only explicitly.
 
 The groups are independent and stop on failure; extended does not run the fast group. Both free groups require Docker; extended also needs internet access, `uvx`, GitHub CLI authentication for zizmor, and Android Studio with Java 21 and Xcode for the [mobile E2E suite](qa/mobile-e2e/README.md#prerequisites). Fast validation requires the configured environment files but invokes no paid AI service. Declutter runs after the build because Knip loads the Worker's Vite config, which requires the built web app.
 

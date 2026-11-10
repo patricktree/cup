@@ -870,6 +870,45 @@ test("a card in view preloads its track, so opening it shows no loading state", 
   expect(await readLoadingStatesSince(page, recordedBefore)).toEqual([]);
 });
 
+test("a preloaded track shows no progress bar while the browser captures its cover transition", async ({
+  mount,
+  page,
+}) => {
+  // WebKit in the E2E suite's Docker browser takes longer than the bar's delay to capture the old
+  // screen; delaying the transition's update stands in for that, in any browser.
+  await page.addInitScript(() => {
+    const startViewTransition = document.startViewTransition.bind(document);
+    document.startViewTransition = (options) => {
+      const update = typeof options === "function" ? options : options?.update;
+      const delayedUpdate = async () => {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        await update?.();
+      };
+      return startViewTransition(
+        typeof options === "function" || options === undefined
+          ? delayedUpdate
+          : { ...options, update: delayedUpdate },
+      );
+    };
+  });
+  const requestedPaths = new Set<string>();
+  page.on("request", (request) => requestedPaths.add(new URL(request.url()).pathname));
+  await recordLoadingStates(page);
+  await recordViewTransitions(page);
+  const component = await mount("routes/_shell.recent/RevisitingScreens");
+  await expectCoversLoaded(page);
+  await expect.poll(() => requestedPaths.has(`/api/audiobooks/${REVISITED_READY_ID}`)).toBe(true);
+
+  const recordedBefore = (await readLoadingStateRecord(page)).length;
+  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+
+  await expect(component.getByText("Two.", { exact: true })).toBeVisible();
+  await expect
+    .poll(async () => (await readViewTransitionRecord(page)).map(({ types }) => types))
+    .toEqual([["track-cover"]]);
+  expect(await readLoadingStatesSince(page, recordedBefore)).toEqual([]);
+});
+
 test("leaving a track being prepared stops polling it, and reopening it polls again", async ({
   mount,
   page,

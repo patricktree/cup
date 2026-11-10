@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
 import http from "node:http";
+import https from "node:https";
+import type net from "node:net";
 import { Temporal } from "temporal-polyfill";
 
 const SUBJECT = "880ce5b5-6542-40fd-8f2d-380f3066e98a";
@@ -20,6 +22,11 @@ type StartAuthProviderOptions = {
    * listen on both the IPv4 and the IPv6 loopback, wherever a client resolves `localhost` to.
    */
   hostname?: "127.0.0.1" | "localhost";
+  /**
+   * Serves HTTPS with this key and certificate instead of HTTP. The web suite passes the Worker's
+   * certificate, because WebKit blocks an HTTPS page from calling HTTP.
+   */
+  tls?: { key: Buffer; cert: Buffer };
 };
 
 /**
@@ -251,12 +258,15 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
       response.writeHead(400).end(JSON.stringify({ message: String(error) }));
     });
   };
+  const { tls } = options;
+  const createServer = (): net.Server =>
+    tls === undefined ? http.createServer(handler) : https.createServer(tls, handler);
   const hostname = options.hostname ?? "127.0.0.1";
   const servers =
     hostname === "localhost"
-      ? await listenOnBothLoopbacks(handler)
-      : [await listen(handler, 0, "127.0.0.1")];
-  origin = `http://${hostname}:${portOf(servers[0])}`;
+      ? await listenOnBothLoopbacks(createServer)
+      : [await listen(createServer, 0, "127.0.0.1")];
+  origin = `${options.tls === undefined ? "http" : "https"}://${hostname}:${portOf(servers[0])}`;
   return {
     origin,
     otherToken: () => tokenFor(OTHER_SUBJECT),
@@ -279,11 +289,11 @@ async function readJson(request: http.IncomingMessage): Promise<unknown> {
  * Listens on one port at both `127.0.0.1` and `::1`, so `localhost` reaches the provider however a
  * client resolves it. Tries another port when the one assigned on IPv4 is taken on IPv6.
  */
-async function listenOnBothLoopbacks(handler: http.RequestListener): Promise<http.Server[]> {
+async function listenOnBothLoopbacks(createServer: () => net.Server): Promise<net.Server[]> {
   for (let attempt = 0; attempt < 10; attempt += 1) {
-    const ipv4 = await listen(handler, 0, "127.0.0.1");
+    const ipv4 = await listen(createServer, 0, "127.0.0.1");
     try {
-      return [ipv4, await listen(handler, portOf(ipv4), "::1")];
+      return [ipv4, await listen(createServer, portOf(ipv4), "::1")];
     } catch (error) {
       await close(ipv4);
       if (!(error instanceof Error && "code" in error && error.code === "EADDRINUSE")) {
@@ -294,8 +304,8 @@ async function listenOnBothLoopbacks(handler: http.RequestListener): Promise<htt
   throw new Error("No identity port is free on both loopback addresses.");
 }
 
-function listen(handler: http.RequestListener, port: number, host: string): Promise<http.Server> {
-  const server = http.createServer(handler);
+function listen(createServer: () => net.Server, port: number, host: string): Promise<net.Server> {
+  const server = createServer();
   return new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, host, () => {
@@ -305,7 +315,7 @@ function listen(handler: http.RequestListener, port: number, host: string): Prom
   });
 }
 
-function portOf(server: http.Server | undefined): number {
+function portOf(server: net.Server | undefined): number {
   const address = server?.address();
   if (!address || typeof address === "string") {
     throw new Error("No identity port");
@@ -313,7 +323,7 @@ function portOf(server: http.Server | undefined): number {
   return address.port;
 }
 
-function close(server: http.Server): Promise<void> {
+function close(server: net.Server): Promise<void> {
   return new Promise((resolve, reject) =>
     server.close((error) => (error ? reject(error) : resolve())),
   );

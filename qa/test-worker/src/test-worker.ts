@@ -44,6 +44,12 @@ type StartTestWorkerOptions = {
   authProviderOrigin?: string;
   /** Writes Wrangler's output to stderr while it runs. */
   streamLogs?: boolean;
+  /**
+   * Serves HTTPS with this PEM key and certificate instead of HTTP. The caller's own requests, such
+   * as the readiness check and grant creation, must trust the certificate, for example through
+   * `NODE_EXTRA_CA_CERTS`.
+   */
+  https?: { keyPath: string; certPath: string };
 };
 
 /** Must match the prefix the Worker entry writes in `logRequest`. */
@@ -58,7 +64,7 @@ const PACKAGE_ROOT = path.resolve(import.meta.dirname, "..");
 export async function startTestWorker(options: StartTestWorkerOptions = {}): Promise<TestWorker> {
   const port = await reservePort();
   const inspectorPort = await reservePort();
-  const origin = `http://127.0.0.1:${port}`;
+  const origin = `${options.https === undefined ? "http" : "https"}://127.0.0.1:${port}`;
   const persistenceDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "cup-test-worker-"));
   const logs: string[] = [];
   let workerProcess: childProcess.ChildProcess | undefined;
@@ -82,6 +88,16 @@ export async function startTestWorker(options: StartTestWorkerOptions = {}): Pro
         "127.0.0.1",
         "--port",
         port.toString(),
+        ...(options.https === undefined
+          ? []
+          : [
+              "--local-protocol",
+              "https",
+              "--https-key-path",
+              options.https.keyPath,
+              "--https-cert-path",
+              options.https.certPath,
+            ]),
         "--inspector-ip",
         "127.0.0.1",
         "--inspector-port",

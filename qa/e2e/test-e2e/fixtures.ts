@@ -1,6 +1,7 @@
-/* oxlint-disable node/no-process-env -- The fixture honors debug flags. */
+/* oxlint-disable node/no-process-env -- The fixture reads the certificate paths from global setup and honors debug flags. */
 import { expect, test as base } from "@playwright/test";
 import type { Page, TestInfo } from "@playwright/test";
+import fs from "node:fs/promises";
 
 import {
   startAuthProvider,
@@ -8,6 +9,11 @@ import {
   type CreatedGrant,
   type TestWorkerScenario,
 } from "@cup/test-worker";
+
+import {
+  HTTPS_CERT_PATH_ENV_VAR_NAME,
+  HTTPS_KEY_PATH_ENV_VAR_NAME,
+} from "#test-e2e/https-certificate.global-setup.ts";
 
 export type WorkerEnvironment = {
   origin: string;
@@ -42,7 +48,7 @@ export const test = base.extend<Fixtures>({
       await environment.dispose(testInfo);
     }
   },
-  page: async ({ expectConsoleError, page, workerEnvironment }, use, testInfo) => {
+  page: async ({ browserName, expectConsoleError, page, workerEnvironment }, use, testInfo) => {
     const unexpectedRequests: string[] = [];
     const consoleErrors: string[] = [];
     const pageErrors: string[] = [];
@@ -62,15 +68,46 @@ export const test = base.extend<Fixtures>({
       unexpectedRequests.push(url.href);
       await route.abort("blockedbyclient");
     });
-    page.on("console", (message) => {
-      if (message.type() === "error") {
-        consoleErrors.push(message.text());
+    // WebKit rejects the outgoing document's pending loads when a navigation replaces it: it raises
+    // each cancelled fetch as failing "due to access control checks", and the queries' error
+    // boundaries and Vite's preload helper log errors nobody can see. Chromium drops that document's
+    // pending loads silently. Errors between a main-frame document request and the commit of the next
+    // document come from the outgoing document, because the next one has run no script yet. They are
+    // attached to the report but not counted. Chromium keeps the full check.
+    const outgoingDocumentErrors: string[] = [];
+    let isReplacingDocument = false;
+    const recordError = (errors: string[], text: string): void => {
+      if (browserName === "webkit" && isReplacingDocument) {
+        outgoingDocumentErrors.push(text);
+      } else {
+        errors.push(text);
+      }
+    };
+    page.on("request", (request) => {
+      if (request.isNavigationRequest() && request.frame() === page.mainFrame()) {
+        isReplacingDocument = true;
       }
     });
-    page.on("pageerror", (error) => pageErrors.push(error.message));
+    page.on("requestfailed", (request) => {
+      if (request.isNavigationRequest() && request.frame() === page.mainFrame()) {
+        isReplacingDocument = false;
+      }
+    });
+    page.on("framenavigated", (frame) => {
+      if (frame === page.mainFrame()) {
+        isReplacingDocument = false;
+      }
+    });
+    page.on("console", (message) => {
+      if (message.type() === "error") {
+        recordError(consoleErrors, message.text());
+      }
+    });
+    page.on("pageerror", (error) => recordError(pageErrors, error.message));
 
     await use(page);
 
+    await attachText(testInfo, "outgoing-document-errors", outgoingDocumentErrors);
     await attachText(testInfo, "browser-console-errors", consoleErrors);
     await attachText(testInfo, "browser-page-errors", pageErrors);
     expect(unexpectedRequests, "The browser made an unapproved external request").toEqual([]);
@@ -103,10 +140,15 @@ type InternalWorkerEnvironment = WorkerEnvironment & {
 async function createWorkerEnvironment(
   initialScenario: TestWorkerScenario,
 ): Promise<InternalWorkerEnvironment> {
-  const authProvider = await startAuthProvider();
+  const httpsKeyPath = readRequiredEnvironmentVariable(HTTPS_KEY_PATH_ENV_VAR_NAME);
+  const httpsCertPath = readRequiredEnvironmentVariable(HTTPS_CERT_PATH_ENV_VAR_NAME);
+  const authProvider = await startAuthProvider({
+    tls: { key: await fs.readFile(httpsKeyPath), cert: await fs.readFile(httpsCertPath) },
+  });
   const worker = await startTestWorker({
     scenario: initialScenario,
     authProviderOrigin: authProvider.origin,
+    https: { keyPath: httpsKeyPath, certPath: httpsCertPath },
     streamLogs: process.env["E2E_STREAM_WRANGLER"] === "1",
   });
 
@@ -137,6 +179,16 @@ async function attachText(testInfo: TestInfo, name: string, lines: string[]): Pr
     return;
   }
   await testInfo.attach(name, { body: lines.join("\n"), contentType: "text/plain" });
+}
+
+function readRequiredEnvironmentVariable(name: string): string {
+  const value = process.env[name];
+  if (value === undefined || value === "") {
+    throw new Error(
+      `${name} is not set; it comes from \`test-e2e/https-certificate.global-setup.ts\`, which the Playwright config runs.`,
+    );
+  }
+  return value;
 }
 
 export async function gotoPage(page: Page, url: string): Promise<void> {

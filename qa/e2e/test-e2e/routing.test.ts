@@ -7,9 +7,16 @@ for (const oldOrigin of [
   "https://create-audiobook-from-url.patricktree.me",
 ]) {
   test(`carries trial credentials across the redirect from ${oldOrigin} and redeems them`, async ({
+    browserName,
     page,
     workerEnvironment,
   }) => {
+    // The old origin can only be emulated by fulfilling its route with the Worker's 308, so this
+    // runs in Chromium alone. A redirect keeping the URL fragment is specified by the Fetch Standard.
+    test.skip(
+      browserName === "webkit",
+      "Playwright's WebKit cannot fulfill a route with a redirect status",
+    );
     await page.route(`${oldOrigin}/**`, async (route) => {
       const url = new URL(route.request().url());
       const response = await route.fetch({

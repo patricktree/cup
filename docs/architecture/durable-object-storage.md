@@ -58,6 +58,8 @@ erDiagram
 
 Both owners store a conversion's outcome and its last started [preparation phase](../GLOSSARY.md#preparation-phase) in typed columns with the same names. Only grants keep `workflow_started_at_ms`, measurements, provider usage, diagnostic references, and `cleanup_state`: they serve the operator's inspection of trial conversions and the grant's own cleanup of failed artifacts, while account conversions are reconciled through dispatch jobs and artifact writers and their artifacts are removed by [conversion deletion](conversion-deletion.md) or account erasure. Grant failure categories are limited to the conversion failure categories; account failures also record `execution-failed`.
 
+A ready outcome in either owner records `has_cover_image` and `narration_language`, the conversion's [narration language](../GLOSSARY.md#narration-language) as a BCP 47 tag. Preparation sets `narration_language` once when it reports the ready outcome, as a copy of the audiobook manifest's `narrationLanguage` ([R2 storage](r2-storage.md)), which is written once, so the copy cannot drift. The column is null for a conversion without a narration language, including those prepared before it was added. Account inspection shows it in each history entry; the listener API leaves it out, and `grant inspect` lists no conversions, so grants store it without displaying it.
+
 Sources: [grant-sqlite-schema.ts](../../libs/conversion-grants/src/storage/grant-sqlite-schema.ts), [rate-limit-schema.ts](../../libs/rolling-limits/src/rate-limit-schema.ts), [duration-ledger-schema.ts](../../libs/duration-ledger/src/duration-ledger-schema.ts); [migrations](../../libs/conversion-grants/drizzle/grant/).
 
 <!-- schema-diagram:grant -->

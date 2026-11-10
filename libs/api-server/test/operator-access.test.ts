@@ -71,6 +71,7 @@ const inspection: {
             etag: "etag",
           },
           hasCoverImage: true,
+          narrationLanguage: "de-AT",
         },
       },
       {
@@ -257,6 +258,23 @@ test("typed operator account routes preserve complete inspection and deletion re
   );
   expect(deletionList.status).toBe(200);
   expect(listAccountDeletionsResponseSchema.parse(await deletionList.json())).toEqual(deletions);
+});
+
+test("account inspection reports each history entry's narration language, and none without one", async () => {
+  const { env } = fixture();
+  const app = createApiServer({ validateOperatorAccess: async () => true });
+  const response = await app.request(
+    `https://cup.audio/api/operator/accounts/${accountId}`,
+    {},
+    env,
+  );
+
+  const { history } = inspectAccountResponseSchema.parse(await response.json());
+  expect(
+    history.items.map(({ outcome }) =>
+      outcome?.status === "ready" ? (outcome.narrationLanguage ?? "none") : "not ready",
+    ),
+  ).toEqual(["de-AT", "none", "none"]);
 });
 
 test("account routes remain behind operator authentication and reject invalid account IDs", async () => {

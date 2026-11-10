@@ -5,7 +5,12 @@ import { SYNCHRONIZATION_UNIT_SCHEMA } from "@cup/narration-document-creation";
 import type { NarrationDocument } from "@cup/narration-document-creation";
 
 import { AUDIOBOOK_MANIFEST_CONTENT_TYPE } from "#src/audio-format.ts";
-import { SPEECH_CONFIG, type SpeechConfig } from "#src/speech-synthesis-config.ts";
+import { isCanonicalLanguageTag } from "#src/language-tag.ts";
+import {
+  LEGACY_GEMINI_V4_SPEECH_CONFIG,
+  SPEECH_CONFIG,
+  type SpeechConfig,
+} from "#src/speech-synthesis-config.ts";
 import { coverImageSchema, type CoverImage } from "#src/store-cover-image.ts";
 
 /** Prepared narration; individual audio segments are published independently. */
@@ -14,6 +19,8 @@ export type Audiobook = {
   originalUrl: string;
   narrationDocument: NarrationDocument;
   speechConfig: SpeechConfig;
+  /** The canonical BCP 47 narration language, absent when the conversion has none. */
+  narrationLanguage?: string | undefined;
   /** Present only when a cover image is stored beside the manifest. */
   coverImage?: CoverImage | undefined;
 };
@@ -58,6 +65,7 @@ export type StoreOptions = {
   originalUrl: string;
   narrationDocument: NarrationDocument;
   speechConfig?: SpeechConfig;
+  narrationLanguage?: string;
   coverImage?: CoverImage;
 };
 
@@ -81,7 +89,12 @@ export const audiobookSchema = z.object({
       voice: z.string().min(1),
       policyVersion: z.string().min(1),
     })
-    .default(SPEECH_CONFIG),
+    // Manifests from before speechConfig was recorded keep the requests they were prepared with.
+    .default(LEGACY_GEMINI_V4_SPEECH_CONFIG),
+  narrationLanguage: z
+    .string()
+    .refine(isCanonicalLanguageTag, "Expected a canonical BCP 47 language tag")
+    .optional(),
   coverImage: coverImageSchema.optional(),
 });
 
@@ -94,6 +107,7 @@ export async function storeAudiobook({
   originalUrl,
   narrationDocument,
   speechConfig = SPEECH_CONFIG,
+  narrationLanguage,
   coverImage,
 }: StoreOptions): Promise<AudiobookReference> {
   const audiobook = audiobookSchema.parse({
@@ -101,6 +115,7 @@ export async function storeAudiobook({
     originalUrl,
     narrationDocument,
     speechConfig,
+    narrationLanguage,
     coverImage,
   });
   const body = JSON.stringify(audiobook);

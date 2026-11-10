@@ -1,7 +1,14 @@
 import { z } from "zod";
 
 import { AUDIO_FORMAT } from "#src/audio-format.ts";
-import { LEGACY_GEMINI_SPEECH_CONFIG } from "#src/speech-synthesis-config.ts";
+import { toLanguageSubtag } from "#src/language-tag.ts";
+import { getNarrationLanguageSupport } from "#src/narration-language-speakability.ts";
+import {
+  isSameSpeechConfig,
+  LEGACY_GEMINI_V3_SPEECH_CONFIG,
+  LEGACY_GEMINI_V4_SPEECH_CONFIG,
+  type SpeechConfig,
+} from "#src/speech-synthesis-config.ts";
 import {
   PermanentNarrationSynthesisError,
   RateLimitedNarrationSynthesisError,
@@ -119,9 +126,11 @@ export async function synthesizeGeminiAudio({
   synthesisAttempt,
   synthesisResponseMode,
   speechConfig,
+  narrationLanguage,
 }: SynthesisOptions): Promise<Uint8Array> {
   const isStreaming = synthesisResponseMode === "streaming";
-  const isLegacyGemini = speechConfig.model === LEGACY_GEMINI_SPEECH_CONFIG.model;
+  const isLegacyGemini = isSameSpeechConfig(speechConfig, LEGACY_GEMINI_V3_SPEECH_CONFIG);
+  const spokenLanguage = selectSpokenLanguage(speechConfig, narrationLanguage);
   const response = await ai.gateway(SPEECH_GATEWAY_ID).run(
     {
       provider: speechConfig.provider,
@@ -137,14 +146,37 @@ export async function synthesizeGeminiAudio({
         // https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash-lite-tts#migration-guide
         input: isLegacyGemini
           ? `Synthesize speech by reading the following transcript verbatim.\nSpeak only the transcript, without adding commentary.\n\nTRANSCRIPT:\n${narrationText}`
-          : [{ type: "user_input", content: [{ type: "text", text: narrationText }] }],
+          : [
+              {
+                type: "user_input",
+                content: [
+                  {
+                    type: "text",
+                    text: narrationText,
+                    ...(spokenLanguage === undefined
+                      ? {}
+                      : {
+                          // An unspoken style is what makes a names-only segment, such as a
+                          // byline, sound like the narration language; the language parameter
+                          // alone does not (patricktree/cup#193).
+                          annotations: [{ type: "speech_metadata", style: spokenLanguage.style }],
+                        }),
+                  },
+                ],
+              },
+            ],
         response_format: {
           type: "audio",
           ...(isLegacyGemini ? {} : { mime_type: "audio/l16" }),
           sample_rate: AUDIO_FORMAT.sampleRate,
         },
         generation_config: {
-          speech_config: [{ voice: speechConfig.voice }],
+          speech_config: [
+            {
+              voice: speechConfig.voice,
+              ...(spokenLanguage === undefined ? {} : { language: spokenLanguage.tag }),
+            },
+          ],
         },
         stream: isStreaming,
       },
@@ -191,6 +223,40 @@ export async function synthesizeGeminiAudio({
   }
 
   return parseAudioResponse(await readResponseBody(response));
+}
+
+/**
+ * Returns the language a request speaks in: the narration language, when the request policy sends
+ * one and the model can speak it. Policies 3 and 4 keep the requests they were prepared with.
+ */
+function selectSpokenLanguage(
+  speechConfig: SpeechConfig,
+  narrationLanguage: string | undefined,
+): { tag: string; style: string } | undefined {
+  const isPolicyWithoutLanguage = [
+    LEGACY_GEMINI_V3_SPEECH_CONFIG,
+    LEGACY_GEMINI_V4_SPEECH_CONFIG,
+  ].some((config) => isSameSpeechConfig(config, speechConfig));
+  if (
+    isPolicyWithoutLanguage ||
+    narrationLanguage === undefined ||
+    getNarrationLanguageSupport(narrationLanguage, speechConfig) !== "speakable"
+  ) {
+    return undefined;
+  }
+
+  // The style names the language without its region: "German" for de-AT.
+  const englishName = new Intl.DisplayNames(["en"], { type: "language" }).of(
+    toLanguageSubtag(narrationLanguage),
+  );
+  if (englishName === undefined) {
+    throw new Error(`No English name for the narration language ${narrationLanguage}`);
+  }
+
+  return {
+    tag: narrationLanguage,
+    style: `Read in ${englishName} with standard ${englishName} pronunciation.`,
+  };
 }
 
 function parseAudioResponse(response: unknown): Uint8Array {

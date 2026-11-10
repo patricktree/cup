@@ -68,6 +68,9 @@ export function resolveConversionExecution(
             title: outcome.title,
             audiobookReference: outcome.audiobookReference,
             ...(outcome.hasCoverImage === undefined ? {} : { hasCoverImage: true }),
+            ...(outcome.narrationLanguage === undefined
+              ? {}
+              : { narrationLanguage: outcome.narrationLanguage }),
           },
           undefined,
           executionEpoch,

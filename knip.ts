@@ -61,6 +61,10 @@ const config: KnipConfig = {
         "cloudflare",
       ],
     },
+    "qa/e2e": {
+      /* The global setup signs the suite's local HTTPS certificate with the system's openssl */
+      ignoreBinaries: ["openssl"],
+    },
     "qa/test-worker": {
       /* These dependencies express the built-app test dependency graph. */
       ignoreDependencies: [
@@ -69,7 +73,7 @@ const config: KnipConfig = {
         "cloudflare",
       ],
     },
-    "libs/narration-content-selection": {
+    "libs/narration-source-analysis": {
       /* Live evals use separate Vitest discovery, so Knip cannot infer these entry points */
       entry: ["vitest.evals.config.ts", "test/evals/**/*.eval.ts"],
     },

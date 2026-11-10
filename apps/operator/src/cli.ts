@@ -111,7 +111,17 @@ account
       );
       output(result, () => {
         const { conversionDeletions, ...rest } = result;
-        process.stdout.write(`${JSON.stringify(rest, null, 2)}\n\nConversion deletions:\n`);
+        process.stdout.write(`${JSON.stringify(rest, null, 2)}\n\nNarration languages:\n`);
+        if (rest.history.items.length === 0) {
+          process.stdout.write("none\n\n");
+        }
+        for (const item of rest.history.items) {
+          writeFields([
+            ["Conversion ID", item.conversionId],
+            ["Narration language", describeNarrationLanguage(item.outcome)],
+          ]);
+        }
+        process.stdout.write("Conversion deletions:\n");
         if (conversionDeletions.length === 0) {
           process.stdout.write("none\n");
         }
@@ -399,6 +409,13 @@ function writeFields(fields: ReadonlyArray<readonly [string, string | number]>):
   }
   process.stdout.write("\n");
 }
+/** The narration language a history entry's ready outcome records, or "none". */
+function describeNarrationLanguage(
+  outcome: { status: string; narrationLanguage?: string | undefined } | null,
+): string {
+  return (outcome?.status === "ready" ? outcome.narrationLanguage : undefined) ?? "none";
+}
+
 function parseUuid(value: string): string {
   return uuidV4Schema.parse(value);
 }
