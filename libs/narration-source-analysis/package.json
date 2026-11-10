@@ -17,8 +17,8 @@
       "default": "./src/index.ts"
     },
     "./fake": {
-      "types": "./dist/types/fake.d.ts",
-      "default": "./src/fake.ts"
+      "types": "./dist/types/index.fake.d.ts",
+      "default": "./src/index.fake.ts"
     }
   },
   "scripts": {
