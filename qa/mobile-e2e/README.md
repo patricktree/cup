@@ -46,7 +46,7 @@ When a test fails, the suite keeps what the device and the test Worker showed at
 - `screenshot.png`: the device's screen
 - `native-page-source.xml`: the native view hierarchy, which includes system screens such as Google's add-account screen
 - `webview-dom.html`: the DOM of the WebView the test was in, or of Cup's WebView when the test was in the native context
-- `device.log`: the device log since the test started. On Android it is a one-off `adb -s <serial> logcat -d` dump of the run's emulator; Appium's own logcat capture stays off (see [Finding Cup's WebView](#finding-cups-webview-android)). On iOS it is the run's simulator's `log show --last <n>m`, in whole minutes since the test started.
+- `device.log`: the device log since the test started. On Android it is a one-off `adb -s <serial> logcat -d` dump of the run's emulator; Appium's own logcat capture stays off (see [Finding Cup's WebView](#finding-cups-webview-android)). On iOS it is the run's simulator's `log show --last <n>m`, in whole minutes since the test started, limited to the processes a test involves: Cup, its share extension, WebKit's processes and Safari. Unfiltered, a new simulator logged 86 MB of system daemons in one minute.
 - `worker.log`: the test Worker's Wrangler output, including each request it received
 
 An artifact the suite could not capture, such as the WebView's DOM when Cup shows no page, is written as `<file>.missing.txt` with the reason. Each capture gets 20 seconds; once the Appium session leaves one unanswered, the suite skips the remaining captures through it. Passing tests leave nothing behind, and each platform's run first removes the folder its previous run left.
