@@ -61,7 +61,7 @@ The detector reads the case's source title and the narration source material reb
 
 ## Run and update evals
 
-From the repository root, run `pnpm validate:evals`. This paid check is excluded from `pnpm validate`. Alternatively, from `libs/narration-source-analysis`, run all registered candidates:
+From the repository root, run `pnpm evals`. This paid check is excluded from `pnpm validate`; the [review gate](../../../../tooling/validation-gates/README.md) runs it only when this library or a package it depends on changed relative to `main`. Alternatively, from `libs/narration-source-analysis`, run all registered candidates:
 
 ```sh
 pnpm eval
