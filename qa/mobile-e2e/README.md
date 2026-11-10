@@ -18,7 +18,7 @@ The suite finds the SDK at `ANDROID_HOME`, then `ANDROID_SDK_ROOT`, then Android
 
 There is none to do by hand. The first run on a Mac takes several minutes longer and says so in its output:
 
-- It installs the pinned Appium drivers into the git-ignored `qa/mobile-e2e/.appium`. Later runs find it there; an interrupted installation is redone.
+- It installs the pinned Appium drivers into the git-ignored `qa/mobile-e2e/.appium`. Later runs find it there; an interrupted installation is redone. A lock, the folder `.appium/.driver-installation.lock` holding its owner's process ID, lets one process at a time check and install drivers, so the Android and iOS processes of a parallel run never write `.appium` at once; a lock whose owner has exited is taken over.
 - It creates the suite's own emulator, `cup-mobile-e2e-api36-ram4g` with 4 GB of RAM, in `~/Library/Caches/cup-mobile-e2e/avd`, boots it once and saves its Quick Boot snapshot. The Pixel 8 profile's default 2 GB made the guest swap constantly during the full suite until adbd stopped answering. A Mac that still has the earlier 2 GB `cup-mobile-e2e-api36` creates the new emulator and its snapshot on its next run; the old folder is no longer used and can be deleted. Every later run, in any checkout, boots a read-only instance from that snapshot in a few seconds. Delete the folder to rebuild the emulator, for example after a system image update.
 - It builds the XCUITest driver's WebDriverAgent for the simulator into `~/Library/Caches/cup-mobile-e2e/wda`, in a folder named after the WebDriverAgent version and Xcode's build version. Every later run, in any checkout, starts that build with `xcodebuild test-without-building` and never rebuilds it; a new driver or Xcode version builds a new folder.
 
@@ -30,14 +30,18 @@ From the repository root:
 pnpm run test:e2e:mobile
 ```
 
-This builds the workspace, then each platform syncs the production web bundle into its native project, builds the debug app (the APK with Gradle, the simulator app with `xcodebuild`), starts its device and Appium, installs the app and runs the specs one after another. The suite runs in `pnpm validate:extended` and `pnpm validate`, after the web E2E suites.
+This builds the workspace once, then [`src/run-e2e.ts`](src/run-e2e.ts) starts the Android and iOS Vitest projects as two Vitest processes at the same time. Each platform syncs the production web bundle into its native project, builds the debug app (the APK with Gradle, the simulator app with `xcodebuild`), starts its device and Appium, installs the app and runs its specs one after another. Every line of output starts with `[android]` or `[ios]`, so the interleaved logs stay readable; the run waits for both processes, names the platforms that failed, and exits non-zero unless both passed. The suite runs in `pnpm validate:extended` and `pnpm validate`, after the web E2E suites.
 
-To run one platform, name its Vitest project:
+The two platforms run in separate processes because one Vitest process cannot run them at the same time: it awaits each project's global setup in turn, and `fileParallelism: false` puts the specs of both projects into one sequential group. [Isolation](#isolation) lists what the two processes keep apart.
+
+To run one platform, name its Vitest project; the runner then starts a single Vitest process with its output unprefixed:
 
 ```sh
 pnpm run test:e2e:mobile --project android
 pnpm run test:e2e:mobile --project ios
 ```
+
+Other arguments, such as a spec file filter, go to each Vitest process unchanged.
 
 ## Runtime
 
@@ -79,6 +83,15 @@ To stream each test Worker's Wrangler logs to the terminal while a test runs, ad
 Runs in several checkouts can go at once. Each run boots its own emulator, which picks its own console port and reports it back, and addresses it by serial; it never kills the shared adb server or touches another run's device while that run still runs. Appium, UiAutomator2, Chromedriver, every test Worker and fake auth provider listen on ports the operating system assigns. `adb reverse` makes each test's Worker and fake auth provider reachable at `http://localhost:<port>` on the emulator. The emulator's own sockets use ports from the same range the Mac assigns from: a minute after booting from the snapshot it held about 60 on such ports, Google Play services' connections and sockets in TIME_WAIT, and `adb reverse` fails with "Address already in use" for any of them (2026-11-10). When the device side of a port is taken, the test starts that server again on another port the operating system assigns, up to five times.
 
 Each iOS run creates its own simulator, named after the run (see [Leftover devices](#leftover-devices)), in the default simulator set, because WebDriverAgent starts through `xcodebuild`, which sees no other set. Because the simulator is the run's own, `IosAppDevice.clearAppData()` resets its whole Keychain along with reinstalling Cup: Cup keeps the account session in the Keychain, which a reinstall leaves in place. The run deletes it afterwards, also when it fails. A detached watcher deletes it when the run is killed. WebDriverAgent and its MJPEG stream listen on ports the operating system assigns.
+
+### Parallel platforms
+
+The Android and iOS processes of one run in one checkout share nothing they write. Each has its own device, ports, test Workers, failure artifacts folder (`test-output/<platform>/`) and leftover-device sweep, which touches only its own platform's devices of exited runs. Both read the built web app read-only: `apps/web-app/dist/web`, which `cap sync` copies, and `apps/cloudflare-worker/dist/client`, which the test Workers serve. The workspace build runs once, before both processes start. What they would share is guarded:
+
+- The Appium drivers in `.appium`: [a lock](#one-time-setup) serializes their check and installation.
+- The emulator's Quick Boot snapshot, prepared once per Mac under a lock, and WebDriverAgent, which concurrent builds each build into a folder of their own before the first rename wins.
+
+`cap sync android` and `cap sync ios` write no file in common. Listing every file in the checkout, ignored files included, that each wrote (2026-11-10, Capacitor 8): `cap sync android` wrote only under `apps/mobile-app/android/` (`capacitor.settings.gradle`, `app/capacitor.build.gradle`, `app/src/main/assets/` with the web bundle under `public/`, `app/src/main/res/xml/config.xml` and `capacitor-cordova-android-plugins/`), and `cap sync ios` only under `apps/mobile-app/ios/App/` (`App/capacitor.config.json`, `App/config.xml`, the web bundle in `App/public/`, and `CapApp-SPM/Package.swift`). Gradle and `xcodebuild` then build within those same folders, `xcodebuild` with a derived data folder of its own.
 
 ### Leftover devices
 
@@ -141,6 +154,7 @@ One Android test launches with the real plugin (`realGoogleSignIn: true`) on the
 
 ## Layout
 
+- [`src/run-e2e.ts`](src/run-e2e.ts): the runner behind `test:e2e`, which starts one Vitest process per platform, or one for a named project.
 - [`src/app-device.ts`](src/app-device.ts): the device-control interface every spec uses. Platform-only steps live on the platform's class, such as [`AndroidAppDevice`](src/android/android-app-device.ts).
 - [`src/fixtures.ts`](src/fixtures.ts): `useMobileApp()` opens the spec file's session, gives each test its own Worker and keeps a failed test's artifacts.
 - [`src/failure-artifacts.ts`](src/failure-artifacts.ts): the output folder and the artifacts captured through the Appium session.

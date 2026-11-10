@@ -1,6 +1,8 @@
 import childProcess from "node:child_process";
 import { once } from "node:events";
+import fs from "node:fs/promises";
 import net from "node:net";
+import path from "node:path";
 
 export type CommandResult = {
   readonly exitCode: number;
@@ -88,4 +90,56 @@ export async function stopChild(child: childProcess.ChildProcess, graceMs = 10_0
   const timeout = setTimeout(() => child.kill("SIGKILL"), graceMs);
   await exited;
   clearTimeout(timeout);
+}
+
+/**
+ * Runs `action` while holding a lock that serializes it across processes, such as runs in several
+ * checkouts or the Android and iOS processes of one parallel run. The lock is the directory
+ * `lockPath`, which `mkdir` creates atomically; a dead holder's lock is taken over.
+ */
+export async function withLock<T>(
+  options: { lockPath: string; waitingFor: string; timeoutMs: number },
+  action: () => Promise<T>,
+): Promise<T> {
+  const { lockPath } = options;
+  const holderPath = path.join(lockPath, "pid");
+
+  await waitFor(
+    options.waitingFor,
+    async () => {
+      try {
+        await fs.mkdir(lockPath);
+        await fs.writeFile(holderPath, String(process.pid));
+        return true;
+      } catch (error) {
+        if (!isErrorWithCode(error, "EEXIST")) {
+          throw error;
+        }
+      }
+      const holder = Number.parseInt(await fs.readFile(holderPath, "utf8").catch(() => ""), 10);
+      if (Number.isInteger(holder) && !isProcessAlive(holder)) {
+        await fs.rm(lockPath, { recursive: true, force: true });
+      }
+      return undefined;
+    },
+    options.timeoutMs,
+  );
+  try {
+    return await action();
+  } finally {
+    await fs.rm(lockPath, { recursive: true, force: true });
+  }
+}
+
+export function isErrorWithCode(error: unknown, code: string): boolean {
+  return error instanceof Error && "code" in error && error.code === code;
+}
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return !isErrorWithCode(error, "ESRCH");
+  }
 }
