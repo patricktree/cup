@@ -130,7 +130,7 @@ Sources: [preparation runner](../../libs/create-audiobook-from-url-workflow/src/
 The web player plays the [narration track](../GLOSSARY.md#narration-track) with one `<audio>` element, on every platform ([ADR 0011](../adr/0011-serve-one-narration-track-and-play-it-with-one-audio-element.md)). The [player host](../../apps/web-app/src/app/player/player-host.ts) creates the element once for the app shell's lifetime and sets each loaded audiobook's track URL as its `src`; the signed URL carries the authorization, and the content security policy allows media only from the API origin's `/api/files/`.
 
 - **State:** the element and its events are the player state; there is no player state machine.
-- **Timeline:** the response's start offsets map `currentTime` to the current unit, which drives the reader's highlight; seeking sets `currentTime` and nothing swaps sources.
+- **Timeline:** the response's start offsets map `currentTime` to the current unit, which drives the reader's highlight; seeking sets `currentTime` and nothing swaps sources. A seek waits until the element reports a duration above 0, because WebKit's GStreamer media backend on Linux first reports 0, and a seek then can end playback at once; the next media event that finds the duration known applies it.
 - **Play:** `play()` is called synchronously within the user gesture, because Mobile Safari refuses audio started after an await. A stale or failed track URL is [renewed](authentication.md#signed-media-url) first.
 - **System media controls:** the player sets only the media session's metadata and registers no action handlers, so the browser's defaults drive the lock screen and notification from the element.
 

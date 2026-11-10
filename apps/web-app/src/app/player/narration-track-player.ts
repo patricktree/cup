@@ -78,17 +78,28 @@ export function isElementPlaying(element: Pick<NarrationAudioElement, "paused" |
 }
 
 /**
+ * Whether a seek on the element lands where it asks. WebKit's GStreamer media backend on Linux can
+ * fire `loadedmetadata` with a duration of 0 before it has read the track's length; a seek then
+ * clamps to that duration, and the backend can settle on a duration of a few milliseconds and end
+ * playback at once. A duration above 0 shows the length is known. While the duration is 0, the
+ * track plays from the start until the held position is applied.
+ */
+function canSeek(element: Pick<NarrationAudioElement, "readyState" | "duration">) {
+  return element.readyState >= HAVE_METADATA && element.duration > 0;
+}
+
+/**
  * Plays a loaded audiobook's narration track on the host's one `<audio>` element.
  *
  * The element is the only playback state: the snapshot is read from it whenever it fires a media
  * event. The player adds what the element cannot hold: a position to apply once the track's
- * metadata is loaded, the save cadence, and failures of `play()` and saves.
+ * duration is known, the save cadence, and failures of `play()` and saves.
  */
 export class NarrationTrackPlayer implements Player {
   private readonly session: PlaybackSession;
   private readonly element: NarrationAudioElement;
   private readonly listeners = new Set<() => void>();
-  /** Where to seek once metadata is loaded; the element cannot seek before. */
+  /** Where to seek once the element knows the track's duration; it cannot seek before. */
   private pendingPositionMilliseconds: number | null;
   private failure: string | null = null;
   private isClosed = false;
@@ -147,7 +158,7 @@ export class NarrationTrackPlayer implements Player {
 
   seekTo = (positionMilliseconds: number) => {
     const position = clampToTimeline(this.session.timeline, positionMilliseconds);
-    if (this.element.readyState < HAVE_METADATA) {
+    if (!canSeek(this.element)) {
       this.pendingPositionMilliseconds = position;
     } else {
       // The element can report its metadata before `loadedmetadata` is dispatched, which must
@@ -196,11 +207,13 @@ export class NarrationTrackPlayer implements Player {
   private handleMediaEvent = (event: Event) => {
     const { element } = this;
 
+    // WebKit's GStreamer backend corrects a duration of 0 without firing `durationchange`, so any
+    // media event, such as the next `timeupdate`, can be the first to find the duration known.
+    if (this.pendingPositionMilliseconds !== null && canSeek(element)) {
+      this.applyPendingPosition();
+    }
+
     switch (event.type) {
-      case "loadedmetadata": {
-        this.applyPendingPosition();
-        break;
-      }
       case "timeupdate": {
         // While seeking, the time reports where the seek started, not a listening position.
         if (!element.seeking && !element.paused) {
