@@ -3,6 +3,13 @@ import crypto from "node:crypto";
 
 import { run } from "#src/host.ts";
 import type { IosHost } from "#src/ios/preflight.ts";
+import {
+  isRunOwnerAlive,
+  readProcessStartTimes,
+  readRunOwner,
+  type RunOwner,
+  type StartTimeLookup,
+} from "#src/run-owner.ts";
 
 export type Simulator = {
   readonly udid: string;
@@ -10,8 +17,68 @@ export type Simulator = {
   delete(): Promise<void>;
 };
 
-/** Every simulator the suite creates is named with this prefix and a random suffix. */
+/** A simulator as `simctl list` reports it. */
+export type ListedSimulator = {
+  readonly udid: string;
+  readonly name: string;
+};
+
+/**
+ * Every simulator the suite creates is named with this prefix, the run that owns it and a random
+ * suffix, as in `cup-mobile-e2e-<pid>-<started at>-<random>`.
+ */
 const NAME_PREFIX = "cup-mobile-e2e-";
+/**
+ * Only names with an owner count: a name without one, from before the owner was part of the name,
+ * may belong to a run still going in an older checkout, so the sweep never deletes it.
+ */
+const OWNED_NAME = /^cup-mobile-e2e-(\d+)-(\d{14})-[\da-f]{8}$/u;
+
+export function simulatorName(owner: RunOwner): string {
+  return `${NAME_PREFIX}${owner.pid}-${owner.startedAt}-${crypto.randomUUID().slice(0, 8)}`;
+}
+
+/**
+ * Picks the suite's simulators whose run no longer runs, which a run killed before its teardown
+ * leaves behind. Simulators of runs still going, such as in another checkout, are kept.
+ */
+export function findOrphanedSimulators(
+  simulators: readonly ListedSimulator[],
+  startTimeOf: StartTimeLookup,
+): string[] {
+  return simulators
+    .filter(({ name }) => {
+      const match = OWNED_NAME.exec(name);
+      if (match === null) {
+        return false;
+      }
+      const [, pid, startedAt = ""] = match;
+      return !isRunOwnerAlive({ pid: Number(pid), startedAt }, startTimeOf);
+    })
+    .map(({ udid }) => udid);
+}
+
+/**
+ * Deletes the simulators that killed runs left behind, after stopping the `xcodebuild` processes
+ * that ran WebDriverAgent on them.
+ */
+export async function deleteOrphanedSimulators(): Promise<void> {
+  const [simulators, startTimeOf] = await Promise.all([listSimulators(), readProcessStartTimes()]);
+  for (const udid of findOrphanedSimulators(simulators, startTimeOf)) {
+    process.stderr.write(`Deleting simulator ${udid}, left behind by a run that no longer runs.\n`);
+    await run("pkill", ["-f", xcodebuildPattern(udid)], { successExitCodes: [0, 1] });
+    // A simulator that is already shut down makes `shutdown` fail; `delete` then reports real errors.
+    await run("xcrun", ["simctl", "shutdown", udid]).catch(() => undefined);
+    try {
+      await run("xcrun", ["simctl", "delete", udid]);
+    } catch (error) {
+      // The dead run's watcher may have deleted it in the meantime.
+      if ((await listSimulators()).some((simulator) => simulator.udid === udid)) {
+        throw error;
+      }
+    }
+  }
+}
 
 /**
  * Creates and boots a uniquely named simulator for this run in the default simulator set:
@@ -20,7 +87,7 @@ const NAME_PREFIX = "cup-mobile-e2e-";
  * killed.
  */
 export async function createSimulator(host: IosHost): Promise<Simulator> {
-  const name = `${NAME_PREFIX}${crypto.randomUUID().slice(0, 8)}`;
+  const name = simulatorName(await readRunOwner());
   const { stdout } = await run("xcrun", [
     "simctl",
     "create",
@@ -77,4 +144,27 @@ function watchForOrphan(udid: string): childProcess.ChildProcess {
  */
 function xcodebuildPattern(udid: string): string {
   return `[x]codebuild .*-destination id=${udid}`;
+}
+
+async function listSimulators(): Promise<ListedSimulator[]> {
+  const { stdout } = await run("xcrun", ["simctl", "list", "devices", "--json"]);
+  const listing: unknown = JSON.parse(stdout);
+  if (!isRecord(listing) || !isRecord(listing["devices"])) {
+    throw new TypeError(`\`simctl list devices --json\` printed no devices: ${stdout}`);
+  }
+  return Object.values(listing["devices"]).flatMap((devices: unknown): ListedSimulator[] =>
+    Array.isArray(devices)
+      ? devices.flatMap((device: unknown): ListedSimulator[] =>
+          isRecord(device) &&
+          typeof device["udid"] === "string" &&
+          typeof device["name"] === "string"
+            ? [{ udid: device["udid"], name: device["name"] }]
+            : [],
+        )
+      : [],
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }

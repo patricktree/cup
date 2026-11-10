@@ -5,5 +5,5 @@
     "@patricktree-stack/config-typescript/tsconfig.typescript-execution-via-type-stripping.json",
     "@patricktree-stack/config-typescript/tsconfig.vitest.json"
   ],
-  "include": ["src/**/*", "test/**/*"]
+  "include": ["src/**/*", "test/**/*", "test-unit/**/*"]
 }

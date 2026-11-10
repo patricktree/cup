@@ -74,9 +74,22 @@ To stream each test Worker's Wrangler logs to the terminal while a test runs, ad
 
 ## Isolation
 
-Runs in several checkouts can go at once. Each run boots its own emulator, which picks its own console port and reports it back, and addresses it by serial; it never kills the shared adb server or touches a device it did not start. Appium, UiAutomator2, Chromedriver, every test Worker and fake auth provider listen on ports the operating system assigns. `adb reverse` makes each test's Worker and fake auth provider reachable at `http://localhost:<port>` on the emulator. The emulator's own sockets use ports from the same range the Mac assigns from: a minute after booting from the snapshot it held about 60 on such ports, Google Play services' connections and sockets in TIME_WAIT, and `adb reverse` fails with "Address already in use" for any of them (2026-11-10). When the device side of a port is taken, the test starts that server again on another port the operating system assigns, up to five times.
+Runs in several checkouts can go at once. Each run boots its own emulator, which picks its own console port and reports it back, and addresses it by serial; it never kills the shared adb server or touches another run's device while that run still runs. Appium, UiAutomator2, Chromedriver, every test Worker and fake auth provider listen on ports the operating system assigns. `adb reverse` makes each test's Worker and fake auth provider reachable at `http://localhost:<port>` on the emulator. The emulator's own sockets use ports from the same range the Mac assigns from: a minute after booting from the snapshot it held about 60 on such ports, Google Play services' connections and sockets in TIME_WAIT, and `adb reverse` fails with "Address already in use" for any of them (2026-11-10). When the device side of a port is taken, the test starts that server again on another port the operating system assigns, up to five times.
 
-Each iOS run creates its own simulator, named `cup-mobile-e2e-<random>`, in the default simulator set, because WebDriverAgent starts through `xcodebuild`, which sees no other set. The run deletes it afterwards, also when it fails. A detached watcher deletes it when the run is killed. WebDriverAgent and its MJPEG stream listen on ports the operating system assigns.
+Each iOS run creates its own simulator, named after the run (see [Leftover devices](#leftover-devices)), in the default simulator set, because WebDriverAgent starts through `xcodebuild`, which sees no other set. The run deletes it afterwards, also when it fails. A detached watcher deletes it when the run is killed. WebDriverAgent and its MJPEG stream listen on ports the operating system assigns.
+
+### Leftover devices
+
+A run that is killed outright, such as with `kill -9` on its process group, can leave its device behind: the emulator keeps running after its parent exits, and the kill can take the simulator's watcher with it. So each platform's setup first removes devices that earlier runs left behind:
+
+- Android: emulators of the suite's AVD whose run has exited, which macOS shows as processes whose parent is `launchd` (process ID 1). They get SIGTERM, then SIGKILL after 15 seconds.
+- iOS: simulators whose name records a run that no longer runs. The name is `cup-mobile-e2e-<process ID>-<start time>-<random>`, with the run's process ID and its start time in seconds, because macOS reuses process IDs. Simulators named `cup-mobile-e2e-<random>`, by checkouts from before the name recorded its run, are never deleted, since their run may still go; delete them by hand with `xcrun simctl delete <udid>` once no run of such a checkout is going.
+
+To remove leftover devices without starting a run:
+
+```sh
+pnpm run test:e2e:mobile:clean
+```
 
 The simulator shares the Mac's loopback, and on iOS 26.3.1 it connects to `localhost` over `::1` first: a probe with servers on `127.0.0.1` and `::1` at the same port saw the app's request arrive on `::1`, and with only `127.0.0.1` listening it fell back there without a noticeable delay (2026-11-09). The fake auth provider listens on both loopbacks. Wrangler binds one address, so the test Worker listens on `127.0.0.1` alone and each iOS test relays `[::1]:<port>` to it; otherwise another process holding the same port on `::1` would receive the app's requests. When another process holds it, the test starts that server again on another port, as on Android.
 
@@ -130,6 +143,8 @@ One Android test launches with the real plugin (`realGoogleSignIn: true`) on the
 - [`src/fixtures.ts`](src/fixtures.ts): `useMobileApp()` opens the spec file's session, gives each test its own Worker and keeps a failed test's artifacts.
 - [`src/failure-artifacts.ts`](src/failure-artifacts.ts): the output folder and the artifacts captured through the Appium session.
 - [`src/journeys.ts`](src/journeys.ts) and [`src/share-assertions.ts`](src/share-assertions.ts): WebView journeys and share assertions that specs of several platforms share.
+- [`src/run-owner.ts`](src/run-owner.ts) and [`src/clean-devices.ts`](src/clean-devices.ts): which run a device belongs to, and the sweep of [leftover devices](#leftover-devices).
 - [`src/android/`](src/android/): the Android preflight check, build, emulator and global setup.
 - [`src/ios/`](src/ios/): the iOS preflight check, build, simulator, WebDriverAgent build, `::1` relay, the page Safari shares and global setup.
 - [`test/`](test/): specs every platform runs; platform-only specs go in `test/<platform>/`.
+- [`test-unit/`](test-unit/): unit tests of the suite's own helpers, which need no device: `pnpm --filter @cup/mobile-e2e test`.

@@ -42,7 +42,7 @@ Tests are never retried: leave Vitest `retry` and Playwright `retries` at their 
 
 Tests that exercise Resend use the [Resend stub](qa/resend-stub/README.md). Its live contract test, `pnpm test:resend-live`, sends real email, so only the operator runs it.
 
-Use `pnpm test:e2e:app` or `pnpm test:e2e:source-material` to rerun a single E2E suite. `pnpm test:e2e` runs both. `pnpm test:e2e:mobile` runs the mobile suite; add `--project android` or `--project ios` to run one platform. Builds use checked-in brand assets; after changing their sources, run `pnpm brand-assets:sync` and review the generated changes. `pnpm brand-assets:check` reports stale files without modifying them.
+Use `pnpm test:e2e:app` or `pnpm test:e2e:source-material` to rerun a single E2E suite. `pnpm test:e2e` runs both. `pnpm test:e2e:mobile` runs the mobile suite; add `--project android` or `--project ios` to run one platform. `pnpm test:e2e:mobile:clean` removes emulators and simulators that killed mobile runs left behind; each run also does that first. Builds use checked-in brand assets; after changing their sources, run `pnpm brand-assets:sync` and review the generated changes. `pnpm brand-assets:check` reports stale files without modifying them.
 
 When you commit a new kind of generated file, mark its path `linguist-generated=true` in `.gitattributes`. GitHub then collapses it in pull request diffs, and agent code reviews leave it out of the diff they read (`git diff -- . ':(exclude,attr:linguist-generated=true)'`).
 

@@ -5,7 +5,7 @@ import { clearFailureArtifacts } from "#src/failure-artifacts.ts";
 import { run } from "#src/host.ts";
 import { buildIosDebugApp } from "#src/ios/build.ts";
 import { checkIosHost } from "#src/ios/preflight.ts";
-import { createSimulator, type Simulator } from "#src/ios/simulator.ts";
+import { createSimulator, deleteOrphanedSimulators, type Simulator } from "#src/ios/simulator.ts";
 import { ensureWebDriverAgent } from "#src/ios/web-driver-agent.ts";
 
 /**
@@ -16,6 +16,9 @@ import { ensureWebDriverAgent } from "#src/ios/web-driver-agent.ts";
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
   const host = await checkIosHost();
   await clearFailureArtifacts("ios");
+  // A run killed together with its orphan watcher, such as with its whole process tree, leaves its
+  // simulator behind.
+  await deleteOrphanedSimulators();
 
   const started: { simulator?: Simulator; appium?: AppiumServer } = {};
   const teardown = async (): Promise<void> => {
