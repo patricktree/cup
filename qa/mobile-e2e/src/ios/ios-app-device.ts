@@ -1,7 +1,8 @@
 import { remote } from "webdriverio";
 
 import type { AppDevice, LaunchArguments } from "#src/app-device.ts";
-import { reservePort, waitFor } from "#src/host.ts";
+import { appiumFailureArtifacts, type FailureArtifact } from "#src/failure-artifacts.ts";
+import { reservePort, run, waitFor } from "#src/host.ts";
 import { startLoopbackRelay, type LoopbackRelay } from "#src/ios/loopback-relay.ts";
 
 /** What the iOS global setup hands each spec file: the run's simulator and Appium server. */
@@ -59,6 +60,8 @@ export class IosAppDevice implements AppDevice {
   private readonly driver: WebdriverIO.Browser;
   private readonly relays = new Map<number, LoopbackRelay>();
   private lastLaunchArguments: LaunchArguments | undefined;
+  /** When the test started, from `performance.now()`. */
+  private testStart: number | undefined;
 
   constructor(target: IosTarget, driver: WebdriverIO.Browser) {
     this.target = target;
@@ -135,6 +138,39 @@ export class IosAppDevice implements AppDevice {
     );
     await this.driver.switchContext(webViewContext);
     return this.driver;
+  }
+
+  async markTestStart(): Promise<void> {
+    this.testStart = performance.now();
+  }
+
+  failureArtifacts(): FailureArtifact[] {
+    return appiumFailureArtifacts({
+      driver: this.driver,
+      // Only a page Cup rendered: Appium hangs for minutes when asked to attach to a blank WebView.
+      findWebViewContext: async () => {
+        const contexts: unknown = await this.driver.execute("mobile: getContexts");
+        return Array.isArray(contexts) ? contexts.findLast(isCupPage)?.id : undefined;
+      },
+      // The simulator's unified log over the whole minutes since the test started, as `log show`
+      // takes durations in minutes at the finest.
+      readDeviceLog: async () => {
+        const elapsedMs = performance.now() - (this.testStart ?? performance.now());
+        const minutes = Math.max(1, Math.ceil(elapsedMs / 60_000));
+        const { stdout } = await run("xcrun", [
+          "simctl",
+          "spawn",
+          this.target.udid,
+          "log",
+          "show",
+          "--style",
+          "compact",
+          "--last",
+          `${minutes}m`,
+        ]);
+        return stdout;
+      },
+    });
   }
 
   async close(): Promise<void> {

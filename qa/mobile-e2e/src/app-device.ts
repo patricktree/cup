@@ -1,3 +1,5 @@
+import type { FailureArtifact } from "#src/failure-artifacts.ts";
+
 /** The platforms the suite runs on; each is a Vitest project of the same name. */
 export type MobilePlatform = "android" | "ios";
 
@@ -31,6 +33,13 @@ export type AppDevice = {
    * reads what the listener sees in the WebView's DOM.
    */
   webView(): Promise<WebdriverIO.Browser>;
+  /** Marks the start of a test: the device log among `failureArtifacts()` begins here. */
+  markTestStart(): Promise<void>;
+  /**
+   * The device log since `markTestStart()`, the screenshot, the native page source and the
+   * WebView's DOM, which the fixture captures one after another when a test failed.
+   */
+  failureArtifacts(): FailureArtifact[];
   /** Ends the Appium session; the app and the device keep running for the next spec file. */
   close(): Promise<void>;
 };
