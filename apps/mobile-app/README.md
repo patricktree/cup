@@ -40,7 +40,7 @@ adb shell am start -n audio.cup.app/.MainActivity
 
 The debug APK is written to `apps/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk`. Confirm the landing page renders and the app can close and reopen without a crash.
 
-The [mobile E2E tests](../../qa/mobile-e2e/README.md) launch the debug build on their own emulator against a local test Worker and check that it launches to the landing page, signs in, keeps or ends the session across a relaunch, handles a cancelled Google sign-in, fills a conversion form from a shared URL, and handles the back button. Cup's presence in the Android Sharesheet when sharing from another app stays a manual check: the tests send the share intent directly.
+The [mobile E2E tests](../../qa/mobile-e2e/README.md) launch the debug build on their own emulator against a local test Worker and check that it launches to the landing page, signs in, keeps or ends the session across a relaunch, handles a cancelled Google sign-in, fills a conversion form from a shared URL, and handles the back button. Cup's presence in the Android Sharesheet when sharing from another app stays a manual check: the tests send the share intent directly. On iOS, the tests open `audio.cup.app://share` links in a signed-out Cup and leave the Share Extension and its handoff to the manual checks below.
 
 ### Debug launch arguments
 
@@ -107,6 +107,8 @@ The handoff uses `audio.cup.app://share?url=<encoded-url>`, the app's only URL s
 The app uses the UIScene lifecycle, which iOS 27 requires: an app built with the iOS 27 SDK that keeps the app-delegate lifecycle stops at launch. [`SceneDelegate`](ios/App/App/SceneDelegate.swift) receives incoming URLs, both at a cold start and while Cup runs, and hands them to Capacitor's `SceneDelegateProxy`, which passes them on to the App plugin's `appUrlOpen` event and launch URL.
 
 The extension uses the same responder-chain URL-opening approach as Chromium, calling `openURL:options:completionHandler:` dynamically. Apple does not support this handoff from Share Extensions; test it after iOS updates. A failed handoff stays in the extension with an error and retry button. The extension does not start conversions or access session cookies.
+
+The [mobile E2E tests](../../qa/mobile-e2e/README.md#share-intake-ios) cover what the app does with a share link once it arrives, signed out only.
 
 Build the App scheme with a local `DEVELOPMENT_TEAM` override; it builds, signs, and embeds the extension. Both bundle identifiers need provisioning: `audio.cup.app` and `audio.cup.app.share`. Verify Safari and Chrome sharing with Cup terminated and already running, cancellation, repeated shares, URLs containing `&`, `+`, or fragments, and that a shared trial link is ignored. If Cup is hidden, look under More in the Share Sheet's app row.
 
