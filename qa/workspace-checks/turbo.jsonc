@@ -1,4 +1,12 @@
 {
   "$schema": "../../node_modules/turbo/schema.json",
   "extends": ["//", "@patricktree-stack/config-turbo-typescript"],
+  "tasks": {
+    "turbo:test": {
+      // The tests read every workspace package's package.json and `.` export target, which this
+      // package's inputs don't cover, so a cached result would replay after another package
+      // breaks a rule. The tests take about a second, so they run every time.
+      "cache": false,
+    },
+  },
 }
