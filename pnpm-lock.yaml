@@ -1965,6 +1965,9 @@ importers:
       appium:
         specifier: 3.9.0
         version: 3.9.0(@types/node@26.6.5)
+      temporal-polyfill:
+        specifier: ^1.0.5
+        version: 1.0.5
       webdriverio:
         specifier: 10.1.0
         version: 10.1.0
