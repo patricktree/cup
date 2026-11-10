@@ -40,7 +40,7 @@ adb shell am start -n audio.cup.app/.MainActivity
 
 The debug APK is written to `apps/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk`. Confirm the landing page renders and the app can close and reopen without a crash.
 
-The [mobile E2E tests](../../qa/mobile-e2e/README.md) launch the debug build on their own emulator against a local test Worker and check that it launches to the landing page, signs in, keeps or ends the session across a relaunch, handles a cancelled Google sign-in, fills a conversion form from a shared URL, and handles the back button. Cup's presence in the Android Sharesheet when sharing from another app stays a manual check: the tests send the share intent directly. On iOS, the tests open `audio.cup.app://share` links in a signed-out Cup and leave the Share Extension and its handoff to the manual checks below.
+The [mobile E2E tests](../../qa/mobile-e2e/README.md) launch the debug build on their own emulator against a local test Worker; [automated and manual checks](#automated-and-manual-checks) lists what they cover.
 
 ### Debug launch arguments
 
@@ -68,7 +68,7 @@ It has no effect without `cupTestApiOrigin`.
 
 After building, open `apps/mobile-app/ios/App/App.xcodeproj` in Xcode and choose a simulator or configure signing for a device. The project uses Swift Package Manager, matching Content Relay.
 
-The [mobile E2E tests](../../qa/mobile-e2e/README.md) launch the debug build on their own simulator against a local test Worker and check that it launches to the landing page.
+The [mobile E2E tests](../../qa/mobile-e2e/README.md) launch the debug build on their own simulator against a local test Worker; [automated and manual checks](#automated-and-manual-checks) lists what they cover.
 
 ### iOS debug launch arguments
 
@@ -114,9 +114,29 @@ The app uses the UIScene lifecycle, which iOS 27 requires: an app built with the
 
 The extension uses the same responder-chain URL-opening approach as Chromium, calling `openURL:options:completionHandler:` dynamically. Apple does not support this handoff from Share Extensions; test it after iOS updates. A failed handoff stays in the extension with an error and retry button. The extension does not start conversions or access session cookies.
 
-The [mobile E2E tests](../../qa/mobile-e2e/README.md#share-intake-ios) cover what the app does with a share link once it arrives, and a share from Safari through the real Share Sheet and this extension with Cup terminated, Cup already running and a cancelled share, all signed out.
+The [mobile E2E tests](../../qa/mobile-e2e/README.md#share-intake-ios) cover what the app does with a share link once it arrives, and a share from Safari through the real Share Sheet and this extension on a simulator; sharing from Chrome and the handoff on a physical iPhone stay [manual](#automated-and-manual-checks).
 
-Build the App scheme with a local `DEVELOPMENT_TEAM` override; it builds, signs, and embeds the extension. Both bundle identifiers need provisioning: `audio.cup.app` and `audio.cup.app.share`. Verify Safari and Chrome sharing with Cup terminated and already running, cancellation, repeated shares, URLs containing `&`, `+`, or fragments, and that a shared trial link is ignored. If Cup is hidden, look under More in the Share Sheet's app row.
+Build the App scheme with a local `DEVELOPMENT_TEAM` override; it builds, signs, and embeds the extension. Both bundle identifiers need provisioning: `audio.cup.app` and `audio.cup.app.share`. If Cup is hidden in the Share Sheet, look under More in its app row.
+
+## Automated and manual checks
+
+The [mobile E2E tests](../../qa/mobile-e2e/README.md) run the debug build of each shell on an emulator or simulator against a local test Worker, in `pnpm validate:extended`. They cover:
+
+- **Both platforms**: launch to the landing page, loaded from the test Worker.
+- **Android**: sign-in through the native adapter with a fake of the Google sign-in plugin, the session in Secure Storage across a relaunch after signing in and after signing out, cancelling Google's real add-account screen, share intake through `ACTION_SEND` intents (Cup stopped or running, repeated shares, `&`, `+` and fragments, a URL inside text, text without a URL and `cup.audio` links ignored, signed out), the back button, and native networking: bearer-token requests and an Origin-less mutation through `CapacitorHttp`.
+- **iOS, signed out**: share links into the landing page's start form (repeated shares, `cup.audio` and malformed links ignored), and sharing from Safari through the Share Sheet and `CupShare` with Cup terminated or running and a cancelled share.
+
+iOS sign-in does not work in the app yet ([CUP-60](https://linear.app/cup-audio/issue/CUP-60)), so no iOS test signs in, and the iOS session across a relaunch and iOS native networking are untested until it does.
+
+The rest stays manual on physical devices with release-signed builds, listed in [CUP-44](https://linear.app/cup-audio/issue/CUP-44/test-the-android-and-ios-apps-native-functionality-on-physical-devices):
+
+1. Playback through a locked device, lock-screen, notification and headset controls, audio focus, and the narration track's signed URL from the shells' origins.
+2. Release-signed builds: install and run, reach `https://cup.audio` through `CapacitorHttp`, and carry no debug override, cleartext exception or sign-in fake.
+3. Real Google sign-in: the Android account picker with a real account, switching accounts after signing out, and iOS Google sign-in.
+4. iOS sign-in in the app, its session across a relaunch and its native networking, until CUP-60 is fixed.
+5. Sharing from real apps: Cup in the Android Sharesheet, sharing from Chrome on iOS, and the `CupShare` handoff on a physical iPhone after each iOS update.
+6. App shell: icons and splash screen, and a tapped `cup.audio` link opening the browser, not the app.
+7. Navigation without loading flashes.
 
 ## Brand assets
 
