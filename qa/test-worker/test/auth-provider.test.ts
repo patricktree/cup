@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { afterAll, beforeAll, expect, test } from "vitest";
 
-import { startAuthProvider } from "@cup/test-worker";
+import { startAuthProvider } from "#src/auth-provider.ts";
 
 let authProvider: Awaited<ReturnType<typeof startAuthProvider>> | undefined;
 

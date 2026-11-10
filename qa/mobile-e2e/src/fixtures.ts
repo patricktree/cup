@@ -14,8 +14,14 @@ import { openIosAppDevice, type IosTarget } from "#src/ios/ios-app-device.ts";
 const RETAIN_WORKER_STATE = process.env["E2E_RETAIN_STATE"] === "1";
 /** Writes each test Worker's Wrangler output to stderr while it runs, as in the web suite. */
 const STREAM_WORKER_LOGS = process.env["E2E_STREAM_WRANGLER"] === "1";
+/**
+ * How many ports `startExposed` tries; a taken port is rare, five in a row means something is
+ * wrong.
+ */
+const PORT_ATTEMPTS = 5;
 
-type Started = {
+/** The servers a test started and the host ports it exposed to the app for them. */
+type TestServers = {
   authProvider?: Awaited<ReturnType<typeof startAuthProvider>>;
   worker?: TestWorker;
   exposedPorts: number[];
@@ -52,7 +58,7 @@ export type MobileApp = {
 export function useMobileApp(): MobileApp {
   let device: AppDevice | undefined;
   /** What this test started so far, so the teardown also undoes a half-finished `beforeEach`. */
-  let started: Started = { exposedPorts: [] };
+  let testServers: TestServers = { exposedPorts: [] };
 
   beforeAll(async () => {
     device = await openDevice(inject("mobilePlatform"));
@@ -64,18 +70,18 @@ export function useMobileApp(): MobileApp {
 
   beforeEach(async () => {
     const openedDevice = requireDefined(device, "The device session");
-    started = { exposedPorts: [] };
+    testServers = { exposedPorts: [] };
+    const { exposedPorts } = testServers;
     // Each test starts signed out, whatever the previous test stored.
     await openedDevice.clearAppData();
     await openedDevice.markTestStart();
     // Its origin and token issuer are `http://localhost:<port>`, as the app and the Worker see it.
-    const authProvider = await startExposed(openedDevice, {
+    const authProvider = await startExposed(openedDevice, exposedPorts, {
       start: () => startAuthProvider({ hostname: "localhost" }),
       stop: (server) => server.close(),
     });
-    started.authProvider = authProvider;
-    started.exposedPorts.push(portOf(authProvider.origin));
-    const worker = await startExposed(openedDevice, {
+    testServers.authProvider = authProvider;
+    testServers.worker = await startExposed(openedDevice, exposedPorts, {
       start: () =>
         startTestWorker({
           authProviderOrigin: authProvider.origin,
@@ -83,13 +89,11 @@ export function useMobileApp(): MobileApp {
         }),
       stop: (server) => server.stop(),
     });
-    started.worker = worker;
-    started.exposedPorts.push(portOf(worker.origin));
   });
 
   afterEach(async (context) => {
-    const { worker, authProvider, exposedPorts } = started;
-    started = { exposedPorts: [] };
+    const { worker, authProvider, exposedPorts } = testServers;
+    testServers = { exposedPorts: [] };
     const failed = context.task.result?.state === "fail";
     const artifactFolder = failed
       ? failureArtifactFolder({
@@ -137,13 +141,15 @@ export function useMobileApp(): MobileApp {
       return requireDefined(device, "The device session");
     },
     get worker() {
-      return requireDefined(started.worker, "This test's Worker");
+      return requireDefined(testServers.worker, "This test's Worker");
     },
     get apiOrigin() {
-      return localhostOrigin(portOf(requireDefined(started.worker, "This test's Worker").origin));
+      return localhostOrigin(
+        portOf(requireDefined(testServers.worker, "This test's Worker").origin),
+      );
     },
     get authProviderOrigin() {
-      return requireDefined(started.authProvider, "This test's fake auth provider").origin;
+      return requireDefined(testServers.authProvider, "This test's fake auth provider").origin;
     },
   };
 }
@@ -159,34 +165,31 @@ async function openDevice(platform: MobilePlatform): Promise<AppDevice> {
 }
 
 /**
- * How many ports `startExposed` tries; a taken port is rare, five in a row means something is
- * wrong.
- */
-const PORT_ATTEMPTS = 5;
-
-/**
- * Starts a server on a port the host's operating system assigns and exposes that port to the app.
- * The device can already hold the same port for a socket of its own, which blocks exposing it; the
- * server then starts again on another assigned port. This picks a port; it repeats no test step.
+ * Starts a server on a port the host's operating system assigns, exposes that port to the app and
+ * adds it to `exposedPorts`, which the teardown unexposes. The device can already hold the same
+ * port for a socket of its own, which blocks exposing it; the server then starts again on another
+ * assigned port. This picks a port; it repeats no test step.
  */
 async function startExposed<T extends { origin: string }>(
   device: AppDevice,
-  server: { start(): Promise<T>; stop(started: T): Promise<void> },
+  exposedPorts: number[],
+  lifecycle: { start(): Promise<T>; stop(server: T): Promise<void> },
 ): Promise<T> {
   const takenPorts: number[] = [];
   for (let attempt = 0; attempt < PORT_ATTEMPTS; attempt++) {
-    const started = await server.start();
-    const port = portOf(started.origin);
+    const server = await lifecycle.start();
+    const port = portOf(server.origin);
     let exposed = false;
     try {
       exposed = await device.exposeHostPort(port);
     } finally {
       if (!exposed) {
-        await server.stop(started);
+        await lifecycle.stop(server);
       }
     }
     if (exposed) {
-      return started;
+      exposedPorts.push(port);
+      return server;
     }
     takenPorts.push(port);
   }

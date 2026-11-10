@@ -22,7 +22,8 @@ const SHARED_URL = "https://source.example.test/fixture";
 test("a share while Cup is not running opens the Add dialog with the URL", async () => {
   const device = asAndroidAppDevice(app.device);
   await signIn();
-  await device.terminate();
+  // Not a plain force-stop: one with Cup in front right after the sign-in can lose the session.
+  await device.leaveAndTerminate();
 
   const requestCount = app.worker.requests().length;
   await device.share(SHARED_URL, { apiOrigin: app.apiOrigin });

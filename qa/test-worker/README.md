@@ -9,6 +9,8 @@ This package holds the test-only Worker that the E2E suites run against, the hel
 
 The Worker serves `apps/cloudflare-worker/dist/client`, so build the workspace before a suite starts it.
 
+The package's own [Vitest tests](test/) check the fake auth provider, such as its reachability over both loopbacks and the nonce check of the ID token exchange; `pnpm validate:fast` runs them.
+
 ## Cost and network boundary
 
 This boundary applies to every suite that uses this package. The test Worker has no Cloudflare AI binding and refuses to run a workflow when an AI binding or Cloudflare credential reaches it. The helper removes Cloudflare account credentials from each Wrangler child process. Do not add a paid-provider binding or a real provider call to this package. A local deterministic fake is the required test seam, even when it gives less confidence than a paid integration test.

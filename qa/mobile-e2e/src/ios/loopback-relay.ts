@@ -55,12 +55,17 @@ export async function startLoopbackRelay(port: number): Promise<LoopbackRelay | 
 }
 
 async function isListeningInThisProcess(port: number): Promise<boolean> {
-  const { stdout } = await run("lsof", [
-    "-nP",
-    "-a",
-    `-iTCP@[::1]:${port}`,
-    "-sTCP:LISTEN",
-    "-t",
-  ]).catch(() => ({ stdout: "" }));
+  // lsof exits with 1 when nothing matches, and prints nothing then.
+  const { exitCode, stdout, stderr } = await run(
+    "lsof",
+    ["-nP", "-a", `-iTCP@[::1]:${port}`, "-sTCP:LISTEN", "-t"],
+    { successExitCodes: [0, 1] },
+  );
+  if (exitCode === 1) {
+    if (stdout !== "" || stderr !== "") {
+      throw new Error(`lsof failed for [::1]:${port}.\n${stdout}${stderr}`);
+    }
+    return false;
+  }
   return stdout.split("\n").includes(String(process.pid));
 }

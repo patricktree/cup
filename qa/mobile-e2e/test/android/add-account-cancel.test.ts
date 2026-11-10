@@ -21,10 +21,14 @@ test("cancelling Google's add-account screen returns to a usable landing page", 
   await startSignInFromLandingPage(webView);
 
   await webView.$("button=Continue with Google").click();
-  // With no account on the device, Google's sign-in opens its add-account screen. It first shows
+  // With no account on the device, Google's sign-in opens a screen of Google Play services.
+  await expect
+    .poll(() => device.focusedPackage(), { timeout: 30_000, interval: 500 })
+    .toBe(GOOGLE_PLAY_SERVICES);
+  // Not an assertion but a readiness step. Google Play services first shows
   // `GoogleSignInActivity`, which then starts the add-account flow on top of itself: a Back pressed
   // before that start cancels only the trampoline, and the add-account screen opens anyway. So wait
-  // for the add-account screen itself, not for Google Play services' package.
+  // for the add-account screen itself before pressing Back.
   await expect
     .poll(() => device.focusedActivity(), { timeout: 30_000, interval: 500 })
     .toBe(ADD_ACCOUNT_ACTIVITY);
