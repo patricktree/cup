@@ -78,9 +78,15 @@ The debug build reads the backend origin from the process arguments `-cupTestApi
 xcrun simctl launch <simulator> audio.cup.app -cupTestApiOrigin http://localhost:8787
 ```
 
-In Xcode, add the arguments under the App scheme's Run action, Arguments Passed On Launch. As on [Android](#debug-launch-arguments), the value must be exactly `http://localhost:<port>`; any other value stops the app at launch with a fatal error naming the argument, and without the arguments a debug build uses `https://cup.audio`. The simulator shares the Mac's loopback, so `localhost` needs no port forwarding.
+In Xcode, add the arguments under the App scheme's Run action, Arguments Passed On Launch. The arguments set the defaults key `cupTestApiOrigin` for one launch, and the build reads that key. A launch without arguments, such as one a shared URL starts, reads the key from the app's own defaults, which the E2E suite writes before such a launch and a reinstall erases:
 
-Only `#if DEBUG` code in [`MainViewController.swift`](ios/App/App/MainViewController.swift) handles the arguments: before Capacitor loads the page, it adds a document-start script that sets the global `window.cupTestApiOrigin`. App Transport Security's built-in exemption for `localhost` allows the plain HTTP, so `Info.plist` is unchanged. Release builds contain none of this.
+```sh
+xcrun simctl spawn <simulator> defaults write audio.cup.app cupTestApiOrigin http://localhost:8787
+```
+
+As on [Android](#debug-launch-arguments), the value must be exactly `http://localhost:<port>`; any other value stops the app at launch with a fatal error naming the key, and without the key a debug build uses `https://cup.audio`. The simulator shares the Mac's loopback, so `localhost` needs no port forwarding.
+
+Only `#if DEBUG` code in [`MainViewController.swift`](ios/App/App/MainViewController.swift) handles the key: before Capacitor loads the page, it adds a document-start script that sets the global `window.cupTestApiOrigin`. App Transport Security's built-in exemption for `localhost` allows the plain HTTP, so `Info.plist` is unchanged. Release builds contain none of this.
 
 ## Links and sharing
 
@@ -108,7 +114,7 @@ The app uses the UIScene lifecycle, which iOS 27 requires: an app built with the
 
 The extension uses the same responder-chain URL-opening approach as Chromium, calling `openURL:options:completionHandler:` dynamically. Apple does not support this handoff from Share Extensions; test it after iOS updates. A failed handoff stays in the extension with an error and retry button. The extension does not start conversions or access session cookies.
 
-The [mobile E2E tests](../../qa/mobile-e2e/README.md#share-intake-ios) cover what the app does with a share link once it arrives, signed out only.
+The [mobile E2E tests](../../qa/mobile-e2e/README.md#share-intake-ios) cover what the app does with a share link once it arrives, and a share from Safari through the real Share Sheet and this extension with Cup terminated, Cup already running and a cancelled share, all signed out.
 
 Build the App scheme with a local `DEVELOPMENT_TEAM` override; it builds, signs, and embeds the extension. Both bundle identifiers need provisioning: `audio.cup.app` and `audio.cup.app.share`. Verify Safari and Chrome sharing with Cup terminated and already running, cancellation, repeated shares, URLs containing `&`, `+`, or fragments, and that a shared trial link is ignored. If Cup is hidden, look under More in the Share Sheet's app row.
 

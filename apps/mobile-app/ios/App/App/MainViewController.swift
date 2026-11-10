@@ -11,8 +11,8 @@ class MainViewController: CAPBridgeViewController {
     /// added here, after the bridge exists and before `viewDidLoad` loads the page.
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
-        // Stops the app on a malformed argument, before it can reach production.
-        guard let origin = TestApiOrigin.fromArguments(ProcessInfo.processInfo.arguments) else {
+        // Stops the app on a malformed origin, before it can reach production.
+        guard let origin = TestApiOrigin.fromDefaults(UserDefaults.standard) else {
             return
         }
         guard let contentController = webView?.configuration.userContentController else {
@@ -29,20 +29,22 @@ class MainViewController: CAPBridgeViewController {
 }
 
 #if DEBUG
-/// Debug builds only: the test Worker origin the mobile E2E suite passes as the process arguments
-/// `-cupTestApiOrigin <origin>`.
+/// Debug builds only: the test Worker origin the mobile E2E suite sets as the defaults key
+/// `cupTestApiOrigin`. The process arguments `-cupTestApiOrigin <origin>` set it for one launch,
+/// through the defaults' arguments domain. A launch without arguments, such as one a shared URL
+/// starts, reads the value the suite wrote into Cup's own defaults with
+/// `xcrun simctl spawn <simulator> defaults write audio.cup.app cupTestApiOrigin <origin>`.
 enum TestApiOrigin {
-    static let argument = "-cupTestApiOrigin"
+    static let key = "cupTestApiOrigin"
 
-    /// Returns the origin, or nil when the launch carries none. Stops the app when the value is
+    /// Returns the origin, or nil when the defaults hold none. Stops the app when the value is
     /// anything but `http://localhost:<port>`.
-    static func fromArguments(_ arguments: [String]) -> String? {
-        guard let index = arguments.firstIndex(of: argument) else {
+    static func fromDefaults(_ defaults: UserDefaults) -> String? {
+        guard let stored = defaults.object(forKey: key) else {
             return nil
         }
-        let value = arguments.indices.contains(index + 1) ? arguments[index + 1] : ""
-        guard isLocalhostOrigin(value) else {
-            fatalError("The \(argument) launch argument must be exactly http://localhost:<port>, got \"\(value)\".")
+        guard let value = stored as? String, isLocalhostOrigin(value) else {
+            fatalError("The \(key) default must be exactly http://localhost:<port>, got \"\(stored)\".")
         }
         return value
     }

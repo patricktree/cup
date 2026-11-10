@@ -1,8 +1,9 @@
 import { remote } from "webdriverio";
 
 import type { AppDevice, LaunchArguments } from "#src/app-device.ts";
-import { reservePort, waitFor } from "#src/host.ts";
+import { reservePort, run, waitFor } from "#src/host.ts";
 import { startLoopbackRelay, type LoopbackRelay } from "#src/ios/loopback-relay.ts";
+import { SHARED_PAGE_HEADING } from "#src/ios/shared-page.ts";
 
 /** What the iOS global setup hands each spec file: the run's simulator and Appium server. */
 export type IosTarget = {
@@ -16,10 +17,34 @@ export type IosTarget = {
 };
 
 const BUNDLE_ID = "audio.cup.app";
-/** Read only by the debug build's `TestApiOrigin`. */
-const API_ORIGIN_ARGUMENT = "-cupTestApiOrigin";
+const SAFARI_BUNDLE_ID = "com.apple.mobilesafari";
+/**
+ * The defaults key the debug build's `TestApiOrigin` reads. Passed as the launch arguments
+ * `-cupTestApiOrigin <origin>`, it lands in the arguments domain of Cup's defaults.
+ */
+const API_ORIGIN_KEY = "cupTestApiOrigin";
 /** Where Capacitor serves the bundled web app. */
 const CUP_PAGE_ORIGIN = "capacitor://localhost";
+
+/** What `mobile: queryAppState` reports for an app. */
+export type AppState = "not running" | "background" | "foreground";
+
+/** The apps a share from Safari involves. */
+export type ShareApp = "cup" | "safari";
+
+/** What the listener taps in the `CupShare` extension's sheet. */
+export type ShareChoice = "open in cup" | "cancel";
+
+/** The predicates of Safari's system UI that a share from Safari taps through. */
+const SHARE_SHEET = {
+  // Safari's compact toolbar has no Share button; Share sits in its More menu.
+  more: 'type == "XCUIElementTypeButton" AND (label == "More" OR name CONTAINS "More")',
+  // In the More menu, the Share button's icon image is labelled "Share" too.
+  share: 'type == "XCUIElementTypeButton" AND label == "Share"',
+  cup: 'type == "XCUIElementTypeCell" AND label == "Cup"',
+  openInCup: 'type == "XCUIElementTypeButton" AND label == "Open in Cup"',
+  cancel: 'type == "XCUIElementTypeButton" AND label == "Cancel"',
+} as const;
 
 /** Opens an Appium session on the run's simulator, addressed by UDID, without launching Cup. */
 export async function openIosAppDevice(target: IosTarget): Promise<IosAppDevice> {
@@ -81,7 +106,7 @@ export class IosAppDevice implements AppDevice {
     await this.terminate();
     await this.driver.execute("mobile: launchApp", {
       bundleId: BUNDLE_ID,
-      arguments: [API_ORIGIN_ARGUMENT, launchArguments.apiOrigin],
+      arguments: [`-${API_ORIGIN_KEY}`, launchArguments.apiOrigin],
     });
   }
 
@@ -109,11 +134,81 @@ export class IosAppDevice implements AppDevice {
 
   /**
    * Opens `url` in Cup, as the Share Extension's handoff does, so a running Cup receives it through
-   * its scene's `openURLContexts`. Cup must run with the launch arguments, because a URL that
-   * starts Cup gets none and would reach `https://cup.audio`.
+   * its scene's `openURLContexts`. A URL that starts Cup passes no launch arguments, so Cup reaches
+   * the test Worker only after `storeApiOrigin`.
    */
   async openUrl(url: string): Promise<void> {
     await this.driver.execute("mobile: deepLink", { url, bundleId: BUNDLE_ID });
+  }
+
+  /**
+   * Stores the test Worker's origin in Cup's defaults on the simulator, where a launch without
+   * arguments, such as one a shared URL starts, finds it. Reinstalling Cup erases it.
+   */
+  async storeApiOrigin(apiOrigin: string): Promise<void> {
+    await run("xcrun", [
+      "simctl",
+      "spawn",
+      this.target.udid,
+      "defaults",
+      "write",
+      BUNDLE_ID,
+      API_ORIGIN_KEY,
+      apiOrigin,
+    ]);
+  }
+
+  /**
+   * Opens `url` in Safari and shares it through the real Share Sheet: More, Share, Cup in the app
+   * row, then `choice` in the `CupShare` extension's sheet. Fails when Safari's system UI has
+   * changed. Ends right after the tap, without waiting for Cup.
+   */
+  async shareFromSafari(url: string, choice: ShareChoice): Promise<void> {
+    await this.driver.switchContext("NATIVE_APP");
+    await this.driver.execute("mobile: deepLink", { url, bundleId: SAFARI_BUNDLE_ID });
+    await this.driver
+      .$(
+        `-ios predicate string:type == "XCUIElementTypeStaticText" AND label == "${SHARED_PAGE_HEADING}"`,
+      )
+      .waitForDisplayed({ timeout: 30_000, timeoutMsg: "Safari did not show the shared page." });
+    await this.tap(SHARE_SHEET.more, "Safari's More button");
+    await this.tap(SHARE_SHEET.share, "Share in Safari's More menu");
+    await this.tap(SHARE_SHEET.cup, "Cup in the Share Sheet's app row");
+    if (choice === "open in cup") {
+      const openInCup = this.driver.$(`-ios predicate string:${SHARE_SHEET.openInCup}`);
+      // The extension enables the button once it has read a valid URL from the share.
+      await openInCup.waitForEnabled({
+        timeout: 10_000,
+        timeoutMsg: "Open in Cup stayed disabled.",
+      });
+      await openInCup.click();
+    } else {
+      await this.tap(SHARE_SHEET.cancel, "Cancel in the CupShare sheet");
+      await this.driver.$(`-ios predicate string:${SHARE_SHEET.openInCup}`).waitForExist({
+        reverse: true,
+        timeout: 10_000,
+        timeoutMsg: "The CupShare sheet stayed open.",
+      });
+    }
+  }
+
+  /** Whether `shareApp` runs, and whether in the foreground. */
+  async appState(shareApp: ShareApp): Promise<AppState> {
+    const state: unknown = await this.driver.execute("mobile: queryAppState", {
+      bundleId: shareApp === "cup" ? BUNDLE_ID : SAFARI_BUNDLE_ID,
+    });
+    // XCUIApplicationState: 1 not running, 2 suspended, 3 in the background, 4 in the foreground.
+    switch (state) {
+      case 1:
+        return "not running";
+      case 2:
+      case 3:
+        return "background";
+      case 4:
+        return "foreground";
+      default:
+        throw new Error(`Unexpected app state of ${shareApp}: ${String(state)}`);
+    }
   }
 
   async webView(): Promise<WebdriverIO.Browser> {
@@ -135,6 +230,12 @@ export class IosAppDevice implements AppDevice {
     );
     await this.driver.switchContext(webViewContext);
     return this.driver;
+  }
+
+  private async tap(predicate: string, description: string): Promise<void> {
+    const element = this.driver.$(`-ios predicate string:${predicate}`);
+    await element.waitForDisplayed({ timeout: 10_000, timeoutMsg: `${description} did not show.` });
+    await element.click();
   }
 
   async close(): Promise<void> {
