@@ -1,11 +1,9 @@
 import { registerPlugin } from "@capacitor/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { GoogleSignInOptions } from "#src/platform/account-auth.js";
 import { initializeAuthStorage as initializeSecureAuthStorage } from "#src/platform/account-auth.native.js";
-import {
-  googleAuthorizationParams,
-  type GoogleSignInOptions,
-} from "#src/platform/account-auth.web.js";
+import { googleAuthorizationParams } from "#src/platform/account-auth.web.js";
 
 export { watchAppState } from "#src/platform/account-auth.native.js";
 

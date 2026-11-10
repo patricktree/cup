@@ -7,12 +7,17 @@ import { App } from "@capacitor/app";
 export function watchAppState(listener: (isActive: boolean) => void): () => void {
   let isWatching = true;
   let hasReportedChange = false;
+
   const registration = App.addListener("appStateChange", ({ isActive }) => {
     hasReportedChange = true;
     if (isWatching) {
       listener(isActive);
     }
   });
+  registration.catch((error: unknown) => {
+    console.error("Failed to listen for app state changes", error);
+  });
+
   const reportCurrentState = async () => {
     const { isActive } = await App.getState();
     // A change reported while the state was being read is newer than the state read.
@@ -20,10 +25,17 @@ export function watchAppState(listener: (isActive: boolean) => void): () => void
       listener(isActive);
     }
   };
-  void reportCurrentState();
+  reportCurrentState().catch((error: unknown) => {
+    console.error("Failed to read the app state", error);
+  });
+
   return () => {
     isWatching = false;
-    void registration.then((handle) => handle.remove());
+    registration
+      .then((handle) => handle.remove())
+      .catch((error: unknown) => {
+        console.error("Failed to stop listening for app state changes", error);
+      });
   };
 }
 

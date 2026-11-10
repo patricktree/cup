@@ -39,7 +39,7 @@ export function AddAudiobookDialog({ onClose }: { onClose: () => void }): React.
         isPending={submission.isPending}
         retryIn={submission.retryIn}
         // Sign-in explains itself in place of the failure.
-        error={submission.requiresSignIn ? undefined : submission.error}
+        error={submission.isSignInOpen ? undefined : submission.error}
         errorFallbackMessage="The track could not be added."
         onSubmit={submission.submit}
         placeholder="Paste URL here"
@@ -53,7 +53,7 @@ export function AddAudiobookDialog({ onClose }: { onClose: () => void }): React.
         }}
       />
 
-      {submission.requiresSignIn ? (
+      {submission.isSignInOpen ? (
         <section aria-label="Sign in">
           <p>Sign in to listen.</p>
           <SignInButtons

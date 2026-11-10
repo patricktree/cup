@@ -10,7 +10,10 @@ import { SourceUrlForm } from "#src/app/components/source-url-form.js";
 import { ArrowRightIcon } from "#src/app/design-system/icons.js";
 import { textStyles } from "#src/app/design-system/text-styles.js";
 import { signedInHomeTarget } from "#src/app/signed-in-home-target.js";
-import { useAccountConversionSubmission } from "#src/app/use-cases/account-conversions.js";
+import {
+  useAccountConversionSubmission,
+  type SignInEntry,
+} from "#src/app/use-cases/account-conversions.js";
 import { composeClassnames } from "#src/app/utils.js";
 import { useStartTrialConversionMutation } from "#src/data-fetching/conversion-grant.js";
 import { useRateLimitCountdown } from "#src/data-fetching/rate-limit.js";
@@ -29,6 +32,16 @@ export function StartConversionForm(props: StartConversionFormProps): React.Reac
   return check.assertIsUnreachable(props);
 }
 
+/** What the sign-in dialog says, by what opened it. */
+const SIGN_IN_DESCRIPTIONS: Record<SignInEntry, React.ReactNode> = {
+  "home-link": <>Sign in to get back to your tracks.</>,
+  submission: (
+    <>
+      Sign in to listen. <strong>New accounts get 30 free minutes.</strong>
+    </>
+  ),
+};
+
 function AccountConversionForm(): React.ReactNode {
   const navigate = useNavigate();
   const submission = useAccountConversionSubmission({
@@ -44,6 +57,11 @@ function AccountConversionForm(): React.ReactNode {
   });
   const submitButtonRef = React.useRef<HTMLButtonElement>(null);
   const signInLinkRef = React.useRef<HTMLAnchorElement>(null);
+  /** Closing the sign-in returns focus to what opened it. */
+  const signInOpeners: Record<SignInEntry, React.RefObject<HTMLElement | null>> = {
+    "home-link": signInLinkRef,
+    submission: submitButtonRef,
+  };
 
   return (
     <>
@@ -54,7 +72,7 @@ function AccountConversionForm(): React.ReactNode {
         shouldReceiveSharedUrl={!submission.isAuthLoading}
         isPending={submission.isPending}
         retryIn={submission.retryIn}
-        error={submission.requiresSignIn ? undefined : submission.error}
+        error={submission.isSignInOpen ? undefined : submission.error}
         onSubmit={submission.submit}
       />
 
@@ -67,20 +85,8 @@ function AccountConversionForm(): React.ReactNode {
             submission.cancelSignIn();
           }
         }}
-        finalFocus={() =>
-          (submission.signInEntry === "home-link"
-            ? signInLinkRef.current
-            : submitButtonRef.current) ?? null
-        }
-        description={
-          submission.signInEntry === "home-link" ? (
-            <>Sign in to get back to your tracks.</>
-          ) : (
-            <>
-              Sign in to listen. <strong>New accounts get 30 free minutes.</strong>
-            </>
-          )
-        }
+        finalFocus={() => signInOpeners[submission.signInEntry].current}
+        description={SIGN_IN_DESCRIPTIONS[submission.signInEntry]}
         signInMethods={submission.signInMethods}
         pendingMethod={submission.signIn.isPending ? submission.signIn.variables : undefined}
         onSignIn={submission.startSignIn}

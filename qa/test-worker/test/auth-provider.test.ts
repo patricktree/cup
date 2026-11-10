@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { setTimeout } from "node:timers/promises";
 import { afterAll, beforeAll, expect, test } from "vitest";
 
 import { startAuthProvider, TEST_ACCOUNT, type AuthProvider } from "#src/auth-provider.ts";
@@ -106,18 +107,44 @@ test("rejects a password sign-in with other credentials, as Supabase does", asyn
   });
 });
 
-test("rejects a refresh token that was already exchanged, as Supabase does", async () => {
+test("returns the same session for a refresh token reused within the reuse interval, as Supabase does", async () => {
   const { refresh_token: refreshToken } = await signIn("pkce");
-  await sessionOf(await refresh(refreshToken));
+  const refreshed = await sessionOf(await refresh(refreshToken));
+  const refreshesBefore = startedAuthProvider().refreshes();
 
-  const response = await refresh(refreshToken);
+  const reused = await sessionOf(await refresh(refreshToken));
 
-  expect(response.status).toBe(400);
-  expect(response.headers.get("x-supabase-api-version")).toBe("2024-01-01");
-  expect(await response.json()).toEqual({
-    code: "refresh_token_already_used",
-    message: "Invalid Refresh Token: Already Used",
-  });
+  expect(reused).toEqual(refreshed);
+  expect(startedAuthProvider().refreshes()).toBe(refreshesBefore);
+});
+
+test("rejects a refresh token reused after the reuse interval, as Supabase does", async () => {
+  const authProvider = await startAuthProvider();
+  try {
+    authProvider.setRefreshTokenReuseInterval(0.05);
+    const { origin } = authProvider;
+    const idToken = await googleIdToken(hash("the nonce"), origin);
+    const session = await sessionOf(await exchangeIdToken(idToken, "the nonce", origin));
+    await sessionOf(await refresh(session.refresh_token, origin));
+    await setTimeout(100);
+
+    const response = await refresh(session.refresh_token, origin);
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("x-supabase-api-version")).toBe("2024-01-01");
+    expect(await response.json()).toEqual({
+      code: "refresh_token_already_used",
+      message: "Invalid Refresh Token: Already Used",
+    });
+  } finally {
+    await authProvider.close();
+  }
+});
+
+test("refuses a negative refresh token reuse interval", () => {
+  expect(() => startedAuthProvider().setRefreshTokenReuseInterval(-1)).toThrow(
+    "A refresh token reuse interval must be a non-negative number of seconds: -1",
+  );
 });
 
 test("rejects a refresh token it never issued, as Supabase does", async () => {

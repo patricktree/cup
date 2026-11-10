@@ -448,7 +448,6 @@ test("sign-out shows signed-out at once, then revokes the session and ends the n
     "stopPlayback",
     "unloadAudio",
     "supabase.signOut",
-    "supabase.stopAutoRefresh",
     "clearStoredSession",
     "clearLastGrantId",
     "clearNativeSignIn",
@@ -509,7 +508,6 @@ test("sign-out before initialization shows signed-out and stops audio before it 
     "stopPlayback",
     "unloadAudio",
     "supabase.signOut",
-    "supabase.stopAutoRefresh",
     "clearStoredSession",
     "clearLastGrantId",
     "clearNativeSignIn",
@@ -559,13 +557,17 @@ test("a sign-in interrupted by sign-out settles when the provider call finishes"
   await signIn;
 });
 
-test("on the web, a sign-in leaves auto refresh to supabase-js", async () => {
+test("on the web, sign-in and sign-out leave auto refresh to supabase-js", async () => {
   const machine = startMachine();
   await machine.initialize();
 
   const signIn = machine.signIn();
   machine.emitAuthChange(createSession("reader"));
   await signIn;
+  await machine.signOut();
+  const secondSignIn = machine.signIn();
+  machine.emitAuthChange(createSession("reader"));
+  await secondSignIn;
 
   expect(machine.effects).not.toContain("supabase.startAutoRefresh");
   expect(machine.effects).not.toContain("supabase.stopAutoRefresh");
@@ -584,6 +586,45 @@ test("in the apps, the foreground starts auto refresh and the background stops i
     "supabase.stopAutoRefresh",
     "supabase.startAutoRefresh",
   ]);
+});
+
+test("in the apps, sign-out stops auto refresh", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+  await machine.initialize();
+  machine.emitAppState(true);
+  machine.effects.length = 0;
+
+  await machine.signOut();
+
+  expect(machine.effects).toContain("supabase.stopAutoRefresh");
+});
+
+test("in the apps, a session that starts in the foreground after a sign-out restarts auto refresh", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+  await machine.initialize();
+  machine.emitAppState(true);
+  await machine.signOut();
+  machine.effects.length = 0;
+
+  const signIn = machine.signIn();
+  machine.emitAuthChange(createSession("reader"));
+  await signIn;
+
+  expect(machine.effects).toContain("supabase.startAutoRefresh");
+});
+
+test("in the apps, a session that starts in the background leaves auto refresh to the next foreground", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+  await machine.initialize();
+  machine.emitAppState(false);
+  await machine.signOut();
+  machine.effects.length = 0;
+
+  const signIn = machine.signIn();
+  machine.emitAuthChange(createSession("reader"));
+  await signIn;
+
+  expect(machine.effects).not.toContain("supabase.startAutoRefresh");
 });
 
 test("the first sign-in after a sign-out asks for the account chooser until a session starts", async () => {

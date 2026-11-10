@@ -15,7 +15,7 @@ import {
 import { useRateLimitCountdown } from "#src/data-fetching/rate-limit.js";
 
 /** What opened the sign-in: the home page's sign-in link, or a submission while signed out. */
-type SignInEntry = "home-link" | "submission";
+export type SignInEntry = "home-link" | "submission";
 
 type PendingRequestStore = {
   read: () => PendingAccountConversion | null;
@@ -90,10 +90,10 @@ export function useAccountConversionSubmission({
     isAuthLoading: authState.status === "loading",
     retryIn,
     error: start.error,
+    /** Sign-in explains itself in place of a failed start while it is open. */
     isSignInOpen: isSignInOpen && !session,
-    /** The entry that opened the sign-in last. */
+    /** The entry that opened the sign-in last, also after it closed. */
     signInEntry,
-    requiresSignIn: isSignInOpen && signInEntry === "submission" && !session,
     /** Signed out once auth has settled, so the listener can choose to sign in. */
     canSignIn: !session && authState.status !== "loading",
     signIn,
@@ -106,8 +106,10 @@ export function useAccountConversionSubmission({
         if (requests.read()?.submitted === false) {
           requests.clear();
         }
+
         isSigningInFromLink.current = true;
       }
+
       signIn.mutate(method);
     },
     signInMethods,

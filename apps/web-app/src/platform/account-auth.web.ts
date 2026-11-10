@@ -1,11 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/**
- * `fresh` authenticates again however recent the last authentication was, such as before account
- * deletion. `chooseAccount` shows Google's account chooser, which the session lifecycle asks for on
- * the first sign-in after a sign-out on this device.
- */
-export type GoogleSignInOptions = { fresh: boolean; chooseAccount: boolean };
+import type { GoogleSignInOptions } from "#src/platform/account-auth.js";
 
 /** Prepares storage for the account session, which is kept under `storageKeys`. */
 export async function initializeAuthStorage(storageKeys: readonly string[]) {

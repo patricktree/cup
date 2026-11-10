@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { SignInCancelledError, UserFacingError } from "#src/errors.js";
-import type { GoogleSignInOptions } from "#src/platform/account-auth.web.js";
+import type { GoogleSignInOptions } from "#src/platform/account-auth.js";
 export { initializeAuthStorage, watchAppState } from "#src/platform/account-auth.native.js";
 
 /**

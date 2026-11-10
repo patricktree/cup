@@ -19,13 +19,16 @@ const IOS_AUTH_CALLBACK_URL = "audio.cup.app://auth/callback";
 /** The Supabase Auth API version whose error shape the provider answers with when asked for it. */
 const SUPABASE_API_VERSION = "2024-01-01";
 const DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS = 300;
+/** Supabase's default `refresh_token_reuse_interval`, which `supabase/config.toml` keeps. */
+const DEFAULT_REFRESH_TOKEN_REUSE_INTERVAL_SECONDS = 10;
 /**
  * The local test account that the password grant signs in; a test Worker started with
  * `offersTestAccount` advertises it, as local development does.
  */
 export const TEST_ACCOUNT = { email: "test-account@example.test", password: "qa-test-account" };
 const TEST_ACCOUNT_SUBJECT = "c5a2b1e4-0f3d-4b8e-9a6c-2d7e1f4b9a30";
-const nowSeconds = () => Math.floor(Temporal.Now.instant().epochMilliseconds / 1000);
+const nowMilliseconds = () => Temporal.Now.instant().epochMilliseconds;
+const nowSeconds = () => Math.floor(nowMilliseconds() / 1000);
 
 type StartAuthProviderOptions = {
   /**
@@ -49,6 +52,9 @@ export type AuthProvider = Awaited<ReturnType<typeof startAuthProvider>>;
  */
 type SignIn = { authenticatedAt: number; method: "oauth" | "id_token" | "password" };
 
+/** The session a refresh token's single use issued, and when, in epoch milliseconds. */
+type Rotation = { session: string; rotatedAt: number };
+
 /**
  * Local identity boundary: real PKCE, a Google ID token exchange with Supabase's nonce check, the
  * test account's password sign-in, signed access tokens and JWKS, with no Google traffic.
@@ -62,14 +68,19 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
     use: "sig",
   };
   const codes = new Map<string, { challenge: string; authenticatedAt: number }>();
-  /** Every refresh token issued, kept after its single use so a reuse is told apart from a typo. */
-  const refreshTokens = new Map<string, SignIn & { isUsed: boolean }>();
+  /**
+   * Every refresh token issued, kept after its single use with the session that use issued, so a
+   * reuse within the reuse interval gets that session again and a later reuse is told apart from a
+   * typo.
+   */
+  const refreshTokens = new Map<string, SignIn & { rotation?: Rotation }>();
   /** The query parameters of each authorization request, also of a rejected one. */
   const authorizationRequests: Array<Record<string, string>> = [];
   let origin = "";
   let exchanges = 0;
   let refreshes = 0;
   let accessTokenLifetimeSeconds = DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS;
+  let refreshTokenReuseIntervalSeconds = DEFAULT_REFRESH_TOKEN_REUSE_INTERVAL_SECONDS;
   const sign = (claims: Record<string, unknown>) => {
     const header = Buffer.from(JSON.stringify({ alg: "ES256", kid: "qa-key" })).toString(
       "base64url",
@@ -122,31 +133,40 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
    */
   const sessionFor = ({ authenticatedAt, method }: SignIn) => {
     const refreshToken = crypto.randomUUID();
-    refreshTokens.set(refreshToken, { authenticatedAt, method, isUsed: false });
-    const isTestAccount = method === "password";
-    const subject = isTestAccount ? TEST_ACCOUNT_SUBJECT : SUBJECT;
+    refreshTokens.set(refreshToken, { authenticatedAt, method });
+
+    const account =
+      method === "password"
+        ? {
+            id: TEST_ACCOUNT_SUBJECT,
+            email: TEST_ACCOUNT.email,
+            provider: "email",
+            metadata: {},
+            identitySubject: TEST_ACCOUNT_SUBJECT,
+          }
+        : {
+            id: SUBJECT,
+            email: "reader@example.test",
+            provider: "google",
+            metadata: { name: READER_NAME, full_name: READER_NAME },
+            identitySubject: GOOGLE_SUBJECT,
+          };
+
     return JSON.stringify({
-      access_token: tokenFor(subject, authenticatedAt, method),
+      access_token: tokenFor(account.id, authenticatedAt, method),
       token_type: "bearer",
       refresh_token: refreshToken,
       expires_in: accessTokenLifetimeSeconds,
-      user: isTestAccount
-        ? {
-            id: subject,
-            email: TEST_ACCOUNT.email,
-            aud: "authenticated",
-            app_metadata: { provider: "email" },
-            user_metadata: {},
-            identities: [{ provider: "email", identity_data: { sub: subject } }],
-          }
-        : {
-            id: subject,
-            email: "reader@example.test",
-            aud: "authenticated",
-            app_metadata: { provider: "google" },
-            user_metadata: { name: READER_NAME, full_name: READER_NAME },
-            identities: [{ provider: "google", identity_data: { sub: GOOGLE_SUBJECT } }],
-          },
+      user: {
+        id: account.id,
+        email: account.email,
+        aud: "authenticated",
+        app_metadata: { provider: account.provider },
+        user_metadata: account.metadata,
+        identities: [
+          { provider: account.provider, identity_data: { sub: account.identitySubject } },
+        ],
+      },
     });
   };
   const authorize = (url: URL, response: http.ServerResponse) => {
@@ -239,8 +259,9 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
     response.end(sessionFor({ authenticatedAt: code.authenticatedAt, method: "oauth" }));
   };
   /**
-   * Exchanges a refresh token for a new session of the same sign-in, once. Unlike Supabase, it has
-   * no reuse interval: any second use of a refresh token is rejected.
+   * Exchanges a refresh token for a new session of the same sign-in, once. As Supabase does, a
+   * reuse within the reuse interval returns the session the first use issued, such as when a page
+   * reloads during a refresh and its storage still holds the old token; a later reuse is rejected.
    */
   const exchangeRefreshToken = (
     body: unknown,
@@ -263,16 +284,24 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
       });
       return;
     }
-    if (signIn.isUsed) {
+    const { rotation } = signIn;
+    if (rotation !== undefined) {
+      if (nowMilliseconds() - rotation.rotatedAt <= refreshTokenReuseIntervalSeconds * 1000) {
+        response.end(rotation.session);
+        return;
+      }
+
       rejectAsSupabase(request, response, {
         errorCode: "refresh_token_already_used",
         message: "Invalid Refresh Token: Already Used",
       });
       return;
     }
-    signIn.isUsed = true;
+
+    const session = sessionFor(signIn);
+    signIn.rotation = { session, rotatedAt: nowMilliseconds() };
     refreshes += 1;
-    response.end(sessionFor(signIn));
+    response.end(session);
   };
   /** Signs in the test account, the only account with a password, as Supabase's email provider. */
   const exchangePassword = (
@@ -391,7 +420,10 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
     authorizationRequests: () => authorizationRequests.map((query) => ({ ...query })),
     /** How many sign-ins exchanged a PKCE code, an ID token or a password for a session. */
     exchanges: () => exchanges,
-    /** How many refresh tokens exchanged for a new session. */
+    /**
+     * How many refresh tokens exchanged for a new session; a reuse within the reuse interval, which
+     * returns a session already issued, does not count.
+     */
     refreshes: () => refreshes,
     /**
      * Sets how long the access tokens of sessions issued from now on stay valid, 300 seconds by
@@ -402,6 +434,19 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
         throw new Error(`An access token lifetime must be a positive whole number: ${seconds}`);
       }
       accessTokenLifetimeSeconds = seconds;
+    },
+    /**
+     * Sets how long after its first use a refresh token still returns the session that use issued,
+     * 10 seconds by default as in Supabase; a test shortens it to see a later reuse rejected.
+     */
+    setRefreshTokenReuseInterval: (seconds: number) => {
+      if (!Number.isFinite(seconds) || seconds < 0) {
+        throw new Error(
+          `A refresh token reuse interval must be a non-negative number of seconds: ${seconds}`,
+        );
+      }
+
+      refreshTokenReuseIntervalSeconds = seconds;
     },
     close: async () => {
       await Promise.all(servers.map(close));

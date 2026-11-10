@@ -87,9 +87,7 @@ test("refreshes the session when Cup comes back from the background after its ac
   await expect
     .poll(() => app.authProvider.refreshes(), { timeout: 10_000, interval: 250 })
     .toBeGreaterThan(refreshesInBackground);
-  // Leaving Recents for the track and coming back loads Recents from the Worker again. A reload
-  // would race the refreshes that every session read starts with tokens this short: the fake auth
-  // provider, unlike Supabase, rejects a refresh token whose rotation the reload kept from storage.
+  // Leaving Recents for the track and coming back loads Recents from the Worker again.
   const requestsBeforeReturning = app.worker.requests().length;
   await webView.$('ul[aria-label="Tracks"] a').click();
   await webView.waitUntil(async () => (await pathname(webView)).startsWith("/app/audiobooks/"), {
