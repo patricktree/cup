@@ -38,6 +38,7 @@ function AccountConversionForm(): React.ReactNode {
     },
   });
   const submitButtonRef = React.useRef<HTMLButtonElement>(null);
+  const signInLinkRef = React.useRef<HTMLAnchorElement>(null);
 
   return (
     <>
@@ -52,20 +53,75 @@ function AccountConversionForm(): React.ReactNode {
         onSubmit={submission.submit}
       />
 
+      {submission.canSignIn && <SignInLine ref={signInLinkRef} onSignIn={submission.openSignIn} />}
+
       <SignInDialog
-        open={submission.requiresSignIn}
+        open={submission.isSignInOpen}
         onOpenChange={(open) => {
           if (!open) {
             submission.cancelSignIn();
           }
         }}
-        finalFocus={() => submitButtonRef.current ?? null}
+        finalFocus={() =>
+          (submission.signInEntry === "home-link"
+            ? signInLinkRef.current
+            : submitButtonRef.current) ?? null
+        }
+        description={
+          submission.signInEntry === "home-link" ? (
+            <>Sign in to get back to your tracks.</>
+          ) : (
+            <>
+              Sign in to listen. <strong>New accounts get 30 free minutes.</strong>
+            </>
+          )
+        }
         signInMethods={submission.signInMethods}
         pendingMethod={submission.signIn.isPending ? submission.signIn.variables : undefined}
         onSignIn={(method) => submission.signIn.mutate(method)}
         errorMessage={submission.signIn.error?.message}
       />
     </>
+  );
+}
+
+/** The signed-out listener's way to sign in without submitting a source URL. */
+function SignInLine({
+  ref,
+  onSignIn,
+}: {
+  ref: React.Ref<HTMLAnchorElement>;
+  onSignIn: () => void;
+}): React.ReactNode {
+  return (
+    <p
+      className={composeClassnames(
+        textStyles.paragraph,
+        css`
+          margin-block-start: 40px;
+          margin-inline: 4px;
+          color: var(--color-fg-emphasized-sm);
+        `,
+      )}
+    >
+      Already listening with Cup?{" "}
+      <a
+        ref={ref}
+        // Opens the sign-in dialog in place; the home page has no sign-in route.
+        href="#sign-in"
+        onClick={(event) => {
+          event.preventDefault();
+          onSignIn();
+        }}
+        className={css`
+          color: var(--color-ink);
+          text-decoration: underline;
+          text-underline-offset: 3px;
+        `}
+      >
+        Sign in
+      </a>
+    </p>
   );
 }
 

@@ -12,6 +12,9 @@ import {
 } from "#src/data-fetching/account.js";
 import { useRateLimitCountdown } from "#src/data-fetching/rate-limit.js";
 
+/** What opened the sign-in: the home page's sign-in link, or a submission while signed out. */
+type SignInEntry = "home-link" | "submission";
+
 type PendingRequestStore = {
   read: () => PendingAccountConversion | null;
   store: (request: PendingAccountConversion) => void;
@@ -43,7 +46,9 @@ export function useAccountConversionSubmission({
   const start = useStartAccountConversionMutation(onStarted);
   const retryIn = useRateLimitCountdown(start.error);
 
-  const [requiresSignIn, setRequiresSignIn] = React.useState(false);
+  const [isSignInOpen, setIsSignInOpen] = React.useState(false);
+  // Kept after the sign-in closes, so its copy and the focus it returns to stay with that entry.
+  const [signInEntry, setSignInEntry] = React.useState<SignInEntry>("submission");
   const resumed = React.useRef(false);
   const requests = React.useMemo(
     () => (requestStorage === "session" ? SESSION_REQUEST_STORE : createMemoryRequestStore()),
@@ -64,7 +69,12 @@ export function useAccountConversionSubmission({
     isAuthLoading: authState.status === "loading",
     retryIn,
     error: start.error,
-    requiresSignIn: requiresSignIn && !session,
+    isSignInOpen: isSignInOpen && !session,
+    /** The entry that opened the sign-in last. */
+    signInEntry,
+    requiresSignIn: isSignInOpen && signInEntry === "submission" && !session,
+    /** Signed out once auth has settled, so the listener can choose to sign in. */
+    canSignIn: !session && authState.status !== "loading",
     signIn,
     signInMethods,
     submit: async ({ sourceUrl: input }: { sourceUrl: string }) => {
@@ -83,21 +93,29 @@ export function useAccountConversionSubmission({
       requests.store(request);
       if (!session) {
         resumed.current = false;
-        setRequiresSignIn(true);
+        setSignInEntry("submission");
+        setIsSignInOpen(true);
         return;
       }
       resumed.current = true;
       await start.mutateAsync({ ...request, subject: session.user.id }).catch(() => {});
     },
+    /** Opens the sign-in without a submission, so it starts without a previous sign-in error. */
+    openSignIn: () => {
+      signIn.reset();
+      setSignInEntry("home-link");
+      setIsSignInOpen(true);
+    },
+    /** Closes the sign-in; only a submission's sign-in marks its stored request unsubmitted. */
     cancelSignIn: () => {
       if (signIn.isPending) {
         return;
       }
       const request = requests.read();
-      if (request) {
+      if (signInEntry === "submission" && request) {
         requests.store({ ...request, submitted: false });
       }
-      setRequiresSignIn(false);
+      setIsSignInOpen(false);
     },
   };
 }

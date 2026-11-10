@@ -184,6 +184,22 @@ test("signed out, Recents and its dialogs redirect home, account recovery offers
   }
 });
 
+test("a Google sign-in from the home page's sign-in link lands on Recents", async ({
+  page,
+  workerEnvironment,
+}) => {
+  const { origin, authProvider } = workerEnvironment;
+  await gotoPage(page, `${origin}/app/`);
+  await page.getByRole("link", { name: "Sign in", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Sign in", exact: true });
+  await expect(dialog).toHaveAccessibleDescription("Sign in to get back to your tracks.");
+  await dialog.getByRole("button", { name: "Continue with Google", exact: true }).click();
+
+  await expect(page).toHaveURL(`${origin}/app/recent`);
+  await expect(page.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+  expect(authProvider.exchanges()).toBe(1);
+});
+
 test("signed in, home redirects to Recents, which opens the account dialog and the masked Add dialog", async ({
   page,
   workerEnvironment,
