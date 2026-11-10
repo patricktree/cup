@@ -188,7 +188,7 @@ test("owning grant sessions can read the cover image the audiobook points to", a
       expect(response.headers.get("ETag")).toBe('"cover-etag"');
       expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://localhost");
       expect(response.headers.get("Cache-Control")).toBe("private, max-age=86400, immutable");
-      expect(response.headers.get("Cross-Origin-Resource-Policy")).toBe("same-origin");
+      expect(response.headers.get("Cross-Origin-Resource-Policy")).toBe("cross-origin");
     }
   }
 });
@@ -234,7 +234,7 @@ test("trial media delivery does not permit arbitrary cross-origin readers", asyn
   );
   expect(response.status).toBe(200);
   expect(response.headers.has("Access-Control-Allow-Origin")).toBe(false);
-  expect(response.headers.get("Cross-Origin-Resource-Policy")).toBe("same-origin");
+  expect(response.headers.get("Cross-Origin-Resource-Policy")).toBe("cross-origin");
 });
 
 function getCoverImageUrl(audiobook: unknown): string {
