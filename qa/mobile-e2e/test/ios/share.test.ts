@@ -11,9 +11,9 @@ import {
 
 /**
  * Share intake through `audio.cup.app://share?url=…` links, as the Share Extension hands a share to
- * Cup. Each test opens the link in a running, signed-out Cup and checks the landing page's start
- * form and that the share started no conversion. Signed-in cases stay out until signing in works on
- * iOS.
+ * Cup. Each test opens the link in a signed-out Cup, running or started by the link, and checks the
+ * landing page's start form and that the share started no conversion. Signed-in cases stay out
+ * until signing in works on iOS.
  */
 const app = useMobileApp();
 
@@ -25,6 +25,19 @@ test("a share fills the landing page's start form", async () => {
   await device.openUrl(shareLink(SHARED_URL));
 
   await expectStartFormUrl(await device.webView(), SHARED_URL);
+  expect(conversionStartsSince(app.worker, 0)).toEqual([]);
+});
+
+test("a share that starts Cup fills the landing page's start form", async () => {
+  const device = await prepareColdStart();
+
+  await device.openUrl(shareLink(SHARED_URL));
+
+  await expectStartFormUrl(await device.webView(), SHARED_URL);
+  // The web app asks for the auth configuration at startup, here from the test Worker.
+  expect(app.worker.requests()).toContainEqual(
+    expect.objectContaining({ method: "GET", path: "/api/auth/config" }),
+  );
   expect(conversionStartsSince(app.worker, 0)).toEqual([]);
 });
 
@@ -44,6 +57,15 @@ test("a shared cup.audio link is ignored", async () => {
   const device = await launchToLandingPage();
 
   // Trial links stay out of the mobile apps (ADR 0017), and so does any other Cup link.
+  await device.openUrl(shareLink("https://cup.audio/trials/fixture-grant"));
+
+  await expectShareIgnored(await device.webView(), "landing page");
+  expect(conversionStartsSince(app.worker, 0)).toEqual([]);
+});
+
+test("a shared cup.audio link that starts Cup is ignored", async () => {
+  const device = await prepareColdStart();
+
   await device.openUrl(shareLink("https://cup.audio/trials/fixture-grant"));
 
   await expectShareIgnored(await device.webView(), "landing page");
@@ -71,6 +93,17 @@ async function launchToLandingPage(): Promise<IosAppDevice> {
   const device = asIosAppDevice(app.device);
   await device.launch({ apiOrigin: app.apiOrigin });
   await waitForLandingPage(await device.webView());
+  return device;
+}
+
+/**
+ * Leaves Cup not running, as every test starts it, and stores the test Worker's origin, which a
+ * link that starts Cup cannot pass as launch arguments.
+ */
+async function prepareColdStart(): Promise<IosAppDevice> {
+  const device = asIosAppDevice(app.device);
+  expect(await device.appState("cup")).toBe("not running");
+  await device.storeApiOrigin(app.apiOrigin);
   return device;
 }
 
