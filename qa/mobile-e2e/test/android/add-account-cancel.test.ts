@@ -45,12 +45,17 @@ test("cancelling Google's add-account screen returns to a usable landing page", 
 
   webView = await device.webView();
   expect(await pathname(webView)).toBe("/app/");
-  // Usable for another attempt. On the 2026-11-09 run, Cup kept its state: the same page, the
-  // filled start form and the open sign-in dialog, which showed the cancellation as an error. If
-  // the WebView restarts instead, the start form asks to sign in again.
+  // Usable for another attempt. On the 2026-11-09 and 2026-11-10 runs, Cup kept its state: the
+  // same page, the filled start form and the open sign-in dialog. If the WebView restarts instead,
+  // the start form asks to sign in again.
   const signIn = webView.$("button=Continue with Google");
-  if (!(await signIn.isDisplayed())) {
+  const keptSignInDialog = await signIn.isDisplayed();
+  if (!keptSignInDialog) {
     await startSignInFromLandingPage(webView);
   }
-  expect(await signIn.isEnabled()).toBe(true);
+  await expect.poll(() => signIn.isEnabled(), { timeout: 10_000, interval: 250 }).toBe(true);
+  // A cancellation the person chose is no failure, so the dialog that started it shows no error,
+  // such as the plugin's raw "[16] Cancelled by user.". A restarted WebView has no such dialog.
+  const errorsAfterCancel = keptSignInDialog ? (await webView.$$("[role=alert]")).length : 0;
+  expect(errorsAfterCancel).toBe(0);
 });
