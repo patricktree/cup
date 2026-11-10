@@ -16,6 +16,9 @@ const GOOGLE_ISSUER = "https://accounts.google.com";
 const GOOGLE_SUBJECT = "qa-google";
 /** Where the iOS app's sign-in sheet returns to Cup, as Supabase's redirect allow-list holds it. */
 const IOS_AUTH_CALLBACK_URL = "audio.cup.app://auth/callback";
+/** The Supabase Auth API version whose error shape the provider answers with when asked for it. */
+const SUPABASE_API_VERSION = "2024-01-01";
+const DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS = 300;
 const nowSeconds = () => Math.floor(Temporal.Now.instant().epochMilliseconds / 1000);
 
 type StartAuthProviderOptions = {
@@ -31,6 +34,12 @@ type StartAuthProviderOptions = {
   tls?: { key: Buffer; cert: Buffer };
 };
 
+/** A running fake auth provider, as tests of every suite read and configure it. */
+export type AuthProvider = Awaited<ReturnType<typeof startAuthProvider>>;
+
+/** The sign-in a session belongs to; a refresh keeps it, as Supabase keeps a session's `amr`. */
+type SignIn = { authenticatedAt: number; method: "oauth" | "id_token" };
+
 /**
  * Local identity boundary: real PKCE, a Google ID token exchange with Supabase's nonce check,
  * signed access tokens and JWKS, with no Google traffic.
@@ -44,8 +53,14 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
     use: "sig",
   };
   const codes = new Map<string, { challenge: string; authenticatedAt: number }>();
+  /** Every refresh token issued, kept after its single use so a reuse is told apart from a typo. */
+  const refreshTokens = new Map<string, SignIn & { isUsed: boolean }>();
+  /** The query parameters of each authorization request, also of a rejected one. */
+  const authorizationRequests: Array<Record<string, string>> = [];
   let origin = "";
   let exchanges = 0;
+  let refreshes = 0;
+  let accessTokenLifetimeSeconds = DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS;
   const sign = (claims: Record<string, unknown>) => {
     const header = Buffer.from(JSON.stringify({ alg: "ES256", kid: "qa-key" })).toString(
       "base64url",
@@ -86,18 +101,23 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
       role: "authenticated",
       email: "reader@example.test",
       iat: now,
-      exp: now + 300,
+      exp: now + accessTokenLifetimeSeconds,
       app_metadata: { provider: "google" },
       amr: [{ method, timestamp: authenticatedAt }],
     });
   };
-  /** The Google-provider session that both the PKCE and the ID token exchange return. */
-  const sessionFor = (authenticatedAt: number, method: "oauth" | "id_token") =>
-    JSON.stringify({
+  /**
+   * The Google-provider session that the PKCE, the ID token and the refresh token exchange return,
+   * with a new single-use refresh token.
+   */
+  const sessionFor = ({ authenticatedAt, method }: SignIn) => {
+    const refreshToken = crypto.randomUUID();
+    refreshTokens.set(refreshToken, { authenticatedAt, method, isUsed: false });
+    return JSON.stringify({
       access_token: tokenFor(SUBJECT, authenticatedAt, method),
       token_type: "bearer",
-      refresh_token: "qa-refresh",
-      expires_in: 300,
+      refresh_token: refreshToken,
+      expires_in: accessTokenLifetimeSeconds,
       user: {
         id: SUBJECT,
         email: "reader@example.test",
@@ -107,7 +127,9 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
         identities: [{ provider: "google", identity_data: { sub: GOOGLE_SUBJECT } }],
       },
     });
+  };
   const authorize = (url: URL, response: http.ServerResponse) => {
+    authorizationRequests.push(Object.fromEntries(url.searchParams));
     const redirect = new URL(url.searchParams.get("redirect_to") ?? "");
     if (
       url.searchParams.get("provider") !== "google" ||
@@ -165,6 +187,10 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
       exchangeIdToken(body, response);
       return;
     }
+    if (url.searchParams.get("grant_type") === "refresh_token") {
+      exchangeRefreshToken(body, request, response);
+      return;
+    }
     if (
       url.searchParams.get("grant_type") !== "pkce" ||
       !body ||
@@ -185,7 +211,43 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
     }
     codes.delete(body.auth_code);
     exchanges += 1;
-    response.end(sessionFor(code.authenticatedAt, "oauth"));
+    response.end(sessionFor({ authenticatedAt: code.authenticatedAt, method: "oauth" }));
+  };
+  /**
+   * Exchanges a refresh token for a new session of the same sign-in, once. Unlike Supabase, it has
+   * no reuse interval: any second use of a refresh token is rejected.
+   */
+  const exchangeRefreshToken = (
+    body: unknown,
+    request: http.IncomingMessage,
+    response: http.ServerResponse,
+  ) => {
+    if (
+      !body ||
+      typeof body !== "object" ||
+      !("refresh_token" in body) ||
+      typeof body.refresh_token !== "string"
+    ) {
+      throw new Error("Invalid refresh token exchange");
+    }
+    const signIn = refreshTokens.get(body.refresh_token);
+    if (signIn === undefined) {
+      rejectAsSupabase(request, response, {
+        errorCode: "refresh_token_not_found",
+        message: "Invalid Refresh Token: Refresh Token Not Found",
+      });
+      return;
+    }
+    if (signIn.isUsed) {
+      rejectAsSupabase(request, response, {
+        errorCode: "refresh_token_already_used",
+        message: "Invalid Refresh Token: Already Used",
+      });
+      return;
+    }
+    signIn.isUsed = true;
+    refreshes += 1;
+    response.end(sessionFor(signIn));
   };
   /** As Supabase does, accepts the ID token only when it carries the SHA-256 hash of the raw nonce. */
   const exchangeIdToken = (body: unknown, response: http.ServerResponse) => {
@@ -209,7 +271,7 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
       throw new Error("ID token nonce mismatch");
     }
     exchanges += 1;
-    response.end(sessionFor(nowSeconds(), "id_token"));
+    response.end(sessionFor({ authenticatedAt: nowSeconds(), method: "id_token" }));
   };
   const handler: http.RequestListener = (request, response) => {
     response.setHeader("Access-Control-Allow-Origin", "*");
@@ -217,6 +279,8 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
       "Access-Control-Allow-Headers",
       "authorization, apikey, content-type, x-client-info, x-supabase-api-version",
     );
+    // supabase-js reads an error's code from the shape this header names, also in a browser.
+    response.setHeader("Access-Control-Expose-Headers", "X-Supabase-Api-Version");
     response.setHeader("Content-Type", "application/json");
     const handle = async () => {
       const url = new URL(request.url ?? "/", origin);
@@ -272,7 +336,25 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
   return {
     origin,
     otherToken: () => tokenFor(OTHER_SUBJECT),
+    /**
+     * The query parameters of every authorization request so far, in order, such as the `prompt`
+     * and `max_age` Cup asked Google for.
+     */
+    authorizationRequests: () => authorizationRequests.map((query) => ({ ...query })),
+    /** How many sign-ins exchanged a PKCE code or an ID token for a session. */
     exchanges: () => exchanges,
+    /** How many refresh tokens exchanged for a new session. */
+    refreshes: () => refreshes,
+    /**
+     * Sets how long the access tokens of sessions issued from now on stay valid, 300 seconds by
+     * default; a test shortens it so a session refreshes within the test's time budget.
+     */
+    setAccessTokenLifetime: (seconds: number) => {
+      if (!Number.isInteger(seconds) || seconds <= 0) {
+        throw new Error(`An access token lifetime must be a positive whole number: ${seconds}`);
+      }
+      accessTokenLifetimeSeconds = seconds;
+    },
     close: async () => {
       await Promise.all(servers.map(close));
     },
@@ -288,6 +370,24 @@ function isAllowedRedirect(redirect: URL): boolean {
     redirect.hostname === "127.0.0.1" ||
     `${redirect.protocol}//${redirect.host}${redirect.pathname}` === IOS_AUTH_CALLBACK_URL
   );
+}
+
+/**
+ * Answers with the 400 error body Supabase Auth sends: the API version 2024-01-01 shape when the
+ * client asks for it, as supabase-js does, and the legacy shape otherwise.
+ */
+function rejectAsSupabase(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  { errorCode, message }: { errorCode: string; message: string },
+) {
+  const apiVersion = request.headers["x-supabase-api-version"];
+  if (typeof apiVersion === "string" && apiVersion >= SUPABASE_API_VERSION) {
+    response.setHeader("X-Supabase-Api-Version", SUPABASE_API_VERSION);
+    response.writeHead(400).end(JSON.stringify({ code: errorCode, message }));
+    return;
+  }
+  response.writeHead(400).end(JSON.stringify({ code: 400, error_code: errorCode, msg: message }));
 }
 
 async function readJson(request: http.IncomingMessage): Promise<unknown> {

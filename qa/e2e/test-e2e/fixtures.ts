@@ -6,6 +6,7 @@ import fs from "node:fs/promises";
 import {
   startAuthProvider,
   startTestWorker,
+  type AuthProvider,
   type CreatedGrant,
   type TestWorkerScenario,
 } from "@cup/test-worker";
@@ -17,7 +18,8 @@ import {
 
 export type WorkerEnvironment = {
   origin: string;
-  authProvider: Awaited<ReturnType<typeof startAuthProvider>>;
+  /** This test's fake auth provider: its recorded authorization requests and token lifetime. */
+  authProvider: AuthProvider;
   persistenceDirectory: string;
   createGrant(): Promise<CreatedGrant>;
   restart(scenario: TestWorkerScenario): Promise<void>;
