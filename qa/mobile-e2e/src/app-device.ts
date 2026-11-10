@@ -14,8 +14,11 @@ export type LaunchArguments = {
  */
 export type AppDevice = {
   readonly platform: MobilePlatform;
-  /** Makes a port on the host reachable at `localhost:<port>` from the app. */
-  exposeHostPort(port: number): Promise<void>;
+  /**
+   * Makes a port on the host reachable at `localhost:<port>` from the app. Returns false, exposing
+   * nothing, when the port is already taken on the device's side, so the caller needs another one.
+   */
+  exposeHostPort(port: number): Promise<boolean>;
   /** Undoes `exposeHostPort`. */
   unexposeHostPort(port: number): Promise<void>;
   /** Stops the app if it runs, then launches it with the given arguments. */

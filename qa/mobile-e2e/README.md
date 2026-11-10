@@ -39,6 +39,17 @@ pnpm run test:e2e:mobile --project android
 pnpm run test:e2e:mobile --project ios
 ```
 
+## Runtime
+
+The suite's budget is about 10 minutes for both platforms on a warm Mac, one with the drivers installed, WebDriverAgent built and the emulator's snapshot saved. Measured on 2026-11-10 on an Apple Silicon Mac with Xcode 27.2 and the iOS 27.2 runtime, one platform at a time, with the workspace build cached:
+
+| Run                              | Android (16 tests) | iOS (10 tests) | Both       |
+| -------------------------------- | ------------------ | -------------- | ---------- |
+| Warm                             | 1 min 59 s         | 2 min 51 s     | 4 min 50 s |
+| New checkout, drivers to install | 2 min 18 s         | 3 min 10 s     | 5 min 28 s |
+
+Vitest reported 116 s for Android and 166 s for iOS, of which the tests took 112 s and 142 s, and 303 s for both platforms in one `pnpm run test:e2e:mobile` within `pnpm validate`; the rest is the cached workspace and app builds, the preflight check, and starting the device and Appium. The iOS share tests through Safari's Share Sheet take 12 to 20 seconds each. A Mac's first run, which also creates the emulator's snapshot and builds WebDriverAgent, takes several minutes longer.
+
 ## Debug a test
 
 When a test fails, the suite keeps what the device and the test Worker showed at that moment in the git-ignored `qa/mobile-e2e/test-output/<platform>/<spec>/<test>/` and prints the folder's path:
@@ -63,11 +74,11 @@ To stream each test Worker's Wrangler logs to the terminal while a test runs, ad
 
 ## Isolation
 
-Runs in several checkouts can go at once. Each run boots its own emulator, which picks its own console port and reports it back, and addresses it by serial; it never kills the shared adb server or touches a device it did not start. Appium, UiAutomator2, Chromedriver, every test Worker and fake auth provider listen on ports the operating system assigns. `adb reverse` makes each test's Worker and fake auth provider reachable at `http://localhost:<port>` on the emulator.
+Runs in several checkouts can go at once. Each run boots its own emulator, which picks its own console port and reports it back, and addresses it by serial; it never kills the shared adb server or touches a device it did not start. Appium, UiAutomator2, Chromedriver, every test Worker and fake auth provider listen on ports the operating system assigns. `adb reverse` makes each test's Worker and fake auth provider reachable at `http://localhost:<port>` on the emulator. The emulator's own sockets use ports from the same range the Mac assigns from: a minute after booting from the snapshot it held about 60 on such ports, Google Play services' connections and sockets in TIME_WAIT, and `adb reverse` fails with "Address already in use" for any of them (2026-11-10). When the device side of a port is taken, the test starts that server again on another port the operating system assigns, up to five times.
 
 Each iOS run creates its own simulator, named `cup-mobile-e2e-<random>`, in the default simulator set, because WebDriverAgent starts through `xcodebuild`, which sees no other set. The run deletes it afterwards, also when it fails. A detached watcher deletes it when the run is killed. WebDriverAgent and its MJPEG stream listen on ports the operating system assigns.
 
-The simulator shares the Mac's loopback, and on iOS 26.3.1 it connects to `localhost` over `::1` first: a probe with servers on `127.0.0.1` and `::1` at the same port saw the app's request arrive on `::1`, and with only `127.0.0.1` listening it fell back there without a noticeable delay (2026-11-09). The fake auth provider listens on both loopbacks. Wrangler binds one address, so the test Worker listens on `127.0.0.1` alone and each iOS test relays `[::1]:<port>` to it; otherwise another process holding the same port on `::1` would receive the app's requests.
+The simulator shares the Mac's loopback, and on iOS 26.3.1 it connects to `localhost` over `::1` first: a probe with servers on `127.0.0.1` and `::1` at the same port saw the app's request arrive on `::1`, and with only `127.0.0.1` listening it fell back there without a noticeable delay (2026-11-09). The fake auth provider listens on both loopbacks. Wrangler binds one address, so the test Worker listens on `127.0.0.1` alone and each iOS test relays `[::1]:<port>` to it; otherwise another process holding the same port on `::1` would receive the app's requests. When another process holds it, the test starts that server again on another port, as on Android.
 
 ## Finding Cup's WebView (Android)
 

@@ -11,9 +11,10 @@ export type LoopbackRelay = {
  * simulator shares the host's loopback and connects to `localhost` over `::1` first, falling back
  * to `127.0.0.1` only when nothing listens on `::1`. The test Worker listens on `127.0.0.1` alone,
  * so without the relay another process holding the same port on `::1` would receive the app's
- * requests. The fake auth provider listens on both loopbacks itself.
+ * requests. The fake auth provider listens on both loopbacks itself. Returns undefined when another
+ * process listens on `[::1]:<port>`.
  */
-export async function startLoopbackRelay(port: number): Promise<LoopbackRelay> {
+export async function startLoopbackRelay(port: number): Promise<LoopbackRelay | undefined> {
   const sockets = new Set<net.Socket>();
   const track = (socket: net.Socket): void => {
     sockets.add(socket);
@@ -37,7 +38,10 @@ export async function startLoopbackRelay(port: number): Promise<LoopbackRelay> {
     if (await isListeningInThisProcess(port)) {
       return { close: () => Promise.resolve() };
     }
-    throw new Error(`Another process listens on [::1]:${port}.`, { cause: error });
+    if (error instanceof Error && "code" in error && error.code === "EADDRINUSE") {
+      return undefined;
+    }
+    throw error;
   }
   return {
     close: () =>

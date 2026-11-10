@@ -100,9 +100,14 @@ export class IosAppDevice implements AppDevice {
     this.driver = driver;
   }
 
-  async exposeHostPort(port: number): Promise<void> {
+  async exposeHostPort(port: number): Promise<boolean> {
     // The simulator shares the host's loopback; only `::1` needs to reach the port too.
-    this.relays.set(port, await startLoopbackRelay(port));
+    const relay = await startLoopbackRelay(port);
+    if (relay === undefined) {
+      return false;
+    }
+    this.relays.set(port, relay);
+    return true;
   }
 
   async unexposeHostPort(port: number): Promise<void> {

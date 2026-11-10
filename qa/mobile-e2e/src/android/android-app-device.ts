@@ -82,8 +82,18 @@ export class AndroidAppDevice implements AppDevice {
     this.driver = driver;
   }
 
-  async exposeHostPort(port: number): Promise<void> {
-    await this.adb(["reverse", `tcp:${port}`, `tcp:${port}`]);
+  async exposeHostPort(port: number): Promise<boolean> {
+    try {
+      await this.adb(["reverse", `tcp:${port}`, `tcp:${port}`]);
+      return true;
+    } catch (error) {
+      // adbd listens on every address of the emulator, so any socket there holding the port blocks
+      // it: Google Play services' connections and TIME_WAIT sockets use ports the host assigns too.
+      if (error instanceof Error && error.message.includes("Address already in use")) {
+        return false;
+      }
+      throw error;
+    }
   }
 
   async unexposeHostPort(port: number): Promise<void> {

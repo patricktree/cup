@@ -69,15 +69,22 @@ export function useMobileApp(): MobileApp {
     await openedDevice.clearAppData();
     await openedDevice.markTestStart();
     // Its origin and token issuer are `http://localhost:<port>`, as the app and the Worker see it.
-    started.authProvider = await startAuthProvider({ hostname: "localhost" });
-    started.worker = await startTestWorker({
-      authProviderOrigin: started.authProvider.origin,
-      streamLogs: STREAM_WORKER_LOGS,
+    const authProvider = await startExposed(openedDevice, {
+      start: () => startAuthProvider({ hostname: "localhost" }),
+      stop: (server) => server.close(),
     });
-    for (const origin of [started.worker.origin, started.authProvider.origin]) {
-      await openedDevice.exposeHostPort(portOf(origin));
-      started.exposedPorts.push(portOf(origin));
-    }
+    started.authProvider = authProvider;
+    started.exposedPorts.push(portOf(authProvider.origin));
+    const worker = await startExposed(openedDevice, {
+      start: () =>
+        startTestWorker({
+          authProviderOrigin: authProvider.origin,
+          streamLogs: STREAM_WORKER_LOGS,
+        }),
+      stop: (server) => server.stop(),
+    });
+    started.worker = worker;
+    started.exposedPorts.push(portOf(worker.origin));
   });
 
   afterEach(async (context) => {
@@ -149,6 +156,43 @@ async function openDevice(platform: MobilePlatform): Promise<AppDevice> {
     return openIosAppDevice(inject("iosTarget"));
   }
   throw new Error(`Unknown mobile platform: ${String(platform)}`);
+}
+
+/**
+ * How many ports `startExposed` tries; a taken port is rare, five in a row means something is
+ * wrong.
+ */
+const PORT_ATTEMPTS = 5;
+
+/**
+ * Starts a server on a port the host's operating system assigns and exposes that port to the app.
+ * The device can already hold the same port for a socket of its own, which blocks exposing it; the
+ * server then starts again on another assigned port. This picks a port; it repeats no test step.
+ */
+async function startExposed<T extends { origin: string }>(
+  device: AppDevice,
+  server: { start(): Promise<T>; stop(started: T): Promise<void> },
+): Promise<T> {
+  const takenPorts: number[] = [];
+  for (let attempt = 0; attempt < PORT_ATTEMPTS; attempt++) {
+    const started = await server.start();
+    const port = portOf(started.origin);
+    let exposed = false;
+    try {
+      exposed = await device.exposeHostPort(port);
+    } finally {
+      if (!exposed) {
+        await server.stop(started);
+      }
+    }
+    if (exposed) {
+      return started;
+    }
+    takenPorts.push(port);
+  }
+  throw new Error(
+    `The device already used every port the host assigned for this test: ${takenPorts.join(", ")}.`,
+  );
 }
 
 /** The app always gets `localhost`, which both platforms map to the host's loopback. */
