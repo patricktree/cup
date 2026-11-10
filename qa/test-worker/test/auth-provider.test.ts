@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { afterAll, beforeAll, expect, test } from "vitest";
 
-import { startAuthProvider, type AuthProvider } from "#src/auth-provider.ts";
+import { startAuthProvider, TEST_ACCOUNT, type AuthProvider } from "#src/auth-provider.ts";
 
 let sharedAuthProvider: AuthProvider | undefined;
 
@@ -77,6 +77,34 @@ test.each(["pkce", "id_token"] as const)(
     expect(session.refresh_token).not.toBe(refreshToken);
   },
 );
+
+test("signs in the local test account with its password, as an email-provider session", async () => {
+  const response = await exchangePassword(TEST_ACCOUNT);
+
+  expect(response.status).toBe(200);
+  const session = await sessionOf(response);
+  expect(await verifiesAgainstJwks(session.access_token)).toBe(true);
+  expect(claimsOf(session.access_token)).toMatchObject({
+    email: TEST_ACCOUNT.email,
+    app_metadata: { provider: "email" },
+    amr: [{ method: "password" }],
+  });
+  const refreshed = await sessionOf(await refresh(session.refresh_token));
+  expect(claimsOf(refreshed.access_token)).toMatchObject({
+    sub: claimsOf(session.access_token)["sub"],
+    app_metadata: { provider: "email" },
+  });
+});
+
+test("rejects a password sign-in with other credentials, as Supabase does", async () => {
+  const response = await exchangePassword({ ...TEST_ACCOUNT, password: "another password" });
+
+  expect(response.status).toBe(400);
+  expect(await response.json()).toEqual({
+    code: "invalid_credentials",
+    message: "Invalid login credentials",
+  });
+});
 
 test("rejects a refresh token that was already exchanged, as Supabase does", async () => {
   const { refresh_token: refreshToken } = await signIn("pkce");
@@ -224,6 +252,25 @@ function exchangeIdToken(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ provider: "google", id_token: idToken, nonce }),
   });
+}
+
+/** The request supabase-js `signInWithPassword` sends. */
+function exchangePassword(credentials: { email: string; password: string }): Promise<Response> {
+  return fetch(`${startedAuthProvider().origin}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Supabase-Api-Version": "2024-01-01" },
+    body: JSON.stringify(credentials),
+  });
+}
+
+function claimsOf(accessToken: string): Record<string, unknown> {
+  const payload: unknown = JSON.parse(
+    Buffer.from(accessToken.split(".")[1] ?? "", "base64url").toString(),
+  );
+  if (!isRecord(payload)) {
+    throw new Error("The access token has no claims.");
+  }
+  return payload;
 }
 
 function hash(nonce: string): string {

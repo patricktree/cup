@@ -6,6 +6,8 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 
+import { TEST_ACCOUNT } from "#src/auth-provider.ts";
+
 /** Selects how the test Worker's fakes behave; the Worker entry parses the same values. */
 export type TestWorkerScenario = "success" | "tts-failure" | "speech-gated" | "preparation-failure";
 
@@ -42,6 +44,11 @@ type StartTestWorkerOptions = {
   scenario?: TestWorkerScenario;
   /** The fake auth provider the Worker verifies tokens against, if the test signs in. */
   authProviderOrigin?: string;
+  /**
+   * Advertises the fake auth provider's test account in the auth configuration, as local
+   * development does, so the sign-in dialog offers "Sign in with test account".
+   */
+  offersTestAccount?: boolean;
   /** Writes Wrangler's output to stderr while it runs. */
   streamLogs?: boolean;
   /**
@@ -109,6 +116,14 @@ export async function startTestWorker(options: StartTestWorkerOptions = {}): Pro
         ...(options.authProviderOrigin === undefined
           ? []
           : ["--var", `SUPABASE_URL:${options.authProviderOrigin}`]),
+        ...(options.offersTestAccount === true
+          ? [
+              "--var",
+              `LOCAL_TEST_ACCOUNT_EMAIL:${TEST_ACCOUNT.email}`,
+              "--var",
+              `LOCAL_TEST_ACCOUNT_PASSWORD:${TEST_ACCOUNT.password}`,
+            ]
+          : []),
       ],
       { cwd: PACKAGE_ROOT, detached: true, env: environment, stdio: ["ignore", "pipe", "pipe"] },
     );

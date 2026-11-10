@@ -9,6 +9,7 @@ import { SignInDialog } from "#src/app/components/sign-in-dialog.js";
 import { SourceUrlForm } from "#src/app/components/source-url-form.js";
 import { ArrowRightIcon } from "#src/app/design-system/icons.js";
 import { textStyles } from "#src/app/design-system/text-styles.js";
+import { signedInHomeTarget } from "#src/app/signed-in-home-target.js";
 import { useAccountConversionSubmission } from "#src/app/use-cases/account-conversions.js";
 import { composeClassnames } from "#src/app/utils.js";
 import { useStartTrialConversionMutation } from "#src/data-fetching/conversion-grant.js";
@@ -35,6 +36,10 @@ function AccountConversionForm(): React.ReactNode {
     requestStorage: "session",
     onStarted: async (conversionId) => {
       await navigate({ to: "/audiobooks/$conversionId", params: { conversionId } });
+    },
+    // As the home route's redirect does, so Back does not return to the signed-out home page.
+    onSignedInFromLink: async () => {
+      await navigate({ to: signedInHomeTarget(), replace: true });
     },
   });
   const submitButtonRef = React.useRef<HTMLButtonElement>(null);
@@ -78,7 +83,7 @@ function AccountConversionForm(): React.ReactNode {
         }
         signInMethods={submission.signInMethods}
         pendingMethod={submission.signIn.isPending ? submission.signIn.variables : undefined}
-        onSignIn={(method) => submission.signIn.mutate(method)}
+        onSignIn={submission.startSignIn}
         errorMessage={submission.signIn.error?.message}
       />
     </>

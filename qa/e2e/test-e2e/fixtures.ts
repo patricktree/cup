@@ -28,6 +28,8 @@ export type WorkerEnvironment = {
 type Fixtures = {
   expectConsoleError: ((message: string | RegExp) => void) & { messages: Array<string | RegExp> };
   qaScenario: TestWorkerScenario;
+  /** Whether the Worker offers the fake auth provider's test account, as local development does. */
+  offersTestAccount: boolean;
   workerEnvironment: WorkerEnvironment;
 };
 
@@ -41,8 +43,9 @@ export const test = base.extend<Fixtures>({
     );
   },
   qaScenario: ["success", { option: true }],
-  workerEnvironment: async ({ qaScenario }, use, testInfo) => {
-    const environment = await createWorkerEnvironment(qaScenario);
+  offersTestAccount: [false, { option: true }],
+  workerEnvironment: async ({ qaScenario, offersTestAccount }, use, testInfo) => {
+    const environment = await createWorkerEnvironment(qaScenario, offersTestAccount);
 
     try {
       await use(environment);
@@ -141,6 +144,7 @@ type InternalWorkerEnvironment = WorkerEnvironment & {
 
 async function createWorkerEnvironment(
   initialScenario: TestWorkerScenario,
+  offersTestAccount: boolean,
 ): Promise<InternalWorkerEnvironment> {
   const httpsKeyPath = readRequiredEnvironmentVariable(HTTPS_KEY_PATH_ENV_VAR_NAME);
   const httpsCertPath = readRequiredEnvironmentVariable(HTTPS_CERT_PATH_ENV_VAR_NAME);
@@ -150,6 +154,7 @@ async function createWorkerEnvironment(
   const worker = await startTestWorker({
     scenario: initialScenario,
     authProviderOrigin: authProvider.origin,
+    offersTestAccount,
     https: { keyPath: httpsKeyPath, certPath: httpsCertPath },
     streamLogs: process.env["E2E_STREAM_WRANGLER"] === "1",
   });

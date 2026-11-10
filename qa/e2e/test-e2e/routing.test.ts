@@ -200,6 +200,55 @@ test("a Google sign-in from the home page's sign-in link lands on Recents", asyn
   expect(authProvider.exchanges()).toBe(1);
 });
 
+test("after a cancelled submission, a Google sign-in from the sign-in link lands on Recents, not on the submitted URL", async ({
+  page,
+  workerEnvironment,
+}) => {
+  const { origin, authProvider } = workerEnvironment;
+  await gotoPage(page, `${origin}/app/`);
+  await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
+  await page.getByRole("button", { name: "Listen" }).click();
+  const dialog = page.getByRole("dialog", { name: "Sign in", exact: true });
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+
+  await page.getByRole("link", { name: "Sign in", exact: true }).click();
+  await dialog.getByRole("button", { name: "Continue with Google", exact: true }).click();
+
+  await expect(page).toHaveURL(`${origin}/app/recent`);
+  await expect(page.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+  expect(authProvider.exchanges()).toBe(1);
+});
+
+test.describe("with the local test account", () => {
+  test.use({ offersTestAccount: true });
+
+  test("a test-account sign-in from the sign-in link replaces home with Recents without a page load", async ({
+    page,
+    workerEnvironment,
+  }) => {
+    const { origin, authProvider } = workerEnvironment;
+    await gotoPage(page, `${origin}/app/`);
+    const historyLength = await page.evaluate(() => window.history.length);
+    // A page load would drop this marker.
+    await page.evaluate(() => Object.assign(window, { isSamePage: true }));
+    await page.getByRole("link", { name: "Sign in", exact: true }).click();
+    await page
+      .getByRole("dialog", { name: "Sign in", exact: true })
+      .getByRole("button", { name: "Sign in with test account", exact: true })
+      .click();
+
+    await expect(page).toHaveURL(`${origin}/app/recent`);
+    await expect(page.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+    expect(authProvider.exchanges()).toBe(1);
+    expect(await page.evaluate(() => "isSamePage" in window)).toBe(true);
+    // Recents replaced the signed-out home page's history entry, so Back leaves the app.
+    expect(await page.evaluate(() => window.history.length)).toBe(historyLength);
+    await page.goBack();
+    await expect(page).toHaveURL("about:blank");
+  });
+});
+
 test("signed in, home redirects to Recents, which opens the account dialog and the masked Add dialog", async ({
   page,
   workerEnvironment,

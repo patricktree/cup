@@ -19,6 +19,12 @@ const IOS_AUTH_CALLBACK_URL = "audio.cup.app://auth/callback";
 /** The Supabase Auth API version whose error shape the provider answers with when asked for it. */
 const SUPABASE_API_VERSION = "2024-01-01";
 const DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS = 300;
+/**
+ * The local test account that the password grant signs in; a test Worker started with
+ * `offersTestAccount` advertises it, as local development does.
+ */
+export const TEST_ACCOUNT = { email: "test-account@example.test", password: "qa-test-account" };
+const TEST_ACCOUNT_SUBJECT = "c5a2b1e4-0f3d-4b8e-9a6c-2d7e1f4b9a30";
 const nowSeconds = () => Math.floor(Temporal.Now.instant().epochMilliseconds / 1000);
 
 type StartAuthProviderOptions = {
@@ -37,12 +43,15 @@ type StartAuthProviderOptions = {
 /** A running fake auth provider, as tests of every suite read and configure it. */
 export type AuthProvider = Awaited<ReturnType<typeof startAuthProvider>>;
 
-/** The sign-in a session belongs to; a refresh keeps it, as Supabase keeps a session's `amr`. */
-type SignIn = { authenticatedAt: number; method: "oauth" | "id_token" };
+/**
+ * The sign-in a session belongs to; a refresh keeps it, as Supabase keeps a session's `amr`. A
+ * password sign-in is the test account's, any other the Google account's.
+ */
+type SignIn = { authenticatedAt: number; method: "oauth" | "id_token" | "password" };
 
 /**
- * Local identity boundary: real PKCE, a Google ID token exchange with Supabase's nonce check,
- * signed access tokens and JWKS, with no Google traffic.
+ * Local identity boundary: real PKCE, a Google ID token exchange with Supabase's nonce check, the
+ * test account's password sign-in, signed access tokens and JWKS, with no Google traffic.
  */
 export async function startAuthProvider(options: StartAuthProviderOptions = {}) {
   const pair = crypto.generateKeyPairSync("ec", { namedCurve: "prime256v1" });
@@ -91,7 +100,7 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
   const tokenFor = (
     subject: string,
     authenticatedAt = nowSeconds(),
-    method: "oauth" | "id_token" = "oauth",
+    method: SignIn["method"] = "oauth",
   ) => {
     const now = nowSeconds();
     return sign({
@@ -99,33 +108,45 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
       sub: subject,
       aud: "authenticated",
       role: "authenticated",
-      email: "reader@example.test",
+      email: method === "password" ? TEST_ACCOUNT.email : "reader@example.test",
       iat: now,
       exp: now + accessTokenLifetimeSeconds,
-      app_metadata: { provider: "google" },
+      app_metadata: { provider: method === "password" ? "email" : "google" },
       amr: [{ method, timestamp: authenticatedAt }],
     });
   };
   /**
-   * The Google-provider session that the PKCE, the ID token and the refresh token exchange return,
-   * with a new single-use refresh token.
+   * The session that the PKCE, the ID token, the password and the refresh token exchange return,
+   * with a new single-use refresh token: the Google account's, or the test account's after a
+   * password sign-in.
    */
   const sessionFor = ({ authenticatedAt, method }: SignIn) => {
     const refreshToken = crypto.randomUUID();
     refreshTokens.set(refreshToken, { authenticatedAt, method, isUsed: false });
+    const isTestAccount = method === "password";
+    const subject = isTestAccount ? TEST_ACCOUNT_SUBJECT : SUBJECT;
     return JSON.stringify({
-      access_token: tokenFor(SUBJECT, authenticatedAt, method),
+      access_token: tokenFor(subject, authenticatedAt, method),
       token_type: "bearer",
       refresh_token: refreshToken,
       expires_in: accessTokenLifetimeSeconds,
-      user: {
-        id: SUBJECT,
-        email: "reader@example.test",
-        aud: "authenticated",
-        app_metadata: { provider: "google" },
-        user_metadata: { name: READER_NAME, full_name: READER_NAME },
-        identities: [{ provider: "google", identity_data: { sub: GOOGLE_SUBJECT } }],
-      },
+      user: isTestAccount
+        ? {
+            id: subject,
+            email: TEST_ACCOUNT.email,
+            aud: "authenticated",
+            app_metadata: { provider: "email" },
+            user_metadata: {},
+            identities: [{ provider: "email", identity_data: { sub: subject } }],
+          }
+        : {
+            id: subject,
+            email: "reader@example.test",
+            aud: "authenticated",
+            app_metadata: { provider: "google" },
+            user_metadata: { name: READER_NAME, full_name: READER_NAME },
+            identities: [{ provider: "google", identity_data: { sub: GOOGLE_SUBJECT } }],
+          },
     });
   };
   const authorize = (url: URL, response: http.ServerResponse) => {
@@ -191,6 +212,10 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
       exchangeRefreshToken(body, request, response);
       return;
     }
+    if (url.searchParams.get("grant_type") === "password") {
+      exchangePassword(body, request, response);
+      return;
+    }
     if (
       url.searchParams.get("grant_type") !== "pkce" ||
       !body ||
@@ -248,6 +273,29 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
     signIn.isUsed = true;
     refreshes += 1;
     response.end(sessionFor(signIn));
+  };
+  /** Signs in the test account, the only account with a password, as Supabase's email provider. */
+  const exchangePassword = (
+    body: unknown,
+    request: http.IncomingMessage,
+    response: http.ServerResponse,
+  ) => {
+    if (
+      !body ||
+      typeof body !== "object" ||
+      !("email" in body) ||
+      !("password" in body) ||
+      body.email !== TEST_ACCOUNT.email ||
+      body.password !== TEST_ACCOUNT.password
+    ) {
+      rejectAsSupabase(request, response, {
+        errorCode: "invalid_credentials",
+        message: "Invalid login credentials",
+      });
+      return;
+    }
+    exchanges += 1;
+    response.end(sessionFor({ authenticatedAt: nowSeconds(), method: "password" }));
   };
   /** As Supabase does, accepts the ID token only when it carries the SHA-256 hash of the raw nonce. */
   const exchangeIdToken = (body: unknown, response: http.ServerResponse) => {
@@ -313,7 +361,7 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
         request.headers.authorization === "Bearer qa-admin"
       ) {
         const id = url.pathname.split("/").at(-1);
-        if (id === SUBJECT || id === OTHER_SUBJECT) {
+        if (id === SUBJECT || id === OTHER_SUBJECT || id === TEST_ACCOUNT_SUBJECT) {
           response.end(JSON.stringify({ id }));
           return;
         }
@@ -341,7 +389,7 @@ export async function startAuthProvider(options: StartAuthProviderOptions = {}) 
      * and `max_age` Cup asked Google for.
      */
     authorizationRequests: () => authorizationRequests.map((query) => ({ ...query })),
-    /** How many sign-ins exchanged a PKCE code or an ID token for a session. */
+    /** How many sign-ins exchanged a PKCE code, an ID token or a password for a session. */
     exchanges: () => exchanges,
     /** How many refresh tokens exchanged for a new session. */
     refreshes: () => refreshes,

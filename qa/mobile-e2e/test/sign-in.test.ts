@@ -5,6 +5,7 @@ import type { RecordedRequest } from "@cup/test-worker";
 import { useMobileApp } from "#src/fixtures.ts";
 import {
   pathname,
+  signInFromHomeLink,
   signInFromLandingPage,
   waitForLandingPage,
   waitForRecents,
@@ -29,6 +30,23 @@ test("signs in with Google and sees Recents loaded from the test Worker", async 
   await webView.$('a[aria-label="Back"]').click();
 
   await waitForRecents(webView, 1);
+  expect(app.worker.requests()).toContainEqual(
+    expect.objectContaining({
+      method: "GET",
+      path: "/api/account/conversions",
+      headers: expect.objectContaining({ authorization: expect.stringMatching(/^Bearer \S+$/) }),
+    }),
+  );
+});
+
+test("signs in from the home page's sign-in link and lands on Recents loaded from the test Worker", async () => {
+  await app.device.launch({ apiOrigin: app.apiOrigin });
+  const webView = await app.device.webView();
+
+  await signInFromHomeLink(app.device, webView);
+
+  // A new account has no tracks yet, so Recents invites it to add the first one.
+  await webView.$("a=Add your first track").waitForDisplayed({ timeout: 30_000 });
   expect(app.worker.requests()).toContainEqual(
     expect.objectContaining({
       method: "GET",

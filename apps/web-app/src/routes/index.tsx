@@ -4,9 +4,9 @@ import React from "react";
 import { ConversionShell } from "#src/app/components/conversion-shell.jsx";
 import { PageSkeleton } from "#src/app/components/page-skeleton.js";
 import { StartConversionForm } from "#src/app/components/start-conversion-form.js";
+import { signedInHomeTarget } from "#src/app/signed-in-home-target.js";
 import { settleAccountSession } from "#src/auth/account-session.js";
 import { readPendingAccountConversion } from "#src/data-fetching/account-conversion-storage.js";
-import { hasPendingSharedUrl } from "#src/platform/share-intake.js";
 
 export const Route = createFileRoute("/")({
   component: IndexPage,
@@ -21,8 +21,7 @@ export const Route = createFileRoute("/")({
      * stored request before it opens the reader.
      */
     if (session && readPendingAccountConversion() === null) {
-      // Share intake also navigates a signed-in listener to the Add dialog; both must end there.
-      throw redirect({ to: hasPendingSharedUrl() ? "/recent/add" : "/recent", replace: true });
+      throw redirect({ to: signedInHomeTarget(), replace: true });
     }
   },
   // Shown only on a cold start, while auth settles.
