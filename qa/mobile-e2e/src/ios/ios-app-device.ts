@@ -107,6 +107,15 @@ export class IosAppDevice implements AppDevice {
     await this.driver.execute("mobile: pressButton", { name: "home" });
   }
 
+  /**
+   * Opens `url` in Cup, as the Share Extension's handoff does, so a running Cup receives it through
+   * its scene's `openURLContexts`. Cup must run with the launch arguments, because a URL that
+   * starts Cup gets none and would reach `https://cup.audio`.
+   */
+  async openUrl(url: string): Promise<void> {
+    await this.driver.execute("mobile: deepLink", { url, bundleId: BUNDLE_ID });
+  }
+
   async webView(): Promise<WebdriverIO.Browser> {
     // A relaunch gives the WebView a new context, named after Cup's new process.
     await this.driver.switchContext("NATIVE_APP");
@@ -132,6 +141,14 @@ export class IosAppDevice implements AppDevice {
     await Promise.all([...this.relays.keys()].map((port) => this.unexposeHostPort(port)));
     await this.driver.deleteSession();
   }
+}
+
+/** For platform-only specs in `test/ios/`, which run on the iOS project only. */
+export function asIosAppDevice(device: AppDevice): IosAppDevice {
+  if (!(device instanceof IosAppDevice)) {
+    throw new Error(`Expected the iOS device, got ${device.platform}.`);
+  }
+  return device;
 }
 
 function isCupPage(context: unknown): context is { id: string } {
