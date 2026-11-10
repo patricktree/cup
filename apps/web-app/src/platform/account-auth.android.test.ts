@@ -58,7 +58,10 @@ async function signInFailingWith(
       },
     };
     try {
-      await module.signInWithGoogle(client, "client-id.apps.googleusercontent.com", false);
+      await module.signInWithGoogle(client, "client-id.apps.googleusercontent.com", {
+        fresh: false,
+        chooseAccount: false,
+      });
       return { outcome: "resolved" as const, exchanged };
     } catch (error) {
       return {

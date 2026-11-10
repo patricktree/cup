@@ -29,13 +29,26 @@ export type SignInMethod = "google" | "test-account";
 /** A fresh sign-in authenticates again even when the provider still has a session. */
 export type SignInRequest = { method: SignInMethod; fresh: boolean };
 
+/**
+ * The device-local "choose account next" marker: sign-out sets it, so the next Google sign-in shows
+ * Google's account chooser and the listener can switch accounts (ADR 0019). The next session that
+ * starts clears it; a failed or cancelled sign-in keeps it.
+ */
+type AccountChooserMarker = {
+  isSet: () => Promise<boolean>;
+  set: () => Promise<void>;
+  clear: () => Promise<void>;
+};
+
 /** What initialization produces: the Supabase client and the platform operations bound to it. */
 export type AccountAuthConnection = {
   client: AccountAuthClient;
   /** The methods the auth configuration offers, in the order the sign-in dialog shows them. */
   signInMethods: readonly SignInMethod[];
-  signIn: (request: SignInRequest) => Promise<void>;
+  /** `chooseAccount` asks Google for its account chooser; the test account ignores it. */
+  signIn: (request: SignInRequest & { chooseAccount: boolean }) => Promise<void>;
   clearStoredSession: () => Promise<void>;
+  accountChooserMarker: AccountChooserMarker;
 };
 
 export type AccountAuthState =
@@ -125,7 +138,8 @@ export const accountSessionMachine = setup({
       { connection: AccountAuthConnection; request: SignInRequest; reply: Reply<void> }
     >(async ({ input }) => {
       try {
-        await input.connection.signIn(input.request);
+        const chooseAccount = await input.connection.accountChooserMarker.isSet();
+        await input.connection.signIn({ ...input.request, chooseAccount });
         input.reply.resolve();
       } catch (error) {
         input.reply.reject(error);
@@ -137,6 +151,7 @@ export const accountSessionMachine = setup({
         const response = await input.client.auth.signOut({ scope: "local" });
         await input.client.auth.stopAutoRefresh();
         await input.clearStoredSession();
+        await input.accountChooserMarker.set();
         return { isRevocationConfirmed: !response.error };
       },
     ),
@@ -160,6 +175,11 @@ export const accountSessionMachine = setup({
         return event.session;
       },
     }),
+    // A web sign-in returns before Google does, so only a session that starts shows the sign-in
+    // succeeded.
+    clearAccountChooserMarker: ({ context }) => {
+      void requireConnection(context).accountChooserMarker.clear();
+    },
     forgetSignIn: assign({ signIn: undefined }),
     queueSignOut: assign({
       session: null,
@@ -246,6 +266,7 @@ export const accountSessionMachine = setup({
                   enqueueActions(({ event, enqueue }) => {
                     if (event.output) {
                       enqueue("clearLastGrantId");
+                      enqueue("clearAccountChooserMarker");
                     }
                   }),
                   assign({ session: ({ event }) => event.output }),
@@ -331,6 +352,7 @@ export const accountSessionMachine = setup({
                   enqueueActions(({ event, enqueue }) => {
                     if (event.session) {
                       enqueue("clearLastGrantId");
+                      enqueue("clearAccountChooserMarker");
                     }
                   }),
                   "assignSessionFromEvent",
@@ -371,7 +393,12 @@ export const accountSessionMachine = setup({
                 SESSION_CHANGED: {
                   guard: "startsSession",
                   target: "signedIn",
-                  actions: ["stopPlayback", "clearLastGrantId", "assignSessionFromEvent"],
+                  actions: [
+                    "stopPlayback",
+                    "clearLastGrantId",
+                    "clearAccountChooserMarker",
+                    "assignSessionFromEvent",
+                  ],
                 },
               },
             },
@@ -395,7 +422,12 @@ export const accountSessionMachine = setup({
                 SESSION_CHANGED: {
                   // The provider reports the new session before the sign-in call returns.
                   guard: "startsSession",
-                  actions: ["stopPlayback", "clearLastGrantId", "assignSessionFromEvent"],
+                  actions: [
+                    "stopPlayback",
+                    "clearLastGrantId",
+                    "clearAccountChooserMarker",
+                    "assignSessionFromEvent",
+                  ],
                 },
               },
             },

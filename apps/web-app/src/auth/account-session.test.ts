@@ -175,8 +175,11 @@ function startMachine({
   const pendingRevocations: Array<() => void> = [];
   const pendingSignIns: Array<() => void> = [];
   const appStateListeners = new Set<(isActive: boolean) => void>();
+  const signInRequests: Array<Parameters<AccountAuthConnection["signIn"]>[0]> = [];
   const fakes = {
     session: restored,
+    isChoosingAccountNext: false,
+    signInError: null as Error | null,
     shouldHoldSessionReads: false,
     shouldHoldRevocations: false,
     shouldHoldSignIns: false,
@@ -219,16 +222,29 @@ function startMachine({
   const connection: AccountAuthConnection = {
     client: { auth: fakeAuth },
     signInMethods: ["google"],
-    signIn: async ({ method, fresh }) => {
-      effects.push(`signIn(${method}, fresh: ${String(fresh)})`);
+    signIn: async (signInRequest) => {
+      effects.push(`signIn(${signInRequest.method}, fresh: ${String(signInRequest.fresh)})`);
+      signInRequests.push(signInRequest);
       if (fakes.shouldHoldSignIns) {
         await new Promise<void>((resolve) => {
           pendingSignIns.push(resolve);
         });
       }
+      if (fakes.signInError) {
+        throw fakes.signInError;
+      }
     },
     clearStoredSession: async () => {
       effects.push("clearStoredSession");
+    },
+    accountChooserMarker: {
+      isSet: async () => fakes.isChoosingAccountNext,
+      set: async () => {
+        fakes.isChoosingAccountNext = true;
+      },
+      clear: async () => {
+        fakes.isChoosingAccountNext = false;
+      },
     },
   };
 
@@ -271,6 +287,7 @@ function startMachine({
     pendingSessionReads,
     pendingRevocations,
     pendingSignIns,
+    signInRequests,
     initialize: async () => {
       actor.send({ type: "INITIALIZE" });
       await waitFor(actor, (snapshot) => snapshot.hasTag("initialized"));
@@ -407,9 +424,9 @@ test("an account session reported during sign-in signs in without clearing queri
 
   expect(machine.effects).toEqual([
     "stopPlayback",
-    "signIn(google, fresh: false)",
     "stopPlayback",
     "clearLastGrantId",
+    "signIn(google, fresh: false)",
   ]);
   expect(machine.actor.getSnapshot().matches({ connected: { ready: "signedIn" } })).toBe(true);
 });
@@ -567,4 +584,55 @@ test("in the apps, the foreground starts auto refresh and the background stops i
     "supabase.stopAutoRefresh",
     "supabase.startAutoRefresh",
   ]);
+});
+
+test("the first sign-in after a sign-out asks for the account chooser until a session starts", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+  await machine.initialize();
+  await machine.signIn();
+
+  await machine.signOut();
+  await machine.signIn();
+  // The provider reports the session once Google returns.
+  machine.emitAuthChange(createSession("other"));
+  await settle();
+  await machine.signIn();
+
+  expect(machine.signInRequests).toEqual([
+    { method: "google", fresh: false, chooseAccount: false },
+    { method: "google", fresh: false, chooseAccount: true },
+    { method: "google", fresh: false, chooseAccount: false },
+  ]);
+  expect(machine.fakes.isChoosingAccountNext).toBe(false);
+});
+
+test("a failed, cancelled or unfinished sign-in after a sign-out keeps asking for the account chooser", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+  await machine.initialize();
+  await machine.signOut();
+
+  machine.fakes.signInError = new Error("The user canceled the sign-in flow.");
+  await expect(machine.signIn()).rejects.toThrow("The user canceled the sign-in flow.");
+  await settle();
+  machine.fakes.signInError = null;
+  // On the web, the sign-in returns once the browser leaves for Google, before any session exists.
+  await machine.signIn();
+  await settle();
+  await machine.signIn();
+
+  expect(machine.signInRequests).toEqual([
+    { method: "google", fresh: false, chooseAccount: true },
+    { method: "google", fresh: false, chooseAccount: true },
+    { method: "google", fresh: false, chooseAccount: true },
+  ]);
+  expect(machine.fakes.isChoosingAccountNext).toBe(true);
+});
+
+test("a session restored after Google's redirect stops asking for the account chooser", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+  machine.fakes.isChoosingAccountNext = true;
+
+  await machine.initialize();
+
+  expect(machine.fakes.isChoosingAccountNext).toBe(false);
 });

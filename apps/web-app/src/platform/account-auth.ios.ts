@@ -2,7 +2,10 @@ import { registerPlugin } from "@capacitor/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { initializeAuthStorage as initializeSecureAuthStorage } from "#src/platform/account-auth.native.js";
-import { googleAuthorizationParams } from "#src/platform/account-auth.web.js";
+import {
+  googleAuthorizationParams,
+  type GoogleSignInOptions,
+} from "#src/platform/account-auth.web.js";
 
 export { watchAppState } from "#src/platform/account-auth.native.js";
 
@@ -44,14 +47,14 @@ const webAuthentication = registerPlugin<WebAuthenticationPlugin>("WebAuthentica
 export async function signInWithGoogle(
   client: SupabaseClient,
   _googleClientId: string | undefined,
-  fresh: boolean,
+  options: GoogleSignInOptions,
 ) {
   const authorization = await client.auth.signInWithOAuth({
     provider: "google",
     options: {
       redirectTo: IOS_AUTH_CALLBACK_URL,
       skipBrowserRedirect: true,
-      queryParams: googleAuthorizationParams(fresh),
+      queryParams: googleAuthorizationParams(options),
     },
   });
   if (authorization.error) {

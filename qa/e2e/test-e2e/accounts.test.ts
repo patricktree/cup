@@ -13,6 +13,8 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   page,
   workerEnvironment,
 }) => {
+  // Five sign-ins and two conversions take longer than the default 30 seconds in WebKit.
+  test.setTimeout(60_000);
   const { origin, authProvider } = workerEnvironment;
   await page.goto(`${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
@@ -23,6 +25,8 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   await signup.getByRole("button", { name: "Continue with Google" }).click();
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
   expect(authProvider.exchanges()).toBe(1);
+  // Without a sign-out on this device, Cup lets Google skip its account chooser.
+  expect(authProvider.authorizationRequests().at(-1)).not.toHaveProperty("prompt");
   const conversionId = new URL(page.url()).pathname.split("/").at(-1);
   await waitForAudiobook(page);
   if (!conversionId) {
@@ -60,6 +64,11 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   await page.getByRole("button", { name: "Delete account…" }).click();
   await expect(page.getByRole("button", { name: "Schedule deletion" })).toBeVisible();
   await expect.poll(() => authProvider.exchanges()).toBe(2);
+  // The fresh sign-in before deletion authenticates again and keeps the account chooser.
+  expect(authProvider.authorizationRequests().at(-1)).toMatchObject({
+    prompt: "select_account",
+    max_age: "0",
+  });
   await scheduleDeletion(page);
   // Scheduling deletion signs the browser out, and signed out, Recents and its dialogs lead home.
   await expect(page).toHaveURL(`${origin}/app/`);
@@ -71,12 +80,21 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   await page.getByRole("button", { name: "Listen" }).click();
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect.poll(() => authProvider.exchanges()).toBe(3);
+  // Deletion signed the browser out, so the next sign-in lets the listener switch accounts.
+  expect(authProvider.authorizationRequests().at(-1)).toMatchObject({ prompt: "select_account" });
+  expect(authProvider.authorizationRequests().at(-1)).not.toHaveProperty("max_age");
   await expect(page.getByRole("alert")).toBeVisible();
+  // A session that ends without a sign-out, here by dropping the stored copy, keeps the next
+  // sign-in free of the chooser: the successful sign-in above cleared the request for it.
+  await page.evaluate(() => localStorage.removeItem("cup_supabase_session"));
   // The scheduled-deletion email links the account recovery page.
   await page.goto(`${origin}/app/account-recovery`);
+  await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
+  await expect.poll(() => authProvider.exchanges()).toBe(4);
+  expect(authProvider.authorizationRequests().at(-1)).not.toHaveProperty("prompt");
   await expect(page.getByRole("heading", { name: "Deletion scheduled" })).toBeVisible();
   await page.getByRole("button", { name: "Restore account…" }).click();
-  await expect.poll(() => authProvider.exchanges()).toBe(4);
+  await expect.poll(() => authProvider.exchanges()).toBe(5);
   await page.getByRole("button", { name: "Confirm recovery" }).click();
   await expect(
     page.getByText(
