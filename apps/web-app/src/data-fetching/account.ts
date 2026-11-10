@@ -13,6 +13,7 @@ import {
 import { requestApi, RpcError } from "#src/data-fetching/api-request.js";
 import { queryClient } from "#src/data-fetching/query-client.js";
 import { QUERY_KEYS } from "#src/data-fetching/query-keys.js";
+import { SignInCancelledError } from "#src/errors.js";
 
 export const accountQuery = (subject: string) =>
   queryOptions({
@@ -36,7 +37,16 @@ export function useSignInMutation() {
   return useMutation({
     // The sign-in dialog keeps its failure next to the button that tries again.
     meta: { errorDisplay: "inline" },
-    mutationFn: (method: SignInMethod) => signIn(method),
+    mutationFn: async (method: SignInMethod) => {
+      try {
+        await signIn(method);
+      } catch (error) {
+        // Backing out is the person's choice, so the dialog stays open without an error.
+        if (!(error instanceof SignInCancelledError)) {
+          throw error;
+        }
+      }
+    },
   });
 }
 

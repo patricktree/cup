@@ -15,11 +15,23 @@ export class UserFacingError extends Error {
   readonly title: string;
   readonly detail: string | undefined;
 
-  constructor({ title, detail }: { title: string; detail?: string }) {
-    super(detail === undefined ? title : `${title} ${detail}`);
+  constructor({ title, detail, cause }: { title: string; detail?: string; cause?: unknown }) {
+    super(detail === undefined ? title : `${title} ${detail}`, { cause });
     this.name = "UserFacingError";
     this.title = title;
     this.detail = detail;
+  }
+}
+
+/**
+ * A sign-in the person backed out of. Screens that only offer sign-in show nothing, because the
+ * person chose it; a step that needed the sign-in, such as confirming account deletion, says why it
+ * stopped.
+ */
+export class SignInCancelledError extends UserFacingError {
+  constructor({ cause }: { cause?: unknown } = {}) {
+    super({ title: "Google sign-in was cancelled.", cause });
+    this.name = "SignInCancelledError";
   }
 }
 
