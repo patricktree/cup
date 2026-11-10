@@ -1,9 +1,22 @@
 import { registerPlugin } from "@capacitor/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { initializeAuthStorage as initializeSecureAuthStorage } from "#src/platform/account-auth.native.js";
 import { googleAuthorizationParams } from "#src/platform/account-auth.web.js";
 
-export { initializeAuthStorage } from "#src/platform/account-auth.native.js";
+/**
+ * Prepares Secure Storage for the account session, writing its Keychain items readable after the
+ * device's first unlock instead of only while it is unlocked: a token refresh during background
+ * audio with the screen locked can then read the session and persist the rotated refresh token.
+ * Items written before keep their accessibility, stay readable, and take the new one on their next
+ * write, the session's next refresh.
+ */
+export async function initializeAuthStorage(storageKeys: readonly string[]) {
+  const authStorage = await initializeSecureAuthStorage(storageKeys);
+  const { KeychainAccess } = await import("@aparajita/capacitor-secure-storage");
+  await authStorage.storage.setDefaultKeychainAccess(KeychainAccess.afterFirstUnlock);
+  return authStorage;
+}
 
 /**
  * Where Supabase sends the browser back after Google: the app's own scheme, which the native
