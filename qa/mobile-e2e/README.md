@@ -39,6 +39,28 @@ pnpm run test:e2e:mobile --project android
 pnpm run test:e2e:mobile --project ios
 ```
 
+## Debug a test
+
+When a test fails, the suite keeps what the device and the test Worker showed at that moment in the git-ignored `qa/mobile-e2e/test-output/<platform>/<spec>/<test>/` and prints the folder's path:
+
+- `screenshot.png`: the device's screen
+- `native-page-source.xml`: the native view hierarchy, which includes system screens such as Google's add-account screen
+- `webview-dom.html`: the DOM of the WebView the test was in, or of Cup's WebView when the test was in the native context
+- `device.log`: the device log since the test started. On Android it is a one-off `adb -s <serial> logcat -d` dump of the run's emulator; Appium's own logcat capture stays off (see [Finding Cup's WebView](#finding-cups-webview-android)). On iOS it is the run's simulator's `log show --last <n>m`, in whole minutes since the test started, limited to the processes a test involves: Cup, its share extension, WebKit's processes and Safari. Unfiltered, a new simulator logged 86 MB of system daemons in one minute.
+- `worker.log`: the test Worker's Wrangler output, including each request it received
+
+An artifact the suite could not capture, such as the WebView's DOM when Cup shows no page, is written as `<file>.missing.txt` with the reason. Each capture gets 20 seconds; once the Appium session leaves one unanswered, the suite skips the remaining captures through it. Passing tests leave nothing behind, and each platform's run first removes the folder its previous run left.
+
+To keep a failed test's Worker persistence directory for inspection, run:
+
+```sh
+E2E_RETAIN_STATE=1 pnpm run test:e2e:mobile
+```
+
+The test's folder then holds `worker-persistence-directory.txt` with the retained directory's path.
+
+To stream each test Worker's Wrangler logs to the terminal while a test runs, add `E2E_STREAM_WRANGLER=1`. Both flags are the [web suite's](../e2e/README.md#debug-a-test), so one setting applies to `pnpm validate:extended` as a whole.
+
 ## Isolation
 
 Runs in several checkouts can go at once. Each run boots its own emulator, which picks its own console port and reports it back, and addresses it by serial; it never kills the shared adb server or touches a device it did not start. Appium, UiAutomator2, Chromedriver, every test Worker and fake auth provider listen on ports the operating system assigns. `adb reverse` makes each test's Worker and fake auth provider reachable at `http://localhost:<port>` on the emulator.
@@ -94,7 +116,8 @@ One Android test launches with the real plugin (`realGoogleSignIn: true`) on the
 ## Layout
 
 - [`src/app-device.ts`](src/app-device.ts): the device-control interface every spec uses. Platform-only steps live on the platform's class, such as [`AndroidAppDevice`](src/android/android-app-device.ts).
-- [`src/fixtures.ts`](src/fixtures.ts): `useMobileApp()` opens the spec file's session and gives each test its own Worker.
+- [`src/fixtures.ts`](src/fixtures.ts): `useMobileApp()` opens the spec file's session, gives each test its own Worker and keeps a failed test's artifacts.
+- [`src/failure-artifacts.ts`](src/failure-artifacts.ts): the output folder and the artifacts captured through the Appium session.
 - [`src/journeys.ts`](src/journeys.ts) and [`src/share-assertions.ts`](src/share-assertions.ts): WebView journeys and share assertions that specs of several platforms share.
 - [`src/android/`](src/android/): the Android preflight check, build, emulator and global setup.
 - [`src/ios/`](src/ios/): the iOS preflight check, build, simulator, WebDriverAgent build, `::1` relay, the page Safari shares and global setup.

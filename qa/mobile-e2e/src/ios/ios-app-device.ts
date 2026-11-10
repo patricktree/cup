@@ -1,6 +1,7 @@
 import { remote } from "webdriverio";
 
 import type { AppDevice, LaunchArguments } from "#src/app-device.ts";
+import { appiumFailureArtifacts, type FailureArtifact } from "#src/failure-artifacts.ts";
 import { reservePort, run, waitFor } from "#src/host.ts";
 import { startLoopbackRelay, type LoopbackRelay } from "#src/ios/loopback-relay.ts";
 import { SHARED_PAGE_HEADING } from "#src/ios/shared-page.ts";
@@ -23,6 +24,13 @@ const SAFARI_BUNDLE_ID = "com.apple.mobilesafari";
  * `-cupTestApiOrigin <origin>`, it lands in the arguments domain of Cup's defaults.
  */
 const API_ORIGIN_KEY = "cupTestApiOrigin";
+/** Cup, its share extension, WebKit's processes and Safari: the processes a test involves. */
+const DEVICE_LOG_PREDICATE = [
+  'process == "App"',
+  'process == "CupShare"',
+  'process BEGINSWITH "com.apple.WebKit"',
+  'process == "MobileSafari"',
+].join(" OR ");
 /** Where Capacitor serves the bundled web app. */
 const CUP_PAGE_ORIGIN = "capacitor://localhost";
 
@@ -84,6 +92,8 @@ export class IosAppDevice implements AppDevice {
   private readonly driver: WebdriverIO.Browser;
   private readonly relays = new Map<number, LoopbackRelay>();
   private lastLaunchArguments: LaunchArguments | undefined;
+  /** When the test started, from `performance.now()`. */
+  private testStart: number | undefined;
 
   constructor(target: IosTarget, driver: WebdriverIO.Browser) {
     this.target = target;
@@ -230,6 +240,43 @@ export class IosAppDevice implements AppDevice {
     );
     await this.driver.switchContext(webViewContext);
     return this.driver;
+  }
+
+  async markTestStart(): Promise<void> {
+    this.testStart = performance.now();
+  }
+
+  failureArtifacts(): FailureArtifact[] {
+    return appiumFailureArtifacts({
+      driver: this.driver,
+      // Only a page Cup rendered: Appium hangs for minutes when asked to attach to a blank WebView.
+      findWebViewContext: async () => {
+        const contexts: unknown = await this.driver.execute("mobile: getContexts");
+        return Array.isArray(contexts) ? contexts.findLast(isCupPage)?.id : undefined;
+      },
+      // The simulator's unified log over the whole minutes since the test started, as `log show`
+      // takes durations in minutes at the finest. Unfiltered, the first minute of a new simulator
+      // logged 450,000 lines (86 MB), and its errors alone 50,000, nearly all of system daemons
+      // (2026-11-10), so it keeps the processes a test involves.
+      readDeviceLog: async () => {
+        const elapsedMs = performance.now() - (this.testStart ?? performance.now());
+        const minutes = Math.max(1, Math.ceil(elapsedMs / 60_000));
+        const { stdout } = await run("xcrun", [
+          "simctl",
+          "spawn",
+          this.target.udid,
+          "log",
+          "show",
+          "--style",
+          "compact",
+          "--last",
+          `${minutes}m`,
+          "--predicate",
+          DEVICE_LOG_PREDICATE,
+        ]);
+        return stdout;
+      },
+    });
   }
 
   private async tap(predicate: string, description: string): Promise<void> {

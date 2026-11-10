@@ -1,6 +1,7 @@
 import type { TestProject } from "vitest/node";
 
 import { startAppium, type AppiumServer } from "#src/appium.ts";
+import { clearFailureArtifacts } from "#src/failure-artifacts.ts";
 import { run } from "#src/host.ts";
 import { buildIosDebugApp } from "#src/ios/build.ts";
 import { checkIosHost } from "#src/ios/preflight.ts";
@@ -14,6 +15,7 @@ import { ensureWebDriverAgent } from "#src/ios/web-driver-agent.ts";
  */
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
   const host = await checkIosHost();
+  await clearFailureArtifacts("ios");
 
   const started: { simulator?: Simulator; appium?: AppiumServer } = {};
   const teardown = async (): Promise<void> => {

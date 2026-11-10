@@ -1,6 +1,7 @@
 import { remote } from "webdriverio";
 
 import type { AppDevice, LaunchArguments } from "#src/app-device.ts";
+import { appiumFailureArtifacts, type FailureArtifact } from "#src/failure-artifacts.ts";
 import { reservePort, run, waitFor, type CommandResult } from "#src/host.ts";
 
 /** What the Android global setup hands each spec file: the run's device and Appium server. */
@@ -73,6 +74,8 @@ export class AndroidAppDevice implements AppDevice {
   private readonly target: AndroidTarget;
   private readonly driver: WebdriverIO.Browser;
   private lastLaunchArguments: AndroidLaunchArguments | undefined;
+  /** The emulator clock at the test start, in the epoch format `logcat -T` accepts. */
+  private testStart: string | undefined;
 
   constructor(target: AndroidTarget, driver: WebdriverIO.Browser) {
     this.target = target;
@@ -247,6 +250,34 @@ export class AndroidAppDevice implements AppDevice {
     );
     await this.driver.switchContext(WEBVIEW_CONTEXT);
     return this.driver;
+  }
+
+  async markTestStart(): Promise<void> {
+    const { stdout } = await this.adb(["shell", "date", "+%s"]);
+    this.testStart = `${stdout.trim()}.000`;
+  }
+
+  failureArtifacts(): FailureArtifact[] {
+    return appiumFailureArtifacts({
+      driver: this.driver,
+      findWebViewContext: async () => {
+        const contexts = await this.driver.getContexts();
+        const ids = contexts.map((context) => (typeof context === "string" ? context : context.id));
+        return ids.includes(WEBVIEW_CONTEXT) ? WEBVIEW_CONTEXT : undefined;
+      },
+      // A one-off dump of the log buffer since the test started. Appium's logcat capture stays off;
+      // see `skipLogcatCapture`.
+      readDeviceLog: async () => {
+        const { stdout } = await this.adb([
+          "logcat",
+          "-d",
+          "-v",
+          "threadtime",
+          ...(this.testStart === undefined ? [] : ["-T", this.testStart]),
+        ]);
+        return stdout;
+      },
+    });
   }
 
   async close(): Promise<void> {
