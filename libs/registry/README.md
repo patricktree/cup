@@ -21,7 +21,7 @@ After editing schemas, generate and verify migrations:
 ```sh
 pnpm --filter @cup/registry migrations:generate --name describe_change
 pnpm --filter @cup/registry test
-pnpm validate:fast
+pnpm gate:review
 ```
 
 Once deployed, append migrations instead of rewriting the baseline. Drizzle Kit rebuilds a table to add a constrained column and copies the new column from the old table, which lacks it; list only the existing columns in the copy, as the [account usage projection](drizzle/registry/0001_account_usage_projection.sql) does. Tests verify schema snapshots and bundled SQL, legacy preservation and migration replay, ownership conflicts, and account provisioning and deletion alongside trial grants.

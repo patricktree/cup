@@ -30,7 +30,7 @@ From the repository root:
 pnpm run test:e2e:mobile
 ```
 
-This builds the workspace, then each platform syncs the production web bundle into its native project, builds the debug app (the APK with Gradle, the simulator app with `xcodebuild`), starts its device and Appium, installs the app and runs the specs one after another. The suite runs in `pnpm validate:extended` and `pnpm validate`, after the web E2E suites.
+This builds the workspace, then each platform syncs the production web bundle into its native project, builds the debug app (the APK with Gradle, the simulator app with `xcodebuild`), starts its device and Appium, installs the app and runs the specs one after another. The suite runs in the [deploy gate](../../tooling/validation-gates/README.md), after the web E2E suites.
 
 To run one platform, name its Vitest project:
 
@@ -48,7 +48,7 @@ The suite's budget is about 10 minutes for both platforms on a warm Mac, one wit
 | Warm                             | 1 min 59 s         | 2 min 51 s     | 4 min 50 s |
 | New checkout, drivers to install | 2 min 18 s         | 3 min 10 s     | 5 min 28 s |
 
-Vitest reported 116 s for Android and 166 s for iOS, of which the tests took 112 s and 142 s, and 303 s for both platforms in one `pnpm run test:e2e:mobile` within `pnpm validate`; the rest is the cached workspace and app builds, the preflight check, and starting the device and Appium. The iOS share tests through Safari's Share Sheet take 12 to 20 seconds each. A Mac's first run, which also creates the emulator's snapshot and builds WebDriverAgent, takes several minutes longer.
+Vitest reported 116 s for Android and 166 s for iOS, of which the tests took 112 s and 142 s, and 303 s for both platforms in one `pnpm run test:e2e:mobile` within a full validation run; the rest is the cached workspace and app builds, the preflight check, and starting the device and Appium. The iOS share tests through Safari's Share Sheet take 12 to 20 seconds each. A Mac's first run, which also creates the emulator's snapshot and builds WebDriverAgent, takes several minutes longer.
 
 Later on 2026-11-10, after iOS gained its signed-in tests ([CUP-60](https://linear.app/cup-audio/issue/CUP-60)), three consecutive warm iOS runs of 18 tests took 4 min 40 s to 4 min 46 s, while other checkouts loaded the Mac; Vitest reported 276 to 282 s, of which the tests took 253 to 255 s. With Android unchanged, both platforms take about 7 minutes warm, within the budget; Android was not measured again.
 
@@ -72,7 +72,7 @@ E2E_RETAIN_STATE=1 pnpm run test:e2e:mobile
 
 The test's folder then holds `worker-persistence-directory.txt` with the retained directory's path.
 
-To stream each test Worker's Wrangler logs to the terminal while a test runs, add `E2E_STREAM_WRANGLER=1`. Both flags are the [web suite's](../e2e/README.md#debug-a-test), so one setting applies to `pnpm validate:extended` as a whole.
+To stream each test Worker's Wrangler logs to the terminal while a test runs, add `E2E_STREAM_WRANGLER=1`. Both flags are the [web suite's](../e2e/README.md#debug-a-test), so one setting applies to a whole validation gate run.
 
 ## Isolation
 

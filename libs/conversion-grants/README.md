@@ -36,7 +36,7 @@ From a configured repository checkout with dependencies installed:
 
    ```sh
    pnpm --filter @cup/conversion-grants test
-   pnpm validate:fast
+   pnpm gate:review
    ```
 
 If a rebase leaves two branches' migrations with the same number, follow [Renumber a migration after a rebase](../accounts/README.md#renumber-a-migration-after-a-rebase) with `@cup/conversion-grants`.

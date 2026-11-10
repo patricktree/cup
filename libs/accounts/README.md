@@ -21,7 +21,7 @@ After editing a schema, generate migrations from the repository root:
 ```sh
 pnpm --filter @cup/accounts migrations:generate --name describe_change
 pnpm --filter @cup/accounts test
-pnpm validate:fast
+pnpm gate:review
 ```
 
 Review generated SQL, snapshots, journals, and Worker bundles together. Add migrations after a baseline is deployed instead of rewriting applied history. Drizzle Kit cannot rename tables or columns non-interactively and does not carry data through rebuilt tables; for such a change, pass `--custom` to the generator, write SQL that moves the existing rows, and test it against data written by the previous migrations. The generator records the current schema as the custom migration's snapshot. Foreign keys stay enforced inside the migration transaction, so rebuilding a referenced table means rebuilding the tables that reference it too, as the [ledger alignment](drizzle/account/0005_align_duration_ledger_schema.sql) does. When Drizzle Kit rebuilds a table to add a constrained column, it also copies the new column from the old table, which lacks it; list only the existing columns in the copy, as the [usage confirmation](drizzle/account/0006_registry_usage_projection.sql) does. Tests verify schema-to-snapshot and bundle-to-SQL agreement while registry integration tests cover account accounting, dispatch, deletion, fencing, and shared ownership.

@@ -22,5 +22,5 @@
 
 ## Commands
 
-- During development: `pnpm validate:fast` from the repo root. Before pushing to `main` (shipping to production): `pnpm validate`.
+- During development: the narrowest check that covers the change, such as `pnpm --filter '@cup/web-app' test:components`. Before review, merge, and deploy: the matching [validation gate](../../AGENTS.md#validation-gates) from the repo root.
 - Run locally through its host: `pnpm --filter '@cup/cloudflare-worker' dev`.

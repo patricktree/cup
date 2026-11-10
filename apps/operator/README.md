@@ -36,10 +36,10 @@ Terraform declares the existing Access application and its allow policy in the [
    - `OPERATOR_ACCESS_AUDIENCE` as the Access application's AUD tag.
    - `OPERATOR_EMAIL` as the exact email address allowed to operate grants.
 
-9. Validate and deploy the Worker:
+9. In the main checkout, run the deploy gate and deploy the Worker:
 
    ```sh
-   pnpm validate
+   pnpm gate:deploy
    pnpm --filter '@cup/cloudflare-worker' run deploy
    ```
 

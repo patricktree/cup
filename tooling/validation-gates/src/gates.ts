@@ -128,6 +128,7 @@ const REVIEW_GATE: Gate = {
         "--output-logs=errors-only",
       ],
     },
+    // Knip loads the Worker's Vite config, which requires the built web app, so it runs after the build.
     { name: "Knip", command: ["pnpm", "run", "declutter"] },
     { name: "Brand-assets check", command: ["pnpm", "run", "brand-assets:check"] },
     { name: "Zizmor", command: ["pnpm", "run", "zizmor"] },
