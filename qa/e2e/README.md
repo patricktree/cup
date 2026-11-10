@@ -22,7 +22,7 @@ pnpm run test:e2e:app
 
 This command builds the workspace and runs the tests with at most two parallel workers. Each test starts an isolated Wrangler process with its own port and persistence directory.
 
-This suite runs in the merge and deploy [validation gates](../../tooling/validation-gates/README.md). The root `pnpm test:e2e` command runs this suite followed by the live source-material extraction suite.
+This suite runs in the merge and deploy [validation gates](../../AGENTS.md#validation-gates). The root `pnpm test:e2e` command runs this suite followed by the live source-material extraction suite.
 
 The [routing tests](test-e2e/routing.test.ts) exercise the built Worker's redirects and asset serving; the legacy trial redirect test uses a real browser because fragments are not sent in HTTP requests. The [navigation journey](test-e2e/navigation.test.ts) checks that Recents and a reopened track show their cached content in the production build while their refetches are held, which the web app's development-build component tests cannot show.
 

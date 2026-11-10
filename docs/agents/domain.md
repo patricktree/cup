@@ -73,4 +73,4 @@ Keep each rule in one home, such as the glossary for meaning and one architectur
 
 ## Complete the change
 
-New pages are indexed, moved or renamed pages have no broken inbound links, and `pnpm docs:check` passes along with the applicable repository validation. Its Markdown, local-link and Mermaid parse checks also run in every [validation gate](../../tooling/validation-gates/README.md). These checks prove structure, not accuracy, deployment state or external URL validity, so read changed prose and diagrams once more against the code they describe.
+New pages are indexed, moved or renamed pages have no broken inbound links, and `pnpm docs:check` passes along with the applicable repository validation. Its Markdown, local-link and Mermaid parse checks also run in every [validation gate](../../AGENTS.md#validation-gates). These checks prove structure, not accuracy, deployment state or external URL validity, so read changed prose and diagrams once more against the code they describe.

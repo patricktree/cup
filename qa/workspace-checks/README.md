@@ -1,6 +1,6 @@
 # Workspace checks
 
-Tests for invariants that span every workspace package. Every [validation gate](../../tooling/validation-gates/README.md) runs them with the other package tests; run them alone with `pnpm --filter @cup/workspace-checks test`. Turbo never caches them, because they read files in every other package, outside this package's cache inputs.
+Tests for invariants that span every workspace package. Every [validation gate](../../AGENTS.md#validation-gates) runs them with the other package tests; run them alone with `pnpm --filter @cup/workspace-checks test`. Turbo never caches them, because they read files in every other package, outside this package's cache inputs.
 
 ## Package export check
 
