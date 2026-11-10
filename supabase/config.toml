@@ -26,6 +26,8 @@ additional_redirect_urls = [
   "http://localhost:5173/app/**",
   "http://127.0.0.1:5173/app/**",
   "env(CUP_LOCAL_REDIRECT_URL)",
+  # Where the iOS app's sign-in sheet returns to Cup.
+  "audio.cup.app://auth/callback",
 ]
 jwt_issuer = "env(CUP_LOCAL_JWT_ISSUER)"
 jwt_expiry = 300

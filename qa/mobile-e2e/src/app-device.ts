@@ -32,6 +32,12 @@ export type AppDevice = {
   /** Sends the app to the background, as the home button does. */
   background(): Promise<void>;
   /**
+   * Takes the steps the platform puts between tapping "Continue with Google" and the fake auth
+   * provider's answer, then returns to the WebView. Android's sign-in fake needs none; iOS asks the
+   * listener to let Cup use the auth provider's site to sign in.
+   */
+  continueGoogleSignIn(): Promise<void>;
+  /**
    * Waits until the app shows its WebView and returns the session switched into it, so the spec
    * reads what the listener sees in the WebView's DOM.
    */

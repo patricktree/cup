@@ -13,8 +13,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.5.3"),
         .package(name: "AparajitaCapacitorSecureStorage", path: "../../../../../node_modules/.pnpm/@aparajita+capacitor-secure-storage@8.0.1/node_modules/@aparajita/capacitor-secure-storage"),
-        .package(name: "CapacitorApp", path: "../../../../../node_modules/.pnpm/@capacitor+app@8.1.2_@capacitor+core@8.5.3/node_modules/@capacitor/app"),
-        .package(name: "CapawesomeCapacitorGoogleSignIn", path: "../../../../../node_modules/.pnpm/@capawesome+capacitor-google-sign-in@0.1.4_@capacitor+core@8.5.3/node_modules/@capawesome/capacitor-google-sign-in")
+        .package(name: "CapacitorApp", path: "../../../../../node_modules/.pnpm/@capacitor+app@8.1.2_@capacitor+core@8.5.3/node_modules/@capacitor/app")
     ],
     targets: [
         .target(
@@ -23,8 +22,7 @@ let package = Package(
                 .product(name: "Capacitor", package: "capacitor-swift-pm"),
                 .product(name: "Cordova", package: "capacitor-swift-pm"),
                 .product(name: "AparajitaCapacitorSecureStorage", package: "AparajitaCapacitorSecureStorage"),
-                .product(name: "CapacitorApp", package: "CapacitorApp"),
-                .product(name: "CapawesomeCapacitorGoogleSignIn", package: "CapawesomeCapacitorGoogleSignIn")
+                .product(name: "CapacitorApp", package: "CapacitorApp")
             ]
         )
     ]

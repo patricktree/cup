@@ -2,15 +2,23 @@ import Capacitor
 import UIKit
 import WebKit
 
-/// Cup's only view controller. Release builds use Capacitor's bridge unchanged.
+/// Cup's only view controller: Capacitor's bridge with the app's own plugins.
 class MainViewController: CAPBridgeViewController {
+    override func capacitorDidLoad() {
+        super.capacitorDidLoad()
+        // The app's own plugins are not npm packages, so Capacitor does not find them by itself.
+        bridge?.registerPluginInstance(WebAuthenticationPlugin())
+        #if DEBUG
+        applyTestApiOrigin()
+        #endif
+    }
+
     #if DEBUG
     /// Points the web app at the test Worker: before the page loads, sets the global that
     /// `apiOrigin()` reads. ATS's built-in exemption for `localhost` allows the plain HTTP. Capacitor
     /// replaces the configuration's content controller while preparing the WebView, so the script is
     /// added here, after the bridge exists and before `viewDidLoad` loads the page.
-    override func capacitorDidLoad() {
-        super.capacitorDidLoad()
+    private func applyTestApiOrigin() {
         // Stops the app on a malformed origin, before it can reach production.
         guard let origin = TestApiOrigin.fromDefaults(UserDefaults.standard) else {
             return

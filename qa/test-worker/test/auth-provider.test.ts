@@ -35,6 +35,53 @@ test("rejects an ID token exchange whose nonce does not match the token's", asyn
   expect(response.status).toBe(400);
 });
 
+test.each(["audio.cup.app://auth/callback", "http://127.0.0.1:5173/app/"])(
+  "sends a PKCE authorization's code to %s, where it exchanges for a session",
+  async (redirect) => {
+    const verifier = "the code verifier";
+
+    const response = await authorize(redirect, hashForPkce(verifier));
+
+    expect(response.status).toBe(302);
+    const location = new URL(response.headers.get("location") ?? "");
+    expect(location.href.startsWith(redirect)).toBe(true);
+    const session = await fetch(`${startedAuthProvider().origin}/auth/v1/token?grant_type=pkce`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        auth_code: location.searchParams.get("code"),
+        code_verifier: verifier,
+      }),
+    });
+    expect(session.status).toBe(200);
+  },
+);
+
+test.each(["audio.cup.app://share", "https://attacker.example/auth/callback"])(
+  "refuses a PKCE authorization that redirects to %s",
+  async (redirect) => {
+    const response = await authorize(redirect, hashForPkce("the code verifier"));
+
+    expect(response.status).toBe(400);
+  },
+);
+
+/** The request supabase-js `signInWithOAuth` sends the browser to, with the S256 challenge. */
+function authorize(redirect: string, challenge: string): Promise<Response> {
+  const url = new URL(`${startedAuthProvider().origin}/auth/v1/authorize`);
+  url.search = new URLSearchParams({
+    provider: "google",
+    redirect_to: redirect,
+    code_challenge: challenge,
+    code_challenge_method: "s256",
+  }).toString();
+  return fetch(url, { redirect: "manual" });
+}
+
+function hashForPkce(verifier: string): string {
+  return crypto.createHash("sha256").update(verifier).digest("base64url");
+}
+
 function startedAuthProvider() {
   if (authProvider === undefined) {
     throw new Error("The fake auth provider has not started.");

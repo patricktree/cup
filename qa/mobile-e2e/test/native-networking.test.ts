@@ -7,16 +7,13 @@ import { SOURCE_URL, signInFromLandingPage, waitForRecents } from "#src/journeys
  * Native networking through `CapacitorHttp`: the app's requests reach the Worker from native code,
  * which sends no Origin header, and the Worker's mutation check accepts them by the custom header
  * and the JSON content type.
- *
- * Android only: iOS sign-in does not work in the app yet (CUP-60), and this test needs a signed-in
- * listener. The iOS half joins once CUP-60 lands.
  */
 const app = useMobileApp();
 
 test("a conversion started from the Add dialog reaches the Worker through native networking", async () => {
   await app.device.launch({ apiOrigin: app.apiOrigin });
   const webView = await app.device.webView();
-  await signInFromLandingPage(webView);
+  await signInFromLandingPage(app.device, webView);
   await webView.$('a[aria-label="Back"]').click();
   await waitForRecents(webView, 1);
 
