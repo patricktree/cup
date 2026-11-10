@@ -4,7 +4,7 @@ status: accepted
 
 # Sign in on iOS through Supabase OAuth in a system browser sheet
 
-The iOS app reused the web sign-in: `signInWithOAuth` navigated the WebView to Supabase, Capacitor handed that navigation to Safari, and Safari could not open the `capacitor://localhost` redirect back into Cup, so no listener could sign in on iOS ([CUP-60](https://linear.app/cup-audio/issue/CUP-60)). Keeping the flow inside the WebView is no option: Google refuses OAuth in embedded WebViews. Android signs in natively: the Google sign-in plugin returns a Google ID token bound to a nonce, which Supabase exchanges. The fix for CUP-60 chose the iOS flow on 2026-11-10; the change that closes CUP-60 implements it.
+The iOS app reused the web sign-in: `signInWithOAuth` navigated the WebView to Supabase, Capacitor handed that navigation to Safari, and Safari could not open the `capacitor://localhost` redirect back into Cup, so no listener could sign in on iOS ([CUP-60](https://linear.app/cup-audio/issue/CUP-60)). Keeping the flow inside the WebView is no option: Google refuses OAuth in embedded WebViews. Android signs in natively: the Google sign-in plugin returns a Google ID token bound to a nonce, which Supabase exchanges. The fix for CUP-60 chose the iOS flow on 2026-11-10, and [patricktree/cup#227](https://github.com/patricktree/cup/pull/227) implemented it.
 
 ## Decision
 
