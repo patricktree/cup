@@ -9,7 +9,7 @@ This package holds the test-only Worker that the E2E suites run against, the hel
 
 The Worker serves `apps/cloudflare-worker/dist/client`, so build the workspace before a suite starts it.
 
-The package's own [Vitest tests](test/) check the fake auth provider, such as its reachability over both loopbacks and the nonce check of the ID token exchange; `pnpm validate:fast` runs them.
+The package's own [Vitest tests](test/) check the fake auth provider, such as its reachability over both loopbacks and the nonce check of the ID token exchange; `pnpm test` and every [validation gate](../../tooling/validation-gates/README.md) run them.
 
 ## Cost and network boundary
 
