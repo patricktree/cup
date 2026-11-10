@@ -1180,8 +1180,8 @@ export function createApiServer(dependencies: ApiServerDependencies = production
         baseUri: ["'none'"],
         formAction: ["'self'"],
       },
-      // The Android and iOS apps embed media from their own `https://localhost` origin with plain
-      // `<img>` and `<audio>` elements. A signed media URL authorizes the request by itself, so its
+      // The Android and iOS apps embed media from their own origins (`https://localhost` on Android,
+      // `capacitor://localhost` on iOS) with plain `<img>` and `<audio>` elements. A signed media URL authorizes the request by itself, so its
       // routes allow a cross-origin embed; credentialed CORS still admits only the app's origins.
       crossOriginResourcePolicy: isSignedMediaPath(context.req.path) ? "cross-origin" : true,
       referrerPolicy: "no-referrer",
