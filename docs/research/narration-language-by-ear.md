@@ -1,12 +1,12 @@
 # PROTOTYPE verdict: narration language by ear
 
-> Historical prototype verdict, incorporated 2026-11-09. Column 3 was built in [#220](https://github.com/patricktree/cup/pull/220) as decided; see [Narration language](../architecture/conversion.md#narration-language). The style names the language by its English name without its region, so `de-AT` gives "German", and it was heard only for German and English. The evidence it answers is in [Gemini TTS language and instructions](gemini-tts-language.md) and [Gemini 3.8 TTS language](gemini-3.8-tts-language.md). The clips, `index.html` and `synthesize.mjs` were not copied; they stay with the original.
+> Historical prototype verdict, incorporated 2026-11-09. Column 3 was built in [#220](https://github.com/patricktree/cup/pull/220) as decided; see [Narration language](../architecture/conversion.md#narration-language). The style names the language by its English name without its region, so `de-AT` gives "German", and it was heard only for German and English. The evidence it answers is in [Gemini TTS language and instructions](gemini-tts-language.md) and [Gemini 3.8 TTS language](gemini-3.8-tts-language.md). On 2026-11-10 the clips, `index.html` and `synthesize.mjs` were added as the [prototype archive](narration-language-by-ear.tar.xz).
 
 [Original prototype](https://github.com/patricktree/cup/tree/0261981e31583034ee6bfbc06f57bf95a62da3ca/libs/audiobook-production/prototype-narration-language), verdict in `VERDICT.md`.
 
 Throwaway branch, never merged. Answers [Prototype: hear the derStandard byline with each way of conveying the language](https://github.com/patricktree/cup/issues/193) for the map [Map: read each audiobook in its narration language](https://github.com/patricktree/cup/issues/190).
 
-Rerun with `node synthesize.mjs` (paid, about 110 short Gemini 3.8 Flash Lite TTS calls), then open `index.html`. The clips listened to are in `out/`.
+Unpack with `tar -xJf docs/research/narration-language-by-ear.tar.xz -C libs/audiobook-production` from the repository root, since the script reads the Cloudflare credentials from `apps/cloudflare-worker/.env.local` relative to its folder. Rerun with `node synthesize.mjs` (paid, about 110 short Gemini 3.8 Flash Lite TTS calls), then open `index.html`. The clips listened to are in `out/`.
 
 Listened to by Patrick on 2026-11-09:
 

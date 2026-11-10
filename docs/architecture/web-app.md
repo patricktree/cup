@@ -23,7 +23,7 @@ A ready history item carries its cover's own [signed media URL](authentication.m
 
 ## Account holder's name
 
-The avatar's initials come from the Supabase session's `user_metadata.name`, else `full_name`, which Supabase fills from the Google sign-in and refreshes on each sign-in. Cup stores no name, so account erasure has none to remove.
+The avatar's initials come from the Supabase session's `user_metadata.name`, else `full_name`, which Supabase fills from the Google sign-in and refreshes on each sign-in. Cup stores no name, so account erasure has none to remove ([name source research](../research/avatar-initials-name-source.md)).
 
 ## Query cache
 
