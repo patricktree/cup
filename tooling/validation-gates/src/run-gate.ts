@@ -15,18 +15,17 @@ export async function runGate(gate: Gate): Promise<{ isPassed: boolean; summary:
   const commit = await describeCommit();
   const outcomes: StepOutcome[] = gate.steps.map(() => ({ status: "not run" }));
 
-  const prerequisiteResults = await Promise.all(
-    gate.prerequisites.map(async (prerequisite) => ({
-      prerequisite,
-      isMet: await prerequisite.isMet(),
-    })),
+  log("Checking prerequisites.");
+  const problems = await Promise.all(
+    gate.prerequisites.map((prerequisite) => prerequisite.findProblem()),
   );
-  const missingList = prerequisiteResults
-    .filter(({ isMet }) => !isMet)
-    .map(({ prerequisite }) => `- ${prerequisite.missingMessage}`)
+  const problemList = problems
+    .filter((problem) => problem !== undefined)
+    /* Indents continuation lines so that a multi-line problem stays one list item. */
+    .map((problem) => `- ${problem.replaceAll(/\n(?=.)/g, "\n  ")}`)
     .join("\n");
-  if (missingList !== "") {
-    log(`Missing prerequisites; no step ran:\n${missingList}`);
+  if (problemList !== "") {
+    log(`Prerequisites are not met; no step ran:\n${problemList}`);
     return {
       isPassed: false,
       summary: formatSummary({
@@ -34,7 +33,7 @@ export async function runGate(gate: Gate): Promise<{ isPassed: boolean; summary:
         commit,
         outcomes,
         totalMs: performance.now() - startedAt,
-        failure: `Stopped before the first step because prerequisites are missing:\n\n${missingList}`,
+        failure: `Stopped before the first step because prerequisites are not met:\n\n${problemList}`,
       }),
     };
   }

@@ -29,6 +29,8 @@
     "fix": "pnpm run format && pnpm run lint:fix",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
+    "gate:deploy": "node tooling/validation-gates/src/cli.ts deploy",
+    "gate:merge": "node tooling/validation-gates/src/cli.ts merge",
     "gate:review": "node tooling/validation-gates/src/cli.ts review",
     "lint": "turbo run turbo:lint",
     "lint:fix": "turbo run turbo:lint:fix",
