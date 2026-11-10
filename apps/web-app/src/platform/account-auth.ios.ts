@@ -4,6 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { initializeAuthStorage as initializeSecureAuthStorage } from "#src/platform/account-auth.native.js";
 import { googleAuthorizationParams } from "#src/platform/account-auth.web.js";
 
+export { watchAppState } from "#src/platform/account-auth.native.js";
+
 /**
  * Prepares Secure Storage for the account session, writing its Keychain items readable after the
  * device's first unlock instead of only while it is unlocked: a token refresh during background

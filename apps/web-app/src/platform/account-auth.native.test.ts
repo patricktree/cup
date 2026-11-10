@@ -113,3 +113,65 @@ test("the Android shell writes the session with the plugin's default access", as
   // Android ignores the access option; the plugin sends its default, `KeychainAccess.whenUnlocked`.
   expect(record.items).toEqual({ [PREFIXED_SESSION_KEY]: { data: "the-session", access: 0 } });
 });
+
+test("reports the app's state at the start, then each foreground and background change", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.assign(window, {
+      webkit: { messageHandlers: { bridge: {} } },
+      Capacitor: {
+        PluginHeaders: [
+          {
+            name: "App",
+            methods: [
+              { name: "addListener" },
+              { name: "removeListener", rtype: "promise" },
+              { name: "getState", rtype: "promise" },
+            ],
+          },
+        ],
+        nativePromise: async (plugin: string, method: string) => {
+          if (plugin === "App" && method === "getState") {
+            return { isActive: true };
+          }
+          if (plugin === "App" && method === "removeListener") {
+            return undefined;
+          }
+          throw new Error(`Unexpected native call ${plugin}.${method}`);
+        },
+        nativeCallback: (
+          _plugin: string,
+          _method: string,
+          _options: unknown,
+          listener: (state: { isActive: boolean }) => void,
+        ) => {
+          window.addEventListener("test-app-state", (event) => {
+            if (event instanceof CustomEvent) {
+              listener({ isActive: Boolean(event.detail) });
+            }
+          });
+          return "app-state-listener";
+        },
+      },
+    });
+  });
+  // The gallery page serves the app's modules; nothing needs to be mounted.
+  await page.goto("");
+
+  const reported = await page.evaluate(async () => {
+    const modulePath = "/src/platform/account-auth.native.ts";
+    const { watchAppState } = await import(modulePath);
+    const states: boolean[] = [];
+    const stopWatching = watchAppState((isActive: boolean) => states.push(isActive));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    for (const isActive of [false, true]) {
+      window.dispatchEvent(new CustomEvent("test-app-state", { detail: isActive }));
+    }
+    stopWatching();
+    window.dispatchEvent(new CustomEvent("test-app-state", { detail: false }));
+    return states;
+  });
+
+  expect(reported).toEqual([true, false, true]);
+});

@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Page, Response } from "@playwright/test";
 
 import { accountSnapshotSchema } from "@cup/listener-api.routes";
 
@@ -298,6 +298,67 @@ test("root auth handles signup and session restoration without account navigatio
     timeout: 60_000,
   });
 });
+
+test("a signed-in session refreshes its expired access token and keeps working, also after a reload", async ({
+  page,
+  workerEnvironment,
+}) => {
+  test.setTimeout(150_000);
+  const { origin, authProvider } = workerEnvironment;
+  authProvider.setAccessTokenLifetime(ACCESS_TOKEN_LIFETIME_SECONDS);
+  await page.goto(`${origin}/app/`);
+  await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
+  await page.getByRole("button", { name: "Listen" }).click();
+  await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
+  const detailUrl = page.url();
+  const signInToken = await readAccessToken(page);
+
+  await waitPastAccessTokenLifetime();
+  const expired = await page.request.get(`${origin}/api/account`, {
+    headers: { Authorization: `Bearer ${signInToken}` },
+  });
+  expect(expired.status()).toBe(401);
+
+  await page.goto(`${origin}/app/recent`);
+  await expect(page.getByRole("list", { name: "Tracks" }).getByRole("listitem")).toHaveCount(1);
+  await waitPastAccessTokenLifetime();
+  const afterOpening = waitForAuthenticatedApiResponse(page, origin);
+  await page.getByRole("list", { name: "Tracks" }).getByRole("link").click();
+  await expect(page).toHaveURL(detailUrl);
+  await waitForAudiobook(page);
+  await expectRefreshedBearerToken(await afterOpening, signInToken);
+
+  // The reloaded app restores the session the last refresh stored; its refresh token is single-use.
+  await waitPastAccessTokenLifetime();
+  const afterReload = waitForAuthenticatedApiResponse(page, origin);
+  await page.reload();
+  await waitForAudiobook(page);
+  await expectRefreshedBearerToken(await afterReload, signInToken);
+  expect(authProvider.refreshes()).toBeGreaterThanOrEqual(2);
+  expect(authProvider.exchanges()).toBe(1);
+});
+
+/** Short enough that a session outlives several access tokens within one test. */
+const ACCESS_TOKEN_LIFETIME_SECONDS = 5;
+
+async function waitPastAccessTokenLifetime() {
+  await new Promise((resolve) => setTimeout(resolve, (ACCESS_TOKEN_LIFETIME_SECONDS + 1) * 1_000));
+}
+
+function waitForAuthenticatedApiResponse(page: Page, origin: string) {
+  return page.waitForResponse(
+    (response) =>
+      response.url().startsWith(`${origin}/api/`) &&
+      response.request().headers()["authorization"]?.startsWith("Bearer ") === true,
+  );
+}
+
+/** The Worker accepted a bearer token that a refresh issued after the sign-in's token expired. */
+async function expectRefreshedBearerToken(response: Response, signInToken: string) {
+  expect(response.ok()).toBe(true);
+  expect(response.request().headers()["authorization"]).not.toBe(`Bearer ${signInToken}`);
+}
 
 test("failed sign-in leaves anonymous trial access available", async ({
   expectConsoleError,

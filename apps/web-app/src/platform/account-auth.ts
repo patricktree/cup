@@ -17,6 +17,12 @@ export const signInWithGoogle =
     : platform === "ios"
       ? ios.signInWithGoogle
       : web.signInWithGoogle;
+export const watchAppState =
+  platform === "android"
+    ? android.watchAppState
+    : platform === "ios"
+      ? ios.watchAppState
+      : web.watchAppState;
 export const clearNativeSignIn =
   platform === "android"
     ? android.clearNativeSignIn

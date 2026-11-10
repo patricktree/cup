@@ -95,6 +95,16 @@ The machine's comments hold the transition rules. It guarantees the following; [
 - Sign-out stops and unloads audio, signs out of Supabase locally, clears the stored session and the remembered trial, and ends the platform's own Google sign-in on Android. On iOS, Safari's Google sign-in, which the sheet shares, stays. It completes locally even when Supabase could not confirm server revocation, and reports the failure; if initialization failed, the UI shows the auth error because the stored session could not be cleared.
 - When account auth cannot initialize and no account is signed in, requests that accept either authorization continue with the grant session alone.
 
+### Session refresh
+
+Access tokens are valid for five minutes (`jwt_exp = 300` in [Terraform](../../terraform/production/supabase.tf), `jwt_expiry = 300` locally), and supabase-js refreshes the session before its token expires; each refresh rotates the single-use refresh token and stores the new session. A session read also refreshes an expired session first.
+
+- On the web, supabase-js's own auto refresh runs while the page is visible and resumes when it becomes visible again. Cup never calls `startAutoRefresh()` or `stopAutoRefresh()` before a sign-in, because either call removes that `visibilitychange` handling.
+- In the Android and iOS apps, the Capacitor app's foreground and background events drive refresh: `startAutoRefresh()` at startup in the foreground and whenever Cup comes to the foreground, `stopAutoRefresh()` whenever it goes to the background. The machine subscribes once per connected client through the platform module's `watchAppState`, which reports nothing on the web, so the machine stays platform-neutral and its tests send fake foreground and background events.
+- Sign-out calls `stopAutoRefresh()`. In the apps, the next foreground event starts it again; until then, a session read still refreshes an expired session.
+
+Known behaviour, recorded rather than changed: tokens stay at five minutes, and Terraform sets no session time-box or inactivity timeout, so a session lasts until sign-out, refresh-token reuse detection, or loss of the stored copy. An Android reinstall or a new device starts signed out, because Android erases Secure Storage with the app; iOS keeps the Keychain across reinstalls. The web E2E test of a signed-in session and the mobile E2E test of a return from the background shorten the fake auth provider's token lifetime to show a session refreshing and staying usable.
+
 ## Resuming a conversion after sign-in
 
 When a reader submits a source URL for an account conversion on the home page, the client saves one pending request, the normalized source URL and an idempotency key, in `sessionStorage` before starting the conversion or asking the reader to sign in. This carries the submission through the OAuth redirect and reloads without putting it in the callback URL or keeping a long-lived draft; it is separate from the Supabase session and establishes neither identity nor authorization.

@@ -31,6 +31,8 @@ export type AppDevice = {
   terminate(): Promise<void>;
   /** Sends the app to the background, as the home button does. */
   background(): Promise<void>;
+  /** Brings a running app back to the foreground, as tapping its icon does. */
+  bringToForeground(): Promise<void>;
   /**
    * Takes the steps the platform puts between tapping "Continue with Google" and the fake auth
    * provider's answer, then returns to the WebView. Android's sign-in fake needs none; iOS asks the

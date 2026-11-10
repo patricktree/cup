@@ -38,5 +38,13 @@ export function googleAuthorizationParams(fresh: boolean): Record<string, string
   return fresh ? { prompt: "select_account", max_age: "0" } : { prompt: "select_account" };
 }
 
+/**
+ * Reports nothing: supabase-js refreshes the session only while the page is visible, as long as
+ * nothing calls its `startAutoRefresh` or `stopAutoRefresh`, which remove that handling.
+ */
+export function watchAppState(_listener: (isActive: boolean) => void): () => void {
+  return () => {};
+}
+
 /** The browser keeps no sign-in of its own beyond the account session. */
 export async function clearNativeSignIn(): Promise<void> {}

@@ -192,7 +192,6 @@ export class AndroidAppDevice implements AppDevice {
     return toAppiumAppState(await this.driver.queryAppState(APP_PACKAGE), APP_PACKAGE);
   }
 
-  /** Brings a running Cup back to the foreground, as tapping its launcher icon does. */
   async bringToForeground(): Promise<void> {
     await this.driver.switchContext("NATIVE_APP");
     await this.driver.activateApp(APP_PACKAGE);

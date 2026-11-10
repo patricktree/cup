@@ -82,6 +82,14 @@ export const accountSessionMachine = setup({
     clearNativeSignIn: fromPromise<void>(() =>
       Promise.reject(missingImplementation("clearNativeSignIn")),
     ),
+    /**
+     * Reports `APP_STATE_CHANGED` when the app shell comes to the foreground or goes to the
+     * background, including its state at the start. The web reports nothing: supabase-js follows
+     * the page's visibility itself.
+     */
+    watchAppState: fromCallback<AccountSessionEvent>(() => {
+      throw missingImplementation("watchAppState");
+    }),
     readSession: fromPromise<Session | null, { client: AccountAuthClient }>(async ({ input }) =>
       readSession(input.client),
     ),
@@ -117,7 +125,6 @@ export const accountSessionMachine = setup({
       { connection: AccountAuthConnection; request: SignInRequest; reply: Reply<void> }
     >(async ({ input }) => {
       try {
-        await input.connection.client.auth.startAutoRefresh();
         await input.connection.signIn(input.request);
         input.reply.resolve();
       } catch (error) {
@@ -279,9 +286,23 @@ export const accountSessionMachine = setup({
       initial: "starting",
       // Subscribed once per client: auth changes reach only the states that handle them, so
       // changes reported during sign-out are ignored without unsubscribing.
-      invoke: {
-        src: "watchSessionChanges",
-        input: ({ context }) => ({ client: requireConnection(context).client }),
+      invoke: [
+        {
+          src: "watchSessionChanges",
+          input: ({ context }) => ({ client: requireConnection(context).client }),
+        },
+        { src: "watchAppState" },
+      ],
+      on: {
+        // In the app shells, refresh runs only in the foreground, as supabase-js does for a visible
+        // page. Calling `startAutoRefresh` also removes supabase-js's own visibility handling,
+        // which a WebView's page visibility would otherwise drive.
+        APP_STATE_CHANGED: {
+          actions: ({ context, event }) => {
+            const { auth } = requireConnection(context).client;
+            void (event.isActive ? auth.startAutoRefresh() : auth.stopAutoRefresh());
+          },
+        },
       },
       states: {
         starting: {
@@ -485,6 +506,7 @@ type ReadSessionEvent = { type: "READ_SESSION"; reply: Reply<Session | null> };
 type AccountSessionEvent =
   | { type: "INITIALIZE" }
   | { type: "SESSION_CHANGED"; session: Session | null }
+  | { type: "APP_STATE_CHANGED"; isActive: boolean }
   | ReadSessionEvent
   | { type: "SIGN_IN"; request: SignInRequest; reply: Reply<void> }
   | { type: "SIGN_OUT"; reply: Reply<void> };

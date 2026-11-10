@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { AuthError, type AuthChangeEvent, type Session } from "@supabase/supabase-js";
-import { createActor, fromPromise, waitFor, type EventFromLogic } from "xstate";
+import { createActor, fromCallback, fromPromise, waitFor, type EventFromLogic } from "xstate";
 
 import {
   accountSessionMachine,
@@ -174,6 +174,7 @@ function startMachine({
   const pendingSessionReads: Array<(session: Session | null) => void> = [];
   const pendingRevocations: Array<() => void> = [];
   const pendingSignIns: Array<() => void> = [];
+  const appStateListeners = new Set<(isActive: boolean) => void>();
   const fakes = {
     session: restored,
     shouldHoldSessionReads: false,
@@ -243,6 +244,11 @@ function startMachine({
         clearNativeSignIn: fromPromise(async () => {
           effects.push("clearNativeSignIn");
         }),
+        watchAppState: fromCallback<AccountSessionEvent>(({ sendBack }) => {
+          const listener = (isActive: boolean) => sendBack({ type: "APP_STATE_CHANGED", isActive });
+          appStateListeners.add(listener);
+          return () => appStateListeners.delete(listener);
+        }),
       },
       actions: {
         clearQueries: () => effects.push("clearQueries"),
@@ -269,6 +275,12 @@ function startMachine({
       actor.send({ type: "INITIALIZE" });
       await waitFor(actor, (snapshot) => snapshot.hasTag("initialized"));
       effects.length = 0;
+    },
+    /** Plays the app shell reporting that Cup came to the foreground or went to the background. */
+    emitAppState: (isActive: boolean) => {
+      for (const listener of appStateListeners) {
+        listener(isActive);
+      }
     },
     emitAuthChange: (session: Session | null) => {
       fakes.session = session;
@@ -364,11 +376,7 @@ test("a session read in flight when sign-in starts resolves to null", async () =
 
   expect(await read).toBeNull();
   await signIn;
-  expect(machine.effects).toEqual([
-    "stopPlayback",
-    "supabase.startAutoRefresh",
-    "signIn(google, fresh: true)",
-  ]);
+  expect(machine.effects).toEqual(["stopPlayback", "signIn(google, fresh: true)"]);
 });
 
 test("a session read in flight when sign-out starts resolves to null", async () => {
@@ -399,10 +407,9 @@ test("an account session reported during sign-in signs in without clearing queri
 
   expect(machine.effects).toEqual([
     "stopPlayback",
-    "supabase.startAutoRefresh",
+    "signIn(google, fresh: false)",
     "stopPlayback",
     "clearLastGrantId",
-    "signIn(google, fresh: false)",
   ]);
   expect(machine.actor.getSnapshot().matches({ connected: { ready: "signedIn" } })).toBe(true);
 });
@@ -533,4 +540,31 @@ test("a sign-in interrupted by sign-out settles when the provider call finishes"
 
   machine.pendingSignIns[0]?.();
   await signIn;
+});
+
+test("on the web, a sign-in leaves auto refresh to supabase-js", async () => {
+  const machine = startMachine();
+  await machine.initialize();
+
+  const signIn = machine.signIn();
+  machine.emitAuthChange(createSession("reader"));
+  await signIn;
+
+  expect(machine.effects).not.toContain("supabase.startAutoRefresh");
+  expect(machine.effects).not.toContain("supabase.stopAutoRefresh");
+});
+
+test("in the apps, the foreground starts auto refresh and the background stops it", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+  await machine.initialize();
+
+  machine.emitAppState(true);
+  machine.emitAppState(false);
+  machine.emitAppState(true);
+
+  expect(machine.effects).toEqual([
+    "supabase.startAutoRefresh",
+    "supabase.stopAutoRefresh",
+    "supabase.startAutoRefresh",
+  ]);
 });

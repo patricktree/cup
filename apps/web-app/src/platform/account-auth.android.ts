@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { SignInCancelledError, UserFacingError } from "#src/errors.js";
-export { initializeAuthStorage } from "#src/platform/account-auth.native.js";
+export { initializeAuthStorage, watchAppState } from "#src/platform/account-auth.native.js";
 
 /**
  * Messages of the plugin's cancellation code that mean the person backed out. Google Play services
