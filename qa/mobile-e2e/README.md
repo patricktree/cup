@@ -81,6 +81,10 @@ One Android test launches with the real plugin (`realGoogleSignIn: true`) on the
 
 [`test/android/back-button.test.ts`](test/android/back-button.test.ts) relaunches a signed-in Cup so Recents is the first screen. Back closes the Add dialog and leaves a track's page for Recents; on Recents, Back puts Cup in the background with its page kept, which the test checks by bringing Cup back to the foreground. The Add dialog focuses its URL field, which opens the on-screen keyboard, and Android's first Back closes an open keyboard instead of reaching Cup, so the test waits for the keyboard to show, leaves the field and waits until the keyboard has left the screen before pressing Back. The keyboard can show seconds after the field got focus, the first time after the emulator booted, and then closes only after the field was left; a Back press in between closed the keyboard.
 
+## Native networking (Android)
+
+[`test/android/native-networking.test.ts`](test/android/native-networking.test.ts) signs in, submits the Add dialog with the source URL the test Worker's fake source preparation accepts, and waits for Recents to list the new conversion. From the Worker's request log it checks that the conversion's `POST /api/account/conversions` arrived without an Origin header but with the `X-Create-Audiobook-From-URL-Request` header and the JSON content type, as only `CapacitorHttp`'s native requests send it, and that every account request since carried a bearer token the test's fake auth provider signed. The test runs on Android only: iOS sign-in does not work in the app yet ([CUP-60](https://linear.app/cup-audio/issue/CUP-60)), and the iOS half joins once it does.
+
 ## Layout
 
 - [`src/app-device.ts`](src/app-device.ts): the device-control interface every spec uses. Platform-only steps live on the platform's class, such as [`AndroidAppDevice`](src/android/android-app-device.ts).
