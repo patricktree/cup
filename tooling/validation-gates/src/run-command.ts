@@ -50,3 +50,17 @@ export function runCommand(
     });
   });
 }
+
+/** Runs a command whose failure is an error rather than a result, and returns its stdout. */
+export async function runCommandOrThrow(
+  command: [string, ...string[]],
+  options: { env?: NodeJS.ProcessEnv } = {},
+): Promise<string> {
+  const result = await runCommand(command, options);
+  if (result.exitCode !== 0) {
+    throw new Error(
+      `\`${command.join(" ")}\` failed with exit code ${result.exitCode}:\n${result.output.trim()}`,
+    );
+  }
+  return result.stdout;
+}

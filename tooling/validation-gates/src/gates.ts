@@ -1,9 +1,12 @@
 import process from "node:process";
 import { z } from "zod";
 
-import { runCommand } from "#src/run-command.ts";
+import { findTrackedChanges, runGit } from "#src/git.ts";
+import { runCommand, runCommandOrThrow } from "#src/run-command.ts";
 
 type Prerequisite = {
+  /** Names the prerequisite in the summary when checking it fails, such as "Docker running". */
+  name: string;
   /**
    * Returns what is missing or wrong, such as "Docker is not running", or undefined when the
    * prerequisite is met.
@@ -22,6 +25,10 @@ type Step = {
   findSkipReason?: () => Promise<string | undefined>;
 };
 
+/**
+ * Each gate includes every prerequisite and step of the gate before it: a later gate spreads its
+ * predecessor's `prerequisites` and `steps` and appends its own instead of repeating them.
+ */
 export type Gate = {
   name: string;
   prerequisites: Prerequisite[];
@@ -29,34 +36,40 @@ export type Gate = {
 };
 
 const NARRATION_SOURCE_ANALYSIS = "@cup/narration-source-analysis";
+/**
+ * The ref the evals rule compares against, as last fetched, so that commits on a stale local `main`
+ * do not count as the branch's changes.
+ */
+const AFFECTED_BASE = "origin/main";
 /** The part of `turbo ls --output=json` the evals rule reads. */
 const TURBO_LS_OUTPUT = z.object({
   packages: z.object({ items: z.array(z.object({ name: z.string() })) }),
 });
 
-const DOCKER_RUNNING = commandSucceeds(
+const DOCKER_RUNNING = commandPrerequisite(
+  "Docker running",
   ["docker", "info"],
   "Docker is not running (`docker info` failed); start Docker Desktop.",
 );
-const UVX_INSTALLED = commandSucceeds(
+const UVX_INSTALLED = commandPrerequisite(
+  "uvx installed",
   ["uvx", "--version"],
   "`uvx` is not installed (`uvx --version` failed); zizmor runs through it.",
 );
-const GH_AUTHENTICATED = commandSucceeds(
+const GH_AUTHENTICATED = commandPrerequisite(
+  "GitHub CLI authenticated",
   ["gh", "auth", "status"],
   "GitHub CLI is not authenticated (`gh auth status` failed); zizmor needs its token. Run `gh auth login`.",
 );
 
 /**
  * The deploy gate runs on exactly the commit being deployed: a clean `main` equal to a freshly
- * fetched `origin/main`. Ignored files, such as `.env.local`, do not count as changes.
+ * fetched `origin/main`.
  */
 const CHECKOUT_DEPLOYABLE: Prerequisite = {
+  name: "Checkout at `origin/main`",
   findProblem: async () => {
-    const fetch = await runCommand(["git", "fetch", "origin"]);
-    if (fetch.exitCode !== 0) {
-      return `\`git fetch origin\` failed with exit code ${fetch.exitCode}:\n${fetch.output.trim()}`;
-    }
+    await runGit(["fetch", "origin"]);
 
     const branchName = (await runGit(["branch", "--show-current"])).trim();
     if (branchName !== "main") {
@@ -70,36 +83,21 @@ const CHECKOUT_DEPLOYABLE: Prerequisite = {
       return `\`HEAD\` (${head.slice(0, 8)}) differs from the freshly fetched \`origin/main\` (${originMain.slice(0, 8)}); the deploy gate runs only on exactly \`origin/main\`.`;
     }
 
-    const changes = await runGit(["status", "--porcelain", "--untracked-files=no"]);
-    if (changes.trim() !== "") {
-      return `Tracked files have uncommitted changes; the deploy gate runs only on a clean checkout:\n\n\`\`\`\n${changes.trimEnd()}\n\`\`\``;
+    const changes = await findTrackedChanges();
+    if (changes !== "") {
+      return `Tracked files have uncommitted changes; the deploy gate runs only on a clean checkout:\n\n\`\`\`\n${changes}\n\`\`\``;
     }
     return undefined;
   },
 };
 
 /**
- * The mobile E2E suite's own preflight check per platform, run up front so that a missing toolchain
- * fails the deploy gate before its first step rather than after the web suites. `@cup/mobile-e2e`
- * exports no modules, so a child process imports the checks by path.
+ * The mobile E2E suite's own preflight check for both platforms, run up front so that a missing
+ * toolchain fails the deploy gate before its first step rather than after the web suites.
  */
-const MOBILE_TOOLCHAINS_READY = commandSucceeds(
-  [
-    "node",
-    "--input-type=module",
-    "--eval",
-    `
-      const { checkAndroidHost } = await import("./qa/mobile-e2e/src/android/preflight.ts");
-      const { checkIosHost } = await import("./qa/mobile-e2e/src/ios/preflight.ts");
-      const results = await Promise.allSettled([checkAndroidHost(), checkIosHost()]);
-      for (const result of results) {
-        if (result.status === "rejected") {
-          console.error(result.reason instanceof Error ? result.reason.message : result.reason);
-          process.exitCode = 1;
-        }
-      }
-    `,
-  ],
+const MOBILE_TOOLCHAINS_READY = commandPrerequisite(
+  "Mobile toolchains ready",
+  ["pnpm", "--silent", "--filter", "@cup/mobile-e2e", "run", "preflight"],
   "The mobile E2E suite's preflight check failed",
   { isOutputShown: true },
 );
@@ -114,20 +112,10 @@ const REVIEW_GATE: Gate = {
     { name: "Format check", command: ["pnpm", "run", "format:check"] },
     { name: "Docs check", command: ["pnpm", "run", "docs:check"] },
     { name: "Turbo boundaries", command: ["pnpm", "run", "boundaries"] },
-    {
-      name: "Build, lint and test",
-      /* Turbo cache hits are accepted, so no `--force`. */
-      command: [
-        "pnpm",
-        "exec",
-        "turbo",
-        "run",
-        "turbo:build",
-        "turbo:lint",
-        "turbo:test",
-        "--output-logs=errors-only",
-      ],
-    },
+    // Turbo cache hits are accepted, so no `--force`; lint and test reuse the build's cache.
+    { name: "Build", command: turboRun("turbo:build") },
+    { name: "Lint", command: turboRun("turbo:lint") },
+    { name: "Test", command: turboRun("turbo:test") },
     // Knip loads the Worker's Vite config, which requires the built web app, so it runs after the build.
     { name: "Knip", command: ["pnpm", "run", "declutter"] },
     { name: "Brand-assets check", command: ["pnpm", "run", "brand-assets:check"] },
@@ -139,7 +127,7 @@ const REVIEW_GATE: Gate = {
       findSkipReason: async () =>
         (await findAffectedPackages()).includes(NARRATION_SOURCE_ANALYSIS)
           ? undefined
-          : `\`${NARRATION_SOURCE_ANALYSIS}\` and its dependencies are not affected relative to \`main\``,
+          : `\`${NARRATION_SOURCE_ANALYSIS}\` and its dependencies are not affected relative to \`${AFFECTED_BASE}\``,
     },
   ],
 };
@@ -150,7 +138,7 @@ const MERGE_GATE: Gate = {
   prerequisites: [...REVIEW_GATE.prerequisites],
   steps: [
     ...REVIEW_GATE.steps,
-    /* Outside turbo, so the suite always runs fresh. */
+    // Outside turbo, so the suite always runs fresh.
     { name: "App E2E", command: ["pnpm", "run", "test:e2e:app"] },
   ],
 };
@@ -161,7 +149,7 @@ const DEPLOY_GATE: Gate = {
   prerequisites: [CHECKOUT_DEPLOYABLE, ...MERGE_GATE.prerequisites, MOBILE_TOOLCHAINS_READY],
   steps: [
     ...MERGE_GATE.steps,
-    /* One platform after the other until the parallel mobile runner has proven itself. */
+    // One platform after the other until the parallel mobile runner has proven itself.
     {
       name: "Mobile E2E (Android)",
       command: ["pnpm", "run", "test:e2e:mobile", "--project", "android"],
@@ -170,10 +158,6 @@ const DEPLOY_GATE: Gate = {
   ],
 };
 
-/**
- * Each gate includes every step of the gate before it; a later gate extends its predecessor's
- * `prerequisites` and `steps` instead of repeating them.
- */
 export const GATE_NAMES = ["review", "merge", "deploy"] as const;
 
 export type GateName = (typeof GATE_NAMES)[number];
@@ -188,12 +172,14 @@ export const GATES: Record<GateName, Gate> = {
  * A prerequisite met when the command exits with 0. With `isOutputShown`, the command's output
  * follows the message, for checks whose output names the fix.
  */
-function commandSucceeds(
+function commandPrerequisite(
+  name: string,
   command: [string, ...string[]],
   message: string,
   { isOutputShown = false }: { isOutputShown?: boolean } = {},
 ): Prerequisite {
   return {
+    name,
     findProblem: async () => {
       const result = await runCommand(command);
       if (result.exitCode === 0) {
@@ -204,31 +190,19 @@ function commandSucceeds(
   };
 }
 
-/** Runs a git command that must succeed and returns its stdout. */
-async function runGit(args: string[]): Promise<string> {
-  const result = await runCommand(["git", ...args]);
-  if (result.exitCode !== 0) {
-    throw new Error(
-      `\`git ${args.join(" ")}\` failed with exit code ${result.exitCode}:\n${result.output}`,
-    );
-  }
-  return result.stdout;
+function turboRun(task: string): [string, ...string[]] {
+  return ["pnpm", "exec", "turbo", "run", task, "--output-logs=errors-only"];
 }
 
 /**
  * Turbo marks a package affected when its files or a dependency's files changed relative to the
- * merge base with `main`, uncommitted changes included.
+ * merge base with `origin/main`, uncommitted changes included.
  */
 async function findAffectedPackages(): Promise<string[]> {
-  const result = await runCommand(["pnpm", "exec", "turbo", "ls", "--affected", "--output=json"], {
-    env: { ...process.env, TURBO_SCM_BASE: "main" },
-  });
-  if (result.exitCode !== 0) {
-    throw new Error(
-      `\`turbo ls --affected\` failed with exit code ${result.exitCode}:\n${result.output}`,
-    );
-  }
-
-  const listing = TURBO_LS_OUTPUT.parse(JSON.parse(result.stdout));
+  const stdout = await runCommandOrThrow(
+    ["pnpm", "exec", "turbo", "ls", "--affected", "--output=json"],
+    { env: { ...process.env, TURBO_SCM_BASE: AFFECTED_BASE } },
+  );
+  const listing = TURBO_LS_OUTPUT.parse(JSON.parse(stdout));
   return listing.packages.items.map((item) => item.name);
 }

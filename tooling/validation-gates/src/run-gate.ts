@@ -1,94 +1,114 @@
 import type { Gate } from "#src/gates.ts";
+import { findTrackedChanges, runGit } from "#src/git.ts";
 import { runCommand } from "#src/run-command.ts";
+
+type Step = Gate["steps"][number];
 
 type StepOutcome =
   | { status: "passed" | "failed"; durationMs: number }
   | { status: "skipped"; reason: string }
   | { status: "not run" };
 
+type StepResult = { step: Step; outcome: StepOutcome };
+
 /**
  * Checks the gate's prerequisites, then runs its steps in order and stops at the first failure.
  * Step output goes to the terminal; the returned summary is Markdown meant to be posted verbatim.
+ * Every failure, including an error from the runner's own git or turbo calls, ends up named in the
+ * summary rather than thrown.
  */
 export async function runGate(gate: Gate): Promise<{ isPassed: boolean; summary: string }> {
   const startedAt = performance.now();
-  const commit = await describeCommit();
-  const outcomes: StepOutcome[] = gate.steps.map(() => ({ status: "not run" }));
+  const results: StepResult[] = gate.steps.map((step) => ({
+    step,
+    outcome: { status: "not run" },
+  }));
+
+  let commit: string;
+  try {
+    commit = await describeCommit();
+  } catch (error) {
+    commit = "unknown";
+    const failure = `Stopped before the prerequisites because the commit could not be determined:\n\n${formatError(error)}`;
+    return finish({ gate, commit, results, startedAt, failure });
+  }
 
   log("Checking prerequisites.");
   const problems = await Promise.all(
-    gate.prerequisites.map((prerequisite) => prerequisite.findProblem()),
+    gate.prerequisites.map((prerequisite) =>
+      prerequisite
+        .findProblem()
+        .catch(
+          (error: unknown) => `Checking "${prerequisite.name}" failed:\n\n${formatError(error)}`,
+        ),
+    ),
   );
   const problemList = problems
     .filter((problem) => problem !== undefined)
-    /* Indents continuation lines so that a multi-line problem stays one list item. */
+    // Indents continuation lines so that a multi-line problem stays one list item.
     .map((problem) => `- ${problem.replaceAll(/\n(?=.)/g, "\n  ")}`)
     .join("\n");
   if (problemList !== "") {
     log(`Prerequisites are not met; no step ran:\n${problemList}`);
-    return {
-      isPassed: false,
-      summary: formatSummary({
-        gate,
-        commit,
-        outcomes,
-        totalMs: performance.now() - startedAt,
-        failure: `Stopped before the first step because prerequisites are not met:\n\n${problemList}`,
-      }),
-    };
+    const failure = `Stopped before the first step because prerequisites are not met:\n\n${problemList}`;
+    return finish({ gate, commit, results, startedAt, failure });
   }
 
-  let failure: string | undefined;
-  for (const [index, step] of gate.steps.entries()) {
-    const skipReason = await step.findSkipReason?.();
-    if (skipReason !== undefined) {
-      log(`Skipping ${step.name}: ${skipReason}.`);
-      outcomes[index] = { status: "skipped", reason: skipReason };
-      continue;
+  for (const result of results) {
+    const failure = await runStep(result);
+    if (failure !== undefined) {
+      log(`${failure} Stopping the ${gate.name} gate.`);
+      return finish({ gate, commit, results, startedAt, failure });
     }
-
-    log(`${step.name}: ${step.command.join(" ")}`);
-    const stepStartedAt = performance.now();
-    const { exitCode } = await runCommand(step.command, { isOutputCaptured: false });
-    const durationMs = performance.now() - stepStartedAt;
-
-    if (exitCode !== 0) {
-      outcomes[index] = { status: "failed", durationMs };
-      failure = `Stopped at step "${step.name}", which failed with exit code ${exitCode}.`;
-      log(`${step.name} failed with exit code ${exitCode}; stopping the ${gate.name} gate.`);
-      break;
-    }
-    outcomes[index] = { status: "passed", durationMs };
   }
-
-  return {
-    isPassed: failure === undefined,
-    summary: formatSummary({
-      gate,
-      commit,
-      outcomes,
-      totalMs: performance.now() - startedAt,
-      failure,
-    }),
-  };
+  return finish({ gate, commit, results, startedAt, failure: undefined });
 }
 
-function formatSummary({
+/** Runs one step and records its outcome; returns why the gate stops, or undefined to go on. */
+async function runStep(result: StepResult): Promise<string | undefined> {
+  const { step } = result;
+
+  let skipReason: string | undefined;
+  try {
+    skipReason = await step.findSkipReason?.();
+  } catch (error) {
+    result.outcome = { status: "failed", durationMs: 0 };
+    return `Stopped at step "${step.name}", whose check for skipping it failed:\n\n${formatError(error)}`;
+  }
+  if (skipReason !== undefined) {
+    log(`Skipping ${step.name}: ${skipReason}.`);
+    result.outcome = { status: "skipped", reason: skipReason };
+    return undefined;
+  }
+
+  log(`${step.name}: ${step.command.join(" ")}`);
+  const stepStartedAt = performance.now();
+  const { exitCode } = await runCommand(step.command, { isOutputCaptured: false });
+  const durationMs = performance.now() - stepStartedAt;
+
+  if (exitCode !== 0) {
+    result.outcome = { status: "failed", durationMs };
+    return `Stopped at step "${step.name}", which failed with exit code ${exitCode}.`;
+  }
+  result.outcome = { status: "passed", durationMs };
+  return undefined;
+}
+
+function finish({
   gate,
   commit,
-  outcomes,
-  totalMs,
+  results,
+  startedAt,
   failure,
 }: {
   gate: Gate;
   commit: string;
-  outcomes: StepOutcome[];
-  totalMs: number;
+  results: StepResult[];
+  startedAt: number;
   /** A Markdown paragraph or list saying why the gate stopped. */
   failure: string | undefined;
-}): string {
-  const rows = gate.steps.map((step, index) => {
-    const outcome = outcomes[index]!;
+}): { isPassed: boolean; summary: string } {
+  const rows = results.map(({ step, outcome }) => {
     if (outcome.status === "passed" || outcome.status === "failed") {
       return `| ${step.name} | ${outcome.status} | ${formatDuration(outcome.durationMs)} |`;
     }
@@ -98,32 +118,28 @@ function formatSummary({
     return `| ${step.name} | not run | - |`;
   });
 
-  return [
+  const summary = [
     `## ${capitalize(gate.name)} gate: ${failure === undefined ? "passed" : "failed"}`,
     "",
-    `Commit ${commit}, ${formatDuration(totalMs)} in total.`,
+    `Commit ${commit}, ${formatDuration(performance.now() - startedAt)} in total.`,
     "",
     ...(failure === undefined ? [] : [failure, ""]),
     "| Step | Result | Duration |",
     "| --- | --- | --- |",
     ...rows,
   ].join("\n");
+  return { isPassed: failure === undefined, summary };
 }
 
 /** The short SHA, marked when tracked files differ from it, since the gate then ran on other code. */
 async function describeCommit(): Promise<string> {
-  const shortSha = await runCommand(["git", "rev-parse", "--short", "HEAD"]);
-  if (shortSha.exitCode !== 0) {
-    throw new Error(`\`git rev-parse --short HEAD\` failed:\n${shortSha.output}`);
-  }
+  const sha = `\`${(await runGit(["rev-parse", "--short", "HEAD"])).trim()}\``;
+  return (await findTrackedChanges()) === "" ? sha : `${sha} with uncommitted changes`;
+}
 
-  const status = await runCommand(["git", "status", "--porcelain", "--untracked-files=no"]);
-  if (status.exitCode !== 0) {
-    throw new Error(`\`git status\` failed:\n${status.output}`);
-  }
-
-  const sha = `\`${shortSha.stdout.trim()}\``;
-  return status.stdout.trim() === "" ? sha : `${sha} with uncommitted changes`;
+function formatError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return `\`\`\`\n${message.trim()}\n\`\`\``;
 }
 
 function formatDuration(durationMs: number): string {
