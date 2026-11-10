@@ -100,7 +100,7 @@ Mobile API requests use ordinary `fetch` calls patched by `CapacitorHttp` to use
 
 The browser exchanges trial credentials for persistent Secure, HttpOnly cookies. The apps open no trials ([ADR 0017](../../docs/adr/0017-keep-trial-links-out-of-the-mobile-apps.md)), so their private account requests rely on the signed-in user's bearer token; Capacitor's native cookie manager still stores any server-issued cookies and sends them on later requests. The `CapacitorCookies` document.cookie patch (<https://capacitorjs.com/docs/apis/cookies>) is not enabled.
 
-Native mutations omit Origin and must include the existing custom request header and JSON content type. Browser mutations must have a matching Origin; cross-site Fetch Metadata is rejected. No cross-origin browser CORS access is enabled.
+Native mutations omit Origin and must include the existing custom request header and JSON content type. Browser mutations must have a matching Origin; cross-site Fetch Metadata is rejected. No cross-origin browser CORS access is enabled. The mobile suite's [native networking test](../../qa/mobile-e2e/README.md#native-networking-android) checks the native mutation on Android.
 
 Capacitor's native HTTP response headers can expose Set-Cookie to JavaScript, so HttpOnly does not provide the same isolation as browser networking.
 

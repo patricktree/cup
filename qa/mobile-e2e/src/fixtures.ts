@@ -25,6 +25,8 @@ export type MobileApp = {
   readonly worker: TestWorker;
   /** The origin the app reaches the Worker at, passed as its launch argument. */
   readonly apiOrigin: string;
+  /** This test's fake auth provider, whose origin is in the issuer of the tokens it signs. */
+  readonly authProviderOrigin: string;
 };
 
 /**
@@ -33,7 +35,14 @@ export type MobileApp = {
  */
 export function useMobileApp(): MobileApp {
   let device: AppDevice | undefined;
-  let current: { worker: TestWorker; apiOrigin: string; cleanUp: () => Promise<void> } | undefined;
+  let current:
+    | {
+        worker: TestWorker;
+        apiOrigin: string;
+        authProviderOrigin: string;
+        cleanUp: () => Promise<void>;
+      }
+    | undefined;
 
   beforeAll(async () => {
     device = await openDevice(inject("mobilePlatform"));
@@ -58,6 +67,7 @@ export function useMobileApp(): MobileApp {
     current = {
       worker,
       apiOrigin: localhostOrigin(workerPort),
+      authProviderOrigin: authProvider.origin,
       cleanUp: async () => {
         await openedDevice.terminate();
         await openedDevice.unexposeHostPort(workerPort);
@@ -82,6 +92,9 @@ export function useMobileApp(): MobileApp {
     },
     get apiOrigin() {
       return requireDefined(current, "This test's Worker").apiOrigin;
+    },
+    get authProviderOrigin() {
+      return requireDefined(current, "This test's fake auth provider").authProviderOrigin;
     },
   };
 }

@@ -4,7 +4,7 @@
  */
 
 /** The source URL the test Worker's fake source preparation accepts. */
-const SOURCE_URL = "https://source.example.test/fixture";
+export const SOURCE_URL = "https://source.example.test/fixture";
 
 const SIGN_IN_TIMEOUT_MS = 60_000;
 
