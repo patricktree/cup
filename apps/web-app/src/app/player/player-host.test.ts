@@ -590,6 +590,42 @@ test("skipping before metadata is loaded skips from the restored position once i
   expect(element.calls).toEqual([`src:${FIRST_TRACK_URL}`, "currentTime:7"]);
 });
 
+test("metadata without a duration holds the restored position until the duration is known", () => {
+  const { host, element, player } = createHost({ subject: "user-1" });
+  host.showConversion(
+    "first",
+    createAudiobook("First", { synchronizationUnitId: "unit-3", offsetMilliseconds: 2_000 }),
+  );
+  host.loadShown();
+
+  // WebKit's GStreamer backend can report its metadata before it has read the track's length.
+  element.loadMetadata(0);
+  expect(element.calls).toEqual([`src:${FIRST_TRACK_URL}`]);
+  expect(player().getSnapshot().positionMilliseconds).toBe(12_000);
+
+  element.duration = 15;
+  element.fire("durationchange");
+
+  expect(element.calls).toEqual([`src:${FIRST_TRACK_URL}`, "currentTime:12"]);
+});
+
+test("a seek while the metadata has no duration waits for any event that finds it known", () => {
+  const { host, element, player } = createHost();
+  host.showConversion("first", FIRST);
+  host.loadShown();
+  element.loadMetadata(0);
+
+  player().seekToUnit(1);
+  expect(element.calls).toEqual([`src:${FIRST_TRACK_URL}`]);
+  expect(player().getSnapshot().positionMilliseconds).toBe(4_000);
+
+  // That backend corrects the duration without firing `durationchange`.
+  element.duration = 15;
+  element.fire("timeupdate");
+
+  expect(element.calls).toEqual([`src:${FIRST_TRACK_URL}`, "currentTime:4"]);
+});
+
 test("a seek after the metadata is read but before its event replaces an earlier seek", () => {
   const { host, element, player } = createHost();
   host.showConversion("first", FIRST);
