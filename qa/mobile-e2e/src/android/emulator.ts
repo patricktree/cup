@@ -7,7 +7,7 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { SYSTEM_IMAGE_PACKAGE, type AndroidHost } from "#src/android/preflight.ts";
-import { run, stopChild, waitFor } from "#src/host.ts";
+import { isErrorWithCode, run, stopChild, waitFor, withLock } from "#src/host.ts";
 
 export type Emulator = {
   /** The adb serial, `emulator-<console port>`; every adb call names it. */
@@ -162,49 +162,56 @@ async function prepareSnapshot(host: AndroidHost): Promise<void> {
     return;
   }
 
-  await withPreparationLock(async () => {
-    if (await exists(SNAPSHOT_READY_MARKER)) {
-      return;
-    }
-    process.stderr.write(
-      `Preparing the suite's Android emulator ${AVD_NAME} and its Quick Boot snapshot once for this Mac; this takes a few minutes.\n`,
-    );
-    await run(
-      host.avdManager,
-      [
-        "create",
-        "avd",
-        "--force",
-        "--name",
-        AVD_NAME,
-        "--package",
-        SYSTEM_IMAGE_PACKAGE,
-        "--device",
-        "pixel_8",
-      ],
-      { env: androidEnvironment(host) },
-    );
-    await setAvdConfig("hw.ramSize", RAM_SIZE);
-    const { serial, process: emulatorProcess } = await startEmulator(host, ["-no-snapshot-load"]);
-    try {
-      await waitForBoot(host, serial, emulatorProcess);
-      // Quick Boot saves the snapshot when a writable emulator quits.
-      await run(host.adb, ["-s", serial, "emu", "kill"]);
-      await waitFor(
-        "the emulator to save its snapshot and quit",
-        () =>
-          Promise.resolve(
-            emulatorProcess.exitCode !== null || emulatorProcess.signalCode !== null
-              ? true
-              : undefined,
-          ),
-        120_000,
+  await withLock(
+    {
+      lockPath: PREPARATION_LOCK,
+      waitingFor: "another run to finish preparing the emulator snapshot",
+      timeoutMs: 15 * 60_000,
+    },
+    async () => {
+      if (await exists(SNAPSHOT_READY_MARKER)) {
+        return;
+      }
+      process.stderr.write(
+        `Preparing the suite's Android emulator ${AVD_NAME} and its Quick Boot snapshot once for this Mac; this takes a few minutes.\n`,
       );
-    } finally {
-      await stopChild(emulatorProcess);
-    }
-    await fs.writeFile(SNAPSHOT_READY_MARKER, "");
-  });
+      await run(
+        host.avdManager,
+        [
+          "create",
+          "avd",
+          "--force",
+          "--name",
+          AVD_NAME,
+          "--package",
+          SYSTEM_IMAGE_PACKAGE,
+          "--device",
+          "pixel_8",
+        ],
+        { env: androidEnvironment(host) },
+      );
+      await setAvdConfig("hw.ramSize", RAM_SIZE);
+      const { serial, process: emulatorProcess } = await startEmulator(host, ["-no-snapshot-load"]);
+      try {
+        await waitForBoot(host, serial, emulatorProcess);
+        // Quick Boot saves the snapshot when a writable emulator quits.
+        await run(host.adb, ["-s", serial, "emu", "kill"]);
+        await waitFor(
+          "the emulator to save its snapshot and quit",
+          () =>
+            Promise.resolve(
+              emulatorProcess.exitCode !== null || emulatorProcess.signalCode !== null
+                ? true
+                : undefined,
+            ),
+          120_000,
+        );
+      } finally {
+        await stopChild(emulatorProcess);
+      }
+      await fs.writeFile(SNAPSHOT_READY_MARKER, "");
+    },
+  );
 }
 
 async function startEmulator(
@@ -313,38 +320,6 @@ async function setAvdConfig(key: string, value: string): Promise<void> {
   );
 }
 
-/** Serializes snapshot preparation across concurrent runs; a dead holder's lock is taken over. */
-async function withPreparationLock(prepare: () => Promise<void>): Promise<void> {
-  await waitFor(
-    "another run to finish preparing the emulator snapshot",
-    async () => {
-      try {
-        await fs.mkdir(PREPARATION_LOCK);
-        await fs.writeFile(path.join(PREPARATION_LOCK, "pid"), String(process.pid));
-        return true;
-      } catch (error) {
-        if (!isErrorWithCode(error, "EEXIST")) {
-          throw error;
-        }
-      }
-      const holder = Number.parseInt(
-        await fs.readFile(path.join(PREPARATION_LOCK, "pid"), "utf8").catch(() => ""),
-        10,
-      );
-      if (Number.isInteger(holder) && !isProcessAlive(holder)) {
-        await fs.rm(PREPARATION_LOCK, { recursive: true, force: true });
-      }
-      return undefined;
-    },
-    15 * 60_000,
-  );
-  try {
-    await prepare();
-  } finally {
-    await fs.rm(PREPARATION_LOCK, { recursive: true, force: true });
-  }
-}
-
 function androidEnvironment(host: AndroidHost): NodeJS.ProcessEnv {
   return {
     ...process.env,
@@ -352,19 +327,6 @@ function androidEnvironment(host: AndroidHost): NodeJS.ProcessEnv {
     ANDROID_SDK_ROOT: host.sdkRoot,
     ANDROID_AVD_HOME: AVD_HOME,
   };
-}
-
-function isProcessAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return !isErrorWithCode(error, "ESRCH");
-  }
-}
-
-function isErrorWithCode(error: unknown, code: string): boolean {
-  return error instanceof Error && "code" in error && error.code === code;
 }
 
 async function exists(filePath: string): Promise<boolean> {

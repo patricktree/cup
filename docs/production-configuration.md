@@ -30,7 +30,13 @@ Deletion notices go to the Resend API at the `RESEND_BASE_URL` variable, `https:
 
 ## Deploy
 
-Deploys are manual: no CI workflow deploys, and pushing to `main` deploys nothing. Deploy from an up-to-date `main` after `pnpm validate` passes:
+Deploys are manual: no CI workflow deploys, and pushing to `main` deploys nothing. Deploy from the main checkout, on exactly the `main` commit that the [deploy gate](../AGENTS.md#validation-gates) passed on:
+
+```sh
+pnpm gate:deploy
+```
+
+Then deploy that commit:
 
 ```sh
 pnpm --filter '@cup/cloudflare-worker' run deploy

@@ -12,7 +12,7 @@ pnpm --filter '@cup/mobile-app' build
 
 This runs the cached shared web build and Capacitor configuration check, then syncs web assets into both native projects. Sync runs outside Turbo and always executes, even when both build tasks hit the cache.
 
-The repository-wide `pnpm build` and `pnpm validate` run `turbo:build` without syncing native projects. Use the mobile package's `build` command above before building or installing a native app.
+The repository-wide `pnpm build` and every [validation gate](../../AGENTS.md#validation-gates) run `turbo:build` without syncing native projects. Use the mobile package's `build` command above before building or installing a native app.
 
 To sync an already built web bundle:
 
@@ -124,7 +124,7 @@ Build the App scheme with a local `DEVELOPMENT_TEAM` override; it builds, signs,
 
 ## Automated and manual checks
 
-The [mobile E2E tests](../../qa/mobile-e2e/README.md) run the debug build of each shell on an emulator or simulator against a local test Worker, in `pnpm validate:extended`. They cover:
+The [mobile E2E tests](../../qa/mobile-e2e/README.md) run the debug build of each shell on an emulator or simulator against a local test Worker, in the [deploy gate](../../AGENTS.md#validation-gates). They cover:
 
 - **Both platforms**: launch to the landing page, loaded from the test Worker.
 - **Smoke journey, both platforms**: launch, sign in from the landing page and see Recents loaded from the test Worker ([`test/sign-in.test.ts`](../../qa/mobile-e2e/test/sign-in.test.ts)).

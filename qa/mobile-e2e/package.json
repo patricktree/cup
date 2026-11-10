@@ -9,8 +9,9 @@
   "scripts": {
     "clean": "del-cli --dot=true \"*.tsbuildinfo\"",
     "devices:clean": "node src/clean-devices.ts",
+    "preflight": "node src/preflight.ts",
     "test": "vitest run --config vitest.unit.config.ts",
-    "test:e2e": "vitest run",
+    "test:e2e": "node src/run-e2e.ts",
     "turbo:build": "tsc --build ./tsconfig.json",
     "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
     "turbo:lint:fix": "pnpm run turbo:lint --fix",
@@ -19,6 +20,7 @@
   "dependencies": {
     "@cup/test-worker": "workspace:*",
     "appium": "3.9.0",
+    "temporal-polyfill": "^1.0.5",
     "webdriverio": "10.1.0"
   },
   "devDependencies": {

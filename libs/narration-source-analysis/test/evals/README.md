@@ -41,7 +41,7 @@ Optional `case.json` metadata accepts only `description` and `tags`:
 }
 ```
 
-Missing partner files, invalid metadata or narration language scenarios, and an empty eval case set fail during suite discovery. The package's unit tests load the committed cases too, so `pnpm validate:fast` catches an invalid case without a paid run.
+Missing partner files, invalid metadata or narration language scenarios, and an empty eval case set fail during suite discovery. The package's unit tests load the committed cases too, so `pnpm test` and every [validation gate](../../../../AGENTS.md#validation-gates) catch an invalid case without a paid run.
 
 ## Narration language scenarios
 
@@ -61,7 +61,7 @@ The detector reads the case's source title and the narration source material reb
 
 ## Run and update evals
 
-From the repository root, run `pnpm validate:evals`. This paid check is excluded from `pnpm validate`. Alternatively, from `libs/narration-source-analysis`, run all registered candidates:
+From the repository root, run `pnpm evals`. This paid check runs only when invoked: the [review gate](../../../../AGENTS.md#validation-gates) runs it only when this library or a package it depends on changed relative to `origin/main`. Alternatively, from `libs/narration-source-analysis`, run all registered candidates:
 
 ```sh
 pnpm eval

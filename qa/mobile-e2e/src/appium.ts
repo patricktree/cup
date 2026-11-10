@@ -1,9 +1,10 @@
 import childProcess from "node:child_process";
+import fs from "node:fs/promises";
 import nodeModule from "node:module";
 import path from "node:path";
 import { remote } from "webdriverio";
 
-import { reservePort, run, stopChild, waitFor } from "#src/host.ts";
+import { reservePort, run, stopChild, waitFor, withLock } from "#src/host.ts";
 
 export type AppiumServer = {
   readonly port: number;
@@ -25,6 +26,11 @@ export type AppiumDriverName = keyof typeof APPIUM_DRIVERS;
 const PACKAGE_ROOT = path.resolve(import.meta.dirname, "..");
 /** Package-local and git-ignored, so `pnpm install` never installs drivers. */
 export const APPIUM_HOME = path.join(PACKAGE_ROOT, ".appium");
+/**
+ * Serializes driver installation: the Android and iOS processes of a parallel run, and runs in
+ * other checkouts of the same folder, would otherwise write `APPIUM_HOME` at once.
+ */
+const DRIVER_INSTALLATION_LOCK = path.join(APPIUM_HOME, ".driver-installation.lock");
 /** The package's own Appium CLI, run by this Node.js so that stopping the child stops Appium. */
 // Vitest's module runner does not support `import.meta.resolve`.
 const require = nodeModule.createRequire(import.meta.url);
@@ -32,16 +38,27 @@ const APPIUM_CLI = path.join(path.dirname(require.resolve("appium/package.json")
 
 /**
  * Installs the drivers into the package-local `APPIUM_HOME` unless the pinned version is already
- * there, then starts one Appium server on a port the operating system assigns.
+ * there, one process at a time, then starts one Appium server on a port the operating system
+ * assigns.
  */
 export async function startAppium(options: {
   drivers: readonly AppiumDriverName[];
   env: NodeJS.ProcessEnv;
 }): Promise<AppiumServer> {
   const environment = { ...options.env, APPIUM_HOME };
-  for (const driver of options.drivers) {
-    await ensureDriver(driver, environment);
-  }
+  await fs.mkdir(APPIUM_HOME, { recursive: true });
+  await withLock(
+    {
+      lockPath: DRIVER_INSTALLATION_LOCK,
+      waitingFor: "another run to finish installing Appium drivers",
+      timeoutMs: 10 * 60_000,
+    },
+    async () => {
+      for (const driver of options.drivers) {
+        await ensureDriver(driver, environment);
+      }
+    },
+  );
 
   const port = await reservePort();
   const logs: string[] = [];
