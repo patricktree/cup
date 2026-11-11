@@ -500,6 +500,26 @@ test("a short pull on the Add dialog's grabber lets it settle back", async ({ mo
   await expect.poll(() => readAddDialogTop(page)).toBe(restingTop);
 });
 
+test("renders the Add dialog held partway down by a pull", async ({ mount, page }) => {
+  await mount("routes/_shell.recent/AddDialog");
+  const restingTop = await waitForAddDialogAtRest(page);
+  const viewport = page.viewportSize();
+  if (!viewport) {
+    throw new Error("The page has no viewport size");
+  }
+
+  const x = viewport.width / 2;
+  await page.mouse.move(x, restingTop + 8);
+  await page.mouse.down();
+  await page.mouse.move(x, restingTop + 108, { steps: 10 });
+  // The dialog follows the pointer once the pull passes Base UI's small start threshold.
+  await expect.poll(() => readAddDialogTop(page)).toBeGreaterThan(restingTop + 50);
+
+  // The backdrop has faded by as much as the pull has moved the dialog down.
+  await expect(page).toHaveScreenshot("add-dialog-mid-pull.png");
+  await page.mouse.up();
+});
+
 test("a mouse drag inside the Add dialog's form leaves it in place", async ({ mount, page }) => {
   await mount("routes/_shell.recent/AddDialog");
   const dialog = page.getByRole("dialog", { name: "Add a track" });
