@@ -2,9 +2,14 @@
   "name": "@cup/mobile-app",
   "private": true,
   "scripts": {
+    "android:run": "node scripts/android-run.mts",
     "build": "turbo run turbo:build && pnpm run native:sync",
+    "lint": "turbo run turbo:lint",
+    "lint:fix": "turbo run turbo:lint:fix",
     "native:sync": "cap sync android && cap sync ios",
-    "turbo:build": "tsc --build"
+    "turbo:build": "tsc --build",
+    "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
+    "turbo:lint:fix": "pnpm run turbo:lint --fix"
   },
   "dependencies": {
     "@aparajita/capacitor-secure-storage": "8.0.1",
@@ -17,9 +22,12 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.3",
+    "@cup/config-oxlint": "workspace:*",
     "@patricktree-stack/config-typescript": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
     "typescript": "catalog:"
   }
 }

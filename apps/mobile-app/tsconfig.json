@@ -1,5 +1,5 @@
 {
-  /* just for IDE support for capacitor.config.ts */
+  /* just for IDE support for capacitor.config.ts; the scripts in scripts/ have their own project */
 
   "extends": [
     "@patricktree-stack/config-typescript/tsconfig.defaults.json",
@@ -9,5 +9,6 @@
     /* Modules */
     "types": ["node"]
   },
-  "include": ["capacitor.config.ts"]
+  "include": ["capacitor.config.ts"],
+  "references": [{ "path": "./tsconfig.scripts.json" }]
 }

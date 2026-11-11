@@ -24,21 +24,22 @@ pnpm --filter '@cup/mobile-app' native:sync
 
 Install Android Studio with SDK platform 36 and Java 21. Set `JAVA_HOME` to a Java 21 installation; Android Studio on macOS includes one at `/Applications/Android Studio.app/Contents/jbr/Contents/Home`.
 
-Create the ignored file `apps/mobile-app/android/local.properties` with your SDK path:
+Start an Android emulator in Android Studio, or connect a device with USB debugging enabled, then deploy the debug build to it from the repository root:
 
-```properties
-sdk.dir=/Users/your-user/Library/Android/sdk
+```sh
+pnpm --filter '@cup/mobile-app' android:run
 ```
 
-Start an Android emulator in Android Studio, or connect a device with USB debugging enabled. Confirm it appears in `adb devices`. Build the web bundle with the command above, then run:
+The script builds the web bundle, syncs it into the Android project, installs the debug build, launches it, and fails if the app stops within five seconds of launching. It finds the SDK the way the [mobile E2E suite](../../qa/mobile-e2e/README.md#prerequisites) does, at `ANDROID_HOME`, then `ANDROID_SDK_ROOT`, then `~/Library/Android/sdk`, and passes it to Gradle, so no `local.properties` is needed. It deploys to the only device `adb devices` lists; with several connected, set `ANDROID_SERIAL` to the one to use. The debug build talks to `https://cup.audio`; confirm the landing page renders and the app can close and reopen without a crash.
+
+After changing native Android code, also run its unit tests and Android lint, with `ANDROID_HOME` set when the SDK is not in Android Studio's default location:
 
 ```sh
 cd apps/mobile-app/android
-./gradlew assembleDebug testDebugUnitTest lintDebug installDebug
-adb shell am start -n audio.cup.app/.MainActivity
+ANDROID_HOME="${ANDROID_HOME:-${HOME}/Library/Android/sdk}" ./gradlew testDebugUnitTest lintDebug
 ```
 
-The debug APK is written to `apps/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk`. Confirm the landing page renders and the app can close and reopen without a crash.
+The debug APK is written to `apps/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk`.
 
 The [mobile E2E tests](../../qa/mobile-e2e/README.md) launch the debug build on their own emulator against a local test Worker; [automated and manual checks](#automated-and-manual-checks) lists what they cover.
 
