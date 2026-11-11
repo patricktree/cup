@@ -22,6 +22,7 @@ export type DSInputProps = {
   required?: boolean | undefined;
   type?: "email" | "password" | "text" | "url";
   hideLabel?: boolean | undefined;
+  refs?: { input?: React.Ref<HTMLInputElement> | undefined } | undefined;
 };
 
 export function DSInput({
@@ -42,6 +43,7 @@ export function DSInput({
   invalid = errorMessage !== undefined,
   dirty,
   touched,
+  refs,
 }: DSInputProps): React.JSX.Element {
   return (
     <Field.Root
@@ -61,6 +63,7 @@ export function DSInput({
     >
       <Field.Label className={hideLabel ? visuallyHidden : undefined}>{label}</Field.Label>
       <Field.Control
+        ref={refs?.input}
         className={composeClassnames(
           css`
             padding-block: calc(1.5 * var(--spacing-base));

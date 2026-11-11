@@ -373,8 +373,31 @@ test("renders the idle Add dialog over Recents", async ({ mount, page }) => {
     page.getByRole("heading", { name: "Recent", exact: true, includeHidden: true }),
   ).toBeAttached();
   await expect(dialog.getByRole("textbox", { name: "URL" })).toBeFocused();
+  await expect(dialog.getByRole("textbox", { name: "URL" })).toHaveAttribute(
+    "placeholder",
+    "Paste website link (https://...)",
+  );
   await expect(dialog.getByRole("button", { name: "Add" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Close" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Cancel" })).toHaveCount(0);
   await expect(page).toHaveScreenshot("add-dialog-idle.png");
+});
+
+test("the Add dialog is a sheet along the bottom edge, inside the app column's gutter", async ({
+  mount,
+  page,
+}) => {
+  await mount("routes/_shell.recent/AddDialog");
+  const box = await page.getByRole("dialog", { name: "Add a track" }).boundingBox();
+  const viewport = page.viewportSize();
+  if (!box || !viewport) {
+    throw new Error("The Add dialog has no box, or the page no viewport size");
+  }
+  expect(box.y + box.height).toBe(viewport.height);
+  // The 800 px app column, less the 12 px gutter on each side.
+  const inset = Math.max(0, (viewport.width - 800) / 2) + 12;
+  expect(box.x).toBe(inset);
+  expect(box.x + box.width).toBe(viewport.width - inset);
 });
 
 test("renders the Add dialog while the start is pending", async ({ mount, page }) => {
@@ -434,7 +457,7 @@ test("validates the source URL in the Add dialog before starting", async ({ moun
 });
 
 for (const close of [
-  { name: "Cancel", run: (page: Page) => page.getByRole("button", { name: "Cancel" }).click() },
+  { name: "Close", run: (page: Page) => page.getByRole("button", { name: "Close" }).click() },
   { name: "Escape", run: (page: Page) => page.keyboard.press("Escape") },
   { name: "a press outside", run: (page: Page) => page.mouse.click(4, 4) },
 ]) {
@@ -1184,7 +1207,7 @@ test("the page title names Recent, and the Add dialog while it is open", async (
   await expect(dialog).toBeVisible();
   await expect(page).toHaveTitle("Add · Cup");
 
-  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page).toHaveTitle("Recent · Cup");
 });

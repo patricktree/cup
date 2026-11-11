@@ -1,9 +1,12 @@
+import { css } from "@linaria/core";
 import { revalidateLogic } from "@tanstack/react-form";
 import React from "react";
 
 import { startConversionRequestSchema } from "@cup/listener-api.routes";
 
+import { textStyles } from "#src/app/design-system/text-styles.js";
 import { useAppForm } from "#src/app/form.js";
+import { composeClassnames } from "#src/app/utils.js";
 import { summarizeError } from "#src/errors.js";
 import { subscribeToSharedUrl } from "#src/platform/share-intake.js";
 
@@ -23,8 +26,47 @@ type SourceUrlFormProps = {
   submittingLabel: string;
   submitIcon?: React.ReactNode;
   sx: { form: string; input?: string; submitButton?: string };
-  refs?: { submitButton?: React.Ref<HTMLButtonElement> | undefined };
+  refs?: {
+    input?: React.Ref<HTMLInputElement> | undefined;
+    submitButton?: React.Ref<HTMLButtonElement> | undefined;
+  };
 };
+
+/**
+ * The drawn look of the home page's start form and the Add a Track sheet: the field is a wavy rule
+ * with no box, and the submit button sits at the end of the row with an arrow after its label.
+ */
+export const wavyRuleFormStyles = {
+  input: composeClassnames(
+    textStyles.paragraph,
+    css`
+      height: 41px;
+      padding-block: 0 9px;
+      padding-inline: 9px;
+
+      /* the rule's round caps overhang the column by 1 px on each side */
+      margin-inline: -1px;
+      background: url("./wavy-rule.svg") bottom / 100% auto no-repeat;
+
+      /* DSInput draws a pill with a border and a shadow; the design has only the wavy rule */
+      border: 0;
+      border-radius: var(--border-radius-sm);
+      box-shadow: none;
+
+      &:focus-visible {
+        /* the design draws no focus ring around the wavy rule; the caret marks the focused field */
+        outline: none;
+        /* DSInput's focus style rounds it into a pill, which would clip the rule's ends */
+        border-radius: var(--border-radius-sm);
+      }
+    `,
+  ),
+  submitButton: css`
+    /* wider than DSButton's gap, between the label and the arrow */
+    gap: calc(2 * var(--spacing-base));
+    justify-self: end;
+  `,
+} as const;
 
 /**
  * The source-URL field and submit button of every start form, with today's validation, and below
@@ -87,6 +129,7 @@ export function SourceUrlForm({
                 type="url"
                 placeholder={placeholder}
                 hideLabel
+                refs={{ input: refs?.input }}
               />
             )}
           </form.AppField>

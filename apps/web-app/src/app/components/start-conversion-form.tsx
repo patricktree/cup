@@ -6,7 +6,7 @@ import React from "react";
 import type { GrantSnapshot } from "@cup/listener-api.routes";
 
 import { SignInDialog } from "#src/app/components/sign-in-dialog.js";
-import { SourceUrlForm } from "#src/app/components/source-url-form.js";
+import { SourceUrlForm, wavyRuleFormStyles } from "#src/app/components/source-url-form.js";
 import { ArrowRightIcon } from "#src/app/design-system/icons.js";
 import { textStyles } from "#src/app/design-system/text-styles.js";
 import { signedInHomeTarget } from "#src/app/signed-in-home-target.js";
@@ -195,35 +195,8 @@ function ConversionForm({
           gap: 23px;
           margin-block: 67px 16px;
         `,
-        input: composeClassnames(
-          textStyles.paragraph,
-          css`
-            height: 41px;
-            padding-block: 0 9px;
-            padding-inline: 9px;
-
-            /* the rule's round caps overhang the column by 1 px on each side */
-            margin-inline: -1px;
-            background: url("./wavy-rule.svg") bottom / 100% auto no-repeat;
-
-            /* DSInput draws a pill with a border and a shadow; the design has only the wavy rule */
-            border: 0;
-            border-radius: var(--border-radius-sm);
-            box-shadow: none;
-
-            &:focus-visible {
-              /* the design draws no focus ring around the wavy rule; the caret marks the focused field */
-              outline: none;
-              /* DSInput's focus style rounds it into a pill, which would clip the rule's ends */
-              border-radius: var(--border-radius-sm);
-            }
-          `,
-        ),
-        submitButton: css`
-          /* wider than DSButton's gap, between the label and the arrow */
-          gap: calc(2 * var(--spacing-base));
-          justify-self: end;
-        `,
+        input: wavyRuleFormStyles.input,
+        submitButton: wavyRuleFormStyles.submitButton,
       }}
     />
   );
