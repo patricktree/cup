@@ -27,7 +27,7 @@ Listeners found Cup's narration a little slow: every audiobook was narrated at t
 
 ## Evidence
 
-- Pace-control research: branch [`research/gemini-tts-pace-controls`](https://github.com/patricktree/cup/tree/research/gemini-tts-pace-controls).
-- Characters-to-duration research: branch [`research/narration-characters-to-duration`](https://github.com/patricktree/cup/tree/research/narration-characters-to-duration).
-- Listening prototype: branch [`prototype/narration-pace`](https://github.com/patricktree/cup/tree/prototype/narration-pace), with every clip and its milliseconds per character in `summary.json`.
-- Time-stretch technology comparison: branch [`research/time-stretch-technology`](https://github.com/patricktree/cup/tree/research/time-stretch-technology), whose archive holds the build scripts for Sonic, the minimal FFmpeg `atempo` build, SoundTouch and Signalsmith Stretch.
+- Pace-control research: [Gemini TTS pace controls](../research/gemini-tts-pace-controls.md).
+- Characters-to-duration research: [Narration audio per character](../research/narration-characters-to-duration.md).
+- Listening prototype: the unmerged branch `prototype/narration-pace` at [`ecfa2311`](https://github.com/patricktree/cup/tree/ecfa2311929a894ef2c4ba6498d2cc70070c600e/libs/audiobook-production/prototype-narration-pace), with every clip and its milliseconds per character in `summary.json`.
+- Time-stretch technology comparison: [Time-stretch technology](../research/time-stretch-technology.md), whose [archive](../research/time-stretch-technology.tar.xz) holds the build scripts for Sonic, the minimal FFmpeg `atempo` build, SoundTouch and Signalsmith Stretch.

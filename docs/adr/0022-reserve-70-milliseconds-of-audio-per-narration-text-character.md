@@ -25,3 +25,8 @@ This partially supersedes ADR 0003's 80-millisecond rate only. Reserving before 
 - Short segments such as headings and names-only bylines overrun their reservation more often. Settlement charges the overrun, capped at what remains of the allowance, as before.
 - A conversion's whole-document estimate is lower, so fewer conversions near the end of an allowance are refused, and the required duration shown on a refusal is closer to what the audio needs.
 - An account or grant holding reservations made before the release keeps those larger amounts until they settle or are released.
+
+## Evidence
+
+- Today's pace per character: [Narration audio per character](../research/narration-characters-to-duration.md).
+- The pace at ×1.05: the listening prototype on the unmerged branch `prototype/narration-pace` at [`ecfa2311`](https://github.com/patricktree/cup/tree/ecfa2311929a894ef2c4ba6498d2cc70070c600e/libs/audiobook-production/prototype-narration-pace), in `summary.json`.
