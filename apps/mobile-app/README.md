@@ -27,7 +27,7 @@ Install Android Studio with SDK platform 36 and Java 21. Set `JAVA_HOME` to a Ja
 Start an Android emulator in Android Studio, or connect a device with USB debugging enabled, then deploy the debug build to it from the repository root:
 
 ```sh
-pnpm --filter '@cup/mobile-app' android:device
+pnpm --filter '@cup/mobile-app' android:run
 ```
 
 The script builds the web bundle, syncs it into the Android project, installs the debug build, launches it, and fails if the app stops within five seconds of launching. It finds the SDK the way the [mobile E2E suite](../../qa/mobile-e2e/README.md#prerequisites) does, at `ANDROID_HOME`, then `ANDROID_SDK_ROOT`, then `~/Library/Android/sdk`, and passes it to Gradle, so no `local.properties` is needed. It deploys to the only device `adb devices` lists; with several connected, set `ANDROID_SERIAL` to the one to use. The debug build talks to `https://cup.audio`; confirm the landing page renders and the app can close and reopen without a crash.

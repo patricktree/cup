@@ -2,7 +2,7 @@
   "name": "@cup/mobile-app",
   "private": true,
   "scripts": {
-    "android:device": "node scripts/android-device.mts",
+    "android:run": "node scripts/android-run.mts",
     "build": "turbo run turbo:build && pnpm run native:sync",
     "lint": "turbo run turbo:lint",
     "lint:fix": "turbo run turbo:lint:fix",
