@@ -6,10 +6,12 @@ import {
   layOutConsecutively,
 } from "#src/duration-accounting.ts";
 
-test("reserves 80 seconds per 1,000 characters with a one-second minimum", () => {
-  expect(estimateAudioDuration(1_000)).toBe(80_000);
-  expect(estimateAudioDuration(2_000)).toBe(160_000);
-  expect(estimateAudioDuration(100)).toBe(8_000);
+test("reserves 70 seconds per 1,000 characters with a one-second minimum", () => {
+  expect(estimateAudioDuration(1_000)).toBe(70_000);
+  expect(estimateAudioDuration(2_000)).toBe(140_000);
+  expect(estimateAudioDuration(100)).toBe(7_000);
+  expect(estimateAudioDuration(15)).toBe(1_050);
+  expect(estimateAudioDuration(14)).toBe(1_000);
   expect(estimateAudioDuration(1)).toBe(1_000);
 });
 

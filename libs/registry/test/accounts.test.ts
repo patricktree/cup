@@ -339,12 +339,12 @@ test("concurrent duration reservations cannot exceed the available duration", as
   expect(statuses.filter((status) => status === "insufficient-duration")).toHaveLength(8);
   expect((await account.inspect()).balance).toEqual({
     unit: "audio-millisecond",
-    available: 0,
-    reserved: 1_800_000,
+    available: 225_000,
+    reserved: 1_575_000,
   });
   expect(await account.inspectAccounting()).toEqual({
-    balance: { unit: "audio-millisecond", available: 0, reserved: 1_800_000 },
-    reconstructed: { available: 0, reserved: 1_800_000 },
+    balance: { unit: "audio-millisecond", available: 225_000, reserved: 1_575_000 },
+    reconstructed: { available: 225_000, reserved: 1_575_000 },
     entries: 3,
   });
 });
@@ -431,7 +431,7 @@ test("successful settlement consumes once and rejects a foreign artifact prefix"
     account.settleConversion(conversionId, outcome, nowMs, 1, [100]),
     account.settleConversion(conversionId, outcome, nowMs, 1, [100]),
   ]);
-  expect((await account.inspect()).balance.reserved).toBe(8_000);
+  expect((await account.inspect()).balance.reserved).toBe(7_000);
   await account.completeAudioSegment(conversionId, 0, 15_000, 1);
   expect((await account.completeAudioSegment(conversionId, 0, 15_000, 1)).result).toBe("replayed");
   expect((await account.inspect()).balance).toEqual({
@@ -1151,7 +1151,7 @@ test("segment overruns cap charges at the allowance without invalidating other r
   expect((await account.inspect()).balance).toEqual({
     unit: "audio-millisecond",
     available: 0,
-    reserved: 900_000,
+    reserved: 787_500,
   });
   await account.completeAudioSegment(id, 1, 2_000_000, 1);
   await account.completeAudioSegment(id, 1, 2_000_000, 1);
@@ -1217,7 +1217,7 @@ test("reservation retries preserve the segment identity and reject conflicting n
   expect(await account.startSynthesis(id, [100], 1)).toEqual({ result: "started" });
   await expectWorkerRpcRejection(account.startSynthesis(id, [101], 1));
   await expectWorkerRpcRejection(account.startSynthesis(id, [100, 100], 2));
-  expect((await account.inspect()).balance.reserved).toBe(8_000);
+  expect((await account.inspect()).balance.reserved).toBe(7_000);
   expect((await account.inspectAccounting()).entries).toBe(2);
 });
 

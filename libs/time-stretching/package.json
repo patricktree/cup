@@ -1,0 +1,53 @@
+{
+  "name": "@cup/time-stretching",
+  "private": true,
+  "files": [
+    "src/**",
+    "native/**",
+    "scripts/**",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "type": "module",
+  "imports": {
+    "#src/time-stretcher.wasm": {
+      "workerd": "./src/time-stretcher.wasm",
+      "node": "./src/time-stretcher-node-loader.ts"
+    },
+    "#src/*": "./src/*"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/types/time-stretching.d.ts",
+      "default": "./src/time-stretching.ts"
+    }
+  },
+  "scripts": {
+    "build": "turbo run turbo:build",
+    "build:time-stretcher": "./scripts/build-time-stretcher.sh",
+    "clean": "del-cli --dot=true \"dist\" \"*.tsbuildinfo\"",
+    "lint": "turbo run turbo:lint",
+    "lint:fix": "turbo run turbo:lint:fix",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "turbo:build": "prepare-declaration-build --declaration-output-dir ./dist/types --build-info-file ./dist/tsconfig.build.tsbuildinfo --source-package-json ./src/package.json && tsc --build ./tsconfig.json",
+    "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
+    "turbo:lint:fix": "pnpm run turbo:lint --fix",
+    "turbo:test": "pnpm run test"
+  },
+  "devDependencies": {
+    "@cup/config-oxlint": "workspace:*",
+    "@cup/prepare-declaration-build": "workspace:*",
+    "@patricktree-stack/config-typescript": "workspace:*",
+    "@patricktree-stack/config-vitest": "workspace:*",
+    "@types/node": "catalog:",
+    "@typescript/native": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

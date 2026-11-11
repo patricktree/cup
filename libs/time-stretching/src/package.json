@@ -1,0 +1,10 @@
+{
+  "type": "module",
+  "imports": {
+    "#src/time-stretcher.wasm": {
+      "workerd": "./time-stretcher.wasm",
+      "node": "./time-stretcher-node-loader.ts"
+    },
+    "#src/*": "./*"
+  }
+}

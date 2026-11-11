@@ -579,7 +579,7 @@ test("an account document exceeding the available duration reserves nothing unti
     account.startSynthesis(conversionId, narrationTextCharactersBySegment, 1),
   ).resolves.toEqual({
     result: "insufficient-duration",
-    requiredMilliseconds: 3_560,
+    requiredMilliseconds: 3_240,
     availableMilliseconds: 2_500,
   });
   await account.adjustAllowance(crypto.randomUUID(), 10_000, "test");
@@ -588,7 +588,7 @@ test("an account document exceeding the available duration reserves nothing unti
   ).resolves.toEqual({
     result: "started",
   });
-  expect((await account.inspect()).balance).toMatchObject({ available: 8_940, reserved: 3_560 });
+  expect((await account.inspect()).balance).toMatchObject({ available: 9_260, reserved: 3_240 });
 });
 
 test.each([400, 503])(

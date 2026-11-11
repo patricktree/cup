@@ -102,7 +102,7 @@ export function createAudioSegmentMetadata(
   return metadata;
 }
 
-/** Verifies that a stored object still matches its segment reference and synthesis policy. */
+/** Verifies that a stored object still matches its segment reference and synthesis identity. */
 export function assertStoredAudioSegment(
   audioObject: StoredAudioSegment,
   audioSegment: AudioSegmentReference,

@@ -5,7 +5,7 @@ import {
   type GetSynthesisStateDependencies,
 } from "#src/use-cases/get-synthesis-state.ts";
 
-// Estimated at 1,000 and 8,000 milliseconds.
+// Estimated at 1,000 and 7,000 milliseconds.
 const NARRATION_TEXT_CHARACTERS_BY_SEGMENT = [5, 100];
 
 const DEPENDENCIES: GetSynthesisStateDependencies = {
@@ -26,7 +26,7 @@ test("a document without reservations reports the duration it needs", async () =
       { sequence: 0, status: "absent" },
       { sequence: 1, status: "absent" },
     ],
-    requiredMilliseconds: 9_000,
+    requiredMilliseconds: 8_000,
     availableMilliseconds: 4_000,
   });
 });

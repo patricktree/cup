@@ -5,16 +5,28 @@ export type SpeechConfig = {
   policyVersion: string;
 };
 
-/** Policy 5 sends the narration language with every segment, when the model can speak it. */
+/**
+ * Speech policy 6 sends the same request as policy 5 and time-stretches the provider audio to its
+ * narration pace, `POLICY_6_SPEED_FACTOR`, before encoding (see `getSpeedFactor`).
+ */
 export const GEMINI_SPEECH_CONFIG = {
+  provider: "google-ai-studio",
+  model: "gemini-3.8-flash-lite-tts",
+  voice: "Charon",
+  policyVersion: "6",
+} as const satisfies SpeechConfig;
+
+// Resumed conversions retain the model, speech policy and narration pace they started with: policy 5 sends
+// the narration language, when the model can speak it, and stores the provider audio unstretched;
+// policy 4 sends no narration language, and policy 3 also wraps the text in a transcript
+// instruction.
+export const LEGACY_GEMINI_V5_SPEECH_CONFIG = {
   provider: "google-ai-studio",
   model: "gemini-3.8-flash-lite-tts",
   voice: "Charon",
   policyVersion: "5",
 } as const satisfies SpeechConfig;
 
-// Resumed conversions retain the model and request policy they started with: policy 4 sends no
-// narration language, and policy 3 also wraps the text in a transcript instruction.
 export const LEGACY_GEMINI_V4_SPEECH_CONFIG = {
   provider: "google-ai-studio",
   model: "gemini-3.8-flash-lite-tts",
@@ -40,6 +52,7 @@ export const ELEVENLABS_SPEECH_CONFIG = {
 /** Every speech configuration a stored audiobook manifest or audio segment may record. */
 export const KNOWN_SPEECH_CONFIGS = [
   GEMINI_SPEECH_CONFIG,
+  LEGACY_GEMINI_V5_SPEECH_CONFIG,
   LEGACY_GEMINI_V4_SPEECH_CONFIG,
   LEGACY_GEMINI_V3_SPEECH_CONFIG,
   ELEVENLABS_SPEECH_CONFIG,
@@ -56,6 +69,24 @@ export function isSameSpeechConfig(left: SpeechConfig, right: SpeechConfig): boo
     left.voice === right.voice &&
     left.policyVersion === right.policyVersion
   );
+}
+
+// Picked by ear from Sonic renders between 1.05 and 1.20 (patricktree/cup#266).
+const POLICY_6_SPEED_FACTOR = 1.05;
+
+/**
+ * Returns the factor by which a speech configuration speeds up the provider audio before encoding.
+ * The factor follows from the provider and policy version rather than a configuration field, so a
+ * stored manifest or segment needs no further metadata to tell its narration pace: Gemini speech
+ * policy 6 speeds up by `POLICY_6_SPEED_FACTOR`, every other policy keeps the provider audio
+ * unstretched. It is keyed by the policy rather than by `GEMINI_SPEECH_CONFIG`, so policy 6
+ * manifests keep their pace after a later policy becomes the deployment configuration.
+ */
+export function getSpeedFactor(speechConfig: SpeechConfig): number {
+  const isGeminiPolicy6 =
+    speechConfig.provider === "google-ai-studio" && speechConfig.policyVersion === "6";
+
+  return isGeminiPolicy6 ? POLICY_6_SPEED_FACTOR : 1;
 }
 
 /** Change this assignment and redeploy to switch the backend provider. */
