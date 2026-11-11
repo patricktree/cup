@@ -1,4 +1,5 @@
 import { encodePcmAsMp3 } from "@cup/mp3-encoding";
+import { stretchPcm } from "@cup/time-stretching";
 
 import { AUDIO_FORMAT, AUDIOBOOK_CONTENT_TYPE, analyzeMp3 } from "#src/audio-format.ts";
 import {
@@ -10,7 +11,7 @@ import {
   type StoredAudioSegment,
 } from "#src/audio-segment-storage.ts";
 import { calculateCrc32 } from "#src/crc32.ts";
-import { SPEECH_CONFIG, type SpeechConfig } from "#src/speech-synthesis-config.ts";
+import { getSpeedFactor, SPEECH_CONFIG, type SpeechConfig } from "#src/speech-synthesis-config.ts";
 import type {
   SpeechSynthesizer,
   SpeechSynthesisAi,
@@ -108,7 +109,14 @@ export async function produceAudioSegment({
     synthesisAttempt,
     synthesisResponseMode,
   });
-  const encodedAudio = await encodePcmAsMp3(providerAudio, {
+  const speedFactor = getSpeedFactor(speechConfig);
+  // The stretch runs before encoding, so the stored audio and every duration measured from it,
+  // such as generated audio duration and synchronization unit offsets, carry the policy's pace.
+  const pcm =
+    speedFactor === 1
+      ? providerAudio
+      : await stretchPcm(providerAudio, { sampleRate: AUDIO_FORMAT.sampleRate, speedFactor });
+  const encodedAudio = await encodePcmAsMp3(pcm, {
     bitrateKilobitsPerSecond: AUDIO_FORMAT.bitrateKilobitsPerSecond,
     sampleRate: AUDIO_FORMAT.sampleRate,
   });

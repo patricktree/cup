@@ -38,6 +38,7 @@
     "@cup/conversion-contracts": "workspace:*",
     "@cup/mp3-encoding": "workspace:*",
     "@cup/narration-document-creation": "workspace:*",
+    "@cup/time-stretching": "workspace:*",
     "zod": "^4.6.5"
   },
   "devDependencies": {

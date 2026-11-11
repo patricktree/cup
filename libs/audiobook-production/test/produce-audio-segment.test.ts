@@ -6,12 +6,19 @@ import {
   type ProduceOptions,
   type SpeechSynthesisAi,
 } from "#src/produce-audio-segment.ts";
+import { createFakeSpeechSynthesisAi } from "#src/speech-synthesis-ai.fake.ts";
 import {
   GEMINI_SPEECH_CONFIG,
   LEGACY_GEMINI_V3_SPEECH_CONFIG,
+  LEGACY_GEMINI_V5_SPEECH_CONFIG,
 } from "#src/speech-synthesis-config.ts";
 
 const CONVERSION_ID = "018f4d80-5b9e-7a43-9cf4-8e192b37cbd8";
+// 100 MP3 frames of 24 ms, so the provider PCM fills whole frames.
+const PROVIDER_PCM_DURATION_MILLISECONDS = 2_400;
+const MP3_FRAME_DURATION_MILLISECONDS = 24;
+// LAME's encoder delay and its flush add two frames to every encoded segment, stretched or not.
+const ENCODER_OVERHEAD_MILLISECONDS = 2 * MP3_FRAME_DURATION_MILLISECONDS;
 type SpeechSynthesisRun = ReturnType<SpeechSynthesisAi["gateway"]>["run"];
 type SpeechSynthesisRequest = Parameters<SpeechSynthesisRun>[0];
 type SpeechSynthesisOptions = Parameters<SpeechSynthesisRun>[1];
@@ -323,6 +330,90 @@ test("reuses a stored segment synthesized in the same narration language", async
   await expect(produceAudioSegment(options)).resolves.toEqual(segment);
   expect(run).toHaveBeenCalledTimes(1);
 });
+
+test("a policy 6 segment stores the provider PCM stretched by 1.05 and records policy 6", async () => {
+  const bucket = createAudioSegmentBucket();
+  const put = vi.spyOn(bucket, "put");
+
+  const segment = await produceAudioSegment({
+    speechConfig: GEMINI_SPEECH_CONFIG,
+    ai: createFakeSpeechSynthesisAi({ durationMilliseconds: PROVIDER_PCM_DURATION_MILLISECONDS }),
+    bucket,
+    conversionId: CONVERSION_ID,
+    sequence: 0,
+    narrationChunk: { text: "A briskly narrated paragraph." },
+  });
+
+  // 2,400 ms / 1.05 is about 2,286 ms.
+  expect(
+    Math.abs(segment.durationMilliseconds - (2_286 + ENCODER_OVERHEAD_MILLISECONDS)),
+  ).toBeLessThanOrEqual(MP3_FRAME_DURATION_MILLISECONDS);
+  expect(put.mock.calls[0]?.[2].customMetadata["synthesis-policy-version"]).toBe("6");
+});
+
+test("a segment of a manifest prepared under policy 5 keeps the provider PCM's duration", async () => {
+  const bucket = createAudioSegmentBucket();
+  const put = vi.spyOn(bucket, "put");
+
+  const segment = await produceAudioSegment({
+    speechConfig: LEGACY_GEMINI_V5_SPEECH_CONFIG,
+    ai: createFakeSpeechSynthesisAi({ durationMilliseconds: PROVIDER_PCM_DURATION_MILLISECONDS }),
+    bucket,
+    conversionId: CONVERSION_ID,
+    sequence: 0,
+    narrationChunk: { text: "A paragraph narrated at the earlier pace." },
+  });
+
+  expect(segment.durationMilliseconds).toBe(
+    PROVIDER_PCM_DURATION_MILLISECONDS + ENCODER_OVERHEAD_MILLISECONDS,
+  );
+  expect(put.mock.calls[0]?.[2].customMetadata["synthesis-policy-version"]).toBe("5");
+});
+
+test.each([
+  ["policy 5", "policy 6", LEGACY_GEMINI_V5_SPEECH_CONFIG, GEMINI_SPEECH_CONFIG],
+  ["policy 6", "policy 5", GEMINI_SPEECH_CONFIG, LEGACY_GEMINI_V5_SPEECH_CONFIG],
+] as const)(
+  "does not reuse a stored %s segment for a %s conversion",
+  async (_storedPolicy, _conversionPolicy, storedSpeechConfig, speechConfig) => {
+    const options = {
+      ai: createFakeSpeechSynthesisAi(),
+      bucket: createAudioSegmentBucket(),
+      conversionId: CONVERSION_ID,
+      sequence: 0,
+      narrationChunk: { text: "A paragraph narrated at one pace." },
+      narrationLanguage: "en-US",
+    };
+    await produceAudioSegment({ ...options, speechConfig: storedSpeechConfig });
+
+    await expect(produceAudioSegment({ ...options, speechConfig })).rejects.toThrow(
+      "identity conflicts",
+    );
+  },
+);
+
+test.each([
+  ["policy 5", LEGACY_GEMINI_V5_SPEECH_CONFIG],
+  ["policy 6", GEMINI_SPEECH_CONFIG],
+] as const)(
+  "reuses a stored %s segment for a conversion of the same policy",
+  async (_, speechConfig) => {
+    const run = vi.fn<SpeechSynthesisRun>(createFakeSpeechSynthesisAi().gateway("default").run);
+    const options = {
+      speechConfig,
+      ai: createSpeechSynthesisAi(run),
+      bucket: createAudioSegmentBucket(),
+      conversionId: CONVERSION_ID,
+      sequence: 0,
+      narrationChunk: { text: "A paragraph narrated at one pace." },
+      narrationLanguage: "en-US",
+    };
+    const segment = await produceAudioSegment(options);
+
+    await expect(produceAudioSegment(options)).resolves.toEqual(segment);
+    expect(run).toHaveBeenCalledTimes(1);
+  },
+);
 
 function createSpeechSynthesisAi(run: SpeechSynthesisRun): SpeechSynthesisAi {
   return {

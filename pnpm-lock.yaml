@@ -1016,6 +1016,9 @@ importers:
       '@cup/narration-document-creation':
         specifier: workspace:*
         version: link:../narration-document-creation
+      '@cup/time-stretching':
+        specifier: workspace:*
+        version: link:../time-stretching
       zod:
         specifier: ^4.6.5
         version: 4.6.5

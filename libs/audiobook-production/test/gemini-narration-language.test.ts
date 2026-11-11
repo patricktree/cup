@@ -5,6 +5,7 @@ import {
   GEMINI_SPEECH_CONFIG,
   LEGACY_GEMINI_V3_SPEECH_CONFIG,
   LEGACY_GEMINI_V4_SPEECH_CONFIG,
+  LEGACY_GEMINI_V5_SPEECH_CONFIG,
   type SpeechConfig,
 } from "#src/speech-synthesis-config.ts";
 import type { SynthesisOptions } from "#src/speech-synthesis.ts";
@@ -20,16 +21,30 @@ const TODAYS_INPUT = [
   { type: "user_input", content: [{ type: "text", text: NARRATION_TEXT }] },
 ] as const;
 const TODAYS_GENERATION_CONFIG = { speech_config: [{ voice: "Charon" }] } as const;
+// Policy 6 sends exactly the request policy 5 sends; only the stored audio's pace differs.
+const POLICIES_WITH_LANGUAGE = [
+  ["v5", LEGACY_GEMINI_V5_SPEECH_CONFIG],
+  ["v6", GEMINI_SPEECH_CONFIG],
+] as const;
 
-test.each([
-  ["de-AT", "German"],
-  ["de", "German"],
-  ["fr", "French"],
-  ["en-GB", "English"],
-] as const)(
-  "a policy v5 request in the speakable narration language %s carries the language and a %s style",
-  async (narrationLanguage, englishName) => {
-    const request = await captureRequest(GEMINI_SPEECH_CONFIG, narrationLanguage);
+test.each(
+  POLICIES_WITH_LANGUAGE.flatMap(([policy, speechConfig]) =>
+    (
+      [
+        ["de-AT", "German"],
+        ["de", "German"],
+        ["fr", "French"],
+        ["en-GB", "English"],
+      ] as const
+    ).map(
+      ([narrationLanguage, englishName]) =>
+        [policy, narrationLanguage, englishName, speechConfig] as const,
+    ),
+  ),
+)(
+  "a policy %s request in the speakable narration language %s carries the language and a %s style",
+  async (_, narrationLanguage, englishName, speechConfig) => {
+    const request = await captureRequest(speechConfig, narrationLanguage);
 
     expect(request.query).toMatchObject({
       input: [
@@ -54,10 +69,16 @@ test.each([
   },
 );
 
-test.each(["sv", "fi-FI", "th"])(
-  "a policy v5 request in the unspeakable narration language %s carries neither language nor style",
-  async (narrationLanguage) => {
-    const request = await captureRequest(GEMINI_SPEECH_CONFIG, narrationLanguage);
+test.each(
+  POLICIES_WITH_LANGUAGE.flatMap(([policy, speechConfig]) =>
+    ["sv", "fi-FI", "th"].map(
+      (narrationLanguage) => [policy, narrationLanguage, speechConfig] as const,
+    ),
+  ),
+)(
+  "a policy %s request in the unspeakable narration language %s carries neither language nor style",
+  async (_, narrationLanguage, speechConfig) => {
+    const request = await captureRequest(speechConfig, narrationLanguage);
 
     // toEqual, not toMatchObject, so a stray language or style fails the test.
     expect(request.query.input).toEqual(TODAYS_INPUT);
@@ -65,12 +86,22 @@ test.each(["sv", "fi-FI", "th"])(
   },
 );
 
-test("a policy v5 request without a narration language is today's request", async () => {
-  const request = await captureRequest(GEMINI_SPEECH_CONFIG, undefined);
+test.each(POLICIES_WITH_LANGUAGE)(
+  "a policy %s request without a narration language is today's request",
+  async (_, speechConfig) => {
+    const request = await captureRequest(speechConfig, undefined);
 
-  // toEqual, not toMatchObject, so a stray language or style fails the test.
-  expect(request.query.input).toEqual(TODAYS_INPUT);
-  expect(request.query.generation_config).toEqual(TODAYS_GENERATION_CONFIG);
+    // toEqual, not toMatchObject, so a stray language or style fails the test.
+    expect(request.query.input).toEqual(TODAYS_INPUT);
+    expect(request.query.generation_config).toEqual(TODAYS_GENERATION_CONFIG);
+  },
+);
+
+test("a policy v6 request is exactly the policy v5 request", async () => {
+  const policy5Request = await captureWholeRequest(LEGACY_GEMINI_V5_SPEECH_CONFIG, "de-AT");
+  const policy6Request = await captureWholeRequest(GEMINI_SPEECH_CONFIG, "de-AT");
+
+  expect(policy6Request).toEqual(policy5Request);
 });
 
 test("a policy v4 request ignores the narration language", async () => {
@@ -96,6 +127,13 @@ async function captureRequest(
   speechConfig: SpeechConfig,
   narrationLanguage: string | undefined,
 ): Promise<z.infer<typeof CAPTURED_REQUEST_SCHEMA>> {
+  return CAPTURED_REQUEST_SCHEMA.parse(await captureWholeRequest(speechConfig, narrationLanguage));
+}
+
+async function captureWholeRequest(
+  speechConfig: SpeechConfig,
+  narrationLanguage: string | undefined,
+): Promise<unknown> {
   let captured: unknown;
   const run: GatewayRun = async (request: unknown) => {
     captured = request;
@@ -115,5 +153,5 @@ async function captureRequest(
     narrationLanguage,
   });
 
-  return CAPTURED_REQUEST_SCHEMA.parse(captured);
+  return captured;
 }

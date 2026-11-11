@@ -26,5 +26,6 @@ ADRs preserve decisions, alternatives, rationale, and consequences. Read them al
 | [0020](0020-validate-in-three-local-gates-that-trust-the-turbo-cache.md)                                            | Validate in three local gates that trust the Turbo cache (partially superseded by 0021)                |
 | [0021](0021-rerun-the-merge-gate-only-after-a-git-conflict.md)                                                      | Rerun the merge gate only after a git conflict                                                         |
 | [0022](0022-reserve-70-milliseconds-of-audio-per-narration-text-character.md)                                       | Reserve 70 milliseconds of audio per narration-text character                                          |
+| [0023](0023-time-stretch-narration-audio-after-synthesis-with-sonic.md)                                             | Time-stretch narration audio after synthesis with Sonic                                                |
 
 Each decision's frontmatter records its status. For a substantive reversal, add a superseding ADR and link it from the previous decision while retaining the old rationale. The [wiki schema](../agents/domain.md#record-decisions-and-evidence) describes how decisions, implementation gaps, and research relate.
