@@ -22,6 +22,11 @@ export function TrackSkeleton({
         aria-hidden="true"
         className={css`
           display: grid;
+          /*
+           * A column that cannot grow past the container: WebKit sized the implicit auto column of
+           * these empty placeholders wider than the page, which made the page scroll sideways.
+           */
+          grid-template-columns: minmax(0, 1fr);
           gap: var(--spacing-gutter);
 
           & > div {
