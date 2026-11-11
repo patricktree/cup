@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Page, Response } from "@playwright/test";
 
 import { accountSnapshotSchema } from "@cup/listener-api.routes";
 
@@ -13,6 +13,8 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   page,
   workerEnvironment,
 }) => {
+  // Five sign-ins and two conversions take longer than the default 30 seconds in WebKit.
+  test.setTimeout(60_000);
   const { origin, authProvider } = workerEnvironment;
   await page.goto(`${origin}/app/`);
   await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
@@ -23,6 +25,8 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   await signup.getByRole("button", { name: "Continue with Google" }).click();
   await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
   expect(authProvider.exchanges()).toBe(1);
+  // Without a sign-out on this device, Cup lets Google skip its account chooser.
+  expect(authProvider.authorizationRequests().at(-1)).not.toHaveProperty("prompt");
   const conversionId = new URL(page.url()).pathname.split("/").at(-1);
   await waitForAudiobook(page);
   if (!conversionId) {
@@ -60,6 +64,11 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   await page.getByRole("button", { name: "Delete account…" }).click();
   await expect(page.getByRole("button", { name: "Schedule deletion" })).toBeVisible();
   await expect.poll(() => authProvider.exchanges()).toBe(2);
+  // The fresh sign-in before deletion authenticates again and keeps the account chooser.
+  expect(authProvider.authorizationRequests().at(-1)).toMatchObject({
+    prompt: "select_account",
+    max_age: "0",
+  });
   await scheduleDeletion(page);
   // Scheduling deletion signs the browser out, and signed out, Recents and its dialogs lead home.
   await expect(page).toHaveURL(`${origin}/app/`);
@@ -71,12 +80,21 @@ test("Google PKCE signup resumes conversion, protects Recents and media, and sup
   await page.getByRole("button", { name: "Listen" }).click();
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect.poll(() => authProvider.exchanges()).toBe(3);
+  // Deletion signed the browser out, so the next sign-in lets the listener switch accounts.
+  expect(authProvider.authorizationRequests().at(-1)).toMatchObject({ prompt: "select_account" });
+  expect(authProvider.authorizationRequests().at(-1)).not.toHaveProperty("max_age");
   await expect(page.getByRole("alert")).toBeVisible();
+  // A session that ends without a sign-out, here by dropping the stored copy, keeps the next
+  // sign-in free of the chooser: the successful sign-in above cleared the request for it.
+  await page.evaluate(() => localStorage.removeItem("cup_supabase_session"));
   // The scheduled-deletion email links the account recovery page.
   await page.goto(`${origin}/app/account-recovery`);
+  await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
+  await expect.poll(() => authProvider.exchanges()).toBe(4);
+  expect(authProvider.authorizationRequests().at(-1)).not.toHaveProperty("prompt");
   await expect(page.getByRole("heading", { name: "Deletion scheduled" })).toBeVisible();
   await page.getByRole("button", { name: "Restore account…" }).click();
-  await expect.poll(() => authProvider.exchanges()).toBe(4);
+  await expect.poll(() => authProvider.exchanges()).toBe(5);
   await page.getByRole("button", { name: "Confirm recovery" }).click();
   await expect(
     page.getByText(
@@ -298,6 +316,67 @@ test("root auth handles signup and session restoration without account navigatio
     timeout: 60_000,
   });
 });
+
+test("a signed-in session refreshes its expired access token and keeps working, also after a reload", async ({
+  page,
+  workerEnvironment,
+}) => {
+  test.setTimeout(150_000);
+  const { origin, authProvider } = workerEnvironment;
+  authProvider.setAccessTokenLifetime(ACCESS_TOKEN_LIFETIME_SECONDS);
+  await page.goto(`${origin}/app/`);
+  await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
+  await page.getByRole("button", { name: "Listen" }).click();
+  await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
+  const detailUrl = page.url();
+  const signInToken = await readAccessToken(page);
+
+  await waitPastAccessTokenLifetime();
+  const expired = await page.request.get(`${origin}/api/account`, {
+    headers: { Authorization: `Bearer ${signInToken}` },
+  });
+  expect(expired.status()).toBe(401);
+
+  await page.goto(`${origin}/app/recent`);
+  await expect(page.getByRole("list", { name: "Tracks" }).getByRole("listitem")).toHaveCount(1);
+  await waitPastAccessTokenLifetime();
+  const afterOpening = waitForAuthenticatedApiResponse(page, origin);
+  await page.getByRole("list", { name: "Tracks" }).getByRole("link").click();
+  await expect(page).toHaveURL(detailUrl);
+  await waitForAudiobook(page);
+  await expectRefreshedBearerToken(await afterOpening, signInToken);
+
+  // The reloaded app restores the session the last refresh stored; its refresh token is single-use.
+  await waitPastAccessTokenLifetime();
+  const afterReload = waitForAuthenticatedApiResponse(page, origin);
+  await page.reload();
+  await waitForAudiobook(page);
+  await expectRefreshedBearerToken(await afterReload, signInToken);
+  expect(authProvider.refreshes()).toBeGreaterThanOrEqual(2);
+  expect(authProvider.exchanges()).toBe(1);
+});
+
+/** Short enough that a session outlives several access tokens within one test. */
+const ACCESS_TOKEN_LIFETIME_SECONDS = 5;
+
+async function waitPastAccessTokenLifetime() {
+  await new Promise((resolve) => setTimeout(resolve, (ACCESS_TOKEN_LIFETIME_SECONDS + 1) * 1_000));
+}
+
+function waitForAuthenticatedApiResponse(page: Page, origin: string) {
+  return page.waitForResponse(
+    (response) =>
+      response.url().startsWith(`${origin}/api/`) &&
+      response.request().headers()["authorization"]?.startsWith("Bearer ") === true,
+  );
+}
+
+/** The Worker accepted a bearer token that a refresh issued after the sign-in's token expired. */
+async function expectRefreshedBearerToken(response: Response, signInToken: string) {
+  expect(response.ok()).toBe(true);
+  expect(response.request().headers()["authorization"]).not.toBe(`Bearer ${signInToken}`);
+}
 
 test("failed sign-in leaves anonymous trial access available", async ({
   expectConsoleError,

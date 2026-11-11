@@ -144,6 +144,10 @@ export class IosAppDevice implements AppDevice {
     await this.driver.execute("mobile: pressButton", { name: "home" });
   }
 
+  async bringToForeground(): Promise<void> {
+    await this.driver.execute("mobile: activateApp", { bundleId: BUNDLE_ID });
+  }
+
   /**
    * Opens `url` in Cup, as the Share Extension's handoff does, so a running Cup receives it through
    * its scene's `openURLContexts`. A URL that starts Cup passes no launch arguments, so Cup reaches

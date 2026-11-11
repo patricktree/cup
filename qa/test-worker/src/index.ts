@@ -1,4 +1,4 @@
-export { startAuthProvider } from "#src/auth-provider.ts";
+export { startAuthProvider, type AuthProvider } from "#src/auth-provider.ts";
 export {
   startTestWorker,
   type CreatedGrant,

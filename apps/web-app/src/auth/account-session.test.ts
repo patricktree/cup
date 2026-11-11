@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { AuthError, type AuthChangeEvent, type Session } from "@supabase/supabase-js";
-import { createActor, fromPromise, waitFor, type EventFromLogic } from "xstate";
+import { createActor, fromCallback, fromPromise, waitFor, type EventFromLogic } from "xstate";
 
 import {
   accountSessionMachine,
@@ -174,8 +174,12 @@ function startMachine({
   const pendingSessionReads: Array<(session: Session | null) => void> = [];
   const pendingRevocations: Array<() => void> = [];
   const pendingSignIns: Array<() => void> = [];
+  const appStateListeners = new Set<(isActive: boolean) => void>();
+  const signInRequests: Array<Parameters<AccountAuthConnection["signIn"]>[0]> = [];
   const fakes = {
     session: restored,
+    isChoosingAccountNext: false,
+    signInError: null as Error | null,
     shouldHoldSessionReads: false,
     shouldHoldRevocations: false,
     shouldHoldSignIns: false,
@@ -218,16 +222,29 @@ function startMachine({
   const connection: AccountAuthConnection = {
     client: { auth: fakeAuth },
     signInMethods: ["google"],
-    signIn: async ({ method, fresh }) => {
-      effects.push(`signIn(${method}, fresh: ${String(fresh)})`);
+    signIn: async (signInRequest) => {
+      effects.push(`signIn(${signInRequest.method}, fresh: ${String(signInRequest.fresh)})`);
+      signInRequests.push(signInRequest);
       if (fakes.shouldHoldSignIns) {
         await new Promise<void>((resolve) => {
           pendingSignIns.push(resolve);
         });
       }
+      if (fakes.signInError) {
+        throw fakes.signInError;
+      }
     },
     clearStoredSession: async () => {
       effects.push("clearStoredSession");
+    },
+    accountChooserMarker: {
+      isSet: async () => fakes.isChoosingAccountNext,
+      set: async () => {
+        fakes.isChoosingAccountNext = true;
+      },
+      clear: async () => {
+        fakes.isChoosingAccountNext = false;
+      },
     },
   };
 
@@ -242,6 +259,11 @@ function startMachine({
         }),
         clearNativeSignIn: fromPromise(async () => {
           effects.push("clearNativeSignIn");
+        }),
+        watchAppState: fromCallback<AccountSessionEvent>(({ sendBack }) => {
+          const listener = (isActive: boolean) => sendBack({ type: "APP_STATE_CHANGED", isActive });
+          appStateListeners.add(listener);
+          return () => appStateListeners.delete(listener);
         }),
       },
       actions: {
@@ -265,10 +287,17 @@ function startMachine({
     pendingSessionReads,
     pendingRevocations,
     pendingSignIns,
+    signInRequests,
     initialize: async () => {
       actor.send({ type: "INITIALIZE" });
       await waitFor(actor, (snapshot) => snapshot.hasTag("initialized"));
       effects.length = 0;
+    },
+    /** Plays the app shell reporting that Cup came to the foreground or went to the background. */
+    emitAppState: (isActive: boolean) => {
+      for (const listener of appStateListeners) {
+        listener(isActive);
+      }
     },
     emitAuthChange: (session: Session | null) => {
       fakes.session = session;
@@ -364,11 +393,7 @@ test("a session read in flight when sign-in starts resolves to null", async () =
 
   expect(await read).toBeNull();
   await signIn;
-  expect(machine.effects).toEqual([
-    "stopPlayback",
-    "supabase.startAutoRefresh",
-    "signIn(google, fresh: true)",
-  ]);
+  expect(machine.effects).toEqual(["stopPlayback", "signIn(google, fresh: true)"]);
 });
 
 test("a session read in flight when sign-out starts resolves to null", async () => {
@@ -399,7 +424,6 @@ test("an account session reported during sign-in signs in without clearing queri
 
   expect(machine.effects).toEqual([
     "stopPlayback",
-    "supabase.startAutoRefresh",
     "stopPlayback",
     "clearLastGrantId",
     "signIn(google, fresh: false)",
@@ -424,7 +448,6 @@ test("sign-out shows signed-out at once, then revokes the session and ends the n
     "stopPlayback",
     "unloadAudio",
     "supabase.signOut",
-    "supabase.stopAutoRefresh",
     "clearStoredSession",
     "clearLastGrantId",
     "clearNativeSignIn",
@@ -485,7 +508,6 @@ test("sign-out before initialization shows signed-out and stops audio before it 
     "stopPlayback",
     "unloadAudio",
     "supabase.signOut",
-    "supabase.stopAutoRefresh",
     "clearStoredSession",
     "clearLastGrantId",
     "clearNativeSignIn",
@@ -533,4 +555,125 @@ test("a sign-in interrupted by sign-out settles when the provider call finishes"
 
   machine.pendingSignIns[0]?.();
   await signIn;
+});
+
+test("on the web, sign-in and sign-out leave auto refresh to supabase-js", async () => {
+  const machine = startMachine();
+  await machine.initialize();
+
+  const signIn = machine.signIn();
+  machine.emitAuthChange(createSession("reader"));
+  await signIn;
+  await machine.signOut();
+  const secondSignIn = machine.signIn();
+  machine.emitAuthChange(createSession("reader"));
+  await secondSignIn;
+
+  expect(machine.effects).not.toContain("supabase.startAutoRefresh");
+  expect(machine.effects).not.toContain("supabase.stopAutoRefresh");
+});
+
+test("in the apps, the foreground starts auto refresh and the background stops it", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+  await machine.initialize();
+
+  machine.emitAppState(true);
+  machine.emitAppState(false);
+  machine.emitAppState(true);
+
+  expect(machine.effects).toEqual([
+    "supabase.startAutoRefresh",
+    "supabase.stopAutoRefresh",
+    "supabase.startAutoRefresh",
+  ]);
+});
+
+test("in the apps, sign-out stops auto refresh", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+  await machine.initialize();
+  machine.emitAppState(true);
+  machine.effects.length = 0;
+
+  await machine.signOut();
+
+  expect(machine.effects).toContain("supabase.stopAutoRefresh");
+});
+
+test("in the apps, a session that starts in the foreground after a sign-out restarts auto refresh", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+  await machine.initialize();
+  machine.emitAppState(true);
+  await machine.signOut();
+  machine.effects.length = 0;
+
+  const signIn = machine.signIn();
+  machine.emitAuthChange(createSession("reader"));
+  await signIn;
+
+  expect(machine.effects).toContain("supabase.startAutoRefresh");
+});
+
+test("in the apps, a session that starts in the background leaves auto refresh to the next foreground", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+  await machine.initialize();
+  machine.emitAppState(false);
+  await machine.signOut();
+  machine.effects.length = 0;
+
+  const signIn = machine.signIn();
+  machine.emitAuthChange(createSession("reader"));
+  await signIn;
+
+  expect(machine.effects).not.toContain("supabase.startAutoRefresh");
+});
+
+test("the first sign-in after a sign-out asks for the account chooser until a session starts", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+  await machine.initialize();
+  await machine.signIn();
+
+  await machine.signOut();
+  await machine.signIn();
+  // The provider reports the session once Google returns.
+  machine.emitAuthChange(createSession("other"));
+  await settle();
+  await machine.signIn();
+
+  expect(machine.signInRequests).toEqual([
+    { method: "google", fresh: false, chooseAccount: false },
+    { method: "google", fresh: false, chooseAccount: true },
+    { method: "google", fresh: false, chooseAccount: false },
+  ]);
+  expect(machine.fakes.isChoosingAccountNext).toBe(false);
+});
+
+test("a failed, cancelled or unfinished sign-in after a sign-out keeps asking for the account chooser", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+  await machine.initialize();
+  await machine.signOut();
+
+  machine.fakes.signInError = new Error("The user canceled the sign-in flow.");
+  await expect(machine.signIn()).rejects.toThrow("The user canceled the sign-in flow.");
+  await settle();
+  machine.fakes.signInError = null;
+  // On the web, the sign-in returns once the browser leaves for Google, before any session exists.
+  await machine.signIn();
+  await settle();
+  await machine.signIn();
+
+  expect(machine.signInRequests).toEqual([
+    { method: "google", fresh: false, chooseAccount: true },
+    { method: "google", fresh: false, chooseAccount: true },
+    { method: "google", fresh: false, chooseAccount: true },
+  ]);
+  expect(machine.fakes.isChoosingAccountNext).toBe(true);
+});
+
+test("a session restored after Google's redirect stops asking for the account chooser", async () => {
+  const machine = startMachine({ restored: createSession("reader") });
+  machine.fakes.isChoosingAccountNext = true;
+
+  await machine.initialize();
+
+  expect(machine.fakes.isChoosingAccountNext).toBe(false);
 });

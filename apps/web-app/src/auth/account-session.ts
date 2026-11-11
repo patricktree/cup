@@ -1,5 +1,5 @@
 import { createClient, type Session } from "@supabase/supabase-js";
-import { createActor, fromPromise, waitFor } from "xstate";
+import { createActor, fromCallback, fromPromise, waitFor } from "xstate";
 
 import { parseOkResponse } from "@cup/listener-api.client";
 import { authConfigResponseSchema } from "@cup/listener-api.routes";
@@ -15,6 +15,7 @@ import {
   type SignInMethod,
 } from "#src/auth/account-session-machine.js";
 import {
+  ACCOUNT_CHOOSER_MARKER_STORAGE_KEY,
   ACCOUNT_SESSION_CODE_VERIFIER_STORAGE_KEY,
   ACCOUNT_SESSION_STORAGE_KEY,
 } from "#src/auth/account-session-storage.js";
@@ -23,6 +24,7 @@ import {
   initializeAuthStorage,
   signInWithGoogle,
   clearNativeSignIn,
+  watchAppState,
 } from "#src/platform/account-auth.js";
 import { STOP_PLAYBACK_EVENT_NAME } from "#src/playback-events.js";
 import { trialBrowserState } from "#src/trial-browser-state.js";
@@ -38,6 +40,9 @@ const accountSessionActor = createActor(
     actors: {
       loadConnection: fromPromise(loadConnection),
       clearNativeSignIn: fromPromise(clearNativeSignIn),
+      watchAppState: fromCallback(({ sendBack }) =>
+        watchAppState((isActive) => sendBack({ type: "APP_STATE_CHANGED", isActive })),
+      ),
     },
     actions: {
       clearQueries: () => queryClient.clear(),
@@ -172,6 +177,7 @@ async function loadConnection(): Promise<AccountAuthConnection> {
       storage: platformStorage.storage,
     },
   });
+  const { storage } = platformStorage;
   const { testAccount } = config;
   const signInMethods: SignInMethod[] = [];
   if (config.googleWebClientId) {
@@ -183,9 +189,9 @@ async function loadConnection(): Promise<AccountAuthConnection> {
   return {
     client,
     signInMethods,
-    signIn: async ({ method, fresh }) => {
+    signIn: async ({ method, fresh, chooseAccount }) => {
       if (method === "google") {
-        await signInWithGoogle(client, config.googleWebClientId, fresh);
+        await signInWithGoogle(client, config.googleWebClientId, { fresh, chooseAccount });
         return;
       }
       if (!testAccount) {
@@ -198,6 +204,16 @@ async function loadConnection(): Promise<AccountAuthConnection> {
       }
     },
     clearStoredSession: platformStorage.clearStoredSession,
+    // Kept where the session is: local storage on the web, Secure Storage in the shells.
+    accountChooserMarker: {
+      isSet: async () => (await storage.getItem(ACCOUNT_CHOOSER_MARKER_STORAGE_KEY)) !== null,
+      set: async () => {
+        await storage.setItem(ACCOUNT_CHOOSER_MARKER_STORAGE_KEY, "true");
+      },
+      clear: async () => {
+        await storage.removeItem(ACCOUNT_CHOOSER_MARKER_STORAGE_KEY);
+      },
+    },
   };
 }
 

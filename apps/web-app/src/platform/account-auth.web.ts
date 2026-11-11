@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { GoogleSignInOptions } from "#src/platform/account-auth.js";
+
 /** Prepares storage for the account session, which is kept under `storageKeys`. */
 export async function initializeAuthStorage(storageKeys: readonly string[]) {
   const storage = window.localStorage;
@@ -16,13 +18,13 @@ export async function initializeAuthStorage(storageKeys: readonly string[]) {
 export async function signInWithGoogle(
   client: SupabaseClient,
   _googleClientId: string | undefined,
-  fresh: boolean,
+  options: GoogleSignInOptions,
 ) {
   const result = await client.auth.signInWithOAuth({
     provider: "google",
     options: {
       redirectTo: `${window.location.origin}${window.location.pathname}`,
-      queryParams: googleAuthorizationParams(fresh),
+      queryParams: googleAuthorizationParams(options),
     },
   });
   if (result.error) {
@@ -31,11 +33,29 @@ export async function signInWithGoogle(
 }
 
 /**
- * Google's authorization parameters: always the account chooser, and for a fresh sign-in, such as
- * before account deletion, a new authentication however recent the last one was.
+ * Google's authorization parameters. Without `prompt`, Google skips its account chooser when it
+ * can, so a normal sign-in takes one tap less; a fresh sign-in keeps the chooser and adds
+ * `max_age=0`.
  */
-export function googleAuthorizationParams(fresh: boolean): Record<string, string> {
-  return fresh ? { prompt: "select_account", max_age: "0" } : { prompt: "select_account" };
+export function googleAuthorizationParams({
+  fresh,
+  chooseAccount,
+}: GoogleSignInOptions): Record<string, string> {
+  if (fresh) {
+    return { prompt: "select_account", max_age: "0" };
+  }
+  if (chooseAccount) {
+    return { prompt: "select_account" };
+  }
+  return {};
+}
+
+/**
+ * Reports nothing: supabase-js refreshes the session only while the page is visible, as long as
+ * nothing calls its `startAutoRefresh` or `stopAutoRefresh`, which remove that handling.
+ */
+export function watchAppState(_listener: (isActive: boolean) => void): () => void {
+  return () => {};
 }
 
 /** The browser keeps no sign-in of its own beyond the account session. */

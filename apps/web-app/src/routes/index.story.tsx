@@ -1,10 +1,13 @@
 import { createMemoryHistory } from "@tanstack/react-router";
 import { waitFor, within } from "@testing-library/dom";
 import { userEvent } from "@testing-library/user-event";
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import React from "react";
 
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
+import { storePendingAccountConversion } from "#src/data-fetching/account-conversion-storage.js";
+import { accountStory } from "#src/ui-gallery/account-fixtures.jsx";
+import { waitWhileHeld } from "#src/ui-gallery/held-responses.js";
 import type { Story } from "#src/ui-gallery/story.js";
 
 const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/"] }));
@@ -60,4 +63,56 @@ export const SignInWithTestAccount = {
       }),
     ),
   ],
+} satisfies Story;
+
+/** A signed-out listener opens the sign-in dialog from the line under the form. */
+export const SignInFromLink = {
+  beforeMount: SignIn.beforeMount,
+  component: LandingPage,
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    await user.click(await within(canvasElement).findByRole("link", { name: "Sign in" }));
+    await within(document.body).findByRole("dialog", { name: "Sign in" });
+  },
+} satisfies Story;
+
+export const SignInFromLinkWithTestAccount = {
+  ...SignInFromLink,
+  handlers: SignInWithTestAccount.handlers,
+} satisfies Story;
+
+/**
+ * Account auth fails to initialize, so home shows signed out, and a sign-in that initializes it
+ * again fails too. Holding `"auth-config"` keeps that retry loading.
+ */
+export const HomeWhileAuthUnavailable = {
+  beforeMount: SignIn.beforeMount,
+  component: LandingPage,
+  handlers: [
+    http.get("/api/auth/config", async () => {
+      await waitWhileHeld("auth-config");
+      return HttpResponse.json(
+        { error: { message: "Sign-in is temporarily unavailable." } },
+        { status: 503 },
+      );
+    }),
+  ],
+} satisfies Story;
+
+/**
+ * A start submitted from the home page resumed after sign-in and is still pending, so a signed-in
+ * listener stays on home instead of being redirected to Recents.
+ */
+export const SignedInHomeWithPendingStart = {
+  ...accountStory({
+    path: "/",
+    handlers: [http.post("/api/account/conversions", () => delay("infinite"))],
+  }),
+  beforeMount: async () => {
+    storePendingAccountConversion({
+      sourceUrl: "https://example.com/article",
+      idempotencyKey: "0f8fad5b-d9cb-469f-a165-70867728950e",
+      submitted: true,
+    });
+  },
 } satisfies Story;

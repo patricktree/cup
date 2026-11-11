@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { SignInCancelledError, UserFacingError } from "#src/errors.js";
-export { initializeAuthStorage } from "#src/platform/account-auth.native.js";
+import type { GoogleSignInOptions } from "#src/platform/account-auth.js";
+export { initializeAuthStorage, watchAppState } from "#src/platform/account-auth.native.js";
 
 /**
  * Messages of the plugin's cancellation code that mean the person backed out. Google Play services
@@ -16,13 +17,16 @@ const CANCELLED_BY_PERSON_MESSAGES = new Set([
 ]);
 
 /**
+ * Ignores `chooseAccount`: sign-out already ends the device's Google sign-in (`clearNativeSignIn`),
+ * so Credential Manager shows its account picker on the next sign-in anyway.
+ *
  * Rejects with a `SignInCancelledError` when the person backs out of Google's screens, and with a
  * `UserFacingError` for any other failure of the plugin.
  */
 export async function signInWithGoogle(
   client: { auth: Pick<SupabaseClient["auth"], "signInWithIdToken"> },
   googleClientId: string | undefined,
-  fresh: boolean,
+  { fresh }: GoogleSignInOptions,
 ) {
   const { GoogleSignIn, ErrorCode } = await import("@capawesome/capacitor-google-sign-in");
   if (!googleClientId) {

@@ -3,7 +3,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, inject, type TestContext } from "vitest";
 
-import { startAuthProvider, startTestWorker, type TestWorker } from "@cup/test-worker";
+import {
+  startAuthProvider,
+  startTestWorker,
+  type AuthProvider,
+  type TestWorker,
+} from "@cup/test-worker";
 
 import { openAndroidAppDevice, type AndroidTarget } from "#src/android/android-app-device.ts";
 import type { AppDevice, MobilePlatform } from "#src/app-device.ts";
@@ -22,7 +27,7 @@ const PORT_ATTEMPTS = 5;
 
 /** The servers a test started and the host ports it exposed to the app for them. */
 type TestServers = {
-  authProvider?: Awaited<ReturnType<typeof startAuthProvider>>;
+  authProvider?: AuthProvider;
   worker?: TestWorker;
   exposedPorts: number[];
 };
@@ -46,8 +51,11 @@ export type MobileApp = {
   readonly worker: TestWorker;
   /** The origin the app reaches the Worker at, passed as its launch argument. */
   readonly apiOrigin: string;
-  /** This test's fake auth provider, whose origin is in the issuer of the tokens it signs. */
-  readonly authProviderOrigin: string;
+  /**
+   * This test's fake auth provider, whose origin is in the issuer of the tokens it signs. A test
+   * reads its recorded authorization requests and sets its access token lifetime.
+   */
+  readonly authProvider: AuthProvider;
 };
 
 /**
@@ -148,8 +156,8 @@ export function useMobileApp(): MobileApp {
         portOf(requireDefined(testServers.worker, "This test's Worker").origin),
       );
     },
-    get authProviderOrigin() {
-      return requireDefined(testServers.authProvider, "This test's fake auth provider").origin;
+    get authProvider() {
+      return requireDefined(testServers.authProvider, "This test's fake auth provider");
     },
   };
 }

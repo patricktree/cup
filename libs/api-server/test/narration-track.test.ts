@@ -369,6 +369,17 @@ test("an account's narration track is served through a token for the owning acco
   expect(new Uint8Array(await response.arrayBuffer())).toEqual(trackBytes);
 });
 
+test("the narration track can be played from the apps' https://localhost page", async () => {
+  const { app, env } = fixture({ owner: accountOwner });
+
+  const response = await app.request(await signTrackUrl(accountOwner), {}, env);
+
+  expect(response.status).toBe(200);
+  // The Android and iOS apps load the track with a plain <audio> element from another origin; the
+  // signed URL is the authorization, so the resource policy must not block a cross-origin embed.
+  expect(response.headers.get("Cross-Origin-Resource-Policy")).toBe("cross-origin");
+});
+
 test("answers 401 without a token, even with the grant cookie", async () => {
   const { app, env, bucketRead } = fixture();
 

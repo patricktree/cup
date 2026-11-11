@@ -1180,6 +1180,10 @@ export function createApiServer(dependencies: ApiServerDependencies = production
         baseUri: ["'none'"],
         formAction: ["'self'"],
       },
+      // The Android and iOS apps embed media from their own origins (`https://localhost` on Android,
+      // `capacitor://localhost` on iOS) with plain `<img>` and `<audio>` elements. A signed media URL authorizes the request by itself, so its
+      // routes allow a cross-origin embed; credentialed CORS still admits only the app's origins.
+      crossOriginResourcePolicy: isSignedMediaPath(context.req.path) ? "cross-origin" : true,
       referrerPolicy: "no-referrer",
       xFrameOptions: "DENY",
     })(context, next),
@@ -1320,7 +1324,6 @@ export function createApiServer(dependencies: ApiServerDependencies = production
       }
       await next();
       allowApplicationOrigin(context, context.req.header("Origin"));
-      context.header("Cross-Origin-Resource-Policy", "same-origin");
       return context.res;
     });
   }
@@ -1433,6 +1436,11 @@ export function createApiServer(dependencies: ApiServerDependencies = production
   return app
     .route("/", createListenerApi(listenerApiHandlers))
     .route("/", createOperatorApi(operatorApiHandlers));
+}
+
+/** Whether the path is one of the media routes that a signed media URL authorizes. */
+function isSignedMediaPath(path: string): boolean {
+  return /^\/api\/files\/audiobooks\/[^/]+\/(?:narration-track\.mp3|cover-image)$/.test(path);
 }
 
 /** The web app's origins: the production origin and the one its Capacitor shells load it from. */

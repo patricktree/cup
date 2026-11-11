@@ -27,6 +27,28 @@ export async function signInFromLandingPage(
   });
 }
 
+/**
+ * From the signed-out landing page, opens the sign-in dialog with the "Sign in" link under the
+ * start form and signs in with "Continue with Google", which the test's fake auth provider answers.
+ * Ends on Recents, where home sends a signed-in listener.
+ */
+export async function signInFromHomeLink(
+  device: AppDevice,
+  webView: WebdriverIO.Browser,
+): Promise<void> {
+  const link = webView.$("a=Sign in");
+  await link.waitForDisplayed({ timeout: 30_000 });
+  await link.click();
+  const signIn = webView.$("button=Continue with Google");
+  await signIn.waitForEnabled({ timeout: 30_000 });
+  await signIn.click();
+  await device.continueGoogleSignIn();
+  await webView.waitUntil(async () => (await pathname(webView)) === "/app/recent", {
+    timeout: SIGN_IN_TIMEOUT_MS,
+    timeoutMsg: "Signing in from the home link did not land on Recents.",
+  });
+}
+
 /** Fills the landing page's start form with `SOURCE_URL` and submits it, which asks to sign in. */
 export async function startSignInFromLandingPage(webView: WebdriverIO.Browser): Promise<void> {
   const url = webView.$('input[type="url"]');

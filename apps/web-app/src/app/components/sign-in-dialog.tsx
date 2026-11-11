@@ -6,7 +6,7 @@ import type { SignInMethod } from "#src/auth/account-session.js";
 
 type SignInDialogProps = Pick<
   DSDialogProps,
-  "open" | "onOpenChange" | "finalFocus" | "errorMessage"
+  "open" | "onOpenChange" | "finalFocus" | "description" | "errorMessage"
 > & {
   signInMethods: readonly SignInMethod[];
   /** The method of the sign-in in progress, if any. */
@@ -23,6 +23,7 @@ export function SignInDialog({
   open,
   onOpenChange,
   finalFocus,
+  description,
   errorMessage,
   signInMethods,
   pendingMethod,
@@ -37,11 +38,7 @@ export function SignInDialog({
       initialFocus={signInButton}
       finalFocus={finalFocus}
       title={<>Sign in</>}
-      description={
-        <>
-          Sign in to listen. <strong>New accounts get 30 free minutes.</strong>
-        </>
-      }
+      description={description}
       cancelButtonText={<>Cancel</>}
       cancelButtonDisabled={pendingMethod !== undefined}
       buttonGroupChildren={

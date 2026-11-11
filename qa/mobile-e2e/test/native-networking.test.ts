@@ -42,7 +42,7 @@ test("a conversion started from the Add dialog reaches the Worker through native
   expect(accountRequests).toContainEqual(expect.objectContaining({ method: "GET" }));
   for (const { headers } of accountRequests) {
     expect(bearerTokenClaims(headers["authorization"])).toMatchObject({
-      iss: `${app.authProviderOrigin}/auth/v1`,
+      iss: `${app.authProvider.origin}/auth/v1`,
       role: "authenticated",
     });
   }

@@ -29,13 +29,26 @@ export type SignInMethod = "google" | "test-account";
 /** A fresh sign-in authenticates again even when the provider still has a session. */
 export type SignInRequest = { method: SignInMethod; fresh: boolean };
 
+/**
+ * The device-local "choose account next" marker: sign-out sets it, so the next Google sign-in shows
+ * Google's account chooser and the listener can switch accounts (ADR 0019). The next session that
+ * starts clears it; a failed or cancelled sign-in keeps it.
+ */
+type AccountChooserMarker = {
+  isSet: () => Promise<boolean>;
+  set: () => Promise<void>;
+  clear: () => Promise<void>;
+};
+
 /** What initialization produces: the Supabase client and the platform operations bound to it. */
 export type AccountAuthConnection = {
   client: AccountAuthClient;
   /** The methods the auth configuration offers, in the order the sign-in dialog shows them. */
   signInMethods: readonly SignInMethod[];
-  signIn: (request: SignInRequest) => Promise<void>;
+  /** `chooseAccount` asks Google for its account chooser; the test account ignores it. */
+  signIn: (request: SignInRequest & { chooseAccount: boolean }) => Promise<void>;
   clearStoredSession: () => Promise<void>;
+  accountChooserMarker: AccountChooserMarker;
 };
 
 export type AccountAuthState =
@@ -56,7 +69,15 @@ const INITIAL_CONTEXT: AccountSessionContext = {
   signIn: undefined,
   signOutReplies: [],
   isRevocationConfirmed: false,
+  isAppActive: undefined,
 };
+
+/** The actions every session that starts runs, whether restored, signed in or switched to. */
+const START_SESSION_ACTIONS = [
+  "clearLastGrantId",
+  "clearAccountChooserMarker",
+  "restartAutoRefreshInForeground",
+] as const;
 
 /**
  * The account auth lifecycle of the web app.
@@ -82,6 +103,14 @@ export const accountSessionMachine = setup({
     clearNativeSignIn: fromPromise<void>(() =>
       Promise.reject(missingImplementation("clearNativeSignIn")),
     ),
+    /**
+     * Reports `APP_STATE_CHANGED` when the app shell comes to the foreground or goes to the
+     * background, including its state at the start. The web reports nothing: supabase-js follows
+     * the page's visibility itself.
+     */
+    watchAppState: fromCallback<AccountSessionEvent>(() => {
+      throw missingImplementation("watchAppState");
+    }),
     readSession: fromPromise<Session | null, { client: AccountAuthClient }>(async ({ input }) =>
       readSession(input.client),
     ),
@@ -117,22 +146,29 @@ export const accountSessionMachine = setup({
       { connection: AccountAuthConnection; request: SignInRequest; reply: Reply<void> }
     >(async ({ input }) => {
       try {
-        await input.connection.client.auth.startAutoRefresh();
-        await input.connection.signIn(input.request);
+        const chooseAccount = await input.connection.accountChooserMarker.isSet();
+        await input.connection.signIn({ ...input.request, chooseAccount });
         input.reply.resolve();
       } catch (error) {
         input.reply.reject(error);
         throw error;
       }
     }),
-    revokeSession: fromPromise<{ isRevocationConfirmed: boolean }, AccountAuthConnection>(
-      async ({ input }) => {
-        const response = await input.client.auth.signOut({ scope: "local" });
-        await input.client.auth.stopAutoRefresh();
-        await input.clearStoredSession();
-        return { isRevocationConfirmed: !response.error };
-      },
-    ),
+    // On the web, refresh is left to supabase-js: `stopAutoRefresh` would remove its visibility
+    // handling until the next page load. Without a session, its refresh has nothing to do.
+    revokeSession: fromPromise<
+      { isRevocationConfirmed: boolean },
+      { connection: AccountAuthConnection; isRefreshDrivenByAppState: boolean }
+    >(async ({ input: { connection, isRefreshDrivenByAppState } }) => {
+      const response = await connection.client.auth.signOut({ scope: "local" });
+      if (isRefreshDrivenByAppState) {
+        await connection.client.auth.stopAutoRefresh();
+      }
+
+      await connection.clearStoredSession();
+      await connection.accountChooserMarker.set();
+      return { isRevocationConfirmed: !response.error };
+    }),
   },
   actions: {
     clearQueries: () => {
@@ -153,6 +189,40 @@ export const accountSessionMachine = setup({
         return event.session;
       },
     }),
+    // A web sign-in returns before Google does, so only a session that starts shows the sign-in
+    // succeeded.
+    clearAccountChooserMarker: ({ context }) => {
+      requireConnection(context)
+        .accountChooserMarker.clear()
+        .catch(reportFailure("Failed to clear the account chooser marker"));
+    },
+    // Sign-out stopped the app shells' auto refresh; a session that starts in the foreground needs
+    // it again. On the web, no app state is reported, so supabase-js keeps driving refresh.
+    restartAutoRefreshInForeground: ({ context }) => {
+      if (context.isAppActive === true) {
+        requireConnection(context)
+          .client.auth.startAutoRefresh()
+          .catch(reportFailure("Failed to start the session's auto refresh"));
+      }
+    },
+    rememberAppState: assign({
+      isAppActive: ({ event }) => {
+        assertEvent(event, "APP_STATE_CHANGED");
+        return event.isActive;
+      },
+    }),
+    /**
+     * In the app shells, refresh runs only in the foreground, as supabase-js does for a visible
+     * page. Calling `startAutoRefresh` also removes supabase-js's own visibility handling, which a
+     * WebView's page visibility would otherwise drive.
+     */
+    followAppState: ({ context, event }) => {
+      assertEvent(event, "APP_STATE_CHANGED");
+      const { auth } = requireConnection(context).client;
+      (event.isActive ? auth.startAutoRefresh() : auth.stopAutoRefresh()).catch(
+        reportFailure("Failed to follow the app state with the session's auto refresh"),
+      );
+    },
     forgetSignIn: assign({ signIn: undefined }),
     queueSignOut: assign({
       session: null,
@@ -238,7 +308,9 @@ export const accountSessionMachine = setup({
                   "stopPlayback",
                   enqueueActions(({ event, enqueue }) => {
                     if (event.output) {
-                      enqueue("clearLastGrantId");
+                      for (const action of START_SESSION_ACTIONS) {
+                        enqueue(action);
+                      }
                     }
                   }),
                   assign({ session: ({ event }) => event.output }),
@@ -279,9 +351,15 @@ export const accountSessionMachine = setup({
       initial: "starting",
       // Subscribed once per client: auth changes reach only the states that handle them, so
       // changes reported during sign-out are ignored without unsubscribing.
-      invoke: {
-        src: "watchSessionChanges",
-        input: ({ context }) => ({ client: requireConnection(context).client }),
+      invoke: [
+        {
+          src: "watchSessionChanges",
+          input: ({ context }) => ({ client: requireConnection(context).client }),
+        },
+        { src: "watchAppState" },
+      ],
+      on: {
+        APP_STATE_CHANGED: { actions: ["rememberAppState", "followAppState"] },
       },
       states: {
         starting: {
@@ -309,7 +387,9 @@ export const accountSessionMachine = setup({
                   "stopPlayback",
                   enqueueActions(({ event, enqueue }) => {
                     if (event.session) {
-                      enqueue("clearLastGrantId");
+                      for (const action of START_SESSION_ACTIONS) {
+                        enqueue(action);
+                      }
                     }
                   }),
                   "assignSessionFromEvent",
@@ -350,7 +430,7 @@ export const accountSessionMachine = setup({
                 SESSION_CHANGED: {
                   guard: "startsSession",
                   target: "signedIn",
-                  actions: ["stopPlayback", "clearLastGrantId", "assignSessionFromEvent"],
+                  actions: ["stopPlayback", ...START_SESSION_ACTIONS, "assignSessionFromEvent"],
                 },
               },
             },
@@ -374,7 +454,7 @@ export const accountSessionMachine = setup({
                 SESSION_CHANGED: {
                   // The provider reports the new session before the sign-in call returns.
                   guard: "startsSession",
-                  actions: ["stopPlayback", "clearLastGrantId", "assignSessionFromEvent"],
+                  actions: ["stopPlayback", ...START_SESSION_ACTIONS, "assignSessionFromEvent"],
                 },
               },
             },
@@ -395,7 +475,10 @@ export const accountSessionMachine = setup({
             revokingSession: {
               invoke: {
                 src: "revokeSession",
-                input: ({ context }) => requireConnection(context),
+                input: ({ context }) => ({
+                  connection: requireConnection(context),
+                  isRefreshDrivenByAppState: context.isAppActive !== undefined,
+                }),
                 onDone: {
                   target: "clearingNativeSignIn",
                   actions: [
@@ -478,6 +561,11 @@ type AccountSessionContext = {
   signIn: { request: SignInRequest; reply: Reply<void> } | undefined;
   signOutReplies: Reply<void>[];
   isRevocationConfirmed: boolean;
+  /**
+   * Whether the app shell was last reported in the foreground: `undefined` until the shell reports,
+   * and always on the web, where supabase-js drives refresh by the page's visibility.
+   */
+  isAppActive: boolean | undefined;
 };
 
 type ReadSessionEvent = { type: "READ_SESSION"; reply: Reply<Session | null> };
@@ -485,6 +573,7 @@ type ReadSessionEvent = { type: "READ_SESSION"; reply: Reply<Session | null> };
 type AccountSessionEvent =
   | { type: "INITIALIZE" }
   | { type: "SESSION_CHANGED"; session: Session | null }
+  | { type: "APP_STATE_CHANGED"; isActive: boolean }
   | ReadSessionEvent
   | { type: "SIGN_IN"; request: SignInRequest; reply: Reply<void> }
   | { type: "SIGN_OUT"; reply: Reply<void> };
@@ -543,6 +632,13 @@ function rejectAll(replies: readonly Reply<void>[], error: unknown) {
   for (const reply of replies) {
     reply.reject(error);
   }
+}
+
+/** Logs the failure of an effect that nothing awaits, so its rejection stays observable. */
+function reportFailure(message: string) {
+  return (error: unknown) => {
+    console.error(message, error);
+  };
 }
 
 function toError(error: unknown) {
