@@ -14,8 +14,9 @@ test.use({ viewport: readDesignImageSize(designImagePath), deviceScaleFactor: 3 
 
 test(`${story} matches the design`, async ({ mount, page }) => {
   await mount(story);
-  // A route story renders only after its lazily loaded chunk arrives, some time after mounting.
-  await expect(page.getByRole("main")).toBeVisible();
+  // A route story renders only after its lazily loaded chunk arrives, some time after mounting. An
+  // open dialog hides `main` from the accessibility tree, though it is still drawn behind it.
+  await expect(page.getByRole("main", { includeHidden: true })).toBeVisible();
 
   const report = await checkAgainstDesign(page, {
     designImagePath,
