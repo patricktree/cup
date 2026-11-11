@@ -1,8 +1,10 @@
 ---
-status: partially superseded by ADRs 0004, 0006, 0007, and 0008
+status: partially superseded by ADRs 0004, 0006, 0007, 0008, and 0022
 ---
 
 # Charge for accessible generated narration
+
+[ADR 0022](0022-reserve-70-milliseconds-of-audio-per-narration-text-character.md) supersedes the 80-milliseconds-per-character reservation rate: new reservations are estimated at 70 milliseconds per narration-text character, with the one-second minimum unchanged, because narration became 5% faster. Existing reservations keep their stored estimate. The original rate and its rationale below are preserved as history.
 
 [ADR 0008](0008-synthesize-the-whole-narration-document.md) supersedes progressive, player-controlled synthesis: the whole narration document is reserved and synthesized as part of the conversion, pausing no longer affects synthesis, and the deferred explicit cancellation is dropped. Estimates, per-segment settlement, capped overruns, and free reuse remain accepted. The original decisions below are preserved as historical rationale.
 

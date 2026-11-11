@@ -583,8 +583,8 @@ test("changes duration allowance without replacing credentials or sessions", asy
     result: "valid",
     snapshot: {
       duration: {
-        availableMilliseconds: 12_000,
-        reservedMilliseconds: 8_000,
+        availableMilliseconds: 13_000,
+        reservedMilliseconds: 7_000,
         spentMilliseconds: 0,
       },
     },
@@ -828,6 +828,57 @@ test("retries reuse reservations, failures release only unfinished work, and rep
   ]);
   expect(await grant.migrate()).toBe(6);
   expect((await grant.inspect(CREATED_AT_MS)).duration.spentMilliseconds).toBe(701);
+});
+
+test("a reservation keeps its stored estimate, and a released segment reserved again uses the current rate", async () => {
+  const name = "duration-re-reservation";
+  const grant = grantStub(name);
+  await grant.initialize(grantId(name), CREATED_AT_MS, EXPIRES_AT_MS);
+  const accepted = await grant.startConversion(
+    "https://example.com/re-reservation",
+    crypto.randomUUID(),
+    CREATED_AT_MS,
+  );
+  if (accepted.result !== "created") {
+    throw new Error("Conversion not accepted");
+  }
+  const id = accepted.conversion.conversionId;
+  await recordReadyWithSegments(grant, id, [1_000, 1_000]);
+  // Both reservations were made before a release that lowered the rate, at 80 ms per character.
+  const storage = await worker.getDurableObjectStorage("CONVERSION_GRANTS", { name });
+  await storage.exec(
+    `UPDATE credit_ledger SET amount = 80000, available_delta = -80000, reserved_delta = 80000
+      WHERE event_kind = 'reserve' AND operation_id IN (SELECT operation_id FROM audio_segments)`,
+  );
+  await storage.exec(
+    "UPDATE credit_operations SET amount = 80000 WHERE operation_id IN (SELECT operation_id FROM audio_segments)",
+  );
+  await storage.exec("UPDATE audio_segments SET estimated_milliseconds = 80000");
+  await storage.exec("UPDATE credit_balances SET available = 7200000 - 160000, reserved = 160000");
+
+  await grant.releaseAudioSegment(id, 1);
+  await expectWorkerRpcRejection(grant.startSynthesis(id, [1_000, 1_000]));
+
+  expect(
+    (await grant.listAudioSegments(id)).map((segment) => [
+      segment.state,
+      segment.estimatedMilliseconds,
+    ]),
+  ).toEqual([
+    ["reserved", 80_000],
+    ["reserved", 70_000],
+  ]);
+  expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual({
+    availableMilliseconds: 7_050_000,
+    reservedMilliseconds: 150_000,
+    spentMilliseconds: 0,
+  });
+  expect((await grant.completeAudioSegment(id, 0, 65_000)).result).toBe("recorded");
+  expect((await grant.inspect(CREATED_AT_MS)).duration).toEqual({
+    availableMilliseconds: 7_065_000,
+    reservedMilliseconds: 70_000,
+    spentMilliseconds: 65_000,
+  });
 });
 
 test("revocation blocks new reservations while existing reservations may finish", async () => {
@@ -1122,8 +1173,8 @@ test("adopting the duration ledger keeps a deployed grant's balance, segments, a
 
   expect(await grant.inspectOperator(CREATED_AT_MS)).toEqual(before);
   expect(before.duration).toEqual({
-    availableMilliseconds: 15_800,
-    reservedMilliseconds: 3_000,
+    availableMilliseconds: 16_050,
+    reservedMilliseconds: 2_750,
     spentMilliseconds: 1_200,
   });
   expect(await grant.listAudioSegments(id)).toEqual(segmentsBefore);
