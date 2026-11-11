@@ -4,6 +4,8 @@ const CHUNK_SAMPLE_COUNT = 4_608;
 // Sonic silently clamps values outside these ranges (SONIC_MIN_* and SONIC_MAX_* in sonic.h).
 const SONIC_SAMPLE_RATE_RANGE = { min: 1_000, max: 500_000 };
 const SONIC_SPEED_RANGE = { min: 0.05, max: 20 };
+// Sonic's lowest detected pitch (SONIC_MIN_PITCH in sonic.h); it holds back two periods of it.
+const SONIC_MIN_PITCH_HERTZ = 65;
 
 /** Configures the time-stretch of mono signed 16-bit little-endian PCM. */
 export type StretchOptions = {
@@ -52,7 +54,7 @@ export async function stretchPcm(pcm: Uint8Array, options: StretchOptions): Prom
   }
 
   try {
-    return stretch(wasm, stretcher, pcm);
+    return stretch(wasm, stretcher, pcm, options);
   } finally {
     wasm.stretcher_free(stretcher);
   }
@@ -102,24 +104,39 @@ async function instantiateStretcher(): Promise<StretcherExports> {
   return wasm;
 }
 
-function stretch(wasm: StretcherExports, stretcher: number, pcm: Uint8Array): Uint8Array {
+function stretch(
+  wasm: StretcherExports,
+  stretcher: number,
+  pcm: Uint8Array,
+  options: StretchOptions,
+): Uint8Array {
   const bufferPointer = wasm.stretcher_get_pcm(stretcher);
 
   if (bufferPointer === 0) {
     throw new Error("Sonic time stretcher did not provide a PCM buffer");
   }
 
+  // Sonic's flush squeezes the pitch periods it still holds back and fades them into silence,
+  // cutting up to about 13 ms off a segment's end. Silence past the end turns those periods into
+  // ordinary input; the output is trimmed back to the segment's stretched length below. The
+  // padding covers two of Sonic's longest pitch periods of output, so it scales with a speed-up.
+  const paddingSampleCount = Math.ceil(
+    ((2 * options.sampleRate) / SONIC_MIN_PITCH_HERTZ) * Math.max(1, options.speedFactor),
+  );
+  const paddedPcm = new Uint8Array(pcm.byteLength + paddingSampleCount * PCM_SAMPLE_BYTE_LENGTH);
+  paddedPcm.set(pcm);
+
   const stretchedChunks: Uint8Array[] = [];
   let stretchedByteLength = 0;
 
   for (
     let byteOffset = 0;
-    byteOffset < pcm.byteLength;
+    byteOffset < paddedPcm.byteLength;
     byteOffset += CHUNK_SAMPLE_COUNT * PCM_SAMPLE_BYTE_LENGTH
   ) {
-    const chunk = pcm.subarray(
+    const chunk = paddedPcm.subarray(
       byteOffset,
-      Math.min(byteOffset + CHUNK_SAMPLE_COUNT * PCM_SAMPLE_BYTE_LENGTH, pcm.byteLength),
+      Math.min(byteOffset + CHUNK_SAMPLE_COUNT * PCM_SAMPLE_BYTE_LENGTH, paddedPcm.byteLength),
     );
 
     new Uint8Array(wasm.memory.buffer, bufferPointer, chunk.byteLength).set(chunk);
@@ -130,16 +147,36 @@ function stretch(wasm: StretcherExports, stretcher: number, pcm: Uint8Array): Ui
     stretchedByteLength += readStretchedChunks(stretchedChunks, wasm, stretcher, bufferPointer);
   }
 
-  // Sonic holds back the last pitch periods until it is flushed; without this a segment's end is lost.
+  // Sonic holds back the last pitch periods until it is flushed; without this the padding is lost
+  // and, with it, the segment's end.
   assertSuccessStatus(wasm.stretcher_flush(stretcher), "flushing");
   stretchedByteLength += readStretchedChunks(stretchedChunks, wasm, stretcher, bufferPointer);
 
-  const stretched = new Uint8Array(stretchedByteLength);
+  const stretchedSampleCount = Math.round(
+    pcm.byteLength / PCM_SAMPLE_BYTE_LENGTH / options.speedFactor,
+  );
+  const stretchedSegmentByteLength = stretchedSampleCount * PCM_SAMPLE_BYTE_LENGTH;
+
+  if (stretchedByteLength < stretchedSegmentByteLength) {
+    throw new Error(
+      `Sonic time stretcher returned ${stretchedByteLength / PCM_SAMPLE_BYTE_LENGTH} samples, fewer than the segment's stretched length of ${stretchedSampleCount}`,
+    );
+  }
+
+  const stretched = new Uint8Array(stretchedSegmentByteLength);
   let outputOffset = 0;
 
   for (const chunk of stretchedChunks) {
-    stretched.set(chunk, outputOffset);
-    outputOffset += chunk.byteLength;
+    const remainingByteLength = stretchedSegmentByteLength - outputOffset;
+
+    if (remainingByteLength === 0) {
+      break;
+    }
+
+    const keptChunk = chunk.subarray(0, Math.min(chunk.byteLength, remainingByteLength));
+
+    stretched.set(keptChunk, outputOffset);
+    outputOffset += keptChunk.byteLength;
   }
 
   return stretched;
