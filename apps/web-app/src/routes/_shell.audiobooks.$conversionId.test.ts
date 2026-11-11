@@ -924,6 +924,24 @@ test("shows preparation skeletons with a disabled player sheet", async ({ mount,
 });
 
 for (const [story, label] of [
+  ["LoadingAudiobook", "Loading track"],
+  ["PendingConversion", "Preparing track"],
+] as const) {
+  test(`the skeleton fits the viewport without horizontal overflow (${story})`, async ({
+    mount,
+    page,
+  }) => {
+    const component = await mount(`routes/_shell.audiobooks.$conversionId/${story}`);
+    await expect(component.getByLabel(label)).toBeVisible();
+    const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+  });
+}
+
+for (const [story, label] of [
   ["PendingStarting", "Starting"],
   ["PendingReadingPage", "Reading the page"],
   ["PendingSelectingContent", "Selecting narration content"],
