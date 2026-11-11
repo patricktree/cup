@@ -12,25 +12,24 @@ import { composeClassnames } from "#src/app/utils.js";
 /**
  * Starts an account conversion from a source URL, in the Add a Track sheet. Sign-in, the rate-limit
  * countdown and errors stay inside the sheet; it closes once the start succeeded, so the new item
- * appears on Recents behind it.
+ * appears on Recents behind it. Every close slides the sheet away first; `onClose` follows once it
+ * has gone.
  */
 export function AddAudiobookDialog({ onClose }: { onClose: () => void }): React.ReactNode {
+  const [open, setOpen] = React.useState(true);
   const submission = useAccountConversionSubmission({
     // The dialog's start never resumes on home or in a later dialog.
     requestStorage: "memory",
     // The start mutation has already invalidated the history query that Recents lists.
-    onStarted: async () => onClose(),
+    onStarted: async () => setOpen(false),
   });
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   return (
     <DSSheet
-      open
-      onOpenChange={(open) => {
-        if (!open) {
-          onClose();
-        }
-      }}
+      open={open}
+      onOpenChange={setOpen}
+      onClosed={onClose}
       // The close button comes first in the sheet; the field is where adding starts.
       initialFocus={inputRef}
       finalFocus={undefined}
