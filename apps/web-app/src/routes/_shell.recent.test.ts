@@ -388,6 +388,7 @@ test("the Add dialog is a sheet along the bottom edge, inside the app column's g
   page,
 }) => {
   await mount("routes/_shell.recent/AddDialog");
+  await waitForAddDialogAtRest(page);
   const box = await page.getByRole("dialog", { name: "Add a track" }).boundingBox();
   const viewport = page.viewportSize();
   if (!box || !viewport) {
@@ -460,12 +461,23 @@ for (const close of [
   { name: "Close", run: (page: Page) => page.getByRole("button", { name: "Close" }).click() },
   { name: "Escape", run: (page: Page) => page.keyboard.press("Escape") },
   { name: "a press outside", run: (page: Page) => page.mouse.click(4, 4) },
+  {
+    name: "Pulling the grabber down",
+    run: async (page: Page) => dragAddDialogGrabber(page, await readAddDialogTop(page), 200),
+  },
 ]) {
-  test(`${close.name} closes the Add dialog opened from Recents`, async ({ mount, page }) => {
+  test(`${close.name} slides the Add dialog away and closes it, opened from Recents`, async ({
+    mount,
+    page,
+  }) => {
     const component = await mount("routes/_shell.recent/EmptyRecents");
     await component.getByRole("link", { name: "Add", exact: true }).click();
-    await expect(page.getByRole("dialog", { name: "Add a track" })).toBeVisible();
+    const restingTop = await waitForAddDialogAtRest(page);
+
+    const closingTops = sampleAddDialogTops(page, "until-gone");
     await close.run(page);
+    expectSlidAway(await closingTops, restingTop);
+
     await expect(page.getByRole("dialog", { name: "Add a track" })).toHaveCount(0);
     await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
     // Opening again proves closing went back to the entry below, not forward to a new one.
@@ -473,6 +485,92 @@ for (const close of [
     await expect(page.getByRole("dialog", { name: "Add a track" })).toBeVisible();
   });
 }
+
+test("a short pull on the Add dialog's grabber lets it settle back", async ({ mount, page }) => {
+  await mount("routes/_shell.recent/AddDialog");
+  const dialog = page.getByRole("dialog", { name: "Add a track" });
+  const restingTop = await waitForAddDialogAtRest(page);
+
+  const tops = sampleAddDialogTops(page, "until-rest-after-moving");
+  await dragAddDialogGrabber(page, restingTop, 60);
+
+  // It followed the pointer down, then came back up.
+  expect(Math.max(...(await tops))).toBeGreaterThan(restingTop + 30);
+  await expect(dialog).toBeVisible();
+  await expect.poll(() => readAddDialogTop(page)).toBe(restingTop);
+});
+
+test("renders the Add dialog held partway down by a pull", async ({ mount, page }) => {
+  await mount("routes/_shell.recent/AddDialog");
+  const restingTop = await waitForAddDialogAtRest(page);
+  const viewport = page.viewportSize();
+  if (!viewport) {
+    throw new Error("The page has no viewport size");
+  }
+
+  const x = viewport.width / 2;
+  await page.mouse.move(x, restingTop + 8);
+  await page.mouse.down();
+  await page.mouse.move(x, restingTop + 108, { steps: 10 });
+  // The dialog follows the pointer once the pull passes Base UI's small start threshold.
+  await expect.poll(() => readAddDialogTop(page)).toBeGreaterThan(restingTop + 50);
+
+  // The backdrop has faded by as much as the pull has moved the dialog down.
+  await expect(page).toHaveScreenshot("add-dialog-mid-pull.png");
+  await page.mouse.up();
+});
+
+test("a mouse drag inside the Add dialog's form leaves it in place", async ({ mount, page }) => {
+  await mount("routes/_shell.recent/AddDialog");
+  const dialog = page.getByRole("dialog", { name: "Add a track" });
+  const restingTop = await waitForAddDialogAtRest(page);
+  const field = await dialog.getByRole("textbox", { name: "URL" }).boundingBox();
+  if (!field) {
+    throw new Error("The URL field has no box");
+  }
+
+  const start = { x: field.x + field.width / 2, y: field.y + field.height / 2 };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x, start.y + 200, { steps: 10 });
+  expect(await readAddDialogTop(page)).toBe(restingTop);
+  await page.mouse.up();
+
+  await expect(dialog).toBeVisible();
+  expect(await readAddDialogTop(page)).toBe(restingTop);
+});
+
+test("the Add dialog slides up from the bottom edge as it opens", async ({ mount, page }) => {
+  const component = await mount("routes/_shell.recent/EmptyRecents");
+  await component.getByRole("link", { name: "Add", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Add a track" })).toBeAttached();
+
+  const openingTops = await sampleAddDialogTops(page, "until-rest");
+  const restingTop = await readAddDialogTop(page);
+  expect(new Set(openingTops).size).toBeGreaterThan(2);
+  expect(openingTops[0]).toBeGreaterThan(restingTop);
+  expect(isOrdered(openingTops, "descending")).toBe(true);
+  expect(openingTops.at(-1)).toBe(restingTop);
+});
+
+test("with reduced motion, the Add dialog appears and leaves without sliding", async ({
+  mount,
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const component = await mount("routes/_shell.recent/EmptyRecents");
+  const dialog = page.getByRole("dialog", { name: "Add a track" });
+  await component.getByRole("link", { name: "Add", exact: true }).click();
+  await expect(dialog).toBeAttached();
+
+  const restingTop = await readAddDialogTop(page);
+  expect(await sampleAddDialogTops(page, "until-rest")).toEqual([restingTop]);
+
+  await page.keyboard.press("Escape");
+  // It may stay for a frame before it leaves, but it never moves across frames.
+  expect((await sampleAddDialogTops(page, "until-rest")).length).toBeLessThanOrEqual(1);
+  await expect(dialog).toHaveCount(0);
+});
 
 test("a start that succeeds after Back closed the Add dialog leaves the listener where they went", async ({
   mount,
@@ -533,7 +631,10 @@ test("a successful start closes the Add dialog and lists the new item", async ({
   await component.getByRole("link", { name: "Add", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Add a track" });
   await dialog.getByRole("textbox", { name: "URL" }).fill(ADDED_SOURCE_URL);
+  const restingTop = await waitForAddDialogAtRest(page);
+  const closingTops = sampleAddDialogTops(page, "until-gone");
   await dialog.getByRole("button", { name: "Add" }).click();
+  expectSlidAway(await closingTops, restingTop);
   await expect(dialog).toHaveCount(0);
   await expect(cardsOf(component).getByRole("link")).toHaveAccessibleName("Preparing");
   await expect(cardsOf(component).getByText("example.test", { exact: true })).toBeVisible();
@@ -1130,6 +1231,107 @@ test("with reduced motion, opening a track and going back start no view transiti
   await page.evaluate(() => document.activeViewTransition?.finished);
   expect(await readViewTransitionRecord(page)).toEqual([]);
 });
+
+/** Waits until the Add dialog has slid in and stopped moving, and returns its top edge. */
+async function waitForAddDialogAtRest(page: Page): Promise<number> {
+  const dialog = page.getByRole("dialog", { name: "Add a track" });
+  await expect(dialog).toBeVisible();
+  await dialog.evaluate((element) =>
+    Promise.all(element.getAnimations().map((animation) => animation.finished)),
+  );
+  return readAddDialogTop(page);
+}
+
+/**
+ * Reads the Add dialog's top edge on every frame, for at most 5 s:
+ *
+ * - `until-rest`: while it moves, until it rests or leaves the document; a dialog that does not move
+ *   yields only its first top, one already gone none.
+ * - `until-rest-after-moving`: as `until-rest`, but first waits for it to start moving.
+ * - `until-gone`: until it leaves the document, also while it rests before.
+ */
+function sampleAddDialogTops(
+  page: Page,
+  stop: "until-rest" | "until-rest-after-moving" | "until-gone",
+): Promise<number[]> {
+  return page.evaluate(
+    (stopAt) =>
+      new Promise<number[]>((resolve) => {
+        const tops: number[] = [];
+        const deadline = performance.now() + 5000;
+        let hasMoved = false;
+        const sample = () => {
+          const dialog = [...document.querySelectorAll('[role="dialog"]')].find(
+            (element) =>
+              document.getElementById(element.getAttribute("aria-labelledby") ?? "")
+                ?.textContent === "Add a track",
+          );
+          if (dialog === undefined) {
+            resolve(tops);
+            return;
+          }
+          const top = dialog.getBoundingClientRect().top;
+          hasMoved ||= tops.length > 0 && top !== tops.at(-1);
+          tops.push(top);
+          const isResting =
+            dialog.getAnimations().length === 0 && !dialog.hasAttribute("data-swiping");
+          const isDone =
+            (stopAt === "until-rest" && isResting) ||
+            (stopAt === "until-rest-after-moving" && isResting && hasMoved);
+          if (isDone || performance.now() > deadline) {
+            resolve(tops);
+            return;
+          }
+          requestAnimationFrame(sample);
+        };
+        sample();
+      }),
+    stop,
+  );
+}
+
+/** Expects the dialog's top edge to have moved down through several frames, off its resting place. */
+function expectSlidAway(tops: number[], restingTop: number) {
+  expect(new Set(tops).size).toBeGreaterThan(2);
+  expect(isOrdered(tops, "ascending"), `top edges ${JSON.stringify(tops)}`).toBe(true);
+  expect(tops.at(-1)).toBeGreaterThan(restingTop);
+}
+
+function isOrdered(values: number[], order: "ascending" | "descending"): boolean {
+  return values.every((value, index) => {
+    const previous = values[index - 1];
+    if (previous === undefined) {
+      return true;
+    }
+    return order === "ascending" ? value >= previous : value <= previous;
+  });
+}
+
+async function readAddDialogTop(page: Page): Promise<number> {
+  const box = await page.getByRole("dialog", { name: "Add a track" }).boundingBox();
+  if (!box) {
+    throw new Error("The Add dialog has no box");
+  }
+  return box.y;
+}
+
+/**
+ * Drags the Add dialog down by its grabber, which sits centered on its top edge, and holds still
+ * before letting go, so the pull ends slowly rather than as a flick.
+ */
+async function dragAddDialogGrabber(page: Page, dialogTop: number, distance: number) {
+  const viewport = page.viewportSize();
+  if (!viewport) {
+    throw new Error("The page has no viewport size");
+  }
+  const x = viewport.width / 2;
+  const y = dialogTop + 8;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x, y + distance, { steps: 10 });
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 300)));
+  await page.mouse.up();
+}
 
 /** Scrolls the shown screen's track cover, on a page made tall enough for any story's content. */
 async function scrollCoverTo(page: Page, place: "above-viewport" | "partly-in-viewport") {
