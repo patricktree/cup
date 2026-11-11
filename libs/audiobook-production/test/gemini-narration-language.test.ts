@@ -22,28 +22,27 @@ const TODAYS_INPUT = [
 ] as const;
 const TODAYS_GENERATION_CONFIG = { speech_config: [{ voice: "Charon" }] } as const;
 // Policy 6 sends exactly the request policy 5 sends; only the stored audio's pace differs.
-const POLICIES_WITH_LANGUAGE = [
-  ["v5", LEGACY_GEMINI_V5_SPEECH_CONFIG],
-  ["v6", GEMINI_SPEECH_CONFIG],
-] as const;
 
-test.each(
-  POLICIES_WITH_LANGUAGE.flatMap(([policy, speechConfig]) =>
-    (
-      [
-        ["de-AT", "German"],
-        ["de", "German"],
-        ["fr", "French"],
-        ["en-GB", "English"],
-      ] as const
-    ).map(
-      ([narrationLanguage, englishName]) =>
-        [policy, narrationLanguage, englishName, speechConfig] as const,
-    ),
-  ),
-)(
-  "a policy %s request in the speakable narration language %s carries the language and a %s style",
-  async (_, narrationLanguage, englishName, speechConfig) => {
+test.each([
+  {
+    speechConfig: LEGACY_GEMINI_V5_SPEECH_CONFIG,
+    narrationLanguage: "de-AT",
+    englishName: "German",
+  },
+  { speechConfig: LEGACY_GEMINI_V5_SPEECH_CONFIG, narrationLanguage: "de", englishName: "German" },
+  { speechConfig: LEGACY_GEMINI_V5_SPEECH_CONFIG, narrationLanguage: "fr", englishName: "French" },
+  {
+    speechConfig: LEGACY_GEMINI_V5_SPEECH_CONFIG,
+    narrationLanguage: "en-GB",
+    englishName: "English",
+  },
+  { speechConfig: GEMINI_SPEECH_CONFIG, narrationLanguage: "de-AT", englishName: "German" },
+  { speechConfig: GEMINI_SPEECH_CONFIG, narrationLanguage: "de", englishName: "German" },
+  { speechConfig: GEMINI_SPEECH_CONFIG, narrationLanguage: "fr", englishName: "French" },
+  { speechConfig: GEMINI_SPEECH_CONFIG, narrationLanguage: "en-GB", englishName: "English" },
+] as const)(
+  "a policy $speechConfig.policyVersion request in the speakable narration language $narrationLanguage carries the language and a $englishName style",
+  async ({ speechConfig, narrationLanguage, englishName }) => {
     const request = await captureRequest(speechConfig, narrationLanguage);
 
     expect(request.query).toMatchObject({
@@ -69,15 +68,16 @@ test.each(
   },
 );
 
-test.each(
-  POLICIES_WITH_LANGUAGE.flatMap(([policy, speechConfig]) =>
-    ["sv", "fi-FI", "th"].map(
-      (narrationLanguage) => [policy, narrationLanguage, speechConfig] as const,
-    ),
-  ),
-)(
-  "a policy %s request in the unspeakable narration language %s carries neither language nor style",
-  async (_, narrationLanguage, speechConfig) => {
+test.each([
+  { speechConfig: LEGACY_GEMINI_V5_SPEECH_CONFIG, narrationLanguage: "sv" },
+  { speechConfig: LEGACY_GEMINI_V5_SPEECH_CONFIG, narrationLanguage: "fi-FI" },
+  { speechConfig: LEGACY_GEMINI_V5_SPEECH_CONFIG, narrationLanguage: "th" },
+  { speechConfig: GEMINI_SPEECH_CONFIG, narrationLanguage: "sv" },
+  { speechConfig: GEMINI_SPEECH_CONFIG, narrationLanguage: "fi-FI" },
+  { speechConfig: GEMINI_SPEECH_CONFIG, narrationLanguage: "th" },
+] as const)(
+  "a policy $speechConfig.policyVersion request in the unspeakable narration language $narrationLanguage carries neither language nor style",
+  async ({ speechConfig, narrationLanguage }) => {
     const request = await captureRequest(speechConfig, narrationLanguage);
 
     // toEqual, not toMatchObject, so a stray language or style fails the test.
@@ -86,9 +86,9 @@ test.each(
   },
 );
 
-test.each(POLICIES_WITH_LANGUAGE)(
-  "a policy %s request without a narration language is today's request",
-  async (_, speechConfig) => {
+test.each([LEGACY_GEMINI_V5_SPEECH_CONFIG, GEMINI_SPEECH_CONFIG])(
+  "a policy $policyVersion request without a narration language is today's request",
+  async (speechConfig) => {
     const request = await captureRequest(speechConfig, undefined);
 
     // toEqual, not toMatchObject, so a stray language or style fails the test.

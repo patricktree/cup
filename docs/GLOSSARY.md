@@ -228,6 +228,24 @@ The immutable, conversion-scoped audio produced from one narration chunk and ide
 
 _Avoid_: audio chunk
 
+## speech configuration
+
+The speech provider, model, voice and speech policy a conversion's audio segments are synthesized with. It is decided once, when the conversion is prepared, so every remaining and retried segment of that conversion sounds alike.
+
+_Avoid_: speech config, synthesis settings, TTS settings
+
+## speech policy
+
+A numbered version of how a speech provider's speech becomes an audio segment: what Cup asks the provider for and what it does to the provider's audio before storing it. A conversion keeps the speech policy of its speech configuration, so a new policy applies only to conversions prepared after it.
+
+_Avoid_: request policy, synthesis policy, policy version
+
+## narration pace
+
+How fast an audiobook's narration is spoken, as a speed factor relative to the speech provider's natural pace: ×1.05 is 5% faster, and ×1 is the provider's own pace. It follows from the speech policy and is part of the stored audio, not a listener's playback rate.
+
+_Avoid_: speed, tempo, playback rate, reading speed
+
 ## narration track
 
 An audiobook's single audio file: its audio segments, unchanged and joined in document order. It exists only once every segment has audio, is assembled per request rather than stored, and is the audio delivered to listeners.

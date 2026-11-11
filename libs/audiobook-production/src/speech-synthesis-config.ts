@@ -6,8 +6,8 @@ export type SpeechConfig = {
 };
 
 /**
- * Policy 6 sends the same request as policy 5 and time-stretches the provider audio by
- * `POLICY_6_SPEED_FACTOR` before encoding.
+ * Speech policy 6 sends the same request as policy 5 and time-stretches the provider audio to its
+ * narration pace, `POLICY_6_SPEED_FACTOR`, before encoding (see `getSpeedFactor`).
  */
 export const GEMINI_SPEECH_CONFIG = {
   provider: "google-ai-studio",
@@ -16,7 +16,7 @@ export const GEMINI_SPEECH_CONFIG = {
   policyVersion: "6",
 } as const satisfies SpeechConfig;
 
-// Resumed conversions retain the model, request policy and pace they started with: policy 5 sends
+// Resumed conversions retain the model, speech policy and narration pace they started with: policy 5 sends
 // the narration language, when the model can speak it, and stores the provider audio unstretched;
 // policy 4 sends no narration language, and policy 3 also wraps the text in a transcript
 // instruction.
@@ -76,12 +76,17 @@ const POLICY_6_SPEED_FACTOR = 1.05;
 
 /**
  * Returns the factor by which a speech configuration speeds up the provider audio before encoding.
- * The factor follows from the policy rather than a configuration field, so a stored manifest or
- * segment needs no further metadata to tell its pace: policy 6 speeds up, every other policy keeps
- * the provider audio unstretched.
+ * The factor follows from the provider and policy version rather than a configuration field, so a
+ * stored manifest or segment needs no further metadata to tell its narration pace: Gemini speech
+ * policy 6 speeds up by `POLICY_6_SPEED_FACTOR`, every other policy keeps the provider audio
+ * unstretched. It is keyed by the policy rather than by `GEMINI_SPEECH_CONFIG`, so policy 6
+ * manifests keep their pace after a later policy becomes the deployment configuration.
  */
 export function getSpeedFactor(speechConfig: SpeechConfig): number {
-  return isSameSpeechConfig(speechConfig, GEMINI_SPEECH_CONFIG) ? POLICY_6_SPEED_FACTOR : 1;
+  const isGeminiPolicy6 =
+    speechConfig.provider === "google-ai-studio" && speechConfig.policyVersion === "6";
+
+  return isGeminiPolicy6 ? POLICY_6_SPEED_FACTOR : 1;
 }
 
 /** Change this assignment and redeploy to switch the backend provider. */

@@ -226,7 +226,7 @@ export async function synthesizeGeminiAudio({
 }
 
 /**
- * Returns the language a request speaks in: the narration language, when the request policy sends
+ * Returns the language a request speaks in: the narration language, when the speech policy sends
  * one and the model can speak it. Policies 3 and 4 keep the requests they were prepared with.
  */
 function selectSpokenLanguage(

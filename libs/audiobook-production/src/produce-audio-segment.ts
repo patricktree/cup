@@ -111,12 +111,12 @@ export async function produceAudioSegment({
   });
   const speedFactor = getSpeedFactor(speechConfig);
   // The stretch runs before encoding, so the stored audio and every duration measured from it,
-  // such as generated audio duration and synchronization unit offsets, carry the policy's pace.
-  const pcm =
+  // such as generated audio duration and synchronization unit offsets, carry the speech policy's narration pace.
+  const pcmAtPolicyPace =
     speedFactor === 1
       ? providerAudio
       : await stretchPcm(providerAudio, { sampleRate: AUDIO_FORMAT.sampleRate, speedFactor });
-  const encodedAudio = await encodePcmAsMp3(pcm, {
+  const encodedAudio = await encodePcmAsMp3(pcmAtPolicyPace, {
     bitrateKilobitsPerSecond: AUDIO_FORMAT.bitrateKilobitsPerSecond,
     sampleRate: AUDIO_FORMAT.sampleRate,
   });
