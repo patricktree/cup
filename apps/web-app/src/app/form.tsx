@@ -17,6 +17,7 @@ type TextFieldProps = Pick<
   | "required"
   | "type"
   | "hideLabel"
+  | "refs"
 >;
 
 function TextField({
@@ -29,6 +30,7 @@ function TextField({
   required,
   type = "text",
   hideLabel = false,
+  refs,
 }: TextFieldProps): React.JSX.Element {
   const field = useFieldContext<string>();
   const errorMessage =
@@ -48,6 +50,7 @@ function TextField({
       required={required}
       type={type}
       hideLabel={hideLabel}
+      refs={refs}
       errorMessage={errorMessage}
       invalid={!field.state.meta.isValid}
       dirty={field.state.meta.isDirty}

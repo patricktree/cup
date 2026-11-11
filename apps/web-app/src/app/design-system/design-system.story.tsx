@@ -9,6 +9,7 @@ import {
   ArrowRightIcon,
   AvatarRingIcon,
   BackChevronIcon,
+  CloseIcon,
   CupLogoIcon,
   MoreIcon,
   PauseIcon,
@@ -133,6 +134,7 @@ const ICONS = [
   ["play", PlayIcon],
   ["cup-logo", CupLogoIcon],
   ["arrow-right", ArrowRightIcon],
+  ["close", CloseIcon],
 ] as const;
 
 const COVER_PATH = "/__story/covers";
