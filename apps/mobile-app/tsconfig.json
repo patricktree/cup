@@ -1,13 +1,11 @@
 {
-  /* just for IDE support for capacitor.config.ts */
+  /* type-checks capacitor.config.ts and the scripts in scripts/; nothing is emitted */
 
   "extends": [
     "@patricktree-stack/config-typescript/tsconfig.defaults.json",
+    "@patricktree-stack/config-typescript/tsconfig.node24.json",
+    "@patricktree-stack/config-typescript/tsconfig.typescript-execution-via-type-stripping.json",
     "@patricktree-stack/config-typescript/tsconfig.capacitor.json"
   ],
-  "compilerOptions": {
-    /* Modules */
-    "types": ["node"]
-  },
-  "include": ["capacitor.config.ts"]
+  "include": ["capacitor.config.ts", "scripts/**/*"]
 }

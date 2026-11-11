@@ -600,6 +600,9 @@ importers:
       '@capacitor/cli':
         specifier: ^8.5.3
         version: 8.5.3
+      '@cup/config-oxlint':
+        specifier: workspace:*
+        version: link:../../tooling/config-oxlint
       '@patricktree-stack/config-typescript':
         specifier: workspace:*
         version: link:../../.patricktree-stack/tooling/config-typescript
@@ -609,6 +612,12 @@ importers:
       '@typescript/native':
         specifier: 'catalog:'
         version: typescript@7.0.2
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.87.0(oxlint-tsgolint@7.0.2004)
+      oxlint-tsgolint:
+        specifier: 'catalog:'
+        version: 7.0.2004
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
