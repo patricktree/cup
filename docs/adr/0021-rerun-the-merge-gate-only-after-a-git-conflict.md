@@ -18,7 +18,7 @@ This partially supersedes [ADR 0020](0020-validate-in-three-local-gates-that-tru
 ## Considered options
 
 - **Keep the exact-tree rule.** Rejected: two unrelated pull requests in flight force a rebase and a rerun, and the rerun costs a fresh app E2E run plus Turbo cache misses.
-- **Rerun only when the packages each side changed overlap**, found with Turbo's `[A...B]` filter ([research](https://github.com/patricktree/cup/issues/259)). Rejected: the web app changes in nearly every pull request, so overlap is the common case, and root files, `.patricktree-stack` pointer bumps and `supabase/`, which Turbo doesn't report or attributes to no package, would need special cases kept by hand.
+- **Rerun only when the packages each side changed overlap**, found with Turbo's `[A...B]` filter ([research](../research/turbo-changed-packages-between-commits.md), [#259](https://github.com/patricktree/cup/issues/259)). Rejected: the web app changes in nearly every pull request, so overlap is the common case, and root files, `.patricktree-stack` pointer bumps and `supabase/`, which Turbo doesn't report or attributes to no package, would need special cases kept by hand.
 - **A check on `main` after each merge.** Rejected: the next gate and the deploy gate catch the same breakage without another run.
 
 ## Consequences
