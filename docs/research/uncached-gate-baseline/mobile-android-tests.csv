@@ -1,0 +1,19 @@
+file,title,duration_ms,status
+launch.test.ts,"launches to the landing page, loaded from the test Worker",2745.1710830000084,passed
+native-networking.test.ts,"a conversion started from the Add dialog reaches the Worker through native networking",5758.113333999994,passed
+sign-in.test.ts,"signs in with Google and sees Recents loaded from the test Worker",4168.676334000003,passed
+sign-in.test.ts,"signs in from the home page's sign-in link and lands on Recents loaded from the test Worker",3249.477584,passed
+sign-in.test.ts,"stays signed in after Cup is stopped and relaunched",5665.025833000007,passed
+sign-in.test.ts,"refreshes the session when Cup comes back from the background after its access token expired",11322.589915999997,passed
+sign-in.test.ts,"stays signed out after signing out and relaunching",8052.957582999996,passed
+android/add-account-cancel.test.ts,"cancelling Google's add-account screen returns to a usable landing page",10865.037125000003,passed
+android/back-button.test.ts,"Back from the Add dialog and from a track returns to Recents",6346.497082999995,passed
+android/back-button.test.ts,"Back on the first screen puts Cup in the background without finishing it",5931.291958999995,passed
+android/share.test.ts,"a share while Cup is not running starts its conversion",9760.143584,passed
+android/share.test.ts,"a share while Cup is running starts its conversion",5380.014417,passed
+android/share.test.ts,"a second share starts a second conversion",6149.731749999999,passed
+android/share.test.ts,"a URL with &, + and a #fragment arrives unchanged",5095.023334000001,passed
+android/share.test.ts,"a URL inside shared text is picked out",5255.171332999998,passed
+android/share.test.ts,"shared text without a URL is ignored",7846.553709,passed
+android/share.test.ts,"a shared cup.audio link is ignored",7716.647500000006,passed
+android/share.test.ts,"a share while signed out fills the landing page's start form and asks to sign in",2615.5573749999967,passed

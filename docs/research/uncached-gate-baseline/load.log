@@ -1,0 +1,1503 @@
+1794506525.86 Load Avg: 1.48, 2.12, 8.43 
+1794506525.86 CPU usage: 10.23% user, 13.25% sys, 76.50% idle 
+1794506525.86 PhysMem: 29G used (2975M wired, 2976M compressor), 6116M unused.
+1794506530.99 Load Avg: 1.44, 2.10, 8.38 
+1794506530.99 CPU usage: 9.63% user, 2.69% sys, 87.66% idle 
+1794506530.99 PhysMem: 29G used (2974M wired, 2976M compressor), 6208M unused.
+1794506536.06 Load Avg: 1.41, 2.08, 8.34 
+1794506536.06 CPU usage: 24.77% user, 10.27% sys, 64.95% idle 
+1794506536.06 PhysMem: 29G used (2979M wired, 2976M compressor), 5994M unused.
+1794506541.14 Load Avg: 1.30, 2.05, 8.29 
+1794506541.14 CPU usage: 16.71% user, 4.6% sys, 79.21% idle 
+1794506541.14 PhysMem: 29G used (2980M wired, 2976M compressor), 5976M unused.
+1794506546.25 Load Avg: 1.43, 2.06, 8.26 
+1794506546.25 CPU usage: 7.96% user, 2.92% sys, 89.10% idle 
+1794506546.25 PhysMem: 30G used (3003M wired, 2973M compressor), 5253M unused.
+1794506551.34 Load Avg: 1.40, 2.05, 8.21 
+1794506551.34 CPU usage: 5.95% user, 2.80% sys, 91.24% idle 
+1794506551.34 PhysMem: 29G used (2979M wired, 2973M compressor), 5799M unused.
+1794506556.49 Load Avg: 3.98, 2.56, 8.32 
+1794506556.49 CPU usage: 38.18% user, 15.43% sys, 46.38% idle 
+1794506556.49 PhysMem: 33G used (3058M wired, 2973M compressor), 2182M unused.
+1794506561.63 Load Avg: 9.34, 3.70, 8.69 
+1794506561.63 CPU usage: 55.71% user, 16.20% sys, 28.8% idle 
+1794506561.63 PhysMem: 35G used (3355M wired, 2972M compressor), 447M unused.
+1794506567.00 Load Avg: 13.24, 4.60, 8.98 
+1794506567.00 CPU usage: 69.73% user, 28.36% sys, 1.90% idle 
+1794506567.00 PhysMem: 33G used (3461M wired, 11G compressor), 1788M unused.
+1794506572.09 Load Avg: 13.62, 4.82, 9.03 
+1794506572.09 CPU usage: 77.41% user, 18.38% sys, 4.20% idle 
+1794506572.09 PhysMem: 24G used (3157M wired, 7570M compressor), 11G unused.
+1794506577.19 Load Avg: 14.69, 5.19, 9.14 
+1794506577.19 CPU usage: 60.12% user, 13.54% sys, 26.33% idle 
+1794506577.19 PhysMem: 26G used (3164M wired, 7333M compressor), 9743M unused.
+1794506582.28 Load Avg: 14.48, 5.30, 9.15 
+1794506582.28 CPU usage: 62.85% user, 9.84% sys, 27.29% idle 
+1794506582.28 PhysMem: 26G used (3381M wired, 7239M compressor), 9440M unused.
+1794506587.38 Load Avg: 13.88, 5.33, 9.14 
+1794506587.38 CPU usage: 65.30% user, 9.90% sys, 24.79% idle 
+1794506587.38 PhysMem: 26G used (3162M wired, 7011M compressor), 9486M unused.
+1794506592.47 Load Avg: 13.97, 5.49, 9.17 
+1794506592.47 CPU usage: 65.95% user, 9.33% sys, 24.70% idle 
+1794506592.47 PhysMem: 26G used (3163M wired, 6994M compressor), 9439M unused.
+1794506597.56 Load Avg: 14.29, 5.70, 9.23 
+1794506597.56 CPU usage: 67.36% user, 9.73% sys, 22.89% idle 
+1794506597.56 PhysMem: 26G used (3163M wired, 6928M compressor), 9228M unused.
+1794506602.65 Load Avg: 14.75, 5.93, 9.29 
+1794506602.65 CPU usage: 66.11% user, 9.27% sys, 24.60% idle 
+1794506602.65 PhysMem: 26G used (3163M wired, 6901M compressor), 9160M unused.
+1794506607.74 Load Avg: 14.21, 5.97, 9.28 
+1794506607.74 CPU usage: 65.3% user, 9.70% sys, 25.26% idle 
+1794506607.74 PhysMem: 26G used (3163M wired, 6884M compressor), 9141M unused.
+1794506612.83 Load Avg: 13.63, 5.98, 9.27 
+1794506612.83 CPU usage: 51.52% user, 7.86% sys, 40.61% idle 
+1794506612.83 PhysMem: 26G used (3150M wired, 6849M compressor), 9018M unused.
+1794506617.92 Load Avg: 12.94, 5.97, 9.24 
+1794506617.92 CPU usage: 60.51% user, 9.21% sys, 30.27% idle 
+1794506617.92 PhysMem: 26G used (3150M wired, 6800M compressor), 8907M unused.
+1794506623.02 Load Avg: 13.02, 6.10, 9.27 
+1794506623.02 CPU usage: 65.88% user, 9.48% sys, 24.62% idle 
+1794506623.02 PhysMem: 26G used (3151M wired, 6777M compressor), 8854M unused.
+1794506628.12 Load Avg: 12.62, 6.13, 9.26 
+1794506628.12 CPU usage: 64.27% user, 9.32% sys, 26.40% idle 
+1794506628.12 PhysMem: 27G used (3150M wired, 6756M compressor), 8602M unused.
+1794506633.22 Load Avg: 12.41, 6.20, 9.27 
+1794506633.22 CPU usage: 66.56% user, 9.67% sys, 23.76% idle 
+1794506633.22 PhysMem: 27G used (3145M wired, 6746M compressor), 8758M unused.
+1794506638.32 Load Avg: 12.06, 6.23, 9.26 
+1794506638.32 CPU usage: 59.10% user, 8.51% sys, 32.37% idle 
+1794506638.32 PhysMem: 27G used (3148M wired, 6737M compressor), 8792M unused.
+1794506643.40 Load Avg: 12.29, 6.37, 9.29 
+1794506643.40 CPU usage: 56.23% user, 7.96% sys, 35.80% idle 
+1794506643.40 PhysMem: 27G used (3156M wired, 6734M compressor), 8545M unused.
+1794506648.50 Load Avg: 12.35, 6.48, 9.31 
+1794506648.50 CPU usage: 59.22% user, 8.40% sys, 32.36% idle 
+1794506648.50 PhysMem: 27G used (3156M wired, 6699M compressor), 8579M unused.
+1794506653.60 Load Avg: 12.32, 6.57, 9.33 
+1794506653.60 CPU usage: 64.89% user, 9.7% sys, 26.2% idle 
+1794506653.60 PhysMem: 27G used (3155M wired, 6689M compressor), 8616M unused.
+1794506658.69 Load Avg: 12.38, 6.68, 9.35 
+1794506658.69 CPU usage: 59.82% user, 8.36% sys, 31.80% idle 
+1794506658.69 PhysMem: 27G used (3148M wired, 6675M compressor), 8360M unused.
+1794506663.78 Load Avg: 12.91, 6.88, 9.41 
+1794506663.78 CPU usage: 61.33% user, 9.20% sys, 29.45% idle 
+1794506663.78 PhysMem: 27G used (3149M wired, 6668M compressor), 8454M unused.
+1794506668.87 Load Avg: 12.75, 6.95, 9.42 
+1794506668.87 CPU usage: 67.8% user, 9.22% sys, 23.68% idle 
+1794506668.87 PhysMem: 27G used (3149M wired, 6663M compressor), 8472M unused.
+1794506673.96 Load Avg: 12.93, 7.08, 9.45 
+1794506673.96 CPU usage: 66.47% user, 9.60% sys, 23.92% idle 
+1794506673.96 PhysMem: 27G used (3148M wired, 6655M compressor), 8406M unused.
+1794506679.08 Load Avg: 12.30, 7.05, 9.42 
+1794506679.08 CPU usage: 66.20% user, 10.18% sys, 23.60% idle 
+1794506679.08 PhysMem: 26G used (3110M wired, 6622M compressor), 9314M unused.
+1794506684.17 Load Avg: 12.27, 7.13, 9.44 
+1794506684.17 CPU usage: 58.83% user, 9.51% sys, 31.65% idle 
+1794506684.17 PhysMem: 27G used (3147M wired, 6615M compressor), 8722M unused.
+1794506689.26 Load Avg: 11.93, 7.15, 9.43 
+1794506689.26 CPU usage: 63.0% user, 10.32% sys, 26.66% idle 
+1794506689.26 PhysMem: 27G used (3149M wired, 6610M compressor), 8559M unused.
+1794506694.35 Load Avg: 11.46, 7.13, 9.41 
+1794506694.35 CPU usage: 65.90% user, 9.43% sys, 24.66% idle 
+1794506694.35 PhysMem: 27G used (3149M wired, 6610M compressor), 8554M unused.
+1794506699.44 Load Avg: 11.34, 7.17, 9.41 
+1794506699.44 CPU usage: 67.76% user, 9.75% sys, 22.47% idle 
+1794506699.44 PhysMem: 27G used (3540M wired, 6595M compressor), 8170M unused.
+1794506704.53 Load Avg: 11.07, 7.19, 9.40 
+1794506704.53 CPU usage: 67.45% user, 9.81% sys, 22.72% idle 
+1794506704.53 PhysMem: 27G used (3149M wired, 6588M compressor), 8041M unused.
+1794506709.63 Load Avg: 10.91, 7.22, 9.40 
+1794506709.63 CPU usage: 66.10% user, 9.25% sys, 24.64% idle 
+1794506709.63 PhysMem: 27G used (3148M wired, 6584M compressor), 8223M unused.
+1794506714.73 Load Avg: 11.15, 7.33, 9.43 
+1794506714.73 CPU usage: 63.52% user, 9.16% sys, 27.30% idle 
+1794506714.73 PhysMem: 27G used (3148M wired, 6581M compressor), 8289M unused.
+1794506719.82 Load Avg: 11.94, 7.56, 9.49 
+1794506719.82 CPU usage: 55.28% user, 8.12% sys, 36.59% idle 
+1794506719.82 PhysMem: 27G used (3149M wired, 6573M compressor), 8204M unused.
+1794506724.91 Load Avg: 11.54, 7.55, 9.48 
+1794506724.91 CPU usage: 59.16% user, 8.88% sys, 31.95% idle 
+1794506724.91 PhysMem: 27G used (3149M wired, 6564M compressor), 8195M unused.
+1794506730.02 Load Avg: 11.26, 7.55, 9.47 
+1794506730.02 CPU usage: 65.88% user, 9.44% sys, 24.67% idle 
+1794506730.02 PhysMem: 27G used (3148M wired, 6564M compressor), 8268M unused.
+1794506735.11 Load Avg: 11.24, 7.61, 9.48 
+1794506735.11 CPU usage: 65.40% user, 9.5% sys, 25.53% idle 
+1794506735.11 PhysMem: 27G used (3149M wired, 6561M compressor), 8002M unused.
+1794506740.20 Load Avg: 11.06, 7.63, 9.48 
+1794506740.20 CPU usage: 66.47% user, 9.72% sys, 23.80% idle 
+1794506740.20 PhysMem: 27G used (3149M wired, 6560M compressor), 8143M unused.
+1794506745.29 Load Avg: 11.30, 7.74, 9.50 
+1794506745.29 CPU usage: 60.68% user, 8.40% sys, 30.90% idle 
+1794506745.29 PhysMem: 27G used (3148M wired, 6554M compressor), 8193M unused.
+1794506750.37 Load Avg: 11.51, 7.84, 9.53 
+1794506750.37 CPU usage: 57.28% user, 8.5% sys, 34.65% idle 
+1794506750.37 PhysMem: 27G used (3148M wired, 6551M compressor), 8139M unused.
+1794506755.46 Load Avg: 11.07, 7.81, 9.51 
+1794506755.46 CPU usage: 59.83% user, 8.28% sys, 31.88% idle 
+1794506755.46 PhysMem: 27G used (3149M wired, 6544M compressor), 8099M unused.
+1794506760.55 Load Avg: 11.14, 7.88, 9.52 
+1794506760.55 CPU usage: 66.27% user, 9.30% sys, 24.42% idle 
+1794506760.55 PhysMem: 27G used (3404M wired, 6538M compressor), 7944M unused.
+1794506765.64 Load Avg: 11.37, 7.98, 9.55 
+1794506765.64 CPU usage: 62.92% user, 8.47% sys, 28.59% idle 
+1794506765.64 PhysMem: 27G used (3156M wired, 6519M compressor), 7958M unused.
+1794506770.74 Load Avg: 11.18, 8.00, 9.54 
+1794506770.74 CPU usage: 60.85% user, 8.98% sys, 30.15% idle 
+1794506770.74 PhysMem: 27G used (3156M wired, 6474M compressor), 8056M unused.
+1794506775.83 Load Avg: 11.17, 8.05, 9.55 
+1794506775.83 CPU usage: 67.31% user, 9.93% sys, 22.74% idle 
+1794506775.83 PhysMem: 27G used (3156M wired, 6469M compressor), 8053M unused.
+1794506780.93 Load Avg: 11.39, 8.15, 9.58 
+1794506780.93 CPU usage: 65.87% user, 9.61% sys, 24.51% idle 
+1794506780.93 PhysMem: 27G used (3155M wired, 6468M compressor), 8066M unused.
+1794506786.03 Load Avg: 11.12, 8.15, 9.57 
+1794506786.03 CPU usage: 62.42% user, 10.47% sys, 27.9% idle 
+1794506786.03 PhysMem: 29G used (3116M wired, 6414M compressor), 6719M unused.
+1794506791.12 Load Avg: 11.19, 8.21, 9.58 
+1794506791.12 CPU usage: 58.32% user, 9.82% sys, 31.84% idle 
+1794506791.12 PhysMem: 32G used (3135M wired, 6095M compressor), 3381M unused.
+1794506796.21 Load Avg: 10.86, 8.19, 9.57 
+1794506796.21 CPU usage: 56.2% user, 11.36% sys, 32.60% idle 
+1794506796.21 PhysMem: 32G used (3140M wired, 6063M compressor), 2809M unused.
+1794506801.31 Load Avg: 11.11, 8.29, 9.59 
+1794506801.31 CPU usage: 60.85% user, 11.45% sys, 27.69% idle 
+1794506801.31 PhysMem: 32G used (3142M wired, 6021M compressor), 2778M unused.
+1794506806.40 Load Avg: 10.38, 8.18, 9.55 
+1794506806.40 CPU usage: 65.59% user, 9.54% sys, 24.86% idle 
+1794506806.40 PhysMem: 32G used (3142M wired, 6008M compressor), 2720M unused.
+1794506811.49 Load Avg: 11.78, 8.55, 9.66 
+1794506811.49 CPU usage: 70.33% user, 12.39% sys, 17.26% idle 
+1794506811.49 PhysMem: 32G used (3142M wired, 6006M compressor), 2723M unused.
+1794506816.58 Load Avg: 12.03, 8.66, 9.70 
+1794506816.58 CPU usage: 72.99% user, 11.57% sys, 15.43% idle 
+1794506816.58 PhysMem: 33G used (3143M wired, 6000M compressor), 2661M unused.
+1794506821.68 Load Avg: 12.03, 8.71, 9.71 
+1794506821.68 CPU usage: 62.60% user, 10.92% sys, 26.46% idle 
+1794506821.68 PhysMem: 33G used (3135M wired, 5986M compressor), 2367M unused.
+1794506826.77 Load Avg: 12.51, 8.87, 9.76 
+1794506826.77 CPU usage: 60.38% user, 10.94% sys, 28.67% idle 
+1794506826.77 PhysMem: 33G used (3136M wired, 5980M compressor), 2185M unused.
+1794506831.88 Load Avg: 12.63, 8.95, 9.78 
+1794506831.88 CPU usage: 47.86% user, 9.0% sys, 43.12% idle 
+1794506831.88 PhysMem: 33G used (3136M wired, 5980M compressor), 2419M unused.
+1794506836.98 Load Avg: 12.82, 9.05, 9.81 
+1794506836.98 CPU usage: 63.20% user, 11.29% sys, 25.50% idle 
+1794506836.98 PhysMem: 33G used (3135M wired, 5969M compressor), 2590M unused.
+1794506842.08 Load Avg: 12.91, 9.14, 9.84 
+1794506842.08 CPU usage: 64.32% user, 10.98% sys, 24.69% idle 
+1794506842.08 PhysMem: 33G used (3137M wired, 5968M compressor), 2515M unused.
+1794506847.17 Load Avg: 13.24, 9.27, 9.88 
+1794506847.17 CPU usage: 69.57% user, 10.10% sys, 20.32% idle 
+1794506847.17 PhysMem: 33G used (3137M wired, 5965M compressor), 2504M unused.
+1794506852.26 Load Avg: 12.42, 9.16, 9.84 
+1794506852.26 CPU usage: 64.71% user, 11.0% sys, 24.28% idle 
+1794506852.26 PhysMem: 33G used (3136M wired, 5955M compressor), 2484M unused.
+1794506857.35 Load Avg: 12.47, 9.23, 9.86 
+1794506857.35 CPU usage: 68.71% user, 10.6% sys, 21.22% idle 
+1794506857.35 PhysMem: 33G used (3135M wired, 5922M compressor), 2335M unused.
+1794506862.45 Load Avg: 12.19, 9.22, 9.85 
+1794506862.45 CPU usage: 70.56% user, 9.32% sys, 20.11% idle 
+1794506862.45 PhysMem: 33G used (3136M wired, 5853M compressor), 2386M unused.
+1794506867.55 Load Avg: 12.57, 9.35, 9.89 
+1794506867.55 CPU usage: 66.99% user, 9.57% sys, 23.42% idle 
+1794506867.55 PhysMem: 33G used (3136M wired, 5853M compressor), 2399M unused.
+1794506872.64 Load Avg: 12.93, 9.48, 9.93 
+1794506872.64 CPU usage: 68.67% user, 9.41% sys, 21.91% idle 
+1794506872.64 PhysMem: 33G used (3135M wired, 5840M compressor), 2377M unused.
+1794506877.73 Load Avg: 13.41, 9.63, 9.99 
+1794506877.73 CPU usage: 68.58% user, 9.86% sys, 21.54% idle 
+1794506877.73 PhysMem: 33G used (3135M wired, 5840M compressor), 2412M unused.
+1794506882.84 Load Avg: 12.98, 9.61, 9.97 
+1794506882.84 CPU usage: 67.69% user, 9.60% sys, 22.69% idle 
+1794506882.84 PhysMem: 33G used (3378M wired, 5839M compressor), 2148M unused.
+1794506887.94 Load Avg: 12.42, 9.55, 9.95 
+1794506887.94 CPU usage: 60.38% user, 11.30% sys, 28.31% idle 
+1794506887.94 PhysMem: 33G used (3148M wired, 5832M compressor), 2170M unused.
+1794506893.03 Load Avg: 11.99, 9.50, 9.93 
+1794506893.03 CPU usage: 64.48% user, 10.96% sys, 24.54% idle 
+1794506893.03 PhysMem: 33G used (3147M wired, 5832M compressor), 2366M unused.
+1794506898.13 Load Avg: 11.91, 9.53, 9.94 
+1794506898.13 CPU usage: 61.65% user, 11.37% sys, 26.96% idle 
+1794506898.13 PhysMem: 33G used (3126M wired, 5830M compressor), 2627M unused.
+1794506903.22 Load Avg: 11.51, 9.49, 9.92 
+1794506903.22 CPU usage: 63.39% user, 10.53% sys, 26.7% idle 
+1794506903.22 PhysMem: 32G used (3123M wired, 5830M compressor), 3014M unused.
+1794506908.31 Load Avg: 11.63, 9.55, 9.94 
+1794506908.31 CPU usage: 57.98% user, 9.73% sys, 32.28% idle 
+1794506908.31 PhysMem: 33G used (3138M wired, 5829M compressor), 2672M unused.
+1794506913.40 Load Avg: 11.58, 9.57, 9.94 
+1794506913.40 CPU usage: 59.94% user, 10.35% sys, 29.69% idle 
+1794506913.40 PhysMem: 33G used (3139M wired, 5829M compressor), 2530M unused.
+1794506918.51 Load Avg: 11.46, 9.58, 9.94 
+1794506918.51 CPU usage: 67.53% user, 9.85% sys, 22.61% idle 
+1794506918.51 PhysMem: 33G used (3140M wired, 5828M compressor), 2496M unused.
+1794506923.60 Load Avg: 11.18, 9.55, 9.93 
+1794506923.60 CPU usage: 67.19% user, 9.79% sys, 23.0% idle 
+1794506923.60 PhysMem: 33G used (3138M wired, 5827M compressor), 2579M unused.
+1794506928.69 Load Avg: 11.56, 9.66, 9.97 
+1794506928.69 CPU usage: 66.79% user, 10.11% sys, 23.8% idle 
+1794506928.69 PhysMem: 33G used (3139M wired, 5827M compressor), 2493M unused.
+1794506933.82 Load Avg: 12.32, 9.84, 10.03 
+1794506933.82 CPU usage: 69.45% user, 10.4% sys, 20.49% idle 
+1794506933.82 PhysMem: 33G used (3138M wired, 5826M compressor), 2526M unused.
+1794506938.91 Load Avg: 11.89, 9.80, 10.01 
+1794506938.91 CPU usage: 62.10% user, 10.4% sys, 27.85% idle 
+1794506938.91 PhysMem: 33G used (3139M wired, 5809M compressor), 2482M unused.
+1794506944.00 Load Avg: 11.82, 9.82, 10.02 
+1794506944.00 CPU usage: 56.65% user, 9.64% sys, 33.70% idle 
+1794506944.00 PhysMem: 33G used (3139M wired, 5808M compressor), 2274M unused.
+1794506949.09 Load Avg: 11.60, 9.80, 10.01 
+1794506949.09 CPU usage: 56.91% user, 9.79% sys, 33.29% idle 
+1794506949.09 PhysMem: 33G used (3140M wired, 5802M compressor), 2391M unused.
+1794506954.18 Load Avg: 11.95, 9.91, 10.05 
+1794506954.18 CPU usage: 64.6% user, 9.92% sys, 26.1% idle 
+1794506954.18 PhysMem: 33G used (3140M wired, 5800M compressor), 2371M unused.
+1794506959.28 Load Avg: 11.71, 9.89, 10.04 
+1794506959.28 CPU usage: 63.36% user, 10.87% sys, 25.75% idle 
+1794506959.28 PhysMem: 33G used (3140M wired, 5798M compressor), 2326M unused.
+1794506964.37 Load Avg: 11.73, 9.93, 10.05 
+1794506964.37 CPU usage: 70.27% user, 9.94% sys, 19.77% idle 
+1794506964.37 PhysMem: 33G used (3140M wired, 5795M compressor), 2332M unused.
+1794506969.46 Load Avg: 11.35, 9.88, 10.04 
+1794506969.46 CPU usage: 64.91% user, 10.71% sys, 24.37% idle 
+1794506969.46 PhysMem: 33G used (3140M wired, 5795M compressor), 2347M unused.
+1794506974.55 Load Avg: 11.57, 9.94, 10.06 
+1794506974.55 CPU usage: 69.97% user, 8.7% sys, 21.94% idle 
+1794506974.55 PhysMem: 33G used (3141M wired, 5791M compressor), 2282M unused.
+1794506979.65 Load Avg: 11.76, 10.01, 10.08 
+1794506979.65 CPU usage: 72.14% user, 8.51% sys, 19.33% idle 
+1794506979.65 PhysMem: 33G used (3132M wired, 5788M compressor), 1932M unused.
+1794506984.76 Load Avg: 11.70, 10.03, 10.09 
+1794506984.76 CPU usage: 67.78% user, 9.58% sys, 22.63% idle 
+1794506984.76 PhysMem: 33G used (3133M wired, 5788M compressor), 2109M unused.
+1794506989.85 Load Avg: 11.24, 9.96, 10.06 
+1794506989.85 CPU usage: 71.23% user, 8.75% sys, 20.1% idle 
+1794506989.85 PhysMem: 33G used (3132M wired, 5787M compressor), 2116M unused.
+1794506994.95 Load Avg: 10.82, 9.90, 10.04 
+1794506994.95 CPU usage: 70.59% user, 9.21% sys, 20.18% idle 
+1794506994.95 PhysMem: 33G used (3132M wired, 5787M compressor), 1913M unused.
+1794507000.04 Load Avg: 10.84, 9.91, 10.04 
+1794507000.04 CPU usage: 70.94% user, 8.74% sys, 20.31% idle 
+1794507000.04 PhysMem: 34G used (3393M wired, 5787M compressor), 1511M unused.
+1794507005.13 Load Avg: 12.21, 10.21, 10.15 
+1794507005.13 CPU usage: 59.30% user, 10.65% sys, 30.4% idle 
+1794507005.13 PhysMem: 34G used (3140M wired, 5756M compressor), 1648M unused.
+1794507010.23 Load Avg: 12.27, 10.26, 10.17 
+1794507010.23 CPU usage: 64.55% user, 10.66% sys, 24.78% idle 
+1794507010.23 PhysMem: 34G used (3524M wired, 5749M compressor), 1366M unused.
+1794507015.32 Load Avg: 11.77, 10.19, 10.14 
+1794507015.32 CPU usage: 62.93% user, 10.68% sys, 26.37% idle 
+1794507015.32 PhysMem: 34G used (3132M wired, 5748M compressor), 1615M unused.
+1794507020.40 Load Avg: 11.63, 10.18, 10.14 
+1794507020.40 CPU usage: 30.95% user, 6.19% sys, 62.84% idle 
+1794507020.40 PhysMem: 31G used (3014M wired, 5574M compressor), 4127M unused.
+1794507025.49 Load Avg: 11.02, 10.08, 10.10 
+1794507025.49 CPU usage: 13.81% user, 3.41% sys, 82.76% idle 
+1794507025.49 PhysMem: 32G used (3050M wired, 5572M compressor), 3610M unused.
+1794507030.60 Load Avg: 10.54, 10.00, 10.07 
+1794507030.60 CPU usage: 22.50% user, 5.10% sys, 72.38% idle 
+1794507030.60 PhysMem: 32G used (3073M wired, 5559M compressor), 2869M unused.
+1794507035.71 Load Avg: 10.57, 10.01, 10.08 
+1794507035.71 CPU usage: 28.18% user, 6.56% sys, 65.25% idle 
+1794507035.71 PhysMem: 34G used (3107M wired, 5558M compressor), 1451M unused.
+1794507040.81 Load Avg: 9.89, 9.88, 10.03 
+1794507040.81 CPU usage: 25.73% user, 6.54% sys, 67.71% idle 
+1794507040.81 PhysMem: 33G used (3099M wired, 5552M compressor), 2044M unused.
+1794507045.90 Load Avg: 9.41, 9.78, 10.00 
+1794507045.90 CPU usage: 17.86% user, 4.57% sys, 77.56% idle 
+1794507045.90 PhysMem: 34G used (3108M wired, 5551M compressor), 1507M unused.
+1794507050.99 Load Avg: 9.30, 9.75, 9.98 
+1794507050.99 CPU usage: 18.0% user, 4.72% sys, 77.27% idle 
+1794507050.99 PhysMem: 34G used (3116M wired, 5550M compressor), 1058M unused.
+1794507056.11 Load Avg: 8.64, 9.61, 9.93 
+1794507056.11 CPU usage: 14.31% user, 4.97% sys, 80.71% idle 
+1794507056.11 PhysMem: 34G used (3116M wired, 5508M compressor), 960M unused.
+1794507061.20 Load Avg: 8.02, 9.46, 9.88 
+1794507061.20 CPU usage: 9.10% user, 3.19% sys, 87.69% idle 
+1794507061.20 PhysMem: 33G used (3353M wired, 5506M compressor), 2064M unused.
+1794507066.31 Load Avg: 7.70, 9.37, 9.84 
+1794507066.31 CPU usage: 18.82% user, 5.2% sys, 76.14% idle 
+1794507066.31 PhysMem: 34G used (3148M wired, 5412M compressor), 628M unused.
+1794507071.40 Load Avg: 7.24, 9.25, 9.80 
+1794507071.40 CPU usage: 14.3% user, 4.9% sys, 81.87% idle 
+1794507071.40 PhysMem: 34G used (3121M wired, 5409M compressor), 1332M unused.
+1794507076.50 Load Avg: 6.74, 9.11, 9.75 
+1794507076.50 CPU usage: 14.28% user, 3.98% sys, 81.73% idle 
+1794507076.50 PhysMem: 35G used (3140M wired, 5408M compressor), 556M unused.
+1794507081.59 Load Avg: 6.44, 9.01, 9.71 
+1794507081.59 CPU usage: 28.17% user, 6.71% sys, 65.11% idle 
+1794507081.59 PhysMem: 33G used (3093M wired, 5408M compressor), 2186M unused.
+1794507086.69 Load Avg: 6.17, 8.91, 9.67 
+1794507086.69 CPU usage: 33.71% user, 8.40% sys, 57.87% idle 
+1794507086.69 PhysMem: 34G used (3116M wired, 5407M compressor), 1163M unused.
+1794507091.78 Load Avg: 6.66, 8.93, 9.66 
+1794507091.78 CPU usage: 26.88% user, 6.62% sys, 66.49% idle 
+1794507091.78 PhysMem: 33G used (3103M wired, 5406M compressor), 1908M unused.
+1794507096.87 Load Avg: 6.61, 8.88, 9.64 
+1794507096.87 CPU usage: 31.36% user, 7.79% sys, 60.83% idle 
+1794507096.87 PhysMem: 33G used (3091M wired, 5406M compressor), 2490M unused.
+1794507101.97 Load Avg: 6.24, 8.77, 9.60 
+1794507101.97 CPU usage: 27.16% user, 6.95% sys, 65.87% idle 
+1794507101.97 PhysMem: 33G used (3083M wired, 5405M compressor), 2197M unused.
+1794507107.06 Load Avg: 5.98, 8.67, 9.56 
+1794507107.06 CPU usage: 27.40% user, 6.36% sys, 66.22% idle 
+1794507107.06 PhysMem: 34G used (3115M wired, 5405M compressor), 676M unused.
+1794507112.15 Load Avg: 6.78, 8.79, 9.60 
+1794507112.15 CPU usage: 26.89% user, 6.64% sys, 66.46% idle 
+1794507112.15 PhysMem: 34G used (3113M wired, 5405M compressor), 1379M unused.
+1794507117.24 Load Avg: 6.80, 8.76, 9.58 
+1794507117.24 CPU usage: 17.79% user, 4.71% sys, 77.48% idle 
+1794507117.24 PhysMem: 34G used (3115M wired, 5401M compressor), 972M unused.
+1794507122.32 Load Avg: 6.90, 8.75, 9.57 
+1794507122.32 CPU usage: 17.82% user, 4.97% sys, 77.20% idle 
+1794507122.32 PhysMem: 33G used (3333M wired, 5400M compressor), 1771M unused.
+1794507127.42 Load Avg: 6.34, 8.60, 9.52 
+1794507127.42 CPU usage: 16.11% user, 4.7% sys, 79.81% idle 
+1794507127.42 PhysMem: 34G used (3123M wired, 5399M compressor), 861M unused.
+1794507132.52 Load Avg: 6.00, 8.49, 9.47 
+1794507132.52 CPU usage: 8.43% user, 2.97% sys, 88.59% idle 
+1794507132.52 PhysMem: 34G used (3122M wired, 5399M compressor), 1111M unused.
+1794507137.64 Load Avg: 6.00, 8.45, 9.45 
+1794507137.64 CPU usage: 28.5% user, 5.69% sys, 66.24% idle 
+1794507137.64 PhysMem: 35G used (3145M wired, 5398M compressor), 593M unused.
+1794507142.73 Load Avg: 5.68, 8.35, 9.41 
+1794507142.73 CPU usage: 16.63% user, 3.91% sys, 79.45% idle 
+1794507142.73 PhysMem: 34G used (3138M wired, 5393M compressor), 1297M unused.
+1794507147.82 Load Avg: 5.62, 8.29, 9.38 
+1794507147.82 CPU usage: 14.96% user, 4.34% sys, 80.68% idle 
+1794507147.82 PhysMem: 35G used (3147M wired, 5393M compressor), 474M unused.
+1794507152.92 Load Avg: 6.05, 8.33, 9.39 
+1794507152.92 CPU usage: 25.21% user, 6.17% sys, 68.61% idle 
+1794507152.92 PhysMem: 33G used (3108M wired, 5390M compressor), 1901M unused.
+1794507158.01 Load Avg: 6.37, 8.36, 9.39 
+1794507158.01 CPU usage: 34.70% user, 8.29% sys, 57.0% idle 
+1794507158.01 PhysMem: 34G used (3120M wired, 5390M compressor), 1123M unused.
+1794507163.11 Load Avg: 6.90, 8.44, 9.41 
+1794507163.11 CPU usage: 27.28% user, 6.66% sys, 66.5% idle 
+1794507163.11 PhysMem: 33G used (3109M wired, 5390M compressor), 1821M unused.
+1794507168.20 Load Avg: 8.11, 8.66, 9.49 
+1794507168.20 CPU usage: 31.98% user, 7.76% sys, 60.25% idle 
+1794507168.20 PhysMem: 33G used (3107M wired, 5389M compressor), 2092M unused.
+1794507173.31 Load Avg: 8.42, 8.72, 9.50 
+1794507173.31 CPU usage: 27.72% user, 6.81% sys, 65.46% idle 
+1794507173.31 PhysMem: 33G used (3068M wired, 5389M compressor), 2526M unused.
+1794507178.40 Load Avg: 8.31, 8.69, 9.49 
+1794507178.40 CPU usage: 32.90% user, 7.11% sys, 59.98% idle 
+1794507178.40 PhysMem: 33G used (3092M wired, 5389M compressor), 2071M unused.
+1794507183.49 Load Avg: 8.12, 8.65, 9.47 
+1794507183.49 CPU usage: 31.9% user, 7.5% sys, 61.84% idle 
+1794507183.49 PhysMem: 34G used (3119M wired, 5389M compressor), 736M unused.
+1794507188.60 Load Avg: 7.63, 8.54, 9.42 
+1794507188.60 CPU usage: 26.71% user, 4.86% sys, 68.41% idle 
+1794507188.60 PhysMem: 33G used (3092M wired, 5387M compressor), 1965M unused.
+1794507193.70 Load Avg: 7.18, 8.43, 9.38 
+1794507193.70 CPU usage: 25.17% user, 4.81% sys, 70.1% idle 
+1794507193.70 PhysMem: 33G used (3094M wired, 5387M compressor), 2069M unused.
+1794507198.82 Load Avg: 7.72, 8.52, 9.41 
+1794507198.82 CPU usage: 22.42% user, 4.35% sys, 73.21% idle 
+1794507198.82 PhysMem: 34G used (3119M wired, 5387M compressor), 891M unused.
+1794507203.91 Load Avg: 7.67, 8.49, 9.39 
+1794507203.91 CPU usage: 10.61% user, 2.84% sys, 86.54% idle 
+1794507203.91 PhysMem: 34G used (3118M wired, 5387M compressor), 1117M unused.
+1794507209.01 Load Avg: 7.29, 8.40, 9.35 
+1794507209.01 CPU usage: 23.87% user, 5.35% sys, 70.76% idle 
+1794507209.01 PhysMem: 35G used (3141M wired, 5387M compressor), 596M unused.
+1794507214.10 Load Avg: 7.11, 8.35, 9.33 
+1794507214.10 CPU usage: 15.27% user, 3.98% sys, 80.73% idle 
+1794507214.10 PhysMem: 35G used (3133M wired, 5385M compressor), 322M unused.
+1794507219.18 Load Avg: 6.54, 8.21, 9.27 
+1794507219.18 CPU usage: 14.61% user, 3.92% sys, 81.45% idle 
+1794507219.18 PhysMem: 34G used (3104M wired, 5385M compressor), 1610M unused.
+1794507224.27 Load Avg: 6.10, 8.09, 9.22 
+1794507224.27 CPU usage: 31.82% user, 5.79% sys, 62.37% idle 
+1794507224.27 PhysMem: 34G used (3097M wired, 5384M compressor), 1632M unused.
+1794507229.36 Load Avg: 5.77, 7.99, 9.18 
+1794507229.36 CPU usage: 33.39% user, 7.68% sys, 58.92% idle 
+1794507229.36 PhysMem: 33G used (3083M wired, 5381M compressor), 2099M unused.
+1794507234.45 Load Avg: 6.11, 8.02, 9.19 
+1794507234.45 CPU usage: 37.48% user, 7.50% sys, 55.0% idle 
+1794507234.45 PhysMem: 34G used (3099M wired, 5381M compressor), 1510M unused.
+1794507239.55 Load Avg: 5.78, 7.92, 9.14 
+1794507239.55 CPU usage: 35.9% user, 7.21% sys, 57.68% idle 
+1794507239.55 PhysMem: 34G used (3106M wired, 5381M compressor), 1127M unused.
+1794507244.64 Load Avg: 5.55, 7.84, 9.11 
+1794507244.64 CPU usage: 32.0% user, 7.54% sys, 60.45% idle 
+1794507244.64 PhysMem: 33G used (3064M wired, 5376M compressor), 2349M unused.
+1794507249.75 Load Avg: 5.27, 7.74, 9.07 
+1794507249.75 CPU usage: 32.65% user, 6.24% sys, 61.10% idle 
+1794507249.75 PhysMem: 34G used (3114M wired, 5365M compressor), 740M unused.
+1794507254.86 Load Avg: 5.01, 7.64, 9.02 
+1794507254.86 CPU usage: 32.13% user, 6.49% sys, 61.36% idle 
+1794507254.86 PhysMem: 33G used (3092M wired, 5365M compressor), 2080M unused.
+1794507259.95 Load Avg: 5.65, 7.73, 9.05 
+1794507259.95 CPU usage: 30.49% user, 4.86% sys, 64.64% idle 
+1794507259.95 PhysMem: 33G used (3103M wired, 5365M compressor), 1798M unused.
+1794507265.04 Load Avg: 5.35, 7.64, 9.01 
+1794507265.04 CPU usage: 27.53% user, 4.54% sys, 67.92% idle 
+1794507265.04 PhysMem: 33G used (3106M wired, 5365M compressor), 1683M unused.
+1794507270.13 Load Avg: 5.73, 7.68, 9.01 
+1794507270.13 CPU usage: 26.56% user, 5.10% sys, 68.33% idle 
+1794507270.13 PhysMem: 34G used (3106M wired, 5358M compressor), 1326M unused.
+1794507275.24 Load Avg: 5.35, 7.57, 8.96 
+1794507275.24 CPU usage: 9.47% user, 2.22% sys, 88.29% idle 
+1794507275.24 PhysMem: 34G used (3115M wired, 5358M compressor), 796M unused.
+1794507280.36 Load Avg: 5.00, 7.46, 8.92 
+1794507280.36 CPU usage: 27.49% user, 5.46% sys, 67.4% idle 
+1794507280.36 PhysMem: 35G used (3146M wired, 5357M compressor), 291M unused.
+1794507285.44 Load Avg: 4.76, 7.37, 8.88 
+1794507285.44 CPU usage: 14.82% user, 3.72% sys, 81.44% idle 
+1794507285.44 PhysMem: 34G used (3115M wired, 5357M compressor), 1429M unused.
+1794507290.54 Load Avg: 4.46, 7.26, 8.83 
+1794507290.54 CPU usage: 15.30% user, 3.93% sys, 80.75% idle 
+1794507290.54 PhysMem: 34G used (3117M wired, 5356M compressor), 1147M unused.
+1794507295.63 Load Avg: 4.26, 7.17, 8.79 
+1794507295.63 CPU usage: 29.30% user, 4.90% sys, 65.78% idle 
+1794507295.63 PhysMem: 33G used (3082M wired, 5356M compressor), 1998M unused.
+1794507300.73 Load Avg: 4.16, 7.10, 8.76 
+1794507300.73 CPU usage: 31.54% user, 7.6% sys, 61.38% idle 
+1794507300.73 PhysMem: 34G used (3352M wired, 5356M compressor), 1634M unused.
+1794507305.82 Load Avg: 4.07, 7.03, 8.72 
+1794507305.82 CPU usage: 37.72% user, 7.55% sys, 54.72% idle 
+1794507305.82 PhysMem: 33G used (3104M wired, 5355M compressor), 1676M unused.
+1794507310.92 Load Avg: 3.98, 6.97, 8.69 
+1794507310.92 CPU usage: 40.17% user, 6.67% sys, 53.15% idle 
+1794507310.92 PhysMem: 34G used (3104M wired, 5354M compressor), 1564M unused.
+1794507316.02 Load Avg: 4.86, 7.10, 8.72 
+1794507316.02 CPU usage: 33.51% user, 7.12% sys, 59.36% idle 
+1794507316.02 PhysMem: 34G used (3113M wired, 5354M compressor), 1027M unused.
+1794507321.13 Load Avg: 4.63, 7.02, 8.68 
+1794507321.13 CPU usage: 21.74% user, 8.63% sys, 69.61% idle 
+1794507321.13 PhysMem: 35G used (3021M wired, 6513M compressor), 81M unused.
+1794507326.22 Load Avg: 4.82, 7.01, 8.67 
+1794507326.22 CPU usage: 64.92% user, 14.98% sys, 20.8% idle 
+1794507326.22 PhysMem: 35G used (3036M wired, 8534M compressor), 121M unused.
+1794507331.32 Load Avg: 5.72, 7.16, 8.72 
+1794507331.32 CPU usage: 59.73% user, 11.26% sys, 29.0% idle 
+1794507331.32 PhysMem: 35G used (3036M wired, 7550M compressor), 149M unused.
+1794507336.42 Load Avg: 5.82, 7.16, 8.71 
+1794507336.42 CPU usage: 43.15% user, 10.51% sys, 46.32% idle 
+1794507336.42 PhysMem: 35G used (3052M wired, 8147M compressor), 129M unused.
+1794507341.53 Load Avg: 5.83, 7.14, 8.69 
+1794507341.53 CPU usage: 45.80% user, 12.19% sys, 42.0% idle 
+1794507341.53 PhysMem: 35G used (3053M wired, 8164M compressor), 143M unused.
+1794507346.62 Load Avg: 7.13, 7.39, 8.77 
+1794507346.62 CPU usage: 46.47% user, 11.94% sys, 41.57% idle 
+1794507346.62 PhysMem: 35G used (3052M wired, 8205M compressor), 164M unused.
+1794507351.71 Load Avg: 7.04, 7.36, 8.75 
+1794507351.71 CPU usage: 53.38% user, 11.56% sys, 35.5% idle 
+1794507351.71 PhysMem: 35G used (3051M wired, 8195M compressor), 142M unused.
+1794507356.80 Load Avg: 6.87, 7.32, 8.73 
+1794507356.80 CPU usage: 34.43% user, 10.0% sys, 55.55% idle 
+1794507356.80 PhysMem: 35G used (3051M wired, 8222M compressor), 106M unused.
+1794507361.89 Load Avg: 6.40, 7.22, 8.68 
+1794507361.89 CPU usage: 43.33% user, 12.49% sys, 44.17% idle 
+1794507361.89 PhysMem: 35G used (3050M wired, 8387M compressor), 140M unused.
+1794507366.98 Load Avg: 7.57, 7.45, 8.76 
+1794507366.98 CPU usage: 33.48% user, 10.96% sys, 55.55% idle 
+1794507366.98 PhysMem: 35G used (3059M wired, 8388M compressor), 140M unused.
+1794507372.07 Load Avg: 7.13, 7.36, 8.72 
+1794507372.07 CPU usage: 38.83% user, 9.6% sys, 52.9% idle 
+1794507372.07 PhysMem: 35G used (3059M wired, 8235M compressor), 173M unused.
+1794507377.15 Load Avg: 8.32, 7.60, 8.79 
+1794507377.15 CPU usage: 48.39% user, 13.24% sys, 38.35% idle 
+1794507377.15 PhysMem: 35G used (3058M wired, 8288M compressor), 126M unused.
+1794507382.24 Load Avg: 9.09, 7.77, 8.85 
+1794507382.24 CPU usage: 48.72% user, 13.33% sys, 37.94% idle 
+1794507382.24 PhysMem: 35G used (3059M wired, 8281M compressor), 106M unused.
+1794507387.33 Load Avg: 9.48, 7.88, 8.88 
+1794507387.33 CPU usage: 42.56% user, 12.89% sys, 44.53% idle 
+1794507387.33 PhysMem: 35G used (3059M wired, 8302M compressor), 91M unused.
+1794507392.45 Load Avg: 9.68, 7.96, 8.90 
+1794507392.45 CPU usage: 41.38% user, 13.60% sys, 45.1% idle 
+1794507392.45 PhysMem: 35G used (3071M wired, 8475M compressor), 120M unused.
+1794507397.54 Load Avg: 10.19, 8.10, 8.94 
+1794507397.54 CPU usage: 45.55% user, 13.32% sys, 41.11% idle 
+1794507397.54 PhysMem: 35G used (3062M wired, 8473M compressor), 264M unused.
+1794507402.64 Load Avg: 9.37, 7.96, 8.88 
+1794507402.64 CPU usage: 46.71% user, 11.93% sys, 41.35% idle 
+1794507402.64 PhysMem: 35G used (3434M wired, 8536M compressor), 137M unused.
+1794507407.73 Load Avg: 9.02, 7.91, 8.86 
+1794507407.73 CPU usage: 19.5% user, 6.20% sys, 74.73% idle 
+1794507407.73 PhysMem: 35G used (3053M wired, 8535M compressor), 320M unused.
+1794507412.82 Load Avg: 8.38, 7.80, 8.81 
+1794507412.82 CPU usage: 20.51% user, 7.77% sys, 71.70% idle 
+1794507412.82 PhysMem: 35G used (3053M wired, 8533M compressor), 321M unused.
+1794507417.91 Load Avg: 8.43, 7.82, 8.82 
+1794507417.91 CPU usage: 44.26% user, 11.11% sys, 44.62% idle 
+1794507417.91 PhysMem: 34G used (3025M wired, 8522M compressor), 1538M unused.
+1794507423.00 Load Avg: 8.55, 7.85, 8.82 
+1794507423.00 CPU usage: 46.27% user, 11.19% sys, 42.53% idle 
+1794507423.00 PhysMem: 35G used (3294M wired, 8499M compressor), 126M unused.
+1794507428.08 Load Avg: 8.11, 7.77, 8.79 
+1794507428.08 CPU usage: 35.99% user, 12.93% sys, 51.6% idle 
+1794507428.08 PhysMem: 35G used (3061M wired, 8494M compressor), 202M unused.
+1794507433.17 Load Avg: 8.98, 7.96, 8.85 
+1794507433.17 CPU usage: 37.8% user, 9.86% sys, 53.5% idle 
+1794507433.17 PhysMem: 35G used (3062M wired, 8493M compressor), 232M unused.
+1794507438.25 Load Avg: 8.50, 7.88, 8.81 
+1794507438.25 CPU usage: 37.90% user, 13.59% sys, 48.50% idle 
+1794507438.25 PhysMem: 34G used (3031M wired, 8483M compressor), 1331M unused.
+1794507443.36 Load Avg: 9.18, 8.03, 8.86 
+1794507443.36 CPU usage: 42.51% user, 10.9% sys, 47.38% idle 
+1794507443.36 PhysMem: 35G used (3052M wired, 8615M compressor), 226M unused.
+1794507448.45 Load Avg: 10.05, 8.23, 8.93 
+1794507448.45 CPU usage: 46.58% user, 11.79% sys, 41.62% idle 
+1794507448.45 PhysMem: 35G used (3059M wired, 8585M compressor), 318M unused.
+1794507453.54 Load Avg: 10.60, 8.37, 8.97 
+1794507453.54 CPU usage: 46.61% user, 10.86% sys, 42.51% idle 
+1794507453.54 PhysMem: 34G used (3032M wired, 8584M compressor), 1451M unused.
+1794507458.64 Load Avg: 9.76, 8.23, 8.92 
+1794507458.64 CPU usage: 31.28% user, 7.84% sys, 60.87% idle 
+1794507458.64 PhysMem: 27G used (2962M wired, 8117M compressor), 7994M unused.
+1794507463.80 Load Avg: 12.66, 8.86, 9.14 
+1794507463.80 CPU usage: 42.51% user, 21.63% sys, 35.85% idle 
+1794507463.80 PhysMem: 30G used (3516M wired, 7985M compressor), 4740M unused.
+1794507468.93 Load Avg: 20.69, 10.59, 9.75 
+1794507468.93 CPU usage: 76.6% user, 23.93% sys, 0.0% idle 
+1794507468.93 PhysMem: 33G used (3632M wired, 7983M compressor), 1715M unused.
+1794507474.08 Load Avg: 22.96, 11.23, 9.98 
+1794507474.08 CPU usage: 59.46% user, 38.53% sys, 2.0% idle 
+1794507474.08 PhysMem: 35G used (3681M wired, 7934M compressor), 389M unused.
+1794507480.11 Load Avg: 33.29, 13.56, 10.81 
+1794507480.11 CPU usage: 72.12% user, 26.78% sys, 1.9% idle 
+1794507480.11 PhysMem: 35G used (3988M wired, 7934M compressor), 307M unused.
+1794507485.57 Load Avg: 53.13, 18.00, 12.39 
+1794507485.57 CPU usage: 69.35% user, 30.57% sys, 0.6% idle 
+1794507485.57 PhysMem: 35G used (4108M wired, 9264M compressor), 246M unused.
+1794507490.72 Load Avg: 66.97, 21.45, 13.64 
+1794507490.72 CPU usage: 70.98% user, 28.84% sys, 0.16% idle 
+1794507490.72 PhysMem: 34G used (4096M wired, 10G compressor), 1221M unused.
+1794507496.06 Load Avg: 81.07, 25.13, 14.99 
+1794507496.06 CPU usage: 73.94% user, 25.86% sys, 0.18% idle 
+1794507496.06 PhysMem: 35G used (4125M wired, 12G compressor), 394M unused.
+1794507501.17 Load Avg: 111.41, 32.35, 17.59 
+1794507501.17 CPU usage: 66.33% user, 32.12% sys, 1.54% idle 
+1794507501.17 PhysMem: 33G used (4193M wired, 13G compressor), 2286M unused.
+1794507506.38 Load Avg: 118.99, 35.23, 18.70 
+1794507506.38 CPU usage: 73.67% user, 25.98% sys, 0.34% idle 
+1794507506.38 PhysMem: 35G used (4616M wired, 13G compressor), 198M unused.
+1794507511.49 Load Avg: 128.68, 38.63, 19.99 
+1794507511.49 CPU usage: 65.3% user, 27.55% sys, 7.40% idle 
+1794507511.49 PhysMem: 35G used (4181M wired, 14G compressor), 182M unused.
+1794507516.61 Load Avg: 123.98, 39.15, 20.29 
+1794507516.61 CPU usage: 53.70% user, 28.43% sys, 17.85% idle 
+1794507516.61 PhysMem: 35G used (4214M wired, 15G compressor), 229M unused.
+1794507521.74 Load Avg: 117.81, 39.28, 20.44 
+1794507521.74 CPU usage: 56.22% user, 23.88% sys, 19.89% idle 
+1794507521.74 PhysMem: 34G used (4341M wired, 15G compressor), 792M unused.
+1794507526.85 Load Avg: 112.06, 39.40, 20.59 
+1794507526.85 CPU usage: 49.78% user, 16.92% sys, 33.29% idle 
+1794507526.85 PhysMem: 35G used (4569M wired, 15G compressor), 204M unused.
+1794507531.97 Load Avg: 106.69, 39.49, 20.73 
+1794507531.97 CPU usage: 40.90% user, 16.2% sys, 43.6% idle 
+1794507531.97 PhysMem: 35G used (4599M wired, 15G compressor), 230M unused.
+1794507537.09 Load Avg: 100.71, 39.36, 20.80 
+1794507537.09 CPU usage: 39.56% user, 15.15% sys, 45.27% idle 
+1794507537.09 PhysMem: 35G used (4558M wired, 15G compressor), 206M unused.
+1794507542.20 Load Avg: 95.13, 39.22, 20.86 
+1794507542.20 CPU usage: 36.15% user, 12.56% sys, 51.28% idle 
+1794507542.20 PhysMem: 35G used (4419M wired, 15G compressor), 322M unused.
+1794507547.32 Load Avg: 89.99, 39.09, 20.92 
+1794507547.32 CPU usage: 32.39% user, 13.79% sys, 53.80% idle 
+1794507547.32 PhysMem: 35G used (4255M wired, 15G compressor), 213M unused.
+1794507552.43 Load Avg: 84.55, 38.80, 20.92 
+1794507552.43 CPU usage: 39.13% user, 11.78% sys, 49.8% idle 
+1794507552.43 PhysMem: 35G used (4233M wired, 15G compressor), 210M unused.
+1794507557.56 Load Avg: 72.29, 37.69, 20.74 
+1794507557.56 CPU usage: 25.9% user, 9.95% sys, 64.94% idle 
+1794507557.56 PhysMem: 35G used (3560M wired, 15G compressor), 362M unused.
+1794507562.66 Load Avg: 67.30, 37.23, 20.67 
+1794507562.66 CPU usage: 10.99% user, 8.4% sys, 80.96% idle 
+1794507562.66 PhysMem: 34G used (4253M wired, 15G compressor), 1491M unused.
+1794507567.79 Load Avg: 62.31, 36.69, 20.58 
+1794507567.79 CPU usage: 19.47% user, 7.41% sys, 73.11% idle 
+1794507567.79 PhysMem: 35G used (4514M wired, 15G compressor), 109M unused.
+1794507572.89 Load Avg: 57.56, 36.13, 20.48 
+1794507572.89 CPU usage: 19.3% user, 9.4% sys, 71.91% idle 
+1794507572.89 PhysMem: 35G used (4534M wired, 16G compressor), 152M unused.
+1794507578.00 Load Avg: 53.03, 35.55, 20.36 
+1794507578.00 CPU usage: 16.53% user, 7.19% sys, 76.27% idle 
+1794507578.00 PhysMem: 35G used (4516M wired, 16G compressor), 479M unused.
+1794507583.10 Load Avg: 51.27, 35.48, 20.43 
+1794507583.10 CPU usage: 10.74% user, 7.10% sys, 82.15% idle 
+1794507583.10 PhysMem: 34G used (4660M wired, 15G compressor), 1215M unused.
+1794507588.21 Load Avg: 48.44, 35.15, 20.40 
+1794507588.21 CPU usage: 32.87% user, 12.99% sys, 54.12% idle 
+1794507588.21 PhysMem: 35G used (4499M wired, 16G compressor), 153M unused.
+1794507593.31 Load Avg: 44.56, 34.57, 20.28 
+1794507593.31 CPU usage: 34.52% user, 11.80% sys, 53.66% idle 
+1794507593.31 PhysMem: 35G used (4488M wired, 16G compressor), 419M unused.
+1794507598.44 Load Avg: 41.80, 34.16, 20.22 
+1794507598.44 CPU usage: 24.85% user, 9.86% sys, 65.27% idle 
+1794507598.44 PhysMem: 35G used (4214M wired, 16G compressor), 175M unused.
+1794507603.55 Load Avg: 38.69, 33.64, 20.12 
+1794507603.55 CPU usage: 19.98% user, 9.56% sys, 70.44% idle 
+1794507603.55 PhysMem: 35G used (4470M wired, 16G compressor), 298M unused.
+1794507608.65 Load Avg: 36.15, 33.20, 20.04 
+1794507608.65 CPU usage: 22.87% user, 9.89% sys, 67.23% idle 
+1794507608.65 PhysMem: 35G used (4302M wired, 15G compressor), 598M unused.
+1794507613.79 Load Avg: 33.50, 32.70, 19.94 
+1794507613.79 CPU usage: 17.35% user, 6.13% sys, 76.50% idle 
+1794507613.79 PhysMem: 35G used (3561M wired, 15G compressor), 229M unused.
+1794507618.88 Load Avg: 31.38, 32.27, 19.87 
+1794507618.88 CPU usage: 12.82% user, 6.91% sys, 80.25% idle 
+1794507618.88 PhysMem: 35G used (4036M wired, 15G compressor), 549M unused.
+1794507624.02 Load Avg: 29.18, 31.80, 19.77 
+1794507624.02 CPU usage: 17.85% user, 7.1% sys, 75.12% idle 
+1794507624.02 PhysMem: 35G used (3558M wired, 15G compressor), 318M unused.
+1794507629.12 Load Avg: 27.97, 31.51, 19.74 
+1794507629.12 CPU usage: 14.44% user, 7.74% sys, 77.80% idle 
+1794507629.12 PhysMem: 35G used (4474M wired, 15G compressor), 274M unused.
+1794507634.24 Load Avg: 26.21, 31.08, 19.66 
+1794507634.25 CPU usage: 14.97% user, 5.68% sys, 79.33% idle 
+1794507634.25 PhysMem: 35G used (3554M wired, 15G compressor), 439M unused.
+1794507639.35 Load Avg: 24.27, 30.60, 19.55 
+1794507639.35 CPU usage: 14.27% user, 8.66% sys, 77.5% idle 
+1794507639.35 PhysMem: 35G used (4470M wired, 15G compressor), 325M unused.
+1794507644.49 Load Avg: 22.48, 30.12, 19.45 
+1794507644.49 CPU usage: 15.87% user, 6.6% sys, 78.5% idle 
+1794507644.49 PhysMem: 35G used (3552M wired, 15G compressor), 620M unused.
+1794507649.62 Load Avg: 20.76, 29.64, 19.34 
+1794507649.62 CPU usage: 15.44% user, 7.90% sys, 76.65% idle 
+1794507649.62 PhysMem: 35G used (4228M wired, 15G compressor), 302M unused.
+1794507654.74 Load Avg: 19.26, 29.18, 19.24 
+1794507654.74 CPU usage: 14.47% user, 6.81% sys, 78.70% idle 
+1794507654.74 PhysMem: 35G used (3564M wired, 15G compressor), 622M unused.
+1794507659.86 Load Avg: 18.92, 28.94, 19.22 
+1794507659.86 CPU usage: 14.75% user, 8.57% sys, 76.66% idle 
+1794507659.86 PhysMem: 35G used (4202M wired, 15G compressor), 386M unused.
+1794507664.98 Load Avg: 18.05, 28.60, 19.15 
+1794507664.98 CPU usage: 21.73% user, 9.12% sys, 69.14% idle 
+1794507664.98 PhysMem: 35G used (4554M wired, 15G compressor), 121M unused.
+1794507670.08 Load Avg: 17.08, 28.22, 19.07 
+1794507670.08 CPU usage: 18.67% user, 9.3% sys, 72.29% idle 
+1794507670.08 PhysMem: 34G used (4198M wired, 16G compressor), 812M unused.
+1794507675.21 Load Avg: 15.95, 27.80, 18.98 
+1794507675.21 CPU usage: 20.75% user, 8.61% sys, 70.63% idle 
+1794507675.21 PhysMem: 35G used (4550M wired, 16G compressor), 333M unused.
+1794507680.31 Load Avg: 15.08, 27.42, 18.90 
+1794507680.31 CPU usage: 18.94% user, 8.7% sys, 72.98% idle 
+1794507680.31 PhysMem: 35G used (4535M wired, 16G compressor), 568M unused.
+1794507685.41 Load Avg: 13.95, 26.98, 18.79 
+1794507685.41 CPU usage: 11.14% user, 6.70% sys, 82.14% idle 
+1794507685.41 PhysMem: 33G used (4213M wired, 15G compressor), 1932M unused.
+1794507690.51 Load Avg: 13.39, 26.65, 18.72 
+1794507690.51 CPU usage: 31.75% user, 11.80% sys, 56.43% idle 
+1794507690.51 PhysMem: 35G used (4337M wired, 16G compressor), 156M unused.
+1794507695.62 Load Avg: 12.72, 26.29, 18.64 
+1794507695.62 CPU usage: 35.75% user, 10.74% sys, 53.49% idle 
+1794507695.62 PhysMem: 35G used (4571M wired, 16G compressor), 141M unused.
+1794507700.74 Load Avg: 12.42, 26.01, 18.58 
+1794507700.74 CPU usage: 30.34% user, 14.65% sys, 55.0% idle 
+1794507700.74 PhysMem: 34G used (4258M wired, 16G compressor), 774M unused.
+1794507705.88 Load Avg: 12.23, 25.74, 18.53 
+1794507705.88 CPU usage: 27.56% user, 12.14% sys, 60.29% idle 
+1794507705.88 PhysMem: 35G used (4536M wired, 16G compressor), 264M unused.
+1794507710.96 Load Avg: 11.41, 25.34, 18.44 
+1794507710.96 CPU usage: 15.70% user, 6.83% sys, 77.45% idle 
+1794507710.96 PhysMem: 33G used (3519M wired, 16G compressor), 1825M unused.
+1794507716.07 Load Avg: 11.13, 25.06, 18.38 
+1794507716.07 CPU usage: 21.91% user, 9.9% sys, 68.99% idle 
+1794507716.07 PhysMem: 34G used (3981M wired, 16G compressor), 800M unused.
+1794507721.20 Load Avg: 10.56, 24.71, 18.29 
+1794507721.20 CPU usage: 45.49% user, 18.33% sys, 36.16% idle 
+1794507721.20 PhysMem: 35G used (4522M wired, 16G compressor), 140M unused.
+1794507726.33 Load Avg: 10.36, 24.43, 18.23 
+1794507726.33 CPU usage: 51.59% user, 14.80% sys, 33.60% idle 
+1794507726.33 PhysMem: 35G used (4269M wired, 16G compressor), 144M unused.
+1794507731.44 Load Avg: 10.65, 24.26, 18.21 
+1794507731.44 CPU usage: 40.46% user, 13.1% sys, 46.52% idle 
+1794507731.44 PhysMem: 35G used (4508M wired, 16G compressor), 551M unused.
+1794507736.55 Load Avg: 10.20, 23.94, 18.13 
+1794507736.55 CPU usage: 29.59% user, 14.62% sys, 55.77% idle 
+1794507736.55 PhysMem: 35G used (4520M wired, 16G compressor), 404M unused.
+1794507741.66 Load Avg: 9.78, 23.62, 18.05 
+1794507741.66 CPU usage: 28.66% user, 11.32% sys, 60.0% idle 
+1794507741.66 PhysMem: 35G used (4491M wired, 16G compressor), 240M unused.
+1794507746.77 Load Avg: 9.88, 23.41, 18.01 
+1794507746.77 CPU usage: 24.86% user, 11.89% sys, 63.24% idle 
+1794507746.77 PhysMem: 35G used (4259M wired, 16G compressor), 504M unused.
+1794507751.90 Load Avg: 9.57, 23.12, 17.94 
+1794507751.90 CPU usage: 27.99% user, 15.1% sys, 56.99% idle 
+1794507751.90 PhysMem: 35G used (4294M wired, 16G compressor), 397M unused.
+1794507757.01 Load Avg: 9.20, 22.82, 17.86 
+1794507757.01 CPU usage: 27.3% user, 13.50% sys, 59.45% idle 
+1794507757.01 PhysMem: 35G used (4243M wired, 16G compressor), 460M unused.
+1794507762.10 Load Avg: 8.54, 22.46, 17.76 
+1794507762.10 CPU usage: 9.2% user, 6.4% sys, 84.93% idle 
+1794507762.10 PhysMem: 34G used (4183M wired, 16G compressor), 1537M unused.
+1794507767.23 Load Avg: 8.18, 22.15, 17.68 
+1794507767.23 CPU usage: 23.33% user, 8.47% sys, 68.18% idle 
+1794507767.23 PhysMem: 35G used (3991M wired, 16G compressor), 195M unused.
+1794507772.34 Load Avg: 8.41, 21.97, 17.64 
+1794507772.34 CPU usage: 40.18% user, 15.9% sys, 44.71% idle 
+1794507772.34 PhysMem: 35G used (4186M wired, 17G compressor), 242M unused.
+1794507777.44 Load Avg: 7.89, 21.64, 17.55 
+1794507777.44 CPU usage: 18.68% user, 8.65% sys, 72.66% idle 
+1794507777.44 PhysMem: 35G used (4623M wired, 17G compressor), 198M unused.
+1794507782.53 Load Avg: 7.66, 21.36, 17.48 
+1794507782.53 CPU usage: 11.63% user, 8.12% sys, 80.24% idle 
+1794507782.53 PhysMem: 34G used (4455M wired, 17G compressor), 1622M unused.
+1794507787.65 Load Avg: 7.21, 21.04, 17.39 
+1794507787.65 CPU usage: 36.80% user, 12.68% sys, 50.50% idle 
+1794507787.65 PhysMem: 35G used (4521M wired, 17G compressor), 149M unused.
+1794507792.78 Load Avg: 7.03, 20.77, 17.31 
+1794507792.78 CPU usage: 17.91% user, 6.1% sys, 76.6% idle 
+1794507792.78 PhysMem: 35G used (4616M wired, 17G compressor), 161M unused.
+1794507797.87 Load Avg: 60.92, 31.71, 21.20 
+1794507797.87 CPU usage: 7.14% user, 20.52% sys, 72.32% idle 
+1794507797.87 PhysMem: 24G used (3002M wired, 10G compressor), 11G unused.
+1794507802.97 Load Avg: 56.20, 31.22, 21.08 
+1794507802.97 CPU usage: 56.94% user, 13.44% sys, 29.60% idle 
+1794507802.97 PhysMem: 26G used (3108M wired, 9649M compressor), 9404M unused.
+1794507808.05 Load Avg: 49.41, 30.59, 20.98 
+1794507808.05 CPU usage: 55.15% user, 9.82% sys, 35.2% idle 
+1794507808.05 PhysMem: 26G used (3130M wired, 9627M compressor), 8830M unused.
+1794507813.14 Load Avg: 46.26, 30.25, 20.91 
+1794507813.14 CPU usage: 63.92% user, 9.98% sys, 26.8% idle 
+1794507813.14 PhysMem: 27G used (3126M wired, 9589M compressor), 8634M unused.
+1794507818.23 Load Avg: 43.43, 29.93, 20.85 
+1794507818.23 CPU usage: 66.60% user, 10.32% sys, 23.6% idle 
+1794507818.23 PhysMem: 27G used (3126M wired, 9567M compressor), 8452M unused.
+1794507823.31 Load Avg: 41.32, 29.71, 20.83 
+1794507823.31 CPU usage: 68.49% user, 9.73% sys, 21.77% idle 
+1794507823.31 PhysMem: 27G used (3126M wired, 9492M compressor), 8325M unused.
+1794507828.40 Load Avg: 38.49, 29.32, 20.74 
+1794507828.40 CPU usage: 69.19% user, 9.67% sys, 21.13% idle 
+1794507828.40 PhysMem: 27G used (3127M wired, 9485M compressor), 8252M unused.
+1794507833.49 Load Avg: 35.73, 28.90, 20.65 
+1794507833.49 CPU usage: 65.2% user, 9.21% sys, 25.75% idle 
+1794507833.49 PhysMem: 27G used (3128M wired, 9471M compressor), 8156M unused.
+1794507838.57 Load Avg: 34.07, 28.67, 20.61 
+1794507838.57 CPU usage: 64.2% user, 9.15% sys, 26.82% idle 
+1794507838.57 PhysMem: 27G used (3128M wired, 9468M compressor), 8170M unused.
+1794507843.66 Load Avg: 31.66, 28.26, 20.52 
+1794507843.66 CPU usage: 52.32% user, 7.82% sys, 39.85% idle 
+1794507843.66 PhysMem: 27G used (3135M wired, 9460M compressor), 7917M unused.
+1794507848.75 Load Avg: 30.32, 28.04, 20.48 
+1794507848.75 CPU usage: 62.21% user, 8.93% sys, 28.85% idle 
+1794507848.75 PhysMem: 27G used (3136M wired, 9422M compressor), 7954M unused.
+1794507853.85 Load Avg: 28.62, 27.72, 20.42 
+1794507853.85 CPU usage: 66.62% user, 9.47% sys, 23.89% idle 
+1794507853.85 PhysMem: 28G used (3128M wired, 9420M compressor), 7643M unused.
+1794507858.94 Load Avg: 27.45, 27.49, 20.38 
+1794507858.94 CPU usage: 65.64% user, 9.26% sys, 25.9% idle 
+1794507858.94 PhysMem: 27G used (3128M wired, 9367M compressor), 7797M unused.
+1794507864.03 Load Avg: 26.45, 27.28, 20.35 
+1794507864.03 CPU usage: 66.70% user, 9.43% sys, 23.86% idle 
+1794507864.03 PhysMem: 27G used (3122M wired, 9366M compressor), 8038M unused.
+1794507869.12 Load Avg: 25.05, 26.98, 20.28 
+1794507869.12 CPU usage: 59.92% user, 8.30% sys, 31.76% idle 
+1794507869.12 PhysMem: 27G used (3126M wired, 9359M compressor), 7980M unused.
+1794507874.21 Load Avg: 23.69, 26.66, 20.21 
+1794507874.21 CPU usage: 56.57% user, 8.26% sys, 35.16% idle 
+1794507874.21 PhysMem: 27G used (3125M wired, 9223M compressor), 7849M unused.
+1794507879.30 Load Avg: 22.83, 26.44, 20.16 
+1794507879.30 CPU usage: 58.40% user, 7.97% sys, 33.62% idle 
+1794507879.30 PhysMem: 27G used (3125M wired, 9221M compressor), 7834M unused.
+1794507884.39 Load Avg: 21.64, 26.13, 20.09 
+1794507884.39 CPU usage: 63.5% user, 8.71% sys, 28.23% idle 
+1794507884.39 PhysMem: 27G used (3125M wired, 9207M compressor), 7818M unused.
+1794507889.48 Load Avg: 21.75, 26.08, 20.11 
+1794507889.48 CPU usage: 63.20% user, 8.77% sys, 28.2% idle 
+1794507889.48 PhysMem: 28G used (3506M wired, 9202M compressor), 7422M unused.
+1794507894.56 Load Avg: 20.81, 25.81, 20.05 
+1794507894.56 CPU usage: 61.36% user, 8.99% sys, 29.63% idle 
+1794507894.56 PhysMem: 28G used (3125M wired, 9200M compressor), 7656M unused.
+1794507899.65 Load Avg: 19.78, 25.52, 19.98 
+1794507899.65 CPU usage: 65.96% user, 9.18% sys, 24.85% idle 
+1794507899.65 PhysMem: 28G used (3126M wired, 9191M compressor), 7777M unused.
+1794507904.76 Load Avg: 19.56, 25.37, 19.96 
+1794507904.76 CPU usage: 63.86% user, 8.98% sys, 27.15% idle 
+1794507904.76 PhysMem: 28G used (3135M wired, 9097M compressor), 7414M unused.
+1794507909.85 Load Avg: 18.55, 25.07, 19.89 
+1794507909.85 CPU usage: 65.23% user, 9.88% sys, 24.87% idle 
+1794507909.85 PhysMem: 27G used (3092M wired, 9096M compressor), 8609M unused.
+1794507914.94 Load Avg: 17.31, 24.70, 19.79 
+1794507914.94 CPU usage: 59.25% user, 8.83% sys, 31.91% idle 
+1794507914.94 PhysMem: 27G used (3125M wired, 9094M compressor), 8120M unused.
+1794507920.03 Load Avg: 16.56, 24.43, 19.72 
+1794507920.03 CPU usage: 62.35% user, 10.49% sys, 27.15% idle 
+1794507920.03 PhysMem: 27G used (3127M wired, 9037M compressor), 7975M unused.
+1794507925.11 Load Avg: 16.44, 24.27, 19.69 
+1794507925.11 CPU usage: 64.35% user, 9.73% sys, 25.91% idle 
+1794507925.11 PhysMem: 27G used (3129M wired, 9034M compressor), 7929M unused.
+1794507930.20 Load Avg: 15.76, 24.00, 19.62 
+1794507930.20 CPU usage: 66.19% user, 9.7% sys, 24.72% idle 
+1794507930.20 PhysMem: 27G used (3119M wired, 9032M compressor), 8056M unused.
+1794507935.28 Load Avg: 15.86, 23.88, 19.60 
+1794507935.28 CPU usage: 67.92% user, 9.39% sys, 22.67% idle 
+1794507935.28 PhysMem: 27G used (3119M wired, 9031M compressor), 8050M unused.
+1794507940.37 Load Avg: 15.71, 23.72, 19.57 
+1794507940.37 CPU usage: 66.40% user, 9.8% sys, 24.51% idle 
+1794507940.37 PhysMem: 27G used (3119M wired, 9030M compressor), 7850M unused.
+1794507945.45 Load Avg: 15.81, 23.61, 19.56 
+1794507945.45 CPU usage: 63.48% user, 8.89% sys, 27.62% idle 
+1794507945.45 PhysMem: 28G used (3110M wired, 9021M compressor), 7658M unused.
+1794507950.55 Load Avg: 15.91, 23.50, 19.54 
+1794507950.55 CPU usage: 62.5% user, 9.7% sys, 28.87% idle 
+1794507950.55 PhysMem: 28G used (3111M wired, 9019M compressor), 7739M unused.
+1794507955.65 Load Avg: 15.92, 23.37, 19.52 
+1794507955.65 CPU usage: 51.32% user, 7.90% sys, 40.76% idle 
+1794507955.65 PhysMem: 27G used (3111M wired, 9010M compressor), 7793M unused.
+1794507960.74 Load Avg: 15.44, 23.15, 19.46 
+1794507960.74 CPU usage: 65.13% user, 9.14% sys, 25.72% idle 
+1794507960.74 PhysMem: 28G used (3368M wired, 9008M compressor), 7521M unused.
+1794507965.83 Load Avg: 14.93, 22.91, 19.40 
+1794507965.83 CPU usage: 65.8% user, 9.34% sys, 25.57% idle 
+1794507965.83 PhysMem: 28G used (3120M wired, 8991M compressor), 7647M unused.
+1794507970.92 Load Avg: 14.05, 22.60, 19.31 
+1794507970.92 CPU usage: 65.12% user, 9.9% sys, 25.77% idle 
+1794507970.92 PhysMem: 28G used (3121M wired, 8984M compressor), 7627M unused.
+1794507976.00 Load Avg: 14.05, 22.46, 19.28 
+1794507976.00 CPU usage: 66.57% user, 9.42% sys, 23.99% idle 
+1794507976.00 PhysMem: 28G used (3121M wired, 8979M compressor), 7679M unused.
+1794507981.09 Load Avg: 13.88, 22.28, 19.24 
+1794507981.09 CPU usage: 55.90% user, 7.77% sys, 36.32% idle 
+1794507981.09 PhysMem: 28G used (3121M wired, 8978M compressor), 7719M unused.
+1794507986.18 Load Avg: 13.81, 22.13, 19.20 
+1794507986.18 CPU usage: 57.44% user, 7.95% sys, 34.60% idle 
+1794507986.18 PhysMem: 28G used (3122M wired, 8978M compressor), 7625M unused.
+1794507991.27 Load Avg: 14.15, 22.06, 19.19 
+1794507991.27 CPU usage: 60.86% user, 7.97% sys, 31.15% idle 
+1794507991.27 PhysMem: 28G used (3120M wired, 8967M compressor), 7647M unused.
+1794507996.36 Load Avg: 13.89, 21.88, 19.15 
+1794507996.36 CPU usage: 65.3% user, 8.93% sys, 26.2% idle 
+1794507996.36 PhysMem: 28G used (3113M wired, 8959M compressor), 7194M unused.
+1794508001.44 Load Avg: 13.42, 21.65, 19.08 
+1794508001.44 CPU usage: 60.78% user, 8.33% sys, 30.87% idle 
+1794508001.44 PhysMem: 28G used (3113M wired, 8950M compressor), 7448M unused.
+1794508006.55 Load Avg: 12.91, 21.40, 19.01 
+1794508006.55 CPU usage: 65.58% user, 9.27% sys, 25.13% idle 
+1794508006.55 PhysMem: 28G used (3113M wired, 8948M compressor), 7457M unused.
+1794508011.64 Load Avg: 13.07, 21.30, 18.99 
+1794508011.64 CPU usage: 66.15% user, 8.90% sys, 24.93% idle 
+1794508011.64 PhysMem: 28G used (3112M wired, 8947M compressor), 7553M unused.
+1794508016.72 Load Avg: 13.39, 21.22, 18.97 
+1794508016.72 CPU usage: 66.49% user, 9.58% sys, 23.92% idle 
+1794508016.72 PhysMem: 28G used (3113M wired, 8856M compressor), 7444M unused.
+1794508021.81 Load Avg: 13.20, 21.05, 18.93 
+1794508021.81 CPU usage: 64.38% user, 11.33% sys, 24.27% idle 
+1794508021.81 PhysMem: 28G used (3076M wired, 7996M compressor), 7051M unused.
+1794508026.90 Load Avg: 13.26, 20.94, 18.90 
+1794508026.90 CPU usage: 57.65% user, 10.3% sys, 32.31% idle 
+1794508026.90 PhysMem: 30G used (3114M wired, 6349M compressor), 5670M unused.
+1794508031.99 Load Avg: 12.68, 20.69, 18.82 
+1794508031.99 CPU usage: 60.44% user, 11.42% sys, 28.13% idle 
+1794508031.99 PhysMem: 30G used (3117M wired, 6320M compressor), 5596M unused.
+1794508037.09 Load Avg: 12.22, 20.46, 18.75 
+1794508037.09 CPU usage: 64.79% user, 10.80% sys, 24.39% idle 
+1794508037.09 PhysMem: 30G used (3110M wired, 6312M compressor), 5327M unused.
+1794508042.17 Load Avg: 11.65, 20.20, 18.67 
+1794508042.17 CPU usage: 63.38% user, 10.41% sys, 26.19% idle 
+1794508042.17 PhysMem: 30G used (3109M wired, 6275M compressor), 5242M unused.
+1794508047.26 Load Avg: 11.59, 20.05, 18.63 
+1794508047.26 CPU usage: 65.39% user, 10.60% sys, 24.0% idle 
+1794508047.26 PhysMem: 30G used (3110M wired, 6274M compressor), 5267M unused.
+1794508052.35 Load Avg: 11.87, 19.97, 18.60 
+1794508052.35 CPU usage: 70.14% user, 10.11% sys, 19.74% idle 
+1794508052.35 PhysMem: 30G used (3110M wired, 6264M compressor), 5138M unused.
+1794508057.47 Load Avg: 12.12, 19.88, 18.58 
+1794508057.47 CPU usage: 62.60% user, 10.66% sys, 26.72% idle 
+1794508057.47 PhysMem: 30G used (3110M wired, 6262M compressor), 5044M unused.
+1794508062.55 Load Avg: 11.79, 19.69, 18.52 
+1794508062.56 CPU usage: 55.91% user, 10.27% sys, 33.80% idle 
+1794508062.56 PhysMem: 30G used (3111M wired, 6257M compressor), 4980M unused.
+1794508067.65 Load Avg: 11.48, 19.49, 18.46 
+1794508067.65 CPU usage: 57.85% user, 9.95% sys, 32.19% idle 
+1794508067.65 PhysMem: 30G used (3111M wired, 6256M compressor), 5001M unused.
+1794508072.74 Load Avg: 11.76, 19.42, 18.44 
+1794508072.74 CPU usage: 64.37% user, 11.19% sys, 24.42% idle 
+1794508072.74 PhysMem: 30G used (3113M wired, 6254M compressor), 4917M unused.
+1794508077.83 Load Avg: 12.26, 19.39, 18.44 
+1794508077.83 CPU usage: 67.14% user, 11.8% sys, 21.77% idle 
+1794508077.83 PhysMem: 30G used (3113M wired, 6253M compressor), 4904M unused.
+1794508082.92 Load Avg: 12.56, 19.34, 18.42 
+1794508082.92 CPU usage: 70.20% user, 10.3% sys, 19.76% idle 
+1794508082.92 PhysMem: 31G used (3354M wired, 6253M compressor), 4613M unused.
+1794508088.01 Load Avg: 11.80, 19.07, 18.33 
+1794508088.01 CPU usage: 64.49% user, 10.88% sys, 24.62% idle 
+1794508088.01 PhysMem: 31G used (3122M wired, 6241M compressor), 4658M unused.
+1794508093.09 Load Avg: 12.39, 18.95, 18.30 
+1794508093.09 CPU usage: 69.57% user, 9.49% sys, 20.92% idle 
+1794508093.09 PhysMem: 31G used (3122M wired, 6236M compressor), 4546M unused.
+1794508098.19 Load Avg: 12.12, 18.78, 18.24 
+1794508098.19 CPU usage: 67.80% user, 9.89% sys, 22.30% idle 
+1794508098.19 PhysMem: 31G used (3121M wired, 6236M compressor), 4642M unused.
+1794508103.28 Load Avg: 12.27, 18.70, 18.22 
+1794508103.28 CPU usage: 69.50% user, 9.35% sys, 21.14% idle 
+1794508103.28 PhysMem: 30G used (3121M wired, 6235M compressor), 4733M unused.
+1794508108.39 Load Avg: 12.25, 18.59, 18.18 
+1794508108.39 CPU usage: 67.78% user, 9.93% sys, 22.27% idle 
+1794508108.39 PhysMem: 31G used (3122M wired, 6207M compressor), 4621M unused.
+1794508113.48 Load Avg: 12.39, 18.52, 18.16 
+1794508113.48 CPU usage: 72.71% user, 9.19% sys, 18.9% idle 
+1794508113.48 PhysMem: 31G used (3120M wired, 6200M compressor), 4593M unused.
+1794508118.56 Load Avg: 11.87, 18.31, 18.08 
+1794508118.56 CPU usage: 60.71% user, 10.75% sys, 28.53% idle 
+1794508118.56 PhysMem: 31G used (3121M wired, 6199M compressor), 4374M unused.
+1794508123.65 Load Avg: 11.64, 18.15, 18.03 
+1794508123.65 CPU usage: 62.16% user, 11.58% sys, 26.24% idle 
+1794508123.65 PhysMem: 31G used (3114M wired, 6197M compressor), 3919M unused.
+1794508128.74 Load Avg: 11.03, 17.92, 17.95 
+1794508128.74 CPU usage: 63.0% user, 10.98% sys, 26.0% idle 
+1794508128.74 PhysMem: 31G used (3113M wired, 6197M compressor), 4204M unused.
+1794508133.84 Load Avg: 11.27, 17.85, 17.92 
+1794508133.84 CPU usage: 63.2% user, 11.19% sys, 25.78% idle 
+1794508133.84 PhysMem: 30G used (3077M wired, 6197M compressor), 4936M unused.
+1794508138.92 Load Avg: 11.57, 17.80, 17.91 
+1794508138.92 CPU usage: 60.75% user, 9.20% sys, 30.3% idle 
+1794508138.92 PhysMem: 31G used (3112M wired, 6196M compressor), 4544M unused.
+1794508144.01 Load Avg: 11.44, 17.67, 17.86 
+1794508144.01 CPU usage: 57.63% user, 10.19% sys, 32.16% idle 
+1794508144.01 PhysMem: 31G used (3124M wired, 6196M compressor), 4199M unused.
+1794508149.10 Load Avg: 10.85, 17.45, 17.78 
+1794508149.10 CPU usage: 61.22% user, 10.92% sys, 27.84% idle 
+1794508149.10 PhysMem: 31G used (3126M wired, 6193M compressor), 4303M unused.
+1794508154.18 Load Avg: 11.18, 17.41, 17.76 
+1794508154.18 CPU usage: 70.99% user, 8.99% sys, 20.0% idle 
+1794508154.18 PhysMem: 31G used (3118M wired, 6191M compressor), 3967M unused.
+1794508159.30 Load Avg: 11.64, 17.40, 17.76 
+1794508159.30 CPU usage: 65.45% user, 10.57% sys, 23.96% idle 
+1794508159.30 PhysMem: 31G used (3119M wired, 6189M compressor), 4145M unused.
+1794508164.39 Load Avg: 11.35, 17.24, 17.70 
+1794508164.39 CPU usage: 68.74% user, 9.25% sys, 21.99% idle 
+1794508164.39 PhysMem: 31G used (3118M wired, 6189M compressor), 4330M unused.
+1794508169.47 Load Avg: 11.08, 17.09, 17.64 
+1794508169.47 CPU usage: 68.44% user, 9.90% sys, 21.65% idle 
+1794508169.47 PhysMem: 31G used (3118M wired, 6184M compressor), 4318M unused.
+1794508174.56 Load Avg: 11.16, 17.00, 17.61 
+1794508174.56 CPU usage: 61.79% user, 10.36% sys, 27.84% idle 
+1794508174.56 PhysMem: 31G used (3118M wired, 6183M compressor), 4229M unused.
+1794508179.65 Load Avg: 10.90, 16.85, 17.55 
+1794508179.65 CPU usage: 53.1% user, 9.43% sys, 37.54% idle 
+1794508179.65 PhysMem: 31G used (3118M wired, 6182M compressor), 4169M unused.
+1794508184.74 Load Avg: 11.47, 16.87, 17.56 
+1794508184.74 CPU usage: 62.15% user, 9.74% sys, 28.9% idle 
+1794508184.74 PhysMem: 31G used (3117M wired, 6179M compressor), 4239M unused.
+1794508189.83 Load Avg: 11.11, 16.71, 17.49 
+1794508189.83 CPU usage: 63.36% user, 10.88% sys, 25.74% idle 
+1794508189.83 PhysMem: 31G used (3118M wired, 6179M compressor), 4184M unused.
+1794508194.92 Load Avg: 11.42, 16.68, 17.48 
+1794508194.92 CPU usage: 69.12% user, 10.31% sys, 20.56% idle 
+1794508194.92 PhysMem: 31G used (3118M wired, 6179M compressor), 4158M unused.
+1794508200.01 Load Avg: 11.55, 16.62, 17.45 
+1794508200.01 CPU usage: 69.63% user, 10.11% sys, 20.25% idle 
+1794508200.01 PhysMem: 31G used (3119M wired, 6177M compressor), 4093M unused.
+1794508205.09 Load Avg: 12.31, 16.69, 17.47 
+1794508205.09 CPU usage: 66.51% user, 10.19% sys, 23.29% idle 
+1794508205.09 PhysMem: 31G used (3126M wired, 6175M compressor), 4092M unused.
+1794508210.19 Load Avg: 12.76, 16.71, 17.48 
+1794508210.19 CPU usage: 72.15% user, 7.22% sys, 20.61% idle 
+1794508210.19 PhysMem: 31G used (3127M wired, 6175M compressor), 4089M unused.
+1794508215.28 Load Avg: 12.86, 16.67, 17.46 
+1794508215.28 CPU usage: 69.52% user, 9.0% sys, 21.47% idle 
+1794508215.28 PhysMem: 31G used (3119M wired, 6174M compressor), 3819M unused.
+1794508220.38 Load Avg: 12.71, 16.57, 17.42 
+1794508220.38 CPU usage: 72.17% user, 9.35% sys, 18.46% idle 
+1794508220.38 PhysMem: 31G used (3118M wired, 6171M compressor), 3980M unused.
+1794508225.46 Load Avg: 13.05, 16.58, 17.41 
+1794508225.46 CPU usage: 71.41% user, 9.34% sys, 19.24% idle 
+1794508225.46 PhysMem: 31G used (3118M wired, 6171M compressor), 4098M unused.
+1794508230.55 Load Avg: 14.17, 16.75, 17.47 
+1794508230.55 CPU usage: 72.75% user, 8.93% sys, 18.30% idle 
+1794508230.55 PhysMem: 31G used (3117M wired, 6170M compressor), 3794M unused.
+1794508235.63 Load Avg: 13.52, 16.57, 17.40 
+1794508235.63 CPU usage: 64.97% user, 9.27% sys, 25.74% idle 
+1794508235.63 PhysMem: 32G used (3119M wired, 6169M compressor), 3653M unused.
+1794508240.73 Load Avg: 13.64, 16.55, 17.39 
+1794508240.73 CPU usage: 62.21% user, 10.35% sys, 27.43% idle 
+1794508240.73 PhysMem: 31G used (3118M wired, 6167M compressor), 3748M unused.
+1794508245.81 Load Avg: 13.10, 16.39, 17.33 
+1794508245.81 CPU usage: 62.63% user, 10.74% sys, 26.61% idle 
+1794508245.81 PhysMem: 32G used (3118M wired, 6167M compressor), 3529M unused.
+1794508250.91 Load Avg: 12.53, 16.22, 17.26 
+1794508250.91 CPU usage: 59.94% user, 10.82% sys, 29.23% idle 
+1794508250.91 PhysMem: 31G used (3071M wired, 6166M compressor), 4385M unused.
+1794508256.01 Load Avg: 11.85, 16.01, 17.18 
+1794508256.01 CPU usage: 26.8% user, 6.38% sys, 67.52% idle 
+1794508256.01 PhysMem: 32G used (3085M wired, 6164M compressor), 3047M unused.
+1794508261.12 Load Avg: 11.14, 15.80, 17.10 
+1794508261.12 CPU usage: 24.67% user, 6.20% sys, 69.12% idle 
+1794508261.12 PhysMem: 31G used (3314M wired, 6163M compressor), 4116M unused.
+1794508266.21 Load Avg: 10.57, 15.60, 17.02 
+1794508266.21 CPU usage: 24.96% user, 6.18% sys, 68.84% idle 
+1794508266.21 PhysMem: 31G used (3086M wired, 6160M compressor), 3768M unused.
+1794508271.29 Load Avg: 10.12, 15.42, 16.95 
+1794508271.29 CPU usage: 17.15% user, 4.41% sys, 78.43% idle 
+1794508271.29 PhysMem: 32G used (3095M wired, 6160M compressor), 3217M unused.
+1794508276.37 Load Avg: 9.47, 15.20, 16.86 
+1794508276.37 CPU usage: 18.2% user, 4.60% sys, 77.37% idle 
+1794508276.37 PhysMem: 32G used (3094M wired, 6159M compressor), 3127M unused.
+1794508281.46 Load Avg: 8.71, 14.95, 16.77 
+1794508281.46 CPU usage: 3.91% user, 2.6% sys, 94.2% idle 
+1794508281.46 PhysMem: 32G used (3094M wired, 6158M compressor), 3115M unused.
+1794508286.54 Load Avg: 8.26, 14.75, 16.68 
+1794508286.54 CPU usage: 21.51% user, 5.45% sys, 73.3% idle 
+1794508286.54 PhysMem: 33G used (3128M wired, 6158M compressor), 2618M unused.
+1794508291.62 Load Avg: 7.67, 14.52, 16.59 
+1794508291.62 CPU usage: 12.37% user, 3.49% sys, 84.12% idle 
+1794508291.62 PhysMem: 31G used (3091M wired, 6157M compressor), 3864M unused.
+1794508296.70 Load Avg: 7.30, 14.33, 16.51 
+1794508296.70 CPU usage: 13.44% user, 3.69% sys, 82.85% idle 
+1794508296.70 PhysMem: 32G used (3118M wired, 6157M compressor), 2932M unused.
+1794508301.79 Load Avg: 7.28, 14.21, 16.46 
+1794508301.79 CPU usage: 18.52% user, 4.70% sys, 76.76% idle 
+1794508301.79 PhysMem: 31G used (3069M wired, 6157M compressor), 4482M unused.
+1794508306.88 Load Avg: 7.01, 14.04, 16.38 
+1794508306.88 CPU usage: 33.74% user, 7.91% sys, 58.34% idle 
+1794508306.88 PhysMem: 31G used (3084M wired, 6156M compressor), 4114M unused.
+1794508312.00 Load Avg: 6.61, 13.84, 16.30 
+1794508312.00 CPU usage: 34.21% user, 8.26% sys, 57.52% idle 
+1794508312.00 PhysMem: 32G used (3094M wired, 6155M compressor), 3238M unused.
+1794508317.08 Load Avg: 6.24, 13.64, 16.21 
+1794508317.08 CPU usage: 27.7% user, 6.83% sys, 66.9% idle 
+1794508317.08 PhysMem: 31G used (3066M wired, 6154M compressor), 4417M unused.
+1794508322.17 Load Avg: 5.98, 13.46, 16.14 
+1794508322.17 CPU usage: 29.26% user, 7.41% sys, 63.31% idle 
+1794508322.17 PhysMem: 30G used (3293M wired, 6152M compressor), 4742M unused.
+1794508327.26 Load Avg: 5.82, 13.31, 16.06 
+1794508327.26 CPU usage: 30.20% user, 6.90% sys, 62.88% idle 
+1794508327.26 PhysMem: 32G used (3092M wired, 6148M compressor), 2900M unused.
+1794508332.35 Load Avg: 6.80, 13.38, 16.08 
+1794508332.35 CPU usage: 22.26% user, 5.60% sys, 72.13% idle 
+1794508332.35 PhysMem: 31G used (3075M wired, 6148M compressor), 4069M unused.
+1794508337.44 Load Avg: 6.89, 13.29, 16.03 
+1794508337.44 CPU usage: 24.23% user, 5.85% sys, 69.90% idle 
+1794508337.44 PhysMem: 31G used (3074M wired, 6146M compressor), 4051M unused.
+1794508342.52 Load Avg: 6.34, 13.07, 15.93 
+1794508342.52 CPU usage: 17.95% user, 4.54% sys, 77.49% idle 
+1794508342.52 PhysMem: 32G used (3090M wired, 6145M compressor), 3184M unused.
+1794508347.61 Load Avg: 6.63, 13.02, 15.90 
+1794508347.61 CPU usage: 18.21% user, 4.81% sys, 76.96% idle 
+1794508347.61 PhysMem: 32G used (3091M wired, 6145M compressor), 3086M unused.
+1794508352.71 Load Avg: 6.18, 12.82, 15.81 
+1794508352.71 CPU usage: 3.96% user, 1.82% sys, 94.21% idle 
+1794508352.71 PhysMem: 32G used (3090M wired, 6145M compressor), 3040M unused.
+1794508357.80 Load Avg: 5.85, 12.64, 15.73 
+1794508357.80 CPU usage: 21.84% user, 5.56% sys, 72.58% idle 
+1794508357.80 PhysMem: 33G used (3114M wired, 6144M compressor), 2354M unused.
+1794508362.91 Load Avg: 5.46, 12.45, 15.64 
+1794508362.91 CPU usage: 11.77% user, 3.41% sys, 84.80% idle 
+1794508362.91 PhysMem: 31G used (3082M wired, 6144M compressor), 3714M unused.
+1794508367.99 Load Avg: 5.10, 12.26, 15.56 
+1794508367.99 CPU usage: 13.74% user, 3.54% sys, 82.70% idle 
+1794508367.99 PhysMem: 32G used (3104M wired, 6144M compressor), 2737M unused.
+1794508373.09 Load Avg: 4.69, 12.06, 15.47 
+1794508373.09 CPU usage: 20.19% user, 5.35% sys, 74.44% idle 
+1794508373.09 PhysMem: 31G used (3063M wired, 6143M compressor), 4156M unused.
+1794508378.18 Load Avg: 5.28, 12.05, 15.45 
+1794508378.18 CPU usage: 35.40% user, 8.40% sys, 56.19% idle 
+1794508378.18 PhysMem: 32G used (3079M wired, 6143M compressor), 3253M unused.
+1794508383.27 Load Avg: 5.34, 11.95, 15.39 
+1794508383.27 CPU usage: 32.60% user, 7.97% sys, 59.41% idle 
+1794508383.27 PhysMem: 31G used (3059M wired, 6142M compressor), 4052M unused.
+1794508388.35 Load Avg: 4.99, 11.77, 15.31 
+1794508388.35 CPU usage: 28.2% user, 6.60% sys, 65.36% idle 
+1794508388.35 PhysMem: 30G used (3055M wired, 6139M compressor), 4995M unused.
+1794508393.45 Load Avg: 5.23, 11.71, 15.26 
+1794508393.45 CPU usage: 31.37% user, 7.83% sys, 60.79% idle 
+1794508393.45 PhysMem: 30G used (3033M wired, 6136M compressor), 5082M unused.
+1794508398.55 Load Avg: 5.11, 11.47, 15.14 
+1794508398.55 CPU usage: 32.67% user, 6.76% sys, 60.56% idle 
+1794508398.55 PhysMem: 32G used (3087M wired, 6135M compressor), 2934M unused.
+1794508403.65 Load Avg: 4.86, 11.31, 15.06 
+1794508403.65 CPU usage: 29.94% user, 6.79% sys, 63.25% idle 
+1794508403.65 PhysMem: 32G used (3087M wired, 6135M compressor), 3103M unused.
+1794508408.73 Load Avg: 4.55, 11.14, 14.98 
+1794508408.73 CPU usage: 30.2% user, 5.55% sys, 64.42% idle 
+1794508408.73 PhysMem: 31G used (3068M wired, 6133M compressor), 4072M unused.
+1794508413.83 Load Avg: 5.39, 11.21, 14.98 
+1794508413.83 CPU usage: 26.2% user, 4.70% sys, 69.27% idle 
+1794508413.83 PhysMem: 31G used (3063M wired, 6132M compressor), 4118M unused.
+1794508418.91 Load Avg: 5.83, 11.20, 14.95 
+1794508418.91 CPU usage: 23.26% user, 4.45% sys, 72.28% idle 
+1794508418.91 PhysMem: 31G used (3070M wired, 6132M compressor), 4003M unused.
+1794508424.01 Load Avg: 5.45, 11.03, 14.87 
+1794508424.01 CPU usage: 10.28% user, 2.66% sys, 87.4% idle 
+1794508424.01 PhysMem: 32G used (3087M wired, 6132M compressor), 3021M unused.
+1794508429.12 Load Avg: 5.41, 10.93, 14.81 
+1794508429.12 CPU usage: 25.98% user, 5.46% sys, 68.55% idle 
+1794508429.12 PhysMem: 33G used (3117M wired, 6132M compressor), 2483M unused.
+1794508434.20 Load Avg: 5.38, 10.83, 14.76 
+1794508434.20 CPU usage: 14.77% user, 3.85% sys, 81.37% idle 
+1794508434.20 PhysMem: 32G used (3088M wired, 6131M compressor), 3611M unused.
+1794508439.29 Load Avg: 5.11, 10.69, 14.68 
+1794508439.29 CPU usage: 15.59% user, 3.83% sys, 80.56% idle 
+1794508439.29 PhysMem: 32G used (3102M wired, 6129M compressor), 3144M unused.
+1794508444.38 Load Avg: 5.98, 10.77, 14.69 
+1794508444.38 CPU usage: 27.44% user, 4.96% sys, 67.59% idle 
+1794508444.38 PhysMem: 31G used (3066M wired, 6126M compressor), 4115M unused.
+1794508449.47 Load Avg: 5.82, 10.66, 14.63 
+1794508449.47 CPU usage: 32.15% user, 7.39% sys, 60.44% idle 
+1794508449.47 PhysMem: 32G used (3075M wired, 6126M compressor), 3612M unused.
+1794508454.56 Load Avg: 6.00, 10.62, 14.59 
+1794508454.56 CPU usage: 36.30% user, 7.71% sys, 55.97% idle 
+1794508454.56 PhysMem: 31G used (3075M wired, 6125M compressor), 3844M unused.
+1794508459.65 Load Avg: 5.75, 10.49, 14.52 
+1794508459.65 CPU usage: 36.67% user, 6.91% sys, 56.41% idle 
+1794508459.65 PhysMem: 32G used (3082M wired, 6124M compressor), 3233M unused.
+1794508464.76 Load Avg: 5.77, 10.42, 14.47 
+1794508464.76 CPU usage: 33.38% user, 7.43% sys, 59.17% idle 
+1794508464.76 PhysMem: 31G used (3054M wired, 6124M compressor), 4291M unused.
+1794508469.85 Load Avg: 6.19, 10.43, 14.45 
+1794508469.85 CPU usage: 35.58% user, 6.90% sys, 57.50% idle 
+1794508469.85 PhysMem: 32G used (3082M wired, 6123M compressor), 2942M unused.
+1794508474.94 Load Avg: 6.98, 10.52, 14.46 
+1794508474.94 CPU usage: 28.32% user, 5.49% sys, 66.18% idle 
+1794508474.94 PhysMem: 32G used (3077M wired, 6123M compressor), 3284M unused.
+1794508480.04 Load Avg: 7.62, 10.59, 14.46 
+1794508480.04 CPU usage: 34.87% user, 5.90% sys, 59.21% idle 
+1794508480.04 PhysMem: 32G used (3082M wired, 6123M compressor), 2935M unused.
+1794508485.13 Load Avg: 7.17, 10.45, 14.39 
+1794508485.13 CPU usage: 24.1% user, 4.20% sys, 71.77% idle 
+1794508485.13 PhysMem: 32G used (3082M wired, 6122M compressor), 2968M unused.
+1794508490.21 Load Avg: 6.84, 10.32, 14.32 
+1794508490.21 CPU usage: 23.76% user, 4.41% sys, 71.81% idle 
+1794508490.21 PhysMem: 33G used (3074M wired, 6122M compressor), 2615M unused.
+1794508495.31 Load Avg: 6.37, 10.17, 14.24 
+1794508495.31 CPU usage: 16.94% user, 3.22% sys, 79.83% idle 
+1794508495.31 PhysMem: 32G used (3074M wired, 6119M compressor), 2868M unused.
+1794508500.41 Load Avg: 6.34, 10.10, 14.19 
+1794508500.41 CPU usage: 24.76% user, 4.72% sys, 70.50% idle 
+1794508500.41 PhysMem: 32G used (3323M wired, 6119M compressor), 3614M unused.
+1794508505.50 Load Avg: 5.83, 9.93, 14.11 
+1794508505.50 CPU usage: 13.96% user, 3.67% sys, 82.35% idle 
+1794508505.50 PhysMem: 32G used (3099M wired, 6109M compressor), 2946M unused.
+1794508510.58 Load Avg: 5.52, 9.80, 14.04 
+1794508510.58 CPU usage: 18.27% user, 4.6% sys, 77.65% idle 
+1794508510.58 PhysMem: 33G used (3107M wired, 6109M compressor), 2450M unused.
+1794508515.69 Load Avg: 5.16, 9.65, 13.96 
+1794508515.69 CPU usage: 16.70% user, 3.83% sys, 79.45% idle 
+1794508515.69 PhysMem: 33G used (3107M wired, 6108M compressor), 2457M unused.
+1794508520.79 Load Avg: 4.99, 9.54, 13.90 
+1794508520.79 CPU usage: 38.55% user, 6.77% sys, 54.66% idle 
+1794508520.79 PhysMem: 30G used (3027M wired, 6108M compressor), 4930M unused.
+1794508525.87 Load Avg: 4.83, 9.43, 13.83 
+1794508525.87 CPU usage: 36.54% user, 7.54% sys, 55.90% idle 
+1794508525.87 PhysMem: 32G used (3064M wired, 6105M compressor), 3491M unused.
+1794508530.97 Load Avg: 5.72, 9.54, 13.85 
+1794508530.97 CPU usage: 40.29% user, 6.18% sys, 53.51% idle 
+1794508530.97 PhysMem: 32G used (3072M wired, 6105M compressor), 3187M unused.
+1794508536.05 Load Avg: 5.98, 9.53, 13.82 
+1794508536.05 CPU usage: 33.99% user, 7.22% sys, 58.77% idle 
+1794508536.05 PhysMem: 31G used (3054M wired, 6105M compressor), 3904M unused.
+1794508541.13 Load Avg: 5.67, 9.41, 13.75 
+1794508541.13 CPU usage: 26.4% user, 6.24% sys, 67.70% idle 
+1794508541.13 PhysMem: 30G used (2970M wired, 6102M compressor), 5564M unused.
+1794508546.22 Load Avg: 5.69, 9.35, 13.70 
+1794508546.22 CPU usage: 43.25% user, 14.21% sys, 42.53% idle 
+1794508546.22 PhysMem: 35G used (2986M wired, 7763M compressor), 179M unused.
+1794508551.32 Load Avg: 6.12, 9.38, 13.69 
+1794508551.32 CPU usage: 47.75% user, 10.64% sys, 41.59% idle 
+1794508551.32 PhysMem: 35G used (3005M wired, 7861M compressor), 124M unused.
+1794508556.41 Load Avg: 6.19, 9.34, 13.65 
+1794508556.41 CPU usage: 41.75% user, 10.79% sys, 47.44% idle 
+1794508556.41 PhysMem: 35G used (3002M wired, 7983M compressor), 122M unused.
+1794508561.49 Load Avg: 6.09, 9.27, 13.60 
+1794508561.49 CPU usage: 52.72% user, 12.18% sys, 35.9% idle 
+1794508561.49 PhysMem: 35G used (3002M wired, 8189M compressor), 100M unused.
+1794508566.60 Load Avg: 6.88, 9.38, 13.61 
+1794508566.60 CPU usage: 49.64% user, 13.30% sys, 37.4% idle 
+1794508566.60 PhysMem: 35G used (3009M wired, 8198M compressor), 188M unused.
+1794508571.69 Load Avg: 6.73, 9.31, 13.56 
+1794508571.69 CPU usage: 50.9% user, 14.44% sys, 35.46% idle 
+1794508571.69 PhysMem: 34G used (2984M wired, 8415M compressor), 1471M unused.
+1794508576.78 Load Avg: 6.43, 9.20, 13.50 
+1794508576.78 CPU usage: 44.20% user, 13.28% sys, 42.50% idle 
+1794508576.78 PhysMem: 34G used (2985M wired, 8427M compressor), 1436M unused.
+1794508581.87 Load Avg: 6.32, 9.13, 13.45 
+1794508581.87 CPU usage: 49.24% user, 13.98% sys, 36.76% idle 
+1794508581.87 PhysMem: 34G used (2971M wired, 8499M compressor), 1405M unused.
+1794508586.96 Load Avg: 6.05, 9.03, 13.38 
+1794508586.96 CPU usage: 38.28% user, 11.87% sys, 49.84% idle 
+1794508586.96 PhysMem: 35G used (3000M wired, 8488M compressor), 330M unused.
+1794508592.05 Load Avg: 5.65, 8.90, 13.31 
+1794508592.05 CPU usage: 25.65% user, 7.83% sys, 66.51% idle 
+1794508592.05 PhysMem: 35G used (3000M wired, 8483M compressor), 449M unused.
+1794508597.13 Load Avg: 5.52, 8.81, 13.26 
+1794508597.13 CPU usage: 17.18% user, 7.50% sys, 75.31% idle 
+1794508597.13 PhysMem: 35G used (3000M wired, 8481M compressor), 322M unused.
+1794508602.21 Load Avg: 6.27, 8.92, 13.27 
+1794508602.21 CPU usage: 42.68% user, 10.54% sys, 46.77% idle 
+1794508602.21 PhysMem: 34G used (2981M wired, 8401M compressor), 1245M unused.
+1794508607.30 Load Avg: 6.01, 8.82, 13.21 
+1794508607.30 CPU usage: 43.76% user, 12.12% sys, 44.11% idle 
+1794508607.30 PhysMem: 35G used (3003M wired, 8383M compressor), 178M unused.
+1794508612.39 Load Avg: 5.93, 8.75, 13.16 
+1794508612.39 CPU usage: 47.62% user, 11.96% sys, 40.40% idle 
+1794508612.39 PhysMem: 35G used (3000M wired, 8515M compressor), 225M unused.
+1794508617.49 Load Avg: 6.74, 8.87, 13.17 
+1794508617.49 CPU usage: 49.48% user, 11.77% sys, 38.74% idle 
+1794508617.49 PhysMem: 35G used (3001M wired, 8510M compressor), 364M unused.
+1794508622.58 Load Avg: 6.36, 8.76, 13.11 
+1794508622.58 CPU usage: 32.65% user, 9.94% sys, 57.39% idle 
+1794508622.58 PhysMem: 35G used (3242M wired, 8489M compressor), 120M unused.
+1794508627.66 Load Avg: 5.85, 8.61, 13.03 
+1794508627.66 CPU usage: 42.93% user, 10.68% sys, 46.38% idle 
+1794508627.66 PhysMem: 35G used (3008M wired, 8475M compressor), 296M unused.
+1794508632.75 Load Avg: 5.78, 8.55, 12.98 
+1794508632.75 CPU usage: 35.63% user, 11.56% sys, 52.79% idle 
+1794508632.75 PhysMem: 35G used (3008M wired, 8472M compressor), 296M unused.
+1794508637.83 Load Avg: 5.80, 8.51, 12.94 
+1794508637.83 CPU usage: 38.7% user, 9.49% sys, 52.43% idle 
+1794508637.83 PhysMem: 35G used (3007M wired, 8470M compressor), 322M unused.
+1794508642.92 Load Avg: 5.57, 8.42, 12.88 
+1794508642.92 CPU usage: 48.25% user, 12.55% sys, 39.19% idle 
+1794508642.92 PhysMem: 34G used (2984M wired, 8466M compressor), 1277M unused.
+1794508648.00 Load Avg: 5.37, 8.33, 12.83 
+1794508648.00 CPU usage: 47.68% user, 10.48% sys, 41.82% idle 
+1794508648.00 PhysMem: 35G used (3008M wired, 8464M compressor), 167M unused.
+1794508653.09 Load Avg: 5.02, 8.21, 12.76 
+1794508653.09 CPU usage: 43.83% user, 11.17% sys, 44.99% idle 
+1794508653.09 PhysMem: 35G used (3000M wired, 8527M compressor), 204M unused.
+1794508658.17 Load Avg: 5.10, 8.17, 12.72 
+1794508658.17 CPU usage: 47.39% user, 13.79% sys, 38.80% idle 
+1794508658.17 PhysMem: 35G used (3000M wired, 8471M compressor), 193M unused.
+1794508663.26 Load Avg: 5.33, 8.17, 12.69 
+1794508663.26 CPU usage: 34.35% user, 10.12% sys, 55.51% idle 
+1794508663.26 PhysMem: 34G used (2978M wired, 8459M compressor), 1253M unused.
+1794508668.36 Load Avg: 5.22, 8.10, 12.64 
+1794508668.36 CPU usage: 37.6% user, 11.68% sys, 51.24% idle 
+1794508668.36 PhysMem: 35G used (3008M wired, 8481M compressor), 104M unused.
+1794508673.45 Load Avg: 5.76, 8.16, 12.63 
+1794508673.45 CPU usage: 46.49% user, 11.47% sys, 42.2% idle 
+1794508673.45 PhysMem: 33G used (2934M wired, 8461M compressor), 1779M unused.
+1794508678.62 Load Avg: 5.30, 8.03, 12.56 
+1794508678.62 CPU usage: 10.72% user, 6.5% sys, 83.22% idle 
+1794508678.62 PhysMem: 28G used (2977M wired, 7983M compressor), 7141M unused.
+1794508683.74 Load Avg: 7.76, 8.49, 12.70 
+1794508683.74 CPU usage: 76.51% user, 22.94% sys, 0.54% idle 
+1794508683.74 PhysMem: 32G used (3544M wired, 7980M compressor), 3019M unused.
+1794508688.86 Load Avg: 12.90, 9.55, 13.04 
+1794508688.86 CPU usage: 65.24% user, 32.35% sys, 2.40% idle 
+1794508688.86 PhysMem: 35G used (3602M wired, 7920M compressor), 281M unused.
+1794508693.99 Load Avg: 15.39, 10.12, 13.23 
+1794508693.99 CPU usage: 54.97% user, 29.68% sys, 15.33% idle 
+1794508693.99 PhysMem: 35G used (3647M wired, 7915M compressor), 245M unused.
+1794508699.12 Load Avg: 46.15, 16.88, 15.59 
+1794508699.12 CPU usage: 75.38% user, 24.61% sys, 0.0% idle 
+1794508699.12 PhysMem: 35G used (3507M wired, 7911M compressor), 200M unused.
+1794508704.30 Load Avg: 68.96, 22.09, 17.44 
+1794508704.30 CPU usage: 69.56% user, 30.43% sys, 0.0% idle 
+1794508704.30 PhysMem: 35G used (3565M wired, 8868M compressor), 240M unused.
+1794508709.44 Load Avg: 90.98, 27.44, 19.35 
+1794508709.44 CPU usage: 74.79% user, 25.17% sys, 0.2% idle 
+1794508709.44 PhysMem: 35G used (4243M wired, 10G compressor), 175M unused.
+1794508714.66 Load Avg: 108.44, 32.11, 21.05 
+1794508714.66 CPU usage: 72.2% user, 27.53% sys, 0.43% idle 
+1794508714.66 PhysMem: 35G used (4546M wired, 12G compressor), 220M unused.
+1794508719.94 Load Avg: 118.82, 35.53, 22.32 
+1794508719.94 CPU usage: 68.67% user, 29.69% sys, 1.63% idle 
+1794508719.94 PhysMem: 35G used (4229M wired, 14G compressor), 210M unused.
+1794508725.06 Load Avg: 124.84, 38.16, 23.32 
+1794508725.06 CPU usage: 70.61% user, 29.18% sys, 0.19% idle 
+1794508725.06 PhysMem: 34G used (4678M wired, 15G compressor), 754M unused.
+1794508730.33 Load Avg: 146.87, 44.17, 25.53 
+1794508730.33 CPU usage: 76.12% user, 23.86% sys, 0.1% idle 
+1794508730.33 PhysMem: 35G used (5066M wired, 17G compressor), 134M unused.
+1794508735.44 Load Avg: 149.20, 46.36, 26.41 
+1794508735.44 CPU usage: 68.94% user, 29.53% sys, 1.51% idle 
+1794508735.44 PhysMem: 32G used (4399M wired, 16G compressor), 3449M unused.
+1794508740.56 Load Avg: 150.47, 48.33, 27.22 
+1794508740.56 CPU usage: 56.84% user, 23.11% sys, 20.3% idle 
+1794508740.56 PhysMem: 33G used (4654M wired, 15G compressor), 2371M unused.
+1794508745.67 Load Avg: 142.18, 48.30, 27.34 
+1794508745.67 CPU usage: 37.38% user, 16.8% sys, 46.53% idle 
+1794508745.67 PhysMem: 33G used (4143M wired, 15G compressor), 1676M unused.
+1794508750.78 Load Avg: 133.84, 48.13, 27.40 
+1794508750.78 CPU usage: 33.16% user, 12.5% sys, 54.77% idle 
+1794508750.78 PhysMem: 34G used (3972M wired, 15G compressor), 1291M unused.
+1794508755.89 Load Avg: 125.92, 47.91, 27.45 
+1794508755.89 CPU usage: 37.39% user, 13.41% sys, 49.19% idle 
+1794508755.89 PhysMem: 34G used (4119M wired, 15G compressor), 653M unused.
+1794508760.98 Load Avg: 118.16, 47.60, 27.45 
+1794508760.98 CPU usage: 28.56% user, 9.22% sys, 62.21% idle 
+1794508760.98 PhysMem: 33G used (3943M wired, 15G compressor), 2024M unused.
+1794508766.08 Load Avg: 111.26, 47.34, 27.48 
+1794508766.08 CPU usage: 38.85% user, 11.24% sys, 49.90% idle 
+1794508766.08 PhysMem: 35G used (3933M wired, 15G compressor), 362M unused.
+1794508771.21 Load Avg: 104.83, 47.07, 27.50 
+1794508771.21 CPU usage: 26.71% user, 9.65% sys, 63.63% idle 
+1794508771.21 PhysMem: 33G used (4193M wired, 15G compressor), 1654M unused.
+1794508776.32 Load Avg: 99.24, 46.87, 27.54 
+1794508776.32 CPU usage: 38.8% user, 13.15% sys, 48.76% idle 
+1794508776.32 PhysMem: 35G used (4432M wired, 15G compressor), 123M unused.
+1794508781.42 Load Avg: 92.26, 46.29, 27.45 
+1794508781.42 CPU usage: 29.22% user, 12.45% sys, 58.32% idle 
+1794508781.42 PhysMem: 34G used (4586M wired, 15G compressor), 1189M unused.
+1794508786.53 Load Avg: 85.99, 45.75, 27.37 
+1794508786.53 CPU usage: 40.13% user, 15.66% sys, 44.20% idle 
+1794508786.53 PhysMem: 35G used (3941M wired, 15G compressor), 155M unused.
+1794508791.64 Load Avg: 79.26, 45.03, 27.23 
+1794508791.64 CPU usage: 11.10% user, 7.69% sys, 81.19% idle 
+1794508791.64 PhysMem: 34G used (4190M wired, 15G compressor), 1609M unused.
+1794508796.76 Load Avg: 73.08, 44.31, 27.08 
+1794508796.76 CPU usage: 21.30% user, 8.60% sys, 70.9% idle 
+1794508796.76 PhysMem: 35G used (4427M wired, 15G compressor), 129M unused.
+1794508801.88 Load Avg: 67.62, 43.66, 26.95 
+1794508801.88 CPU usage: 26.8% user, 10.86% sys, 63.4% idle 
+1794508801.88 PhysMem: 35G used (4418M wired, 15G compressor), 146M unused.
+1794508806.98 Load Avg: 67.97, 44.13, 27.21 
+1794508806.98 CPU usage: 22.47% user, 12.72% sys, 64.79% idle 
+1794508806.98 PhysMem: 35G used (4153M wired, 15G compressor), 551M unused.
+1794508812.10 Load Avg: 63.01, 43.50, 27.09 
+1794508812.10 CPU usage: 23.58% user, 11.88% sys, 64.52% idle 
+1794508812.10 PhysMem: 35G used (4487M wired, 15G compressor), 115M unused.
+1794508817.21 Load Avg: 58.53, 42.89, 26.97 
+1794508817.21 CPU usage: 27.16% user, 11.25% sys, 61.57% idle 
+1794508817.21 PhysMem: 35G used (4488M wired, 15G compressor), 195M unused.
+1794508822.32 Load Avg: 54.40, 42.29, 26.85 
+1794508822.32 CPU usage: 13.32% user, 7.50% sys, 79.16% idle 
+1794508822.32 PhysMem: 34G used (4212M wired, 15G compressor), 1108M unused.
+1794508827.43 Load Avg: 50.44, 41.67, 26.72 
+1794508827.43 CPU usage: 29.89% user, 12.78% sys, 57.31% idle 
+1794508827.43 PhysMem: 35G used (4183M wired, 16G compressor), 155M unused.
+1794508832.52 Load Avg: 47.77, 41.26, 26.67 
+1794508832.52 CPU usage: 36.62% user, 11.2% sys, 52.35% idle 
+1794508832.52 PhysMem: 35G used (4508M wired, 16G compressor), 131M unused.
+1794508837.62 Load Avg: 44.42, 40.68, 26.54 
+1794508837.62 CPU usage: 29.26% user, 13.48% sys, 57.25% idle 
+1794508837.62 PhysMem: 35G used (4503M wired, 16G compressor), 558M unused.
+1794508842.74 Load Avg: 41.50, 40.14, 26.44 
+1794508842.74 CPU usage: 29.35% user, 11.57% sys, 59.6% idle 
+1794508842.74 PhysMem: 35G used (4173M wired, 16G compressor), 233M unused.
+1794508847.84 Load Avg: 38.42, 39.52, 26.30 
+1794508847.84 CPU usage: 25.82% user, 11.67% sys, 62.50% idle 
+1794508847.84 PhysMem: 34G used (4168M wired, 16G compressor), 631M unused.
+1794508852.95 Load Avg: 35.82, 38.96, 26.18 
+1794508852.95 CPU usage: 29.80% user, 13.30% sys, 56.88% idle 
+1794508852.95 PhysMem: 35G used (4171M wired, 16G compressor), 132M unused.
+1794508858.05 Load Avg: 33.44, 38.42, 26.06 
+1794508858.05 CPU usage: 17.14% user, 7.34% sys, 75.51% idle 
+1794508858.05 PhysMem: 34G used (4436M wired, 16G compressor), 741M unused.
+1794508863.15 Load Avg: 34.12, 38.47, 26.15 
+1794508863.15 CPU usage: 17.8% user, 8.53% sys, 74.37% idle 
+1794508863.15 PhysMem: 35G used (4353M wired, 16G compressor), 315M unused.
+1794508868.25 Load Avg: 32.11, 37.98, 26.05 
+1794508868.25 CPU usage: 21.1% user, 8.44% sys, 70.54% idle 
+1794508868.25 PhysMem: 35G used (4609M wired, 16G compressor), 340M unused.
+1794508873.39 Load Avg: 29.86, 37.42, 25.92 
+1794508873.39 CPU usage: 12.89% user, 7.16% sys, 79.94% idle 
+1794508873.39 PhysMem: 35G used (3489M wired, 15G compressor), 564M unused.
+1794508878.49 Load Avg: 27.71, 36.85, 25.79 
+1794508878.49 CPU usage: 17.28% user, 8.78% sys, 73.93% idle 
+1794508878.49 PhysMem: 35G used (4404M wired, 15G compressor), 599M unused.
+1794508883.60 Load Avg: 26.21, 36.39, 25.69 
+1794508883.60 CPU usage: 20.84% user, 8.36% sys, 70.78% idle 
+1794508883.60 PhysMem: 35G used (4163M wired, 15G compressor), 217M unused.
+1794508888.69 Load Avg: 24.59, 35.88, 25.57 
+1794508888.69 CPU usage: 18.55% user, 8.72% sys, 72.72% idle 
+1794508888.69 PhysMem: 34G used (4214M wired, 16G compressor), 981M unused.
+1794508893.79 Load Avg: 23.50, 35.47, 25.49 
+1794508893.79 CPU usage: 13.86% user, 5.26% sys, 80.86% idle 
+1794508893.79 PhysMem: 33G used (3447M wired, 16G compressor), 2051M unused.
+1794508898.87 Load Avg: 21.62, 34.88, 25.34 
+1794508898.87 CPU usage: 9.92% user, 6.2% sys, 84.4% idle 
+1794508898.87 PhysMem: 34G used (3885M wired, 15G compressor), 1262M unused.
+1794508903.96 Load Avg: 20.05, 34.33, 25.20 
+1794508903.96 CPU usage: 40.76% user, 13.1% sys, 46.22% idle 
+1794508903.96 PhysMem: 35G used (3947M wired, 16G compressor), 142M unused.
+1794508909.07 Load Avg: 19.08, 33.90, 25.10 
+1794508909.07 CPU usage: 40.30% user, 16.8% sys, 43.61% idle 
+1794508909.07 PhysMem: 35G used (4419M wired, 16G compressor), 219M unused.
+1794508914.19 Load Avg: 18.28, 33.48, 25.01 
+1794508914.19 CPU usage: 45.82% user, 15.20% sys, 38.96% idle 
+1794508914.19 PhysMem: 35G used (4220M wired, 16G compressor), 338M unused.
+1794508919.28 Load Avg: 18.01, 33.17, 24.95 
+1794508919.28 CPU usage: 42.65% user, 14.51% sys, 42.83% idle 
+1794508919.28 PhysMem: 35G used (4181M wired, 16G compressor), 332M unused.
+1794508924.40 Load Avg: 16.27, 32.30, 24.73 
+1794508924.40 CPU usage: 20.15% user, 10.65% sys, 69.18% idle 
+1794508924.40 PhysMem: 35G used (4411M wired, 16G compressor), 135M unused.
+1794508929.51 Load Avg: 15.20, 31.81, 24.60 
+1794508929.51 CPU usage: 19.95% user, 8.99% sys, 71.5% idle 
+1794508929.51 PhysMem: 35G used (4518M wired, 16G compressor), 300M unused.
+1794508934.64 Load Avg: 14.06, 31.30, 24.47 
+1794508934.64 CPU usage: 16.27% user, 8.41% sys, 75.31% idle 
+1794508934.64 PhysMem: 33G used (4149M wired, 16G compressor), 1732M unused.
+1794508939.74 Load Avg: 13.26, 30.85, 24.35 
+1794508939.74 CPU usage: 19.25% user, 9.40% sys, 71.33% idle 
+1794508939.74 PhysMem: 35G used (4470M wired, 16G compressor), 312M unused.
+1794508944.85 Load Avg: 12.36, 30.37, 24.21 
+1794508944.85 CPU usage: 16.26% user, 6.78% sys, 76.94% idle 
+1794508944.85 PhysMem: 35G used (3512M wired, 16G compressor), 453M unused.
+1794508949.94 Load Avg: 11.53, 29.90, 24.08 
+1794508949.94 CPU usage: 9.97% user, 6.90% sys, 83.12% idle 
+1794508949.94 PhysMem: 34G used (4145M wired, 16G compressor), 1311M unused.
+1794508955.04 Load Avg: 11.08, 29.50, 23.98 
+1794508955.05 CPU usage: 29.71% user, 11.70% sys, 58.58% idle 
+1794508955.05 PhysMem: 35G used (3514M wired, 16G compressor), 137M unused.
+1794508960.15 Load Avg: 10.28, 29.02, 23.84 
+1794508960.15 CPU usage: 33.58% user, 11.79% sys, 54.62% idle 
+1794508960.15 PhysMem: 35G used (4526M wired, 16G compressor), 117M unused.
+1794508965.25 Load Avg: 10.81, 28.83, 23.80 
+1794508965.25 CPU usage: 20.33% user, 10.23% sys, 69.43% idle 
+1794508965.25 PhysMem: 34G used (4287M wired, 16G compressor), 706M unused.
+1794508970.35 Load Avg: 10.67, 28.50, 23.72 
+1794508970.35 CPU usage: 19.65% user, 7.91% sys, 72.42% idle 
+1794508970.35 PhysMem: 35G used (4495M wired, 16G compressor), 173M unused.
+1794508975.47 Load Avg: 9.90, 28.04, 23.58 
+1794508975.47 CPU usage: 15.6% user, 7.1% sys, 77.92% idle 
+1794508975.47 PhysMem: 33G used (3486M wired, 16G compressor), 2062M unused.
+1794508980.58 Load Avg: 9.66, 27.69, 23.48 
+1794508980.58 CPU usage: 23.3% user, 8.32% sys, 68.63% idle 
+1794508980.58 PhysMem: 34G used (4187M wired, 16G compressor), 1153M unused.
+1794508985.67 Load Avg: 9.29, 27.31, 23.38 
+1794508985.67 CPU usage: 39.90% user, 13.28% sys, 46.81% idle 
+1794508985.67 PhysMem: 35G used (4128M wired, 16G compressor), 316M unused.
+1794508990.78 Load Avg: 9.19, 26.99, 23.29 
+1794508990.78 CPU usage: 18.21% user, 8.8% sys, 73.69% idle 
+1794508990.78 PhysMem: 35G used (4555M wired, 16G compressor), 258M unused.
+1794508995.86 Load Avg: 8.69, 26.59, 23.17 
+1794508995.86 CPU usage: 10.16% user, 7.71% sys, 82.11% idle 
+1794508995.86 PhysMem: 33G used (4182M wired, 16G compressor), 1934M unused.
+1794509000.97 Load Avg: 10.48, 26.67, 23.21 
+1794509000.97 CPU usage: 41.47% user, 16.52% sys, 42.0% idle 
+1794509000.97 PhysMem: 35G used (4466M wired, 16G compressor), 147M unused.
+1794509006.10 Load Avg: 9.88, 26.27, 23.09 
+1794509006.10 CPU usage: 18.57% user, 6.45% sys, 74.97% idle 
+1794509006.10 PhysMem: 33G used (4100M wired, 16G compressor), 2110M unused.
+1794509011.17 Load Avg: 9.49, 25.92, 22.99 
+1794509011.17 CPU usage: 5.1% user, 18.85% sys, 76.12% idle 
+1794509011.17 PhysMem: 22G used (2905M wired, 10G compressor), 13G unused.
+1794509016.29 Load Avg: 8.89, 25.52, 22.86 
+1794509016.29 CPU usage: 4.46% user, 9.68% sys, 85.85% idle 
+1794509016.29 PhysMem: 22G used (2903M wired, 10G compressor), 13G unused.
+1794509021.38 Load Avg: 8.26, 25.11, 22.74 
+1794509021.38 CPU usage: 2.14% user, 1.8% sys, 96.76% idle 
+1794509021.38 PhysMem: 22G used (2902M wired, 10G compressor), 13G unused.
+1794509026.51 Load Avg: 7.67, 24.71, 22.61 
+1794509026.51 CPU usage: 3.39% user, 2.6% sys, 94.53% idle 
+1794509026.51 PhysMem: 22G used (2900M wired, 10G compressor), 13G unused.
+1794509031.64 Load Avg: 7.14, 24.32, 22.48 
+1794509031.64 CPU usage: 3.2% user, 1.62% sys, 95.35% idle 
+1794509031.64 PhysMem: 23G used (2901M wired, 9959M compressor), 13G unused.
+1794509036.73 Load Avg: 6.65, 23.93, 22.36 
+1794509036.73 CPU usage: 2.3% user, 1.30% sys, 96.65% idle 
+1794509036.73 PhysMem: 23G used (2901M wired, 9937M compressor), 13G unused.
+1794509041.83 Load Avg: 6.20, 23.55, 22.23 
+1794509041.83 CPU usage: 2.58% user, 1.32% sys, 96.9% idle 
+1794509041.83 PhysMem: 23G used (2900M wired, 9932M compressor), 12G unused.
+1794509046.95 Load Avg: 6.26, 23.28, 22.14 
+1794509046.95 CPU usage: 2.45% user, 1.21% sys, 96.33% idle 
+1794509046.95 PhysMem: 23G used (2908M wired, 9909M compressor), 12G unused.
+1794509052.04 Load Avg: 5.84, 22.91, 22.02 
+1794509052.04 CPU usage: 5.74% user, 2.14% sys, 92.10% idle 
+1794509052.04 PhysMem: 24G used (3296M wired, 9809M compressor), 12G unused.
+1794509057.15 Load Avg: 5.37, 22.53, 21.89 
+1794509057.15 CPU usage: 2.2% user, 0.96% sys, 97.0% idle 
+1794509057.15 PhysMem: 23G used (2903M wired, 9806M compressor), 12G unused.
+1794509062.28 Load Avg: 5.18, 22.20, 21.78 
+1794509062.28 CPU usage: 2.51% user, 1.29% sys, 96.19% idle 
+1794509062.28 PhysMem: 23G used (2904M wired, 9801M compressor), 12G unused.
+1794509067.41 Load Avg: 4.85, 21.85, 21.65 
+1794509067.41 CPU usage: 2.70% user, 1.25% sys, 96.4% idle 
+1794509067.41 PhysMem: 23G used (2904M wired, 9787M compressor), 12G unused.
+1794509072.50 Load Avg: 4.54, 21.50, 21.53 
+1794509072.50 CPU usage: 2.35% user, 1.13% sys, 96.50% idle 
+1794509072.50 PhysMem: 23G used (2903M wired, 9774M compressor), 12G unused.
+1794509077.62 Load Avg: 4.25, 21.16, 21.41 
+1794509077.62 CPU usage: 1.91% user, 0.82% sys, 97.25% idle 
+1794509077.62 PhysMem: 23G used (2903M wired, 9770M compressor), 12G unused.

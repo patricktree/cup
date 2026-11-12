@@ -1,0 +1,1373 @@
+file,title,project,duration_ms,status
+app/avatar-initials.test.ts,"\"Verena Handler-Kunze\" gives the initials \"VH\"",mobile-chromium,1,passed
+app/avatar-initials.test.ts,"\"Verena Handler-Kunze\" gives the initials \"VH\"",desktop-chromium,2,passed
+app/avatar-initials.test.ts,"\"Verena Handler-Kunze\" gives the initials \"VH\"",mobile-webkit,2,passed
+app/avatar-initials.test.ts,"\"Verena Handler-Kunze\" gives the initials \"VH\"",desktop-webkit,3,passed
+app/avatar-initials.test.ts,"\"Cher\" gives the initials \"C\"",mobile-chromium,1,passed
+app/avatar-initials.test.ts,"\"Cher\" gives the initials \"C\"",desktop-chromium,0,passed
+app/avatar-initials.test.ts,"\"Cher\" gives the initials \"C\"",mobile-webkit,0,passed
+app/avatar-initials.test.ts,"\"Cher\" gives the initials \"C\"",desktop-webkit,0,passed
+app/avatar-initials.test.ts,"\"Ludwig van Beethoven\" gives the initials \"LB\"",mobile-chromium,1,passed
+app/avatar-initials.test.ts,"\"Ludwig van Beethoven\" gives the initials \"LB\"",desktop-chromium,0,passed
+app/avatar-initials.test.ts,"\"Ludwig van Beethoven\" gives the initials \"LB\"",mobile-webkit,0,passed
+app/avatar-initials.test.ts,"\"Ludwig van Beethoven\" gives the initials \"LB\"",desktop-webkit,0,passed
+app/avatar-initials.test.ts,"\"山田 太郎\" gives the initials \"山太\"",mobile-chromium,2,passed
+app/avatar-initials.test.ts,"\"山田 太郎\" gives the initials \"山太\"",desktop-chromium,0,passed
+app/avatar-initials.test.ts,"\"山田 太郎\" gives the initials \"山太\"",mobile-webkit,0,passed
+app/avatar-initials.test.ts,"\"山田 太郎\" gives the initials \"山太\"",desktop-webkit,0,passed
+app/avatar-initials.test.ts,"\"  Anna 🌸  \" gives the initials \"A\"",mobile-chromium,0,passed
+app/avatar-initials.test.ts,"\"  Anna 🌸  \" gives the initials \"A\"",desktop-chromium,0,passed
+app/avatar-initials.test.ts,"\"  Anna 🌸  \" gives the initials \"A\"",mobile-webkit,0,passed
+app/avatar-initials.test.ts,"\"  Anna 🌸  \" gives the initials \"A\"",desktop-webkit,0,passed
+app/avatar-initials.test.ts,"\"(Bob) Dylan\" gives the initials \"BD\"",mobile-chromium,0,passed
+app/avatar-initials.test.ts,"\"(Bob) Dylan\" gives the initials \"BD\"",desktop-chromium,0,passed
+app/avatar-initials.test.ts,"\"(Bob) Dylan\" gives the initials \"BD\"",mobile-webkit,0,passed
+app/avatar-initials.test.ts,"\"(Bob) Dylan\" gives the initials \"BD\"",desktop-webkit,0,passed
+app/avatar-initials.test.ts,"\"Émile Zola\" gives the initials \"ÉZ\"",mobile-chromium,0,passed
+app/avatar-initials.test.ts,"\"Émile Zola\" gives the initials \"ÉZ\"",desktop-chromium,0,passed
+app/avatar-initials.test.ts,"\"Émile Zola\" gives the initials \"ÉZ\"",mobile-webkit,0,passed
+app/avatar-initials.test.ts,"\"Émile Zola\" gives the initials \"ÉZ\"",desktop-webkit,0,passed
+app/avatar-initials.test.ts,"\"\" gives no initials",mobile-chromium,0,passed
+app/avatar-initials.test.ts,"\"\" gives no initials",desktop-chromium,0,passed
+app/avatar-initials.test.ts,"\"\" gives no initials",mobile-webkit,0,passed
+app/avatar-initials.test.ts,"\"\" gives no initials",desktop-webkit,0,passed
+app/avatar-initials.test.ts,"\"   \" gives no initials",mobile-chromium,0,passed
+app/avatar-initials.test.ts,"\"   \" gives no initials",desktop-chromium,0,passed
+app/avatar-initials.test.ts,"\"   \" gives no initials",mobile-webkit,0,passed
+app/avatar-initials.test.ts,"\"   \" gives no initials",desktop-webkit,0,passed
+app/avatar-initials.test.ts,"\"🌸 42 ---\" gives no initials",mobile-chromium,0,passed
+app/avatar-initials.test.ts,"\"🌸 42 ---\" gives no initials",desktop-chromium,0,passed
+app/avatar-initials.test.ts,"\"🌸 42 ---\" gives no initials",mobile-webkit,0,passed
+app/avatar-initials.test.ts,"\"🌸 42 ---\" gives no initials",desktop-webkit,0,passed
+app/avatar-initials.test.ts,"an absent name gives no initials",mobile-chromium,0,passed
+app/avatar-initials.test.ts,"an absent name gives no initials",desktop-chromium,0,passed
+app/avatar-initials.test.ts,"an absent name gives no initials",mobile-webkit,0,passed
+app/avatar-initials.test.ts,"an absent name gives no initials",desktop-webkit,0,passed
+app/avatar-initials.test.ts,"null gives no initials",mobile-chromium,0,passed
+app/avatar-initials.test.ts,"null gives no initials",desktop-chromium,0,passed
+app/avatar-initials.test.ts,"null gives no initials",mobile-webkit,0,passed
+app/avatar-initials.test.ts,"null gives no initials",desktop-webkit,0,passed
+app/avatar-initials.test.ts,"42 gives no initials",mobile-chromium,0,passed
+app/avatar-initials.test.ts,"42 gives no initials",desktop-chromium,0,passed
+app/avatar-initials.test.ts,"42 gives no initials",mobile-webkit,0,passed
+app/avatar-initials.test.ts,"42 gives no initials",desktop-webkit,0,passed
+app/components/account-chrome.test.ts,"the tab bar on Recents marks Recent as the current tab",mobile-chromium,2608,passed
+app/components/account-chrome.test.ts,"the tab bar on Recents marks Recent as the current tab",desktop-chromium,1901,passed
+app/components/account-chrome.test.ts,"the tab bar on Recents marks Recent as the current tab",mobile-webkit,1791,passed
+app/components/account-chrome.test.ts,"the tab bar on Recents marks Recent as the current tab",desktop-webkit,1880,passed
+app/components/account-chrome.test.ts,"Add never shows as current, even with the Add dialog open",mobile-chromium,2615,passed
+app/components/account-chrome.test.ts,"Add never shows as current, even with the Add dialog open",desktop-chromium,1955,passed
+app/components/account-chrome.test.ts,"Add never shows as current, even with the Add dialog open",mobile-webkit,1915,passed
+app/components/account-chrome.test.ts,"Add never shows as current, even with the Add dialog open",desktop-webkit,1927,passed
+app/components/account-chrome.test.ts,"routes/index/SignIn shows no tab bar",mobile-chromium,2653,passed
+app/components/account-chrome.test.ts,"routes/index/SignIn shows no tab bar",desktop-chromium,2076,passed
+app/components/account-chrome.test.ts,"routes/index/SignIn shows no tab bar",mobile-webkit,2143,passed
+app/components/account-chrome.test.ts,"routes/index/SignIn shows no tab bar",desktop-webkit,2092,passed
+app/components/account-chrome.test.ts,"routes/trials.$grantId/OpenGrant shows no tab bar",mobile-chromium,2492,passed
+app/components/account-chrome.test.ts,"routes/trials.$grantId/OpenGrant shows no tab bar",desktop-chromium,1727,passed
+app/components/account-chrome.test.ts,"routes/trials.$grantId/OpenGrant shows no tab bar",mobile-webkit,1758,passed
+app/components/account-chrome.test.ts,"routes/trials.$grantId/OpenGrant shows no tab bar",desktop-webkit,1689,passed
+app/components/account-chrome.test.ts,"routes/_shell.audiobooks.$conversionId/ReadyAudiobook shows no tab bar",mobile-chromium,1601,passed
+app/components/account-chrome.test.ts,"routes/_shell.audiobooks.$conversionId/ReadyAudiobook shows no tab bar",desktop-chromium,1815,passed
+app/components/account-chrome.test.ts,"routes/_shell.audiobooks.$conversionId/ReadyAudiobook shows no tab bar",mobile-webkit,1737,passed
+app/components/account-chrome.test.ts,"routes/_shell.audiobooks.$conversionId/ReadyAudiobook shows no tab bar",desktop-webkit,1724,passed
+app/components/account-chrome.test.ts,"the avatar shows the account holder's initials and opens the account dialog",mobile-chromium,2039,passed
+app/components/account-chrome.test.ts,"the avatar shows the account holder's initials and opens the account dialog",desktop-chromium,1998,passed
+app/components/account-chrome.test.ts,"the avatar shows the account holder's initials and opens the account dialog",mobile-webkit,1898,passed
+app/components/account-chrome.test.ts,"the avatar shows the account holder's initials and opens the account dialog",desktop-webkit,2077,passed
+app/components/account-chrome.test.ts,"the avatar shows a glyph when the session carries no name",mobile-chromium,1905,passed
+app/components/account-chrome.test.ts,"the avatar shows a glyph when the session carries no name",desktop-chromium,1543,passed
+app/components/account-chrome.test.ts,"the avatar shows a glyph when the session carries no name",mobile-webkit,1755,passed
+app/components/account-chrome.test.ts,"the avatar shows a glyph when the session carries no name",desktop-webkit,1632,passed
+app/components/detail-top-bar.test.ts,"the plain top bar shows back and the menu",mobile-chromium,878,passed
+app/components/detail-top-bar.test.ts,"the plain top bar shows back and the menu",desktop-chromium,779,passed
+app/components/detail-top-bar.test.ts,"the plain top bar shows back and the menu",mobile-webkit,858,passed
+app/components/detail-top-bar.test.ts,"the plain top bar shows back and the menu",desktop-webkit,942,passed
+app/components/detail-top-bar.test.ts,"the compact top bar shows the title and host, cut off when too long",mobile-chromium,962,passed
+app/components/detail-top-bar.test.ts,"the compact top bar shows the title and host, cut off when too long",desktop-chromium,885,passed
+app/components/detail-top-bar.test.ts,"the compact top bar shows the title and host, cut off when too long",mobile-webkit,834,passed
+app/components/detail-top-bar.test.ts,"the compact top bar shows the title and host, cut off when too long",desktop-webkit,803,passed
+app/components/detail-top-bar.test.ts,"the top bar's menu offers the original page, Retry and Delete track…",mobile-chromium,831,passed
+app/components/detail-top-bar.test.ts,"the top bar's menu offers the original page, Retry and Delete track…",desktop-chromium,879,passed
+app/components/detail-top-bar.test.ts,"the top bar's menu offers the original page, Retry and Delete track…",mobile-webkit,814,passed
+app/components/detail-top-bar.test.ts,"the top bar's menu offers the original page, Retry and Delete track…",desktop-webkit,939,passed
+app/design-system/design-system.test.ts,"renders all design system variants",mobile-chromium,677,passed
+app/design-system/design-system.test.ts,"renders all design system variants",desktop-chromium,614,passed
+app/design-system/design-system.test.ts,"renders all design system variants",mobile-webkit,807,passed
+app/design-system/design-system.test.ts,"renders all design system variants",desktop-webkit,841,passed
+app/design-system/design-system.test.ts,"records button clicks and renders disabled states",mobile-chromium,763,passed
+app/design-system/design-system.test.ts,"records button clicks and renders disabled states",desktop-chromium,720,passed
+app/design-system/design-system.test.ts,"records button clicks and renders disabled states",mobile-webkit,926,passed
+app/design-system/design-system.test.ts,"records button clicks and renders disabled states",desktop-webkit,1051,passed
+app/design-system/design-system.test.ts,"supports input interaction and accessible errors",mobile-chromium,577,passed
+app/design-system/design-system.test.ts,"supports input interaction and accessible errors",desktop-chromium,571,passed
+app/design-system/design-system.test.ts,"supports input interaction and accessible errors",mobile-webkit,698,passed
+app/design-system/design-system.test.ts,"supports input interaction and accessible errors",desktop-webkit,712,passed
+app/design-system/design-system.test.ts,"keeps Space Mono outside the Inter typeface scope only",mobile-chromium,830,passed
+app/design-system/design-system.test.ts,"keeps Space Mono outside the Inter typeface scope only",desktop-chromium,755,passed
+app/design-system/design-system.test.ts,"keeps Space Mono outside the Inter typeface scope only",mobile-webkit,1031,passed
+app/design-system/design-system.test.ts,"keeps Space Mono outside the Inter typeface scope only",desktop-webkit,1020,passed
+app/design-system/design-system.test.ts,"renders the color tokens",mobile-chromium,584,passed
+app/design-system/design-system.test.ts,"renders the color tokens",desktop-chromium,528,passed
+app/design-system/design-system.test.ts,"renders the color tokens",mobile-webkit,704,passed
+app/design-system/design-system.test.ts,"renders the color tokens",desktop-webkit,694,passed
+app/design-system/design-system.test.ts,"renders the text styles",mobile-chromium,635,passed
+app/design-system/design-system.test.ts,"renders the text styles",desktop-chromium,623,passed
+app/design-system/design-system.test.ts,"renders the text styles",mobile-webkit,674,passed
+app/design-system/design-system.test.ts,"renders the text styles",desktop-webkit,681,passed
+app/design-system/design-system.test.ts,"renders the drawn icons",mobile-chromium,599,passed
+app/design-system/design-system.test.ts,"renders the drawn icons",desktop-chromium,568,passed
+app/design-system/design-system.test.ts,"renders the drawn icons",mobile-webkit,668,passed
+app/design-system/design-system.test.ts,"renders the drawn icons",desktop-webkit,676,passed
+app/design-system/design-system.test.ts,"renders enabled and disabled icon buttons",mobile-chromium,644,passed
+app/design-system/design-system.test.ts,"renders enabled and disabled icon buttons",desktop-chromium,594,passed
+app/design-system/design-system.test.ts,"renders enabled and disabled icon buttons",mobile-webkit,648,passed
+app/design-system/design-system.test.ts,"renders enabled and disabled icon buttons",desktop-webkit,660,passed
+app/design-system/design-system.test.ts,"shows the focus ring on a keyboard-focused icon button",mobile-chromium,607,passed
+app/design-system/design-system.test.ts,"shows the focus ring on a keyboard-focused icon button",desktop-chromium,594,passed
+app/design-system/design-system.test.ts,"shows the focus ring on a keyboard-focused icon button",mobile-webkit,653,passed
+app/design-system/design-system.test.ts,"shows the focus ring on a keyboard-focused icon button",desktop-webkit,647,passed
+app/design-system/design-system.test.ts,"shows the overlay on a pressed icon button",mobile-chromium,640,passed
+app/design-system/design-system.test.ts,"shows the overlay on a pressed icon button",desktop-chromium,641,passed
+app/design-system/design-system.test.ts,"shows the overlay on a pressed icon button",mobile-webkit,683,passed
+app/design-system/design-system.test.ts,"shows the overlay on a pressed icon button",desktop-webkit,732,passed
+app/design-system/design-system.test.ts,"renders loaded, loading and circular cover images",mobile-chromium,564,passed
+app/design-system/design-system.test.ts,"renders loaded, loading and circular cover images",desktop-chromium,598,passed
+app/design-system/design-system.test.ts,"renders loaded, loading and circular cover images",mobile-webkit,645,passed
+app/design-system/design-system.test.ts,"renders loaded, loading and circular cover images",desktop-webkit,632,passed
+app/design-system/design-system.test.ts,"keeps the previous cover visible until the new one has loaded",mobile-chromium,595,passed
+app/design-system/design-system.test.ts,"keeps the previous cover visible until the new one has loaded",desktop-chromium,614,passed
+app/design-system/design-system.test.ts,"keeps the previous cover visible until the new one has loaded",mobile-webkit,600,passed
+app/design-system/design-system.test.ts,"keeps the previous cover visible until the new one has loaded",desktop-webkit,623,passed
+app/player/audiobook-timeline.test.ts,"the current unit is the last one starting at or before a position",mobile-chromium,0,passed
+app/player/audiobook-timeline.test.ts,"the current unit is the last one starting at or before a position",desktop-chromium,0,passed
+app/player/audiobook-timeline.test.ts,"the current unit is the last one starting at or before a position",mobile-webkit,0,passed
+app/player/audiobook-timeline.test.ts,"the current unit is the last one starting at or before a position",desktop-webkit,1,passed
+app/player/audiobook-timeline.test.ts,"a position outside the narration track is clamped to one that does not end it",mobile-chromium,0,passed
+app/player/audiobook-timeline.test.ts,"a position outside the narration track is clamped to one that does not end it",desktop-chromium,0,passed
+app/player/audiobook-timeline.test.ts,"a position outside the narration track is clamped to one that does not end it",mobile-webkit,0,passed
+app/player/audiobook-timeline.test.ts,"a position outside the narration track is clamped to one that does not end it",desktop-webkit,0,passed
+app/player/playback-session.test.ts,"restores the saved unit and offset as a position on the narration track",mobile-chromium,0,passed
+app/player/playback-session.test.ts,"restores the saved unit and offset as a position on the narration track",desktop-chromium,0,passed
+app/player/playback-session.test.ts,"restores the saved unit and offset as a position on the narration track",mobile-webkit,0,passed
+app/player/playback-session.test.ts,"restores the saved unit and offset as a position on the narration track",desktop-webkit,0,passed
+app/player/playback-session.test.ts,"an unknown unit, or no saved position, restores the start",mobile-chromium,0,passed
+app/player/playback-session.test.ts,"an unknown unit, or no saved position, restores the start",desktop-chromium,0,passed
+app/player/playback-session.test.ts,"an unknown unit, or no saved position, restores the start",mobile-webkit,0,passed
+app/player/playback-session.test.ts,"an unknown unit, or no saved position, restores the start",desktop-webkit,0,passed
+app/player/playback-session.test.ts,"a position on the narration track becomes the unit and the offset within its audio",mobile-chromium,0,passed
+app/player/playback-session.test.ts,"a position on the narration track becomes the unit and the offset within its audio",desktop-chromium,0,passed
+app/player/playback-session.test.ts,"a position on the narration track becomes the unit and the offset within its audio",mobile-webkit,0,passed
+app/player/playback-session.test.ts,"a position on the narration track becomes the unit and the offset within its audio",desktop-webkit,1,passed
+app/player/playback-session.test.ts,"a restored position converts back to the saved listening position",mobile-chromium,0,passed
+app/player/playback-session.test.ts,"a restored position converts back to the saved listening position",desktop-chromium,0,passed
+app/player/playback-session.test.ts,"a restored position converts back to the saved listening position",mobile-webkit,0,passed
+app/player/playback-session.test.ts,"a restored position converts back to the saved listening position",desktop-webkit,0,passed
+app/player/playback-session.test.ts,"a narration track whose start offsets do not match the units is refused",mobile-chromium,0,passed
+app/player/playback-session.test.ts,"a narration track whose start offsets do not match the units is refused",desktop-chromium,0,passed
+app/player/playback-session.test.ts,"a narration track whose start offsets do not match the units is refused",mobile-webkit,0,passed
+app/player/playback-session.test.ts,"a narration track whose start offsets do not match the units is refused",desktop-webkit,0,passed
+app/player/playback-session.test.ts,"saves go to the subject in order",mobile-chromium,0,passed
+app/player/playback-session.test.ts,"saves go to the subject in order",desktop-chromium,0,passed
+app/player/playback-session.test.ts,"saves go to the subject in order",mobile-webkit,0,passed
+app/player/playback-session.test.ts,"saves go to the subject in order",desktop-webkit,0,passed
+app/player/playback-session.test.ts,"a refused save does not hold back the next one",mobile-chromium,0,passed
+app/player/playback-session.test.ts,"a refused save does not hold back the next one",desktop-chromium,0,passed
+app/player/playback-session.test.ts,"a refused save does not hold back the next one",mobile-webkit,0,passed
+app/player/playback-session.test.ts,"a refused save does not hold back the next one",desktop-webkit,0,passed
+app/player/playback-session.test.ts,"saves during playback wait for the save interval",mobile-chromium,0,passed
+app/player/playback-session.test.ts,"saves during playback wait for the save interval",desktop-chromium,0,passed
+app/player/playback-session.test.ts,"saves during playback wait for the save interval",mobile-webkit,0,passed
+app/player/playback-session.test.ts,"saves during playback wait for the save interval",desktop-webkit,0,passed
+app/player/playback-session.test.ts,"an anonymous listener's position is saved without a subject",mobile-chromium,0,passed
+app/player/playback-session.test.ts,"an anonymous listener's position is saved without a subject",desktop-chromium,0,passed
+app/player/playback-session.test.ts,"an anonymous listener's position is saved without a subject",mobile-webkit,0,passed
+app/player/playback-session.test.ts,"an anonymous listener's position is saved without a subject",desktop-webkit,0,passed
+app/player/player-host.test.ts,"showing an audiobook loads nothing, while it can be played",mobile-chromium,0,passed
+app/player/player-host.test.ts,"showing an audiobook loads nothing, while it can be played",desktop-chromium,1,passed
+app/player/player-host.test.ts,"showing an audiobook loads nothing, while it can be played",mobile-webkit,1,passed
+app/player/player-host.test.ts,"showing an audiobook loads nothing, while it can be played",desktop-webkit,0,passed
+app/player/player-host.test.ts,"before it is loaded, the shown audiobook resumes from the listening position the server stored",mobile-chromium,0,passed
+app/player/player-host.test.ts,"before it is loaded, the shown audiobook resumes from the listening position the server stored",desktop-chromium,0,passed
+app/player/player-host.test.ts,"before it is loaded, the shown audiobook resumes from the listening position the server stored",mobile-webkit,0,passed
+app/player/player-host.test.ts,"before it is loaded, the shown audiobook resumes from the listening position the server stored",desktop-webkit,0,passed
+app/player/player-host.test.ts,"before it is loaded, the shown audiobook resumes from the device's position for listeners without an account",mobile-chromium,0,passed
+app/player/player-host.test.ts,"before it is loaded, the shown audiobook resumes from the device's position for listeners without an account",desktop-chromium,0,passed
+app/player/player-host.test.ts,"before it is loaded, the shown audiobook resumes from the device's position for listeners without an account",mobile-webkit,0,passed
+app/player/player-host.test.ts,"before it is loaded, the shown audiobook resumes from the device's position for listeners without an account",desktop-webkit,0,passed
+app/player/player-host.test.ts,"while the account is restored, the shown audiobook resumes from the start, then from the account's position",mobile-chromium,0,passed
+app/player/player-host.test.ts,"while the account is restored, the shown audiobook resumes from the start, then from the account's position",desktop-chromium,0,passed
+app/player/player-host.test.ts,"while the account is restored, the shown audiobook resumes from the start, then from the account's position",mobile-webkit,0,passed
+app/player/player-host.test.ts,"while the account is restored, the shown audiobook resumes from the start, then from the account's position",desktop-webkit,0,passed
+app/player/player-host.test.ts,"after its track is unloaded, the shown audiobook resumes from where a listener without an account stopped",mobile-chromium,2,passed
+app/player/player-host.test.ts,"after its track is unloaded, the shown audiobook resumes from where a listener without an account stopped",desktop-chromium,2,passed
+app/player/player-host.test.ts,"after its track is unloaded, the shown audiobook resumes from where a listener without an account stopped",mobile-webkit,2,passed
+app/player/player-host.test.ts,"after its track is unloaded, the shown audiobook resumes from where a listener without an account stopped",desktop-webkit,2,passed
+app/player/player-host.test.ts,"a shown audiobook that cannot play resumes from the start",mobile-chromium,0,passed
+app/player/player-host.test.ts,"a shown audiobook that cannot play resumes from the start",desktop-chromium,0,passed
+app/player/player-host.test.ts,"a shown audiobook that cannot play resumes from the start",mobile-webkit,0,passed
+app/player/player-host.test.ts,"a shown audiobook that cannot play resumes from the start",desktop-webkit,0,passed
+app/player/player-host.test.ts,"loading the shown audiobook sets its narration track on the one element without playing",mobile-chromium,4,passed
+app/player/player-host.test.ts,"loading the shown audiobook sets its narration track on the one element without playing",desktop-chromium,0,passed
+app/player/player-host.test.ts,"loading the shown audiobook sets its narration track on the one element without playing",mobile-webkit,0,passed
+app/player/player-host.test.ts,"loading the shown audiobook sets its narration track on the one element without playing",desktop-webkit,0,passed
+app/player/player-host.test.ts,"loading restores the saved unit and offset once metadata is loaded and stays paused",mobile-chromium,0,passed
+app/player/player-host.test.ts,"loading restores the saved unit and offset once metadata is loaded and stays paused",desktop-chromium,0,passed
+app/player/player-host.test.ts,"loading restores the saved unit and offset once metadata is loaded and stays paused",mobile-webkit,0,passed
+app/player/player-host.test.ts,"loading restores the saved unit and offset once metadata is loaded and stays paused",desktop-webkit,0,passed
+app/player/player-host.test.ts,"Play starts the element within the call, before anything is awaited",mobile-chromium,0,passed
+app/player/player-host.test.ts,"Play starts the element within the call, before anything is awaited",desktop-chromium,0,passed
+app/player/player-host.test.ts,"Play starts the element within the call, before anything is awaited",mobile-webkit,0,passed
+app/player/player-host.test.ts,"Play starts the element within the call, before anything is awaited",desktop-webkit,0,passed
+app/player/player-host.test.ts,"toggling pauses a playing audiobook and plays a paused one",mobile-chromium,0,passed
+app/player/player-host.test.ts,"toggling pauses a playing audiobook and plays a paused one",desktop-chromium,0,passed
+app/player/player-host.test.ts,"toggling pauses a playing audiobook and plays a paused one",mobile-webkit,0,passed
+app/player/player-host.test.ts,"toggling pauses a playing audiobook and plays a paused one",desktop-webkit,0,passed
+app/player/player-host.test.ts,"a unit tap sets the element's time to the unit's start offset",mobile-chromium,0,passed
+app/player/player-host.test.ts,"a unit tap sets the element's time to the unit's start offset",desktop-chromium,0,passed
+app/player/player-host.test.ts,"a unit tap sets the element's time to the unit's start offset",mobile-webkit,0,passed
+app/player/player-host.test.ts,"a unit tap sets the element's time to the unit's start offset",desktop-webkit,0,passed
+app/player/player-host.test.ts,"a unit tap before metadata is loaded seeks once it is",mobile-chromium,0,passed
+app/player/player-host.test.ts,"a unit tap before metadata is loaded seeks once it is",desktop-chromium,0,passed
+app/player/player-host.test.ts,"a unit tap before metadata is loaded seeks once it is",mobile-webkit,0,passed
+app/player/player-host.test.ts,"a unit tap before metadata is loaded seeks once it is",desktop-webkit,0,passed
+app/player/player-host.test.ts,"the position bar sets the element's time, short of the track's end",mobile-chromium,0,passed
+app/player/player-host.test.ts,"the position bar sets the element's time, short of the track's end",desktop-chromium,0,passed
+app/player/player-host.test.ts,"the position bar sets the element's time, short of the track's end",mobile-webkit,0,passed
+app/player/player-host.test.ts,"the position bar sets the element's time, short of the track's end",desktop-webkit,0,passed
+app/player/player-host.test.ts,"the current unit follows the element's time across start offsets",mobile-chromium,0,passed
+app/player/player-host.test.ts,"the current unit follows the element's time across start offsets",desktop-chromium,0,passed
+app/player/player-host.test.ts,"the current unit follows the element's time across start offsets",mobile-webkit,0,passed
+app/player/player-host.test.ts,"the current unit follows the element's time across start offsets",desktop-webkit,0,passed
+app/player/player-host.test.ts,"time updates of the same position publish no new snapshot",mobile-chromium,0,passed
+app/player/player-host.test.ts,"time updates of the same position publish no new snapshot",desktop-chromium,0,passed
+app/player/player-host.test.ts,"time updates of the same position publish no new snapshot",mobile-webkit,0,passed
+app/player/player-host.test.ts,"time updates of the same position publish no new snapshot",desktop-webkit,0,passed
+app/player/player-host.test.ts,"saves during playback at most every save interval, and on pause",mobile-chromium,1,passed
+app/player/player-host.test.ts,"saves during playback at most every save interval, and on pause",desktop-chromium,1,passed
+app/player/player-host.test.ts,"saves during playback at most every save interval, and on pause",mobile-webkit,1,passed
+app/player/player-host.test.ts,"saves during playback at most every save interval, and on pause",desktop-webkit,2,passed
+app/player/player-host.test.ts,"seeking saves the new position right away",mobile-chromium,1,passed
+app/player/player-host.test.ts,"seeking saves the new position right away",desktop-chromium,0,passed
+app/player/player-host.test.ts,"seeking saves the new position right away",mobile-webkit,1,passed
+app/player/player-host.test.ts,"seeking saves the new position right away",desktop-webkit,1,passed
+app/player/player-host.test.ts,"skipping moves the element's time by the given amount and saves the new position",mobile-chromium,1,passed
+app/player/player-host.test.ts,"skipping moves the element's time by the given amount and saves the new position",desktop-chromium,1,passed
+app/player/player-host.test.ts,"skipping moves the element's time by the given amount and saves the new position",mobile-webkit,4,passed
+app/player/player-host.test.ts,"skipping moves the element's time by the given amount and saves the new position",desktop-webkit,2,passed
+app/player/player-host.test.ts,"skipping back stops at the start, and skipping forward short of the end",mobile-chromium,0,passed
+app/player/player-host.test.ts,"skipping back stops at the start, and skipping forward short of the end",desktop-chromium,0,passed
+app/player/player-host.test.ts,"skipping back stops at the start, and skipping forward short of the end",mobile-webkit,0,passed
+app/player/player-host.test.ts,"skipping back stops at the start, and skipping forward short of the end",desktop-webkit,0,passed
+app/player/player-host.test.ts,"skipping before metadata is loaded skips from the restored position once it is",mobile-chromium,0,passed
+app/player/player-host.test.ts,"skipping before metadata is loaded skips from the restored position once it is",desktop-chromium,0,passed
+app/player/player-host.test.ts,"skipping before metadata is loaded skips from the restored position once it is",mobile-webkit,0,passed
+app/player/player-host.test.ts,"skipping before metadata is loaded skips from the restored position once it is",desktop-webkit,0,passed
+app/player/player-host.test.ts,"metadata without a duration holds the restored position until the duration is known",mobile-chromium,0,passed
+app/player/player-host.test.ts,"metadata without a duration holds the restored position until the duration is known",desktop-chromium,0,passed
+app/player/player-host.test.ts,"metadata without a duration holds the restored position until the duration is known",mobile-webkit,0,passed
+app/player/player-host.test.ts,"metadata without a duration holds the restored position until the duration is known",desktop-webkit,0,passed
+app/player/player-host.test.ts,"a seek while the metadata has no duration waits for any event that finds it known",mobile-chromium,0,passed
+app/player/player-host.test.ts,"a seek while the metadata has no duration waits for any event that finds it known",desktop-chromium,0,passed
+app/player/player-host.test.ts,"a seek while the metadata has no duration waits for any event that finds it known",mobile-webkit,0,passed
+app/player/player-host.test.ts,"a seek while the metadata has no duration waits for any event that finds it known",desktop-webkit,0,passed
+app/player/player-host.test.ts,"a seek after the metadata is read but before its event replaces an earlier seek",mobile-chromium,0,passed
+app/player/player-host.test.ts,"a seek after the metadata is read but before its event replaces an earlier seek",desktop-chromium,0,passed
+app/player/player-host.test.ts,"a seek after the metadata is read but before its event replaces an earlier seek",mobile-webkit,0,passed
+app/player/player-host.test.ts,"a seek after the metadata is read but before its event replaces an earlier seek",desktop-webkit,0,passed
+app/player/player-host.test.ts,"a refused save is shown as the player's error",mobile-chromium,1,passed
+app/player/player-host.test.ts,"a refused save is shown as the player's error",desktop-chromium,1,passed
+app/player/player-host.test.ts,"a refused save is shown as the player's error",mobile-webkit,1,passed
+app/player/player-host.test.ts,"a refused save is shown as the player's error",desktop-webkit,1,passed
+app/player/player-host.test.ts,"reaching the end returns to the start and saves it",mobile-chromium,2,passed
+app/player/player-host.test.ts,"reaching the end returns to the start and saves it",desktop-chromium,1,passed
+app/player/player-host.test.ts,"reaching the end returns to the start and saves it",mobile-webkit,2,passed
+app/player/player-host.test.ts,"reaching the end returns to the start and saves it",desktop-webkit,1,passed
+app/player/player-host.test.ts,"Play within 12 hours of receiving the track URL plays it without a refetch",mobile-chromium,0,passed
+app/player/player-host.test.ts,"Play within 12 hours of receiving the track URL plays it without a refetch",desktop-chromium,0,passed
+app/player/player-host.test.ts,"Play within 12 hours of receiving the track URL plays it without a refetch",mobile-webkit,0,passed
+app/player/player-host.test.ts,"Play within 12 hours of receiving the track URL plays it without a refetch",desktop-webkit,0,passed
+app/player/player-host.test.ts,"Play more than 12 hours after receiving the track URL renews it and keeps the position",mobile-chromium,5,passed
+app/player/player-host.test.ts,"Play more than 12 hours after receiving the track URL renews it and keeps the position",desktop-chromium,3,passed
+app/player/player-host.test.ts,"Play more than 12 hours after receiving the track URL renews it and keeps the position",mobile-webkit,3,passed
+app/player/player-host.test.ts,"Play more than 12 hours after receiving the track URL renews it and keeps the position",desktop-webkit,3,passed
+app/player/player-host.test.ts,"the age of a shown audiobook's track URL counts from when the page received it",mobile-chromium,1,passed
+app/player/player-host.test.ts,"the age of a shown audiobook's track URL counts from when the page received it",desktop-chromium,1,passed
+app/player/player-host.test.ts,"the age of a shown audiobook's track URL counts from when the page received it",mobile-webkit,1,passed
+app/player/player-host.test.ts,"the age of a shown audiobook's track URL counts from when the page received it",desktop-webkit,1,passed
+app/player/player-host.test.ts,"a track URL received more than 12 hours ago is renewed on Play, however recently the page showed it",mobile-chromium,1,passed
+app/player/player-host.test.ts,"a track URL received more than 12 hours ago is renewed on Play, however recently the page showed it",desktop-chromium,1,passed
+app/player/player-host.test.ts,"a track URL received more than 12 hours ago is renewed on Play, however recently the page showed it",mobile-webkit,1,passed
+app/player/player-host.test.ts,"a track URL received more than 12 hours ago is renewed on Play, however recently the page showed it",desktop-webkit,1,passed
+app/player/player-host.test.ts,"a unit tap that renews the track URL seeks to the unit once the renewed track is loaded",mobile-chromium,1,passed
+app/player/player-host.test.ts,"a unit tap that renews the track URL seeks to the unit once the renewed track is loaded",desktop-chromium,1,passed
+app/player/player-host.test.ts,"a unit tap that renews the track URL seeks to the unit once the renewed track is loaded",mobile-webkit,1,passed
+app/player/player-host.test.ts,"a unit tap that renews the track URL seeks to the unit once the renewed track is loaded",desktop-webkit,1,passed
+app/player/player-host.test.ts,"a media error is shown, and Play renews the track URL and resumes at the same position",mobile-chromium,2,passed
+app/player/player-host.test.ts,"a media error is shown, and Play renews the track URL and resumes at the same position",desktop-chromium,2,passed
+app/player/player-host.test.ts,"a media error is shown, and Play renews the track URL and resumes at the same position",mobile-webkit,2,passed
+app/player/player-host.test.ts,"a media error is shown, and Play renews the track URL and resumes at the same position",desktop-webkit,2,passed
+app/player/player-host.test.ts,"a track that fails to load after Play shows the error, and the next tap plays again",mobile-chromium,1,passed
+app/player/player-host.test.ts,"a track that fails to load after Play shows the error, and the next tap plays again",desktop-chromium,1,passed
+app/player/player-host.test.ts,"a track that fails to load after Play shows the error, and the next tap plays again",mobile-webkit,2,passed
+app/player/player-host.test.ts,"a track that fails to load after Play shows the error, and the next tap plays again",desktop-webkit,3,passed
+app/player/player-host.test.ts,"a refused renewal keeps playback stopped and shows an error",mobile-chromium,1,passed
+app/player/player-host.test.ts,"a refused renewal keeps playback stopped and shows an error",desktop-chromium,1,passed
+app/player/player-host.test.ts,"a refused renewal keeps playback stopped and shows an error",mobile-webkit,1,passed
+app/player/player-host.test.ts,"a refused renewal keeps playback stopped and shows an error",desktop-webkit,1,passed
+app/player/player-host.test.ts,"an audiobook response without a narration track refuses the renewal",mobile-chromium,2,passed
+app/player/player-host.test.ts,"an audiobook response without a narration track refuses the renewal",desktop-chromium,1,passed
+app/player/player-host.test.ts,"an audiobook response without a narration track refuses the renewal",mobile-webkit,1,passed
+app/player/player-host.test.ts,"an audiobook response without a narration track refuses the renewal",desktop-webkit,1,passed
+app/player/player-host.test.ts,"a play refused after the renewal leaves Play available",mobile-chromium,2,passed
+app/player/player-host.test.ts,"a play refused after the renewal leaves Play available",desktop-chromium,1,passed
+app/player/player-host.test.ts,"a play refused after the renewal leaves Play available",mobile-webkit,2,passed
+app/player/player-host.test.ts,"a play refused after the renewal leaves Play available",desktop-webkit,1,passed
+app/player/player-host.test.ts,"Pause during a renewal keeps the track paused",mobile-chromium,2,passed
+app/player/player-host.test.ts,"Pause during a renewal keeps the track paused",desktop-chromium,1,passed
+app/player/player-host.test.ts,"Pause during a renewal keeps the track paused",mobile-webkit,1,passed
+app/player/player-host.test.ts,"Pause during a renewal keeps the track paused",desktop-webkit,1,passed
+app/player/player-host.test.ts,"a renewal that completes after unloading plays nothing",mobile-chromium,4,passed
+app/player/player-host.test.ts,"a renewal that completes after unloading plays nothing",desktop-chromium,1,passed
+app/player/player-host.test.ts,"a renewal that completes after unloading plays nothing",mobile-webkit,1,passed
+app/player/player-host.test.ts,"a renewal that completes after unloading plays nothing",desktop-webkit,1,passed
+app/player/player-host.test.ts,"a renewal that finds the track gone unloads it and reports it as no longer available",mobile-chromium,2,passed
+app/player/player-host.test.ts,"a renewal that finds the track gone unloads it and reports it as no longer available",desktop-chromium,2,passed
+app/player/player-host.test.ts,"a renewal that finds the track gone unloads it and reports it as no longer available",mobile-webkit,1,passed
+app/player/player-host.test.ts,"a renewal that finds the track gone unloads it and reports it as no longer available",desktop-webkit,2,passed
+app/player/player-host.test.ts,"loading another audiobook clears the notice of a track no longer available",mobile-chromium,1,passed
+app/player/player-host.test.ts,"loading another audiobook clears the notice of a track no longer available",desktop-chromium,1,passed
+app/player/player-host.test.ts,"loading another audiobook clears the notice of a track no longer available",mobile-webkit,2,passed
+app/player/player-host.test.ts,"loading another audiobook clears the notice of a track no longer available",desktop-webkit,1,passed
+app/player/player-host.test.ts,"releasing a track being deleted unloads it until Play",mobile-chromium,2,passed
+app/player/player-host.test.ts,"releasing a track being deleted unloads it until Play",desktop-chromium,1,passed
+app/player/player-host.test.ts,"releasing a track being deleted unloads it until Play",mobile-webkit,2,passed
+app/player/player-host.test.ts,"releasing a track being deleted unloads it until Play",desktop-webkit,2,passed
+app/player/player-host.test.ts,"a refused play is shown, and Play stays available",mobile-chromium,2,passed
+app/player/player-host.test.ts,"a refused play is shown, and Play stays available",desktop-chromium,1,passed
+app/player/player-host.test.ts,"a refused play is shown, and Play stays available",mobile-webkit,1,passed
+app/player/player-host.test.ts,"a refused play is shown, and Play stays available",desktop-webkit,2,passed
+app/player/player-host.test.ts,"playing another audiobook sets its narration track on the same element",mobile-chromium,2,passed
+app/player/player-host.test.ts,"playing another audiobook sets its narration track on the same element",desktop-chromium,2,passed
+app/player/player-host.test.ts,"playing another audiobook sets its narration track on the same element",mobile-webkit,2,passed
+app/player/player-host.test.ts,"playing another audiobook sets its narration track on the same element",desktop-webkit,2,passed
+app/player/player-host.test.ts,"seeking the shown audiobook while another one plays loads it paused at that position",mobile-chromium,2,passed
+app/player/player-host.test.ts,"seeking the shown audiobook while another one plays loads it paused at that position",desktop-chromium,1,passed
+app/player/player-host.test.ts,"seeking the shown audiobook while another one plays loads it paused at that position",mobile-webkit,1,passed
+app/player/player-host.test.ts,"seeking the shown audiobook while another one plays loads it paused at that position",desktop-webkit,2,passed
+app/player/player-host.test.ts,"the shown audiobook without a narration track loads nothing, and Play leaves the loaded one",mobile-chromium,0,passed
+app/player/player-host.test.ts,"the shown audiobook without a narration track loads nothing, and Play leaves the loaded one",desktop-chromium,0,passed
+app/player/player-host.test.ts,"the shown audiobook without a narration track loads nothing, and Play leaves the loaded one",mobile-webkit,0,passed
+app/player/player-host.test.ts,"the shown audiobook without a narration track loads nothing, and Play leaves the loaded one",desktop-webkit,0,passed
+app/player/player-host.test.ts,"an audiobook without a narration track is never loaded",mobile-chromium,0,passed
+app/player/player-host.test.ts,"an audiobook without a narration track is never loaded",desktop-chromium,0,passed
+app/player/player-host.test.ts,"an audiobook without a narration track is never loaded",mobile-webkit,0,passed
+app/player/player-host.test.ts,"an audiobook without a narration track is never loaded",desktop-webkit,0,passed
+app/player/player-host.test.ts,"an audiobook whose narration track appears while shown can be played, and loads nothing before",mobile-chromium,0,passed
+app/player/player-host.test.ts,"an audiobook whose narration track appears while shown can be played, and loads nothing before",desktop-chromium,0,passed
+app/player/player-host.test.ts,"an audiobook whose narration track appears while shown can be played, and loads nothing before",mobile-webkit,0,passed
+app/player/player-host.test.ts,"an audiobook whose narration track appears while shown can be played, and loads nothing before",desktop-webkit,0,passed
+app/player/player-host.test.ts,"signed-in listeners resume from the listening position the server stored",mobile-chromium,0,passed
+app/player/player-host.test.ts,"signed-in listeners resume from the listening position the server stored",desktop-chromium,0,passed
+app/player/player-host.test.ts,"signed-in listeners resume from the listening position the server stored",mobile-webkit,0,passed
+app/player/player-host.test.ts,"signed-in listeners resume from the listening position the server stored",desktop-webkit,0,passed
+app/player/player-host.test.ts,"listeners without an account resume from the device's listening position",mobile-chromium,0,passed
+app/player/player-host.test.ts,"listeners without an account resume from the device's listening position",desktop-chromium,0,passed
+app/player/player-host.test.ts,"listeners without an account resume from the device's listening position",mobile-webkit,0,passed
+app/player/player-host.test.ts,"listeners without an account resume from the device's listening position",desktop-webkit,0,passed
+app/player/player-host.test.ts,"a change of the signed-in user unloads the element",mobile-chromium,2,passed
+app/player/player-host.test.ts,"a change of the signed-in user unloads the element",desktop-chromium,1,passed
+app/player/player-host.test.ts,"a change of the signed-in user unloads the element",mobile-webkit,1,passed
+app/player/player-host.test.ts,"a change of the signed-in user unloads the element",desktop-webkit,5,passed
+app/player/player-host.test.ts,"unloading leaves the element empty and paused",mobile-chromium,1,passed
+app/player/player-host.test.ts,"unloading leaves the element empty and paused",desktop-chromium,1,passed
+app/player/player-host.test.ts,"unloading leaves the element empty and paused",mobile-webkit,1,passed
+app/player/player-host.test.ts,"unloading leaves the element empty and paused",desktop-webkit,1,passed
+app/preparation-phase-label.test.ts,"the starting preparation phase reads \"Starting\"",mobile-chromium,0,passed
+app/preparation-phase-label.test.ts,"the starting preparation phase reads \"Starting\"",desktop-chromium,0,passed
+app/preparation-phase-label.test.ts,"the starting preparation phase reads \"Starting\"",mobile-webkit,0,passed
+app/preparation-phase-label.test.ts,"the starting preparation phase reads \"Starting\"",desktop-webkit,0,passed
+app/preparation-phase-label.test.ts,"the reading-page preparation phase reads \"Reading the page\"",mobile-chromium,0,passed
+app/preparation-phase-label.test.ts,"the reading-page preparation phase reads \"Reading the page\"",desktop-chromium,0,passed
+app/preparation-phase-label.test.ts,"the reading-page preparation phase reads \"Reading the page\"",mobile-webkit,0,passed
+app/preparation-phase-label.test.ts,"the reading-page preparation phase reads \"Reading the page\"",desktop-webkit,0,passed
+app/preparation-phase-label.test.ts,"the selecting-content preparation phase reads \"Selecting narration content\"",mobile-chromium,0,passed
+app/preparation-phase-label.test.ts,"the selecting-content preparation phase reads \"Selecting narration content\"",desktop-chromium,0,passed
+app/preparation-phase-label.test.ts,"the selecting-content preparation phase reads \"Selecting narration content\"",mobile-webkit,0,passed
+app/preparation-phase-label.test.ts,"the selecting-content preparation phase reads \"Selecting narration content\"",desktop-webkit,0,passed
+app/preparation-phase-label.test.ts,"the preparing-text preparation phase reads \"Preparing the text\"",mobile-chromium,0,passed
+app/preparation-phase-label.test.ts,"the preparing-text preparation phase reads \"Preparing the text\"",desktop-chromium,0,passed
+app/preparation-phase-label.test.ts,"the preparing-text preparation phase reads \"Preparing the text\"",mobile-webkit,0,passed
+app/preparation-phase-label.test.ts,"the preparing-text preparation phase reads \"Preparing the text\"",desktop-webkit,0,passed
+app/preparation-phase-label.test.ts,"the missing preparation phase reads \"Preparing\"",mobile-chromium,0,passed
+app/preparation-phase-label.test.ts,"the missing preparation phase reads \"Preparing\"",desktop-chromium,0,passed
+app/preparation-phase-label.test.ts,"the missing preparation phase reads \"Preparing\"",mobile-webkit,0,passed
+app/preparation-phase-label.test.ts,"the missing preparation phase reads \"Preparing\"",desktop-webkit,0,passed
+app/preparation-phase-label.test.ts,"a preparation phase this client does not know reads \"Preparing\"",mobile-chromium,1,passed
+app/preparation-phase-label.test.ts,"a preparation phase this client does not know reads \"Preparing\"",desktop-chromium,1,passed
+app/preparation-phase-label.test.ts,"a preparation phase this client does not know reads \"Preparing\"",mobile-webkit,1,passed
+app/preparation-phase-label.test.ts,"a preparation phase this client does not know reads \"Preparing\"",desktop-webkit,1,passed
+app/preparation-phase-label.test.ts,"no label shows an ellipsis or a percentage",mobile-chromium,0,passed
+app/preparation-phase-label.test.ts,"no label shows an ellipsis or a percentage",desktop-chromium,0,passed
+app/preparation-phase-label.test.ts,"no label shows an ellipsis or a percentage",mobile-webkit,0,passed
+app/preparation-phase-label.test.ts,"no label shows an ellipsis or a percentage",desktop-webkit,0,passed
+app/source-host.test.ts,"the source host of https://www.derstandard.at/story/3000000 is derstandard.at",mobile-chromium,0,passed
+app/source-host.test.ts,"the source host of https://www.derstandard.at/story/3000000 is derstandard.at",desktop-chromium,0,passed
+app/source-host.test.ts,"the source host of https://www.derstandard.at/story/3000000 is derstandard.at",mobile-webkit,0,passed
+app/source-host.test.ts,"the source host of https://www.derstandard.at/story/3000000 is derstandard.at",desktop-webkit,0,passed
+app/source-host.test.ts,"the source host of https://theverge.com/ai is theverge.com",mobile-chromium,0,passed
+app/source-host.test.ts,"the source host of https://theverge.com/ai is theverge.com",desktop-chromium,0,passed
+app/source-host.test.ts,"the source host of https://theverge.com/ai is theverge.com",mobile-webkit,0,passed
+app/source-host.test.ts,"the source host of https://theverge.com/ai is theverge.com",desktop-webkit,0,passed
+app/source-host.test.ts,"the source host of https://edition.cnn.com/2026/10/27/world is edition.cnn.com",mobile-chromium,0,passed
+app/source-host.test.ts,"the source host of https://edition.cnn.com/2026/10/27/world is edition.cnn.com",desktop-chromium,0,passed
+app/source-host.test.ts,"the source host of https://edition.cnn.com/2026/10/27/world is edition.cnn.com",mobile-webkit,0,passed
+app/source-host.test.ts,"the source host of https://edition.cnn.com/2026/10/27/world is edition.cnn.com",desktop-webkit,0,passed
+app/source-host.test.ts,"the source host of http://localhost:8787/fixture is localhost",mobile-chromium,0,passed
+app/source-host.test.ts,"the source host of http://localhost:8787/fixture is localhost",desktop-chromium,0,passed
+app/source-host.test.ts,"the source host of http://localhost:8787/fixture is localhost",mobile-webkit,0,passed
+app/source-host.test.ts,"the source host of http://localhost:8787/fixture is localhost",desktop-webkit,0,passed
+app/source-host.test.ts,"a source URL that does not parse shows as given",mobile-chromium,0,passed
+app/source-host.test.ts,"a source URL that does not parse shows as given",desktop-chromium,0,passed
+app/source-host.test.ts,"a source URL that does not parse shows as given",mobile-webkit,0,passed
+app/source-host.test.ts,"a source URL that does not parse shows as given",desktop-webkit,0,passed
+auth/account-session.test.ts,"auth distinguishes loading, failure, and successful signed-out initialization",mobile-chromium,1197,passed
+auth/account-session.test.ts,"auth distinguishes loading, failure, and successful signed-out initialization",desktop-chromium,1177,passed
+auth/account-session.test.ts,"auth distinguishes loading, failure, and successful signed-out initialization",mobile-webkit,1179,passed
+auth/account-session.test.ts,"auth distinguishes loading, failure, and successful signed-out initialization",desktop-webkit,1066,passed
+auth/account-session.test.ts,"concurrent session reads share an SDK refresh and cannot restore a signed-out session",mobile-chromium,1192,passed
+auth/account-session.test.ts,"concurrent session reads share an SDK refresh and cannot restore a signed-out session",desktop-chromium,1157,passed
+auth/account-session.test.ts,"concurrent session reads share an SDK refresh and cannot restore a signed-out session",mobile-webkit,1025,passed
+auth/account-session.test.ts,"concurrent session reads share an SDK refresh and cannot restore a signed-out session",desktop-webkit,1373,passed
+auth/account-session.test.ts,"initial restoration keeps cached queries and forgets the remembered trial",mobile-chromium,3,passed
+auth/account-session.test.ts,"initial restoration keeps cached queries and forgets the remembered trial",desktop-chromium,3,passed
+auth/account-session.test.ts,"initial restoration keeps cached queries and forgets the remembered trial",mobile-webkit,3,passed
+auth/account-session.test.ts,"initial restoration keeps cached queries and forgets the remembered trial",desktop-webkit,3,passed
+auth/account-session.test.ts,"failed initialization is retryable",mobile-chromium,1,passed
+auth/account-session.test.ts,"failed initialization is retryable",desktop-chromium,1,passed
+auth/account-session.test.ts,"failed initialization is retryable",mobile-webkit,1,passed
+auth/account-session.test.ts,"failed initialization is retryable",desktop-webkit,1,passed
+auth/account-session.test.ts,"a session read in flight when another account replaces the signed-in one resolves to null",mobile-chromium,1,passed
+auth/account-session.test.ts,"a session read in flight when another account replaces the signed-in one resolves to null",desktop-chromium,1,passed
+auth/account-session.test.ts,"a session read in flight when another account replaces the signed-in one resolves to null",mobile-webkit,1,passed
+auth/account-session.test.ts,"a session read in flight when another account replaces the signed-in one resolves to null",desktop-webkit,1,passed
+auth/account-session.test.ts,"a session read in flight when sign-in starts resolves to null",mobile-chromium,1,passed
+auth/account-session.test.ts,"a session read in flight when sign-in starts resolves to null",desktop-chromium,1,passed
+auth/account-session.test.ts,"a session read in flight when sign-in starts resolves to null",mobile-webkit,0,passed
+auth/account-session.test.ts,"a session read in flight when sign-in starts resolves to null",desktop-webkit,1,passed
+auth/account-session.test.ts,"a session read in flight when sign-out starts resolves to null",mobile-chromium,1,passed
+auth/account-session.test.ts,"a session read in flight when sign-out starts resolves to null",desktop-chromium,1,passed
+auth/account-session.test.ts,"a session read in flight when sign-out starts resolves to null",mobile-webkit,1,passed
+auth/account-session.test.ts,"a session read in flight when sign-out starts resolves to null",desktop-webkit,0,passed
+auth/account-session.test.ts,"an account session reported during sign-in signs in without clearing queries",mobile-chromium,0,passed
+auth/account-session.test.ts,"an account session reported during sign-in signs in without clearing queries",desktop-chromium,0,passed
+auth/account-session.test.ts,"an account session reported during sign-in signs in without clearing queries",mobile-webkit,0,passed
+auth/account-session.test.ts,"an account session reported during sign-in signs in without clearing queries",desktop-webkit,0,passed
+auth/account-session.test.ts,"sign-out shows signed-out at once, then revokes the session and ends the native sign-in",mobile-chromium,1,passed
+auth/account-session.test.ts,"sign-out shows signed-out at once, then revokes the session and ends the native sign-in",desktop-chromium,1,passed
+auth/account-session.test.ts,"sign-out shows signed-out at once, then revokes the session and ends the native sign-in",mobile-webkit,1,passed
+auth/account-session.test.ts,"sign-out shows signed-out at once, then revokes the session and ends the native sign-in",desktop-webkit,0,passed
+auth/account-session.test.ts,"auth changes reported during sign-out are ignored",mobile-chromium,1,passed
+auth/account-session.test.ts,"auth changes reported during sign-out are ignored",desktop-chromium,1,passed
+auth/account-session.test.ts,"auth changes reported during sign-out are ignored",mobile-webkit,0,passed
+auth/account-session.test.ts,"auth changes reported during sign-out are ignored",desktop-webkit,0,passed
+auth/account-session.test.ts,"sign-in is refused while signing out",mobile-chromium,2,passed
+auth/account-session.test.ts,"sign-in is refused while signing out",desktop-chromium,2,passed
+auth/account-session.test.ts,"sign-in is refused while signing out",mobile-webkit,2,passed
+auth/account-session.test.ts,"sign-in is refused while signing out",desktop-webkit,2,passed
+auth/account-session.test.ts,"sign-out reports a revocation the server did not confirm",mobile-chromium,1,passed
+auth/account-session.test.ts,"sign-out reports a revocation the server did not confirm",desktop-chromium,1,passed
+auth/account-session.test.ts,"sign-out reports a revocation the server did not confirm",mobile-webkit,1,passed
+auth/account-session.test.ts,"sign-out reports a revocation the server did not confirm",desktop-webkit,1,passed
+auth/account-session.test.ts,"sign-out before initialization shows signed-out and stops audio before it initializes",mobile-chromium,1,passed
+auth/account-session.test.ts,"sign-out before initialization shows signed-out and stops audio before it initializes",desktop-chromium,1,passed
+auth/account-session.test.ts,"sign-out before initialization shows signed-out and stops audio before it initializes",mobile-webkit,0,passed
+auth/account-session.test.ts,"sign-out before initialization shows signed-out and stops audio before it initializes",desktop-webkit,0,passed
+auth/account-session.test.ts,"sign-out stops audio and reports the failure when initialization fails",mobile-chromium,0,passed
+auth/account-session.test.ts,"sign-out stops audio and reports the failure when initialization fails",desktop-chromium,1,passed
+auth/account-session.test.ts,"sign-out stops audio and reports the failure when initialization fails",mobile-webkit,0,passed
+auth/account-session.test.ts,"sign-out stops audio and reports the failure when initialization fails",desktop-webkit,0,passed
+auth/account-session.test.ts,"the auth change subscription lasts across sign-in, account switches, and sign-out",mobile-chromium,0,passed
+auth/account-session.test.ts,"the auth change subscription lasts across sign-in, account switches, and sign-out",desktop-chromium,1,passed
+auth/account-session.test.ts,"the auth change subscription lasts across sign-in, account switches, and sign-out",mobile-webkit,0,passed
+auth/account-session.test.ts,"the auth change subscription lasts across sign-in, account switches, and sign-out",desktop-webkit,1,passed
+auth/account-session.test.ts,"a sign-in interrupted by sign-out settles when the provider call finishes",mobile-chromium,1,passed
+auth/account-session.test.ts,"a sign-in interrupted by sign-out settles when the provider call finishes",desktop-chromium,0,passed
+auth/account-session.test.ts,"a sign-in interrupted by sign-out settles when the provider call finishes",mobile-webkit,0,passed
+auth/account-session.test.ts,"a sign-in interrupted by sign-out settles when the provider call finishes",desktop-webkit,0,passed
+auth/account-session.test.ts,"on the web, sign-in and sign-out leave auto refresh to supabase-js",mobile-chromium,1,passed
+auth/account-session.test.ts,"on the web, sign-in and sign-out leave auto refresh to supabase-js",desktop-chromium,1,passed
+auth/account-session.test.ts,"on the web, sign-in and sign-out leave auto refresh to supabase-js",mobile-webkit,0,passed
+auth/account-session.test.ts,"on the web, sign-in and sign-out leave auto refresh to supabase-js",desktop-webkit,0,passed
+auth/account-session.test.ts,"in the apps, the foreground starts auto refresh and the background stops it",mobile-chromium,0,passed
+auth/account-session.test.ts,"in the apps, the foreground starts auto refresh and the background stops it",desktop-chromium,0,passed
+auth/account-session.test.ts,"in the apps, the foreground starts auto refresh and the background stops it",mobile-webkit,0,passed
+auth/account-session.test.ts,"in the apps, the foreground starts auto refresh and the background stops it",desktop-webkit,0,passed
+auth/account-session.test.ts,"in the apps, sign-out stops auto refresh",mobile-chromium,1,passed
+auth/account-session.test.ts,"in the apps, sign-out stops auto refresh",desktop-chromium,0,passed
+auth/account-session.test.ts,"in the apps, sign-out stops auto refresh",mobile-webkit,0,passed
+auth/account-session.test.ts,"in the apps, sign-out stops auto refresh",desktop-webkit,0,passed
+auth/account-session.test.ts,"in the apps, a session that starts in the foreground after a sign-out restarts auto refresh",mobile-chromium,0,passed
+auth/account-session.test.ts,"in the apps, a session that starts in the foreground after a sign-out restarts auto refresh",desktop-chromium,0,passed
+auth/account-session.test.ts,"in the apps, a session that starts in the foreground after a sign-out restarts auto refresh",mobile-webkit,0,passed
+auth/account-session.test.ts,"in the apps, a session that starts in the foreground after a sign-out restarts auto refresh",desktop-webkit,0,passed
+auth/account-session.test.ts,"in the apps, a session that starts in the background leaves auto refresh to the next foreground",mobile-chromium,0,passed
+auth/account-session.test.ts,"in the apps, a session that starts in the background leaves auto refresh to the next foreground",desktop-chromium,0,passed
+auth/account-session.test.ts,"in the apps, a session that starts in the background leaves auto refresh to the next foreground",mobile-webkit,0,passed
+auth/account-session.test.ts,"in the apps, a session that starts in the background leaves auto refresh to the next foreground",desktop-webkit,0,passed
+auth/account-session.test.ts,"the first sign-in after a sign-out asks for the account chooser until a session starts",mobile-chromium,1,passed
+auth/account-session.test.ts,"the first sign-in after a sign-out asks for the account chooser until a session starts",desktop-chromium,1,passed
+auth/account-session.test.ts,"the first sign-in after a sign-out asks for the account chooser until a session starts",mobile-webkit,0,passed
+auth/account-session.test.ts,"the first sign-in after a sign-out asks for the account chooser until a session starts",desktop-webkit,0,passed
+auth/account-session.test.ts,"a failed, cancelled or unfinished sign-in after a sign-out keeps asking for the account chooser",mobile-chromium,1,passed
+auth/account-session.test.ts,"a failed, cancelled or unfinished sign-in after a sign-out keeps asking for the account chooser",desktop-chromium,1,passed
+auth/account-session.test.ts,"a failed, cancelled or unfinished sign-in after a sign-out keeps asking for the account chooser",mobile-webkit,1,passed
+auth/account-session.test.ts,"a failed, cancelled or unfinished sign-in after a sign-out keeps asking for the account chooser",desktop-webkit,0,passed
+auth/account-session.test.ts,"a session restored after Google's redirect stops asking for the account chooser",mobile-chromium,0,passed
+auth/account-session.test.ts,"a session restored after Google's redirect stops asking for the account chooser",desktop-chromium,0,passed
+auth/account-session.test.ts,"a session restored after Google's redirect stops asking for the account chooser",mobile-webkit,0,passed
+auth/account-session.test.ts,"a session restored after Google's redirect stops asking for the account chooser",desktop-webkit,0,passed
+data-fetching/account-conversions.test.ts,"a late rate-limit response cannot change the next account's pending request",mobile-chromium,1632,passed
+data-fetching/account-conversions.test.ts,"a late rate-limit response cannot change the next account's pending request",desktop-chromium,1645,passed
+data-fetching/account-conversions.test.ts,"a late rate-limit response cannot change the next account's pending request",mobile-webkit,1806,passed
+data-fetching/account-conversions.test.ts,"a late rate-limit response cannot change the next account's pending request",desktop-webkit,1947,passed
+data-fetching/api-request.test.ts,"unsuccessful responses reject with the API error code, status, retry delay, and request ID",mobile-chromium,1103,passed
+data-fetching/api-request.test.ts,"unsuccessful responses reject with the API error code, status, retry delay, and request ID",desktop-chromium,993,passed
+data-fetching/api-request.test.ts,"unsuccessful responses reject with the API error code, status, retry delay, and request ID",mobile-webkit,1129,passed
+data-fetching/api-request.test.ts,"unsuccessful responses reject with the API error code, status, retry delay, and request ID",desktop-webkit,1133,passed
+data-fetching/api-request.test.ts,"optional account authorization sends no token while signed out",mobile-chromium,1159,passed
+data-fetching/api-request.test.ts,"optional account authorization sends no token while signed out",desktop-chromium,956,passed
+data-fetching/api-request.test.ts,"optional account authorization sends no token while signed out",mobile-webkit,964,passed
+data-fetching/api-request.test.ts,"optional account authorization sends no token while signed out",desktop-webkit,985,passed
+data-fetching/api-request.test.ts,"optional account authorization sends the signed-in account's token",mobile-chromium,1085,passed
+data-fetching/api-request.test.ts,"optional account authorization sends the signed-in account's token",desktop-chromium,1143,passed
+data-fetching/api-request.test.ts,"optional account authorization sends the signed-in account's token",mobile-webkit,882,passed
+data-fetching/api-request.test.ts,"optional account authorization sends the signed-in account's token",desktop-webkit,962,passed
+data-fetching/api-request.test.ts,"required account authorization rejects a different account before dispatch",mobile-chromium,1202,passed
+data-fetching/api-request.test.ts,"required account authorization rejects a different account before dispatch",desktop-chromium,930,passed
+data-fetching/api-request.test.ts,"required account authorization rejects a different account before dispatch",mobile-webkit,995,passed
+data-fetching/api-request.test.ts,"required account authorization rejects a different account before dispatch",desktop-webkit,982,passed
+platform/account-auth.android.test.ts,"a sign-in the person cancelled rejects as a cancellation: [16] Cancelled by user.",mobile-chromium,1858,passed
+platform/account-auth.android.test.ts,"a sign-in the person cancelled rejects as a cancellation: [16] Cancelled by user.",desktop-chromium,1560,passed
+platform/account-auth.android.test.ts,"a sign-in the person cancelled rejects as a cancellation: [16] Cancelled by user.",mobile-webkit,1613,passed
+platform/account-auth.android.test.ts,"a sign-in the person cancelled rejects as a cancellation: [16] Cancelled by user.",desktop-webkit,1711,passed
+platform/account-auth.android.test.ts,"a sign-in the person cancelled rejects as a cancellation: The user canceled the sign-in flow.",mobile-chromium,1852,passed
+platform/account-auth.android.test.ts,"a sign-in the person cancelled rejects as a cancellation: The user canceled the sign-in flow.",desktop-chromium,1872,passed
+platform/account-auth.android.test.ts,"a sign-in the person cancelled rejects as a cancellation: The user canceled the sign-in flow.",mobile-webkit,1686,passed
+platform/account-auth.android.test.ts,"a sign-in the person cancelled rejects as a cancellation: The user canceled the sign-in flow.",desktop-webkit,1706,passed
+platform/account-auth.android.test.ts,"any other plugin failure shows a user-facing message: [16] Account reauth failed.",mobile-chromium,1750,passed
+platform/account-auth.android.test.ts,"any other plugin failure shows a user-facing message: [16] Account reauth failed.",desktop-chromium,1806,passed
+platform/account-auth.android.test.ts,"any other plugin failure shows a user-facing message: [16] Account reauth failed.",mobile-webkit,1679,passed
+platform/account-auth.android.test.ts,"any other plugin failure shows a user-facing message: [16] Account reauth failed.",desktop-webkit,1724,passed
+platform/account-auth.android.test.ts,"any other plugin failure shows a user-facing message: No credential is available.",mobile-chromium,1817,passed
+platform/account-auth.android.test.ts,"any other plugin failure shows a user-facing message: No credential is available.",desktop-chromium,1724,passed
+platform/account-auth.android.test.ts,"any other plugin failure shows a user-facing message: No credential is available.",mobile-webkit,1558,passed
+platform/account-auth.android.test.ts,"any other plugin failure shows a user-facing message: No credential is available.",desktop-webkit,1721,passed
+platform/account-auth.android.test.ts,"any other plugin failure shows a user-facing message: TYPE_UNKNOWN: [8] Unknown error",mobile-chromium,1572,passed
+platform/account-auth.android.test.ts,"any other plugin failure shows a user-facing message: TYPE_UNKNOWN: [8] Unknown error",desktop-chromium,1675,passed
+platform/account-auth.android.test.ts,"any other plugin failure shows a user-facing message: TYPE_UNKNOWN: [8] Unknown error",mobile-webkit,1336,passed
+platform/account-auth.android.test.ts,"any other plugin failure shows a user-facing message: TYPE_UNKNOWN: [8] Unknown error",desktop-webkit,1400,passed
+platform/account-auth.ios.test.ts,"signs in through the system browser sheet and exchanges the returned code",mobile-chromium,510,passed
+platform/account-auth.ios.test.ts,"signs in through the system browser sheet and exchanges the returned code",desktop-chromium,432,passed
+platform/account-auth.ios.test.ts,"signs in through the system browser sheet and exchanges the returned code",mobile-webkit,428,passed
+platform/account-auth.ios.test.ts,"signs in through the system browser sheet and exchanges the returned code",desktop-webkit,452,passed
+platform/account-auth.ios.test.ts,"asks Google for its account chooser when the session lifecycle asks for it",mobile-chromium,479,passed
+platform/account-auth.ios.test.ts,"asks Google for its account chooser when the session lifecycle asks for it",desktop-chromium,429,passed
+platform/account-auth.ios.test.ts,"asks Google for its account chooser when the session lifecycle asks for it",mobile-webkit,476,passed
+platform/account-auth.ios.test.ts,"asks Google for its account chooser when the session lifecycle asks for it",desktop-webkit,568,passed
+platform/account-auth.ios.test.ts,"asks Google for the account chooser and a new authentication on a fresh sign-in",mobile-chromium,434,passed
+platform/account-auth.ios.test.ts,"asks Google for the account chooser and a new authentication on a fresh sign-in",desktop-chromium,445,passed
+platform/account-auth.ios.test.ts,"asks Google for the account chooser and a new authentication on a fresh sign-in",mobile-webkit,511,passed
+platform/account-auth.ios.test.ts,"asks Google for the account chooser and a new authentication on a fresh sign-in",desktop-webkit,530,passed
+platform/account-auth.ios.test.ts,"reports the provider's error and exchanges nothing when the callback has no code",mobile-chromium,446,passed
+platform/account-auth.ios.test.ts,"reports the provider's error and exchanges nothing when the callback has no code",desktop-chromium,446,passed
+platform/account-auth.ios.test.ts,"reports the provider's error and exchanges nothing when the callback has no code",mobile-webkit,477,passed
+platform/account-auth.ios.test.ts,"reports the provider's error and exchanges nothing when the callback has no code",desktop-webkit,508,passed
+platform/account-auth.native.test.ts,"the iOS shell writes the session readable after the device's first unlock",mobile-chromium,460,passed
+platform/account-auth.native.test.ts,"the iOS shell writes the session readable after the device's first unlock",desktop-chromium,471,passed
+platform/account-auth.native.test.ts,"the iOS shell writes the session readable after the device's first unlock",mobile-webkit,489,passed
+platform/account-auth.native.test.ts,"the iOS shell writes the session readable after the device's first unlock",desktop-webkit,519,passed
+platform/account-auth.native.test.ts,"the iOS shell reads a session stored before the update and rewrites it after first unlock",mobile-chromium,426,passed
+platform/account-auth.native.test.ts,"the iOS shell reads a session stored before the update and rewrites it after first unlock",desktop-chromium,433,passed
+platform/account-auth.native.test.ts,"the iOS shell reads a session stored before the update and rewrites it after first unlock",mobile-webkit,449,passed
+platform/account-auth.native.test.ts,"the iOS shell reads a session stored before the update and rewrites it after first unlock",desktop-webkit,521,passed
+platform/account-auth.native.test.ts,"the Android shell writes the session with the plugin's default access",mobile-chromium,461,passed
+platform/account-auth.native.test.ts,"the Android shell writes the session with the plugin's default access",desktop-chromium,419,passed
+platform/account-auth.native.test.ts,"the Android shell writes the session with the plugin's default access",mobile-webkit,435,passed
+platform/account-auth.native.test.ts,"the Android shell writes the session with the plugin's default access",desktop-webkit,468,passed
+platform/account-auth.native.test.ts,"reports the app's state at the start, then each foreground and background change",mobile-chromium,411,passed
+platform/account-auth.native.test.ts,"reports the app's state at the start, then each foreground and background change",desktop-chromium,414,passed
+platform/account-auth.native.test.ts,"reports the app's state at the start, then each foreground and background change",mobile-webkit,471,passed
+platform/account-auth.native.test.ts,"reports the app's state at the start, then each foreground and background change",desktop-webkit,490,passed
+platform/account-auth.web.test.ts,"a normal sign-in leaves Google free to skip its account chooser",mobile-chromium,391,passed
+platform/account-auth.web.test.ts,"a normal sign-in leaves Google free to skip its account chooser",desktop-chromium,382,passed
+platform/account-auth.web.test.ts,"a normal sign-in leaves Google free to skip its account chooser",mobile-webkit,369,passed
+platform/account-auth.web.test.ts,"a normal sign-in leaves Google free to skip its account chooser",desktop-webkit,474,passed
+platform/account-auth.web.test.ts,"asks Google for its account chooser when the session lifecycle asks for it",mobile-chromium,377,passed
+platform/account-auth.web.test.ts,"asks Google for its account chooser when the session lifecycle asks for it",desktop-chromium,389,passed
+platform/account-auth.web.test.ts,"asks Google for its account chooser when the session lifecycle asks for it",mobile-webkit,435,passed
+platform/account-auth.web.test.ts,"asks Google for its account chooser when the session lifecycle asks for it",desktop-webkit,473,passed
+platform/account-auth.web.test.ts,"asks Google for the account chooser and a new authentication on a fresh sign-in",mobile-chromium,393,passed
+platform/account-auth.web.test.ts,"asks Google for the account chooser and a new authentication on a fresh sign-in",desktop-chromium,398,passed
+platform/account-auth.web.test.ts,"asks Google for the account chooser and a new authentication on a fresh sign-in",mobile-webkit,392,passed
+platform/account-auth.web.test.ts,"asks Google for the account chooser and a new authentication on a fresh sign-in",desktop-webkit,449,passed
+platform/incoming-urls.ios.test.ts,"submits share URLs through the form",mobile-chromium,1843,passed
+platform/incoming-urls.ios.test.ts,"submits share URLs through the form",desktop-chromium,1895,passed
+platform/incoming-urls.ios.test.ts,"submits share URLs through the form",mobile-webkit,1814,passed
+platform/incoming-urls.ios.test.ts,"submits share URLs through the form",desktop-webkit,1986,passed
+platform/incoming-urls.ios.test.ts,"ignores shared Cup links and URLs other than share handoffs",mobile-chromium,1679,passed
+platform/incoming-urls.ios.test.ts,"ignores shared Cup links and URLs other than share handoffs",desktop-chromium,1741,passed
+platform/incoming-urls.ios.test.ts,"ignores shared Cup links and URLs other than share handoffs",mobile-webkit,1690,passed
+platform/incoming-urls.ios.test.ts,"ignores shared Cup links and URLs other than share handoffs",desktop-webkit,1811,passed
+platform/media-session.test.ts,"only the media session's metadata is set, and clearing removes it",mobile-chromium,1755,passed
+platform/media-session.test.ts,"only the media session's metadata is set, and clearing removes it",desktop-chromium,1704,passed
+platform/media-session.test.ts,"only the media session's metadata is set, and clearing removes it",mobile-webkit,1740,passed
+platform/media-session.test.ts,"only the media session's metadata is set, and clearing removes it",desktop-webkit,1785,passed
+platform/share-plugin.android.test.ts,"submits a cold-start share and repeat shares through the form",mobile-chromium,1941,passed
+platform/share-plugin.android.test.ts,"submits a cold-start share and repeat shares through the form",desktop-chromium,1828,passed
+platform/share-plugin.android.test.ts,"submits a cold-start share and repeat shares through the form",mobile-webkit,1812,passed
+platform/share-plugin.android.test.ts,"submits a cold-start share and repeat shares through the form",desktop-webkit,1931,passed
+platform/share-plugin.android.test.ts,"a share during a pending start waits and is submitted once that start settles",mobile-chromium,1756,passed
+platform/share-plugin.android.test.ts,"a share during a pending start waits and is submitted once that start settles",desktop-chromium,1788,passed
+platform/share-plugin.android.test.ts,"a share during a pending start waits and is submitted once that start settles",mobile-webkit,1719,passed
+platform/share-plugin.android.test.ts,"a share during a pending start waits and is submitted once that start settles",desktop-webkit,1802,passed
+platform/share-plugin.android.test.ts,"ignores shared Cup links, so a trial link never fills the form",mobile-chromium,1811,passed
+platform/share-plugin.android.test.ts,"ignores shared Cup links, so a trial link never fills the form",desktop-chromium,1772,passed
+platform/share-plugin.android.test.ts,"ignores shared Cup links, so a trial link never fills the form",mobile-webkit,1673,passed
+platform/share-plugin.android.test.ts,"ignores shared Cup links, so a trial link never fills the form",desktop-webkit,1728,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"tapping narration seeks the narration track to that unit, including nested text",mobile-chromium,2641,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"tapping narration seeks the narration track to that unit, including nested text",desktop-chromium,2767,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"tapping narration seeks the narration track to that unit, including nested text",mobile-webkit,2838,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"tapping narration seeks the narration track to that unit, including nested text",desktop-webkit,2871,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"without a source subtitle the host follows the title directly",mobile-chromium,1853,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"without a source subtitle the host follows the title directly",desktop-chromium,1718,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"without a source subtitle the host follows the title directly",mobile-webkit,1735,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"without a source subtitle the host follows the title directly",desktop-webkit,1895,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the position bar seeks the narration track",mobile-chromium,1545,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the position bar seeks the narration track",desktop-chromium,1562,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the position bar seeks the narration track",mobile-webkit,1785,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the position bar seeks the narration track",desktop-webkit,1889,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"playback continues across pages until the player sheet plays another audiobook",mobile-chromium,2433,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"playback continues across pages until the player sheet plays another audiobook",desktop-chromium,2556,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"playback continues across pages until the player sheet plays another audiobook",mobile-webkit,2682,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"playback continues across pages until the player sheet plays another audiobook",desktop-webkit,3035,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the player sheet skips 15 seconds back and forward, within the track",mobile-chromium,1755,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the player sheet skips 15 seconds back and forward, within the track",desktop-chromium,1828,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the player sheet skips 15 seconds back and forward, within the track",mobile-webkit,2019,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the player sheet skips 15 seconds back and forward, within the track",desktop-webkit,2099,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"before an audiobook is loaded, the detail view shows and skips from its listening position",mobile-chromium,2544,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"before an audiobook is loaded, the detail view shows and skips from its listening position",desktop-chromium,2444,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"before an audiobook is loaded, the detail view shows and skips from its listening position",mobile-webkit,2766,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"before an audiobook is loaded, the detail view shows and skips from its listening position",desktop-webkit,2765,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the player sheet shows the start of an audiobook with a narration track",mobile-chromium,1757,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the player sheet shows the start of an audiobook with a narration track",desktop-chromium,1697,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the player sheet shows the start of an audiobook with a narration track",mobile-webkit,1728,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the player sheet shows the start of an audiobook with a narration track",desktop-webkit,1929,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the player sheet is disabled until the audiobook has a narration track",mobile-chromium,1606,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the player sheet is disabled until the audiobook has a narration track",desktop-chromium,1592,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the player sheet is disabled until the audiobook has a narration track",mobile-webkit,1727,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the player sheet is disabled until the audiobook has a narration track",desktop-webkit,2008,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a trial audiobook renders without a loading state and leads back home",mobile-chromium,1728,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a trial audiobook renders without a loading state and leads back home",desktop-chromium,1712,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a trial audiobook renders without a loading state and leads back home",mobile-webkit,1872,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a trial audiobook renders without a loading state and leads back home",desktop-webkit,1936,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"Back after a deep link opens Recents as a new entry above the track",mobile-chromium,1929,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"Back after a deep link opens Recents as a new entry above the track",desktop-chromium,1994,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"Back after a deep link opens Recents as a new entry above the track",mobile-webkit,2161,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"Back after a deep link opens Recents as a new entry above the track",desktop-webkit,2481,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"an account audiobook opens with its cover, title and host below a plain top bar",mobile-chromium,1897,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"an account audiobook opens with its cover, title and host below a plain top bar",desktop-chromium,2042,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"an account audiobook opens with its cover, title and host below a plain top bar",mobile-webkit,2162,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"an account audiobook opens with its cover, title and host below a plain top bar",desktop-webkit,2194,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"once the title scrolls away the top bar shows it, and the playing segment is highlighted",mobile-chromium,2529,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"once the title scrolls away the top bar shows it, and the playing segment is highlighted",desktop-chromium,2440,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"once the title scrolls away the top bar shows it, and the playing segment is highlighted",mobile-webkit,2724,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"once the title scrolls away the top bar shows it, and the playing segment is highlighted",desktop-webkit,2835,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu opens the original page",mobile-chromium,2001,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu opens the original page",desktop-chromium,1961,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu opens the original page",mobile-webkit,2430,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu opens the original page",desktop-webkit,2262,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu retries an audiobook with a failed segment",mobile-chromium,1721,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu retries an audiobook with a failed segment",desktop-chromium,1765,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu retries an audiobook with a failed segment",mobile-webkit,2137,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu retries an audiobook with a failed segment",desktop-webkit,1877,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers Retry after preparation failed",mobile-chromium,1624,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers Retry after preparation failed",desktop-chromium,1579,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers Retry after preparation failed",mobile-webkit,1877,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers Retry after preparation failed",desktop-webkit,1858,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers Retry when the duration did not suffice",mobile-chromium,1694,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers Retry when the duration did not suffice",desktop-chromium,1799,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers Retry when the duration did not suffice",mobile-webkit,1730,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers Retry when the duration did not suffice",desktop-webkit,1772,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers no Retry while the conversion runs (PendingConversion)",mobile-chromium,1807,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers no Retry while the conversion runs (PendingConversion)",desktop-chromium,1767,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers no Retry while the conversion runs (PendingConversion)",mobile-webkit,1710,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers no Retry while the conversion runs (PendingConversion)",desktop-webkit,1801,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers no Retry while the conversion runs (SynthesizingAudiobook)",mobile-chromium,1885,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers no Retry while the conversion runs (SynthesizingAudiobook)",desktop-chromium,1753,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers no Retry while the conversion runs (SynthesizingAudiobook)",mobile-webkit,1693,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers no Retry while the conversion runs (SynthesizingAudiobook)",desktop-webkit,1804,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers no Retry when the audiobook cannot generate",mobile-chromium,1890,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers no Retry when the audiobook cannot generate",desktop-chromium,1811,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers no Retry when the audiobook cannot generate",mobile-webkit,1774,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers no Retry when the audiobook cannot generate",desktop-webkit,1798,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu ends with a destructive Delete track… for a pending track",mobile-chromium,1695,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu ends with a destructive Delete track… for a pending track",desktop-chromium,1873,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu ends with a destructive Delete track… for a pending track",mobile-webkit,1670,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu ends with a destructive Delete track… for a pending track",desktop-webkit,1787,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu ends with a destructive Delete track… for a ready track",mobile-chromium,2002,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu ends with a destructive Delete track… for a ready track",desktop-chromium,1831,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu ends with a destructive Delete track… for a ready track",mobile-webkit,2041,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu ends with a destructive Delete track… for a ready track",desktop-webkit,1948,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu ends with a destructive Delete track… for a failed track",mobile-chromium,1804,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu ends with a destructive Delete track… for a failed track",desktop-chromium,1759,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu ends with a destructive Delete track… for a failed track",mobile-webkit,1664,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu ends with a destructive Delete track… for a failed track",desktop-webkit,1914,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a trial audiobook's menu offers no Delete track…",mobile-chromium,1873,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a trial audiobook's menu offers no Delete track…",desktop-chromium,1783,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a trial audiobook's menu offers no Delete track…",mobile-webkit,1766,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a trial audiobook's menu offers no Delete track…",desktop-webkit,1941,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a signed-in listener's menu offers no Delete track… for a trial audiobook",mobile-chromium,1839,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a signed-in listener's menu offers no Delete track… for a trial audiobook",desktop-chromium,1943,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a signed-in listener's menu offers no Delete track… for a trial audiobook",mobile-webkit,1925,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a signed-in listener's menu offers no Delete track… for a trial audiobook",desktop-webkit,1918,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers Delete track… for a track on a later page of the account history",mobile-chromium,1816,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers Delete track… for a track on a later page of the account history",desktop-chromium,1829,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers Delete track… for a track on a later page of the account history",mobile-webkit,1783,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the top bar's menu offers Delete track… for a track on a later page of the account history",desktop-webkit,1809,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"Delete track… asks first, starts on Cancel, and Escape keeps the track",mobile-chromium,1899,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"Delete track… asks first, starts on Cancel, and Escape keeps the track",desktop-chromium,1974,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"Delete track… asks first, starts on Cancel, and Escape keeps the track",mobile-webkit,1924,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"Delete track… asks first, starts on Cancel, and Escape keeps the track",desktop-webkit,2192,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"deleting a track unloads the player first, then lands on Recents without it",mobile-chromium,1968,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"deleting a track unloads the player first, then lands on Recents without it",desktop-chromium,2043,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"deleting a track unloads the player first, then lands on Recents without it",mobile-webkit,2067,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"deleting a track unloads the player first, then lands on Recents without it",desktop-webkit,2427,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"Recents never lists a deleted track from its cached list, before its refresh answers",mobile-chromium,1930,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"Recents never lists a deleted track from its cached list, before its refresh answers",desktop-chromium,1995,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"Recents never lists a deleted track from its cached list, before its refresh answers",mobile-webkit,2060,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"Recents never lists a deleted track from its cached list, before its refresh answers",desktop-webkit,2228,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a track already deleted elsewhere counts as deleted",mobile-chromium,1825,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a track already deleted elsewhere counts as deleted",desktop-chromium,1942,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a track already deleted elsewhere counts as deleted",mobile-webkit,2115,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a track already deleted elsewhere counts as deleted",desktop-webkit,2294,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"while the deletion runs both buttons are disabled and the dialog stays open",mobile-chromium,1927,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"while the deletion runs both buttons are disabled and the dialog stays open",desktop-chromium,1731,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"while the deletion runs both buttons are disabled and the dialog stays open",mobile-webkit,2066,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"while the deletion runs both buttons are disabled and the dialog stays open",desktop-webkit,2142,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a failed deletion keeps the dialog open with an inline error, the player unloaded, and allows a retry",mobile-chromium,2146,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a failed deletion keeps the dialog open with an inline error, the player unloaded, and allows a retry",desktop-chromium,1965,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a failed deletion keeps the dialog open with an inline error, the player unloaded, and allows a retry",mobile-webkit,2405,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a failed deletion keeps the dialog open with an inline error, the player unloaded, and allows a retry",desktop-webkit,2484,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a pending track is deleted without its polling showing the deletion as an error",mobile-chromium,1874,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a pending track is deleted without its polling showing the deletion as an error",desktop-chromium,1922,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a pending track is deleted without its polling showing the deletion as an error",mobile-webkit,2112,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a pending track is deleted without its polling showing the deletion as an error",desktop-webkit,2165,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"deleting a track opened from Recents returns to Recents where it was, without the track",mobile-chromium,2487,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"deleting a track opened from Recents returns to Recents where it was, without the track",desktop-chromium,2332,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"deleting a track opened from Recents returns to Recents where it was, without the track",mobile-webkit,3888,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"deleting a track opened from Recents returns to Recents where it was, without the track",desktop-webkit,4507,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"after a deletion, Recents' cached history lacks the track while its refetch is held",mobile-chromium,1929,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"after a deletion, Recents' cached history lacks the track while its refetch is held",desktop-chromium,2002,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"after a deletion, Recents' cached history lacks the track while its refetch is held",mobile-webkit,2052,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"after a deletion, Recents' cached history lacks the track while its refetch is held",desktop-webkit,2128,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"an audiobook opened again loads at the position saved meanwhile, while its refetch is held",mobile-chromium,3210,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"an audiobook opened again loads at the position saved meanwhile, while its refetch is held",desktop-chromium,3091,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"an audiobook opened again loads at the position saved meanwhile, while its refetch is held",mobile-webkit,3955,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"an audiobook opened again loads at the position saved meanwhile, while its refetch is held",desktop-webkit,3791,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a track found gone when its audio is requested again is unloaded and reported",mobile-chromium,1699,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a track found gone when its audio is requested again is unloaded and reported",desktop-chromium,1649,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a track found gone when its audio is requested again is unloaded and reported",mobile-webkit,1854,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a track found gone when its audio is requested again is unloaded and reported",desktop-webkit,1903,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"shows generation progress and keeps Play disabled while audio is generated",mobile-chromium,1654,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"shows generation progress and keeps Play disabled while audio is generated",desktop-chromium,1609,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"shows generation progress and keeps Play disabled while audio is generated",mobile-webkit,1608,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"shows generation progress and keeps Play disabled while audio is generated",desktop-webkit,1756,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"explains the needed and available duration when the document does not fit",mobile-chromium,1555,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"explains the needed and available duration when the document does not fit",desktop-chromium,1638,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"explains the needed and available duration when the document does not fit",mobile-webkit,1900,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"explains the needed and available duration when the document does not fit",desktop-webkit,1948,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a failed segment is marked and playback waits for a successful Retry",mobile-chromium,1761,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a failed segment is marked and playback waits for a successful Retry",desktop-chromium,2008,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a failed segment is marked and playback waits for a successful Retry",mobile-webkit,2148,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a failed segment is marked and playback waits for a successful Retry",desktop-webkit,2171,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"an audiobook whose generation waits for freed duration asks for a Retry",mobile-chromium,1837,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"an audiobook whose generation waits for freed duration asks for a Retry",desktop-chromium,1899,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"an audiobook whose generation waits for freed duration asks for a Retry",mobile-webkit,1880,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"an audiobook whose generation waits for freed duration asks for a Retry",desktop-webkit,1950,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"an audiobook whose every segment failed offers only Retry",mobile-chromium,1912,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"an audiobook whose every segment failed offers only Retry",desktop-chromium,1975,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"an audiobook whose every segment failed offers only Retry",mobile-webkit,1762,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"an audiobook whose every segment failed offers only Retry",desktop-webkit,1913,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"renders audiobook-not-found",mobile-chromium,1779,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"renders audiobook-not-found",desktop-chromium,1826,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"renders audiobook-not-found",mobile-webkit,1737,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"renders audiobook-not-found",desktop-webkit,1809,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"renders audiobook-load-error",mobile-chromium,2222,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"renders audiobook-load-error",desktop-chromium,1981,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"renders audiobook-load-error",mobile-webkit,2186,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"renders audiobook-load-error",desktop-webkit,2203,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"shows loading skeletons with an unknown preparation phase",mobile-chromium,2438,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"shows loading skeletons with an unknown preparation phase",desktop-chromium,2604,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"shows loading skeletons with an unknown preparation phase",mobile-webkit,2517,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"shows loading skeletons with an unknown preparation phase",desktop-webkit,2474,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"shows preparation skeletons with a disabled player sheet",mobile-chromium,1788,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"shows preparation skeletons with a disabled player sheet",desktop-chromium,1826,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"shows preparation skeletons with a disabled player sheet",mobile-webkit,1442,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"shows preparation skeletons with a disabled player sheet",desktop-webkit,1722,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the skeleton fits the viewport without horizontal overflow (LoadingAudiobook)",mobile-chromium,2465,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the skeleton fits the viewport without horizontal overflow (LoadingAudiobook)",desktop-chromium,2481,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the skeleton fits the viewport without horizontal overflow (LoadingAudiobook)",mobile-webkit,2156,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the skeleton fits the viewport without horizontal overflow (LoadingAudiobook)",desktop-webkit,2309,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the skeleton fits the viewport without horizontal overflow (PendingConversion)",mobile-chromium,1499,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the skeleton fits the viewport without horizontal overflow (PendingConversion)",desktop-chromium,1525,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the skeleton fits the viewport without horizontal overflow (PendingConversion)",mobile-webkit,1311,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the skeleton fits the viewport without horizontal overflow (PendingConversion)",desktop-webkit,1469,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the status line of a pending conversion reads \"Starting\"",mobile-chromium,1445,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the status line of a pending conversion reads \"Starting\"",desktop-chromium,1341,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the status line of a pending conversion reads \"Starting\"",mobile-webkit,1517,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the status line of a pending conversion reads \"Starting\"",desktop-webkit,1511,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the status line of a pending conversion reads \"Reading the page\"",mobile-chromium,1663,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the status line of a pending conversion reads \"Reading the page\"",desktop-chromium,1670,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the status line of a pending conversion reads \"Reading the page\"",mobile-webkit,1540,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the status line of a pending conversion reads \"Reading the page\"",desktop-webkit,1586,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the status line of a pending conversion reads \"Selecting narration content\"",mobile-chromium,1688,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the status line of a pending conversion reads \"Selecting narration content\"",desktop-chromium,1732,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the status line of a pending conversion reads \"Selecting narration content\"",mobile-webkit,1500,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the status line of a pending conversion reads \"Selecting narration content\"",desktop-webkit,1637,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the status line of a pending conversion reads \"Preparing the text\"",mobile-chromium,1716,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the status line of a pending conversion reads \"Preparing the text\"",desktop-chromium,1733,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the status line of a pending conversion reads \"Preparing the text\"",mobile-webkit,1663,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the status line of a pending conversion reads \"Preparing the text\"",desktop-webkit,1709,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"preparation failure replaces skeletons with Retry",mobile-chromium,1834,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"preparation failure replaces skeletons with Retry",desktop-chromium,1886,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"preparation failure replaces skeletons with Retry",mobile-webkit,1727,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"preparation failure replaces skeletons with Retry",desktop-webkit,1856,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a refused retry is reported with a toast and leaves the reader in place",mobile-chromium,1868,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a refused retry is reported with a toast and leaves the reader in place",desktop-chromium,1997,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a refused retry is reported with a toast and leaves the reader in place",mobile-webkit,1877,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a refused retry is reported with a toast and leaves the reader in place",desktop-webkit,2081,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a shown track that polling finds inaccessible is replaced by the error screen (TrackGoneWhilePolling)",mobile-chromium,3113,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a shown track that polling finds inaccessible is replaced by the error screen (TrackGoneWhilePolling)",desktop-chromium,3142,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a shown track that polling finds inaccessible is replaced by the error screen (TrackGoneWhilePolling)",mobile-webkit,2930,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a shown track that polling finds inaccessible is replaced by the error screen (TrackGoneWhilePolling)",desktop-webkit,3022,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a shown track that polling finds inaccessible is replaced by the error screen (TrackAccessDeniedWhilePolling)",mobile-chromium,3090,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a shown track that polling finds inaccessible is replaced by the error screen (TrackAccessDeniedWhilePolling)",desktop-chromium,3034,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a shown track that polling finds inaccessible is replaced by the error screen (TrackAccessDeniedWhilePolling)",mobile-webkit,2894,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"a shown track that polling finds inaccessible is replaced by the error screen (TrackAccessDeniedWhilePolling)",desktop-webkit,3027,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"failed polling keeps the track and shows one toast until polling recovers",mobile-chromium,5726,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"failed polling keeps the track and shows one toast until polling recovers",desktop-chromium,5907,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"failed polling keeps the track and shows one toast until polling recovers",mobile-webkit,5549,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"failed polling keeps the track and shows one toast until polling recovers",desktop-webkit,5691,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title names the audiobook once it has loaded",mobile-chromium,1427,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title names the audiobook once it has loaded",desktop-chromium,1289,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title names the audiobook once it has loaded",mobile-webkit,1318,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title names the audiobook once it has loaded",desktop-webkit,1254,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title of LoadingAudiobook is the generic one",mobile-chromium,2150,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title of LoadingAudiobook is the generic one",desktop-chromium,2099,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title of LoadingAudiobook is the generic one",mobile-webkit,1867,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title of LoadingAudiobook is the generic one",desktop-webkit,1738,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title of AudiobookNotFound is the generic one",mobile-chromium,1563,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title of AudiobookNotFound is the generic one",desktop-chromium,1408,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title of AudiobookNotFound is the generic one",mobile-webkit,1192,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title of AudiobookNotFound is the generic one",desktop-webkit,1147,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title of AudiobookLoadError is the generic one",mobile-chromium,1576,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title of AudiobookLoadError is the generic one",desktop-chromium,1503,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title of AudiobookLoadError is the generic one",mobile-webkit,1086,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title of AudiobookLoadError is the generic one",desktop-webkit,1066,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title takes the audiobook's title once preparation brings it in",mobile-chromium,2647,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title takes the audiobook's title once preparation brings it in",desktop-chromium,2638,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title takes the audiobook's title once preparation brings it in",mobile-webkit,2598,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title takes the audiobook's title once preparation brings it in",desktop-webkit,2631,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title follows the listener between audiobooks and Recents",mobile-chromium,1866,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title follows the listener between audiobooks and Recents",desktop-chromium,1765,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title follows the listener between audiobooks and Recents",mobile-webkit,1954,passed
+routes/_shell.audiobooks.$conversionId.test.ts,"the page title follows the listener between audiobooks and Recents",desktop-webkit,1914,passed
+routes/_shell.recent.account.test.ts,"renders active-account",mobile-chromium,1453,passed
+routes/_shell.recent.account.test.ts,"renders active-account",desktop-chromium,1445,passed
+routes/_shell.recent.account.test.ts,"renders active-account",mobile-webkit,1431,passed
+routes/_shell.recent.account.test.ts,"renders active-account",desktop-webkit,1487,passed
+routes/_shell.recent.account.test.ts,"renders setup-pending",mobile-chromium,1598,passed
+routes/_shell.recent.account.test.ts,"renders setup-pending",desktop-chromium,1799,passed
+routes/_shell.recent.account.test.ts,"renders setup-pending",mobile-webkit,1332,passed
+routes/_shell.recent.account.test.ts,"renders setup-pending",desktop-webkit,1518,passed
+routes/_shell.recent.account.test.ts,"renders confirm-deletion",mobile-chromium,1636,passed
+routes/_shell.recent.account.test.ts,"renders confirm-deletion",desktop-chromium,1646,passed
+routes/_shell.recent.account.test.ts,"renders confirm-deletion",mobile-webkit,1642,passed
+routes/_shell.recent.account.test.ts,"renders confirm-deletion",desktop-webkit,1831,passed
+routes/_shell.recent.account.test.ts,"renders recovery-available",mobile-chromium,1782,passed
+routes/_shell.recent.account.test.ts,"renders recovery-available",desktop-chromium,1744,passed
+routes/_shell.recent.account.test.ts,"renders recovery-available",mobile-webkit,1813,passed
+routes/_shell.recent.account.test.ts,"renders recovery-available",desktop-webkit,1982,passed
+routes/_shell.recent.account.test.ts,"renders confirm-recovery",mobile-chromium,1884,passed
+routes/_shell.recent.account.test.ts,"renders confirm-recovery",desktop-chromium,1935,passed
+routes/_shell.recent.account.test.ts,"renders confirm-recovery",mobile-webkit,1853,passed
+routes/_shell.recent.account.test.ts,"renders confirm-recovery",desktop-webkit,1864,passed
+routes/_shell.recent.account.test.ts,"renders final-deletion",mobile-chromium,1846,passed
+routes/_shell.recent.account.test.ts,"renders final-deletion",desktop-chromium,1869,passed
+routes/_shell.recent.account.test.ts,"renders final-deletion",mobile-webkit,1803,passed
+routes/_shell.recent.account.test.ts,"renders final-deletion",desktop-webkit,1846,passed
+routes/_shell.recent.account.test.ts,"closing the account dialog opened from Recents returns to Recents",mobile-chromium,2178,passed
+routes/_shell.recent.account.test.ts,"closing the account dialog opened from Recents returns to Recents",desktop-chromium,1915,passed
+routes/_shell.recent.account.test.ts,"closing the account dialog opened from Recents returns to Recents",mobile-webkit,2189,passed
+routes/_shell.recent.account.test.ts,"closing the account dialog opened from Recents returns to Recents",desktop-webkit,2183,passed
+routes/_shell.recent.account.test.ts,"closing the account dialog opened by a direct link leads to Recents",mobile-chromium,1739,passed
+routes/_shell.recent.account.test.ts,"closing the account dialog opened by a direct link leads to Recents",desktop-chromium,1906,passed
+routes/_shell.recent.account.test.ts,"closing the account dialog opened by a direct link leads to Recents",mobile-webkit,1972,passed
+routes/_shell.recent.account.test.ts,"closing the account dialog opened by a direct link leads to Recents",desktop-webkit,1963,passed
+routes/_shell.recent.account.test.ts,"canceling deletion confirmation removes the pending operation",mobile-chromium,1836,passed
+routes/_shell.recent.account.test.ts,"canceling deletion confirmation removes the pending operation",desktop-chromium,1794,passed
+routes/_shell.recent.account.test.ts,"canceling deletion confirmation removes the pending operation",mobile-webkit,2033,passed
+routes/_shell.recent.account.test.ts,"canceling deletion confirmation removes the pending operation",desktop-webkit,2089,passed
+routes/_shell.recent.account.test.ts,"account setup query failure can be retried",mobile-chromium,2136,passed
+routes/_shell.recent.account.test.ts,"account setup query failure can be retried",desktop-chromium,2541,passed
+routes/_shell.recent.account.test.ts,"account setup query failure can be retried",mobile-webkit,1911,passed
+routes/_shell.recent.account.test.ts,"account setup query failure can be retried",desktop-webkit,1838,passed
+routes/_shell.recent.account.test.ts,"confirmation cannot use a challenge that was cleared after the dialog rendered",mobile-chromium,1809,passed
+routes/_shell.recent.account.test.ts,"confirmation cannot use a challenge that was cleared after the dialog rendered",desktop-chromium,1818,passed
+routes/_shell.recent.account.test.ts,"confirmation cannot use a challenge that was cleared after the dialog rendered",mobile-webkit,1979,passed
+routes/_shell.recent.account.test.ts,"confirmation cannot use a challenge that was cleared after the dialog rendered",desktop-webkit,1816,passed
+routes/_shell.recent.account.test.ts,"the account dialog stays open while a confirmation step runs",mobile-chromium,1771,passed
+routes/_shell.recent.account.test.ts,"the account dialog stays open while a confirmation step runs",desktop-chromium,1720,passed
+routes/_shell.recent.account.test.ts,"the account dialog stays open while a confirmation step runs",mobile-webkit,2039,passed
+routes/_shell.recent.account.test.ts,"the account dialog stays open while a confirmation step runs",desktop-webkit,1872,passed
+routes/_shell.recent.account.test.ts,"the account dialog opens with focus on Close, not on a step that changes the account",mobile-chromium,1653,passed
+routes/_shell.recent.account.test.ts,"the account dialog opens with focus on Close, not on a step that changes the account",desktop-chromium,1694,passed
+routes/_shell.recent.account.test.ts,"the account dialog opens with focus on Close, not on a step that changes the account",mobile-webkit,1791,passed
+routes/_shell.recent.account.test.ts,"the account dialog opens with focus on Close, not on a step that changes the account",desktop-webkit,1821,passed
+routes/_shell.recent.account.test.ts,"the account still loading is marked as a loading state",mobile-chromium,2295,passed
+routes/_shell.recent.account.test.ts,"the account still loading is marked as a loading state",desktop-chromium,2311,passed
+routes/_shell.recent.account.test.ts,"the account still loading is marked as a loading state",mobile-webkit,2333,passed
+routes/_shell.recent.account.test.ts,"the account still loading is marked as a loading state",desktop-webkit,2466,passed
+routes/_shell.recent.test.ts,"renders empty-recents",mobile-chromium,1901,passed
+routes/_shell.recent.test.ts,"renders empty-recents",desktop-chromium,1837,passed
+routes/_shell.recent.test.ts,"renders empty-recents",mobile-webkit,1528,passed
+routes/_shell.recent.test.ts,"renders empty-recents",desktop-webkit,1741,passed
+routes/_shell.recent.test.ts,"renders recents",mobile-chromium,1984,passed
+routes/_shell.recent.test.ts,"renders recents",desktop-chromium,1898,passed
+routes/_shell.recent.test.ts,"renders recents",mobile-webkit,1891,passed
+routes/_shell.recent.test.ts,"renders recents",desktop-webkit,1872,passed
+routes/_shell.recent.test.ts,"renders recents-one-ready-item",mobile-chromium,1827,passed
+routes/_shell.recent.test.ts,"renders recents-one-ready-item",desktop-chromium,1900,passed
+routes/_shell.recent.test.ts,"renders recents-one-ready-item",mobile-webkit,1847,passed
+routes/_shell.recent.test.ts,"renders recents-one-ready-item",desktop-webkit,1824,passed
+routes/_shell.recent.test.ts,"renders recents-pending-and-failed",mobile-chromium,1822,passed
+routes/_shell.recent.test.ts,"renders recents-pending-and-failed",desktop-chromium,1706,passed
+routes/_shell.recent.test.ts,"renders recents-pending-and-failed",mobile-webkit,1805,passed
+routes/_shell.recent.test.ts,"renders recents-pending-and-failed",desktop-webkit,1938,passed
+routes/_shell.recent.test.ts,"renders recents-with-mini-player",mobile-chromium,2295,passed
+routes/_shell.recent.test.ts,"renders recents-with-mini-player",desktop-chromium,2397,passed
+routes/_shell.recent.test.ts,"renders recents-with-mini-player",mobile-webkit,2342,passed
+routes/_shell.recent.test.ts,"renders recents-with-mini-player",desktop-webkit,2574,passed
+routes/_shell.recent.test.ts,"a ready card links to its detail view and shows its title, cover and host",mobile-chromium,1901,passed
+routes/_shell.recent.test.ts,"a ready card links to its detail view and shows its title, cover and host",desktop-chromium,1902,passed
+routes/_shell.recent.test.ts,"a ready card links to its detail view and shows its title, cover and host",mobile-webkit,1957,passed
+routes/_shell.recent.test.ts,"a ready card links to its detail view and shows its title, cover and host",desktop-webkit,1940,passed
+routes/_shell.recent.test.ts,"a card preloads its track only once no dialog covers it",mobile-chromium,2583,passed
+routes/_shell.recent.test.ts,"a card preloads its track only once no dialog covers it",desktop-chromium,2556,passed
+routes/_shell.recent.test.ts,"a card preloads its track only once no dialog covers it",mobile-webkit,2588,passed
+routes/_shell.recent.test.ts,"a card preloads its track only once no dialog covers it",desktop-webkit,2616,passed
+routes/_shell.recent.test.ts,"pending and failed cards show a muted line in the title slot and no cover",mobile-chromium,1546,passed
+routes/_shell.recent.test.ts,"pending and failed cards show a muted line in the title slot and no cover",desktop-chromium,1649,passed
+routes/_shell.recent.test.ts,"pending and failed cards show a muted line in the title slot and no cover",mobile-webkit,1753,passed
+routes/_shell.recent.test.ts,"pending and failed cards show a muted line in the title slot and no cover",desktop-webkit,1860,passed
+routes/_shell.recent.test.ts,"the masonry keeps newest-first order left to right, top down",mobile-chromium,1941,passed
+routes/_shell.recent.test.ts,"the masonry keeps newest-first order left to right, top down",desktop-chromium,1721,passed
+routes/_shell.recent.test.ts,"the masonry keeps newest-first order left to right, top down",mobile-webkit,1824,passed
+routes/_shell.recent.test.ts,"the masonry keeps newest-first order left to right, top down",desktop-webkit,1902,passed
+routes/_shell.recent.test.ts,"scrolling to the end loads the next page without moving existing cards",mobile-chromium,1960,passed
+routes/_shell.recent.test.ts,"scrolling to the end loads the next page without moving existing cards",desktop-chromium,1949,passed
+routes/_shell.recent.test.ts,"scrolling to the end loads the next page without moving existing cards",mobile-webkit,2027,passed
+routes/_shell.recent.test.ts,"scrolling to the end loads the next page without moving existing cards",desktop-webkit,2263,passed
+routes/_shell.recent.test.ts,"Back from a track opened on a scrolled Recents returns to the same card",mobile-chromium,2629,passed
+routes/_shell.recent.test.ts,"Back from a track opened on a scrolled Recents returns to the same card",desktop-chromium,2760,passed
+routes/_shell.recent.test.ts,"Back from a track opened on a scrolled Recents returns to the same card",mobile-webkit,4631,passed
+routes/_shell.recent.test.ts,"Back from a track opened on a scrolled Recents returns to the same card",desktop-webkit,5841,passed
+routes/_shell.recent.test.ts,"renders the mini-player, paused and playing",mobile-chromium,2365,passed
+routes/_shell.recent.test.ts,"renders the mini-player, paused and playing",desktop-chromium,2492,passed
+routes/_shell.recent.test.ts,"renders the mini-player, paused and playing",mobile-webkit,2615,passed
+routes/_shell.recent.test.ts,"renders the mini-player, paused and playing",desktop-webkit,2773,passed
+routes/_shell.recent.test.ts,"renders the mini-player-without-cover, paused and playing",mobile-chromium,2379,passed
+routes/_shell.recent.test.ts,"renders the mini-player-without-cover, paused and playing",desktop-chromium,2256,passed
+routes/_shell.recent.test.ts,"renders the mini-player-without-cover, paused and playing",mobile-webkit,2752,passed
+routes/_shell.recent.test.ts,"renders the mini-player-without-cover, paused and playing",desktop-webkit,2520,passed
+routes/_shell.recent.test.ts,"the mini player names the loaded audiobook and its host",mobile-chromium,2122,passed
+routes/_shell.recent.test.ts,"the mini player names the loaded audiobook and its host",desktop-chromium,1829,passed
+routes/_shell.recent.test.ts,"the mini player names the loaded audiobook and its host",mobile-webkit,2405,passed
+routes/_shell.recent.test.ts,"the mini player names the loaded audiobook and its host",desktop-webkit,2492,passed
+routes/_shell.recent.test.ts,"the mini player's −15 s skips the narration track back 15 seconds",mobile-chromium,2151,passed
+routes/_shell.recent.test.ts,"the mini player's −15 s skips the narration track back 15 seconds",desktop-chromium,2163,passed
+routes/_shell.recent.test.ts,"the mini player's −15 s skips the narration track back 15 seconds",mobile-webkit,2648,passed
+routes/_shell.recent.test.ts,"the mini player's −15 s skips the narration track back 15 seconds",desktop-webkit,2448,passed
+routes/_shell.recent.test.ts,"pressing the mini player's cover opens the loaded audiobook's detail view, the rest of the pill does not",mobile-chromium,2230,passed
+routes/_shell.recent.test.ts,"pressing the mini player's cover opens the loaded audiobook's detail view, the rest of the pill does not",desktop-chromium,2258,passed
+routes/_shell.recent.test.ts,"pressing the mini player's cover opens the loaded audiobook's detail view, the rest of the pill does not",mobile-webkit,2613,passed
+routes/_shell.recent.test.ts,"pressing the mini player's cover opens the loaded audiobook's detail view, the rest of the pill does not",desktop-webkit,2700,passed
+routes/_shell.recent.test.ts,"the mini player stays behind the account dialog",mobile-chromium,2228,passed
+routes/_shell.recent.test.ts,"the mini player stays behind the account dialog",desktop-chromium,2294,passed
+routes/_shell.recent.test.ts,"the mini player stays behind the account dialog",mobile-webkit,2452,passed
+routes/_shell.recent.test.ts,"the mini player stays behind the account dialog",desktop-webkit,2395,passed
+routes/_shell.recent.test.ts,"a signed-in home redirects to Recents",mobile-chromium,1699,passed
+routes/_shell.recent.test.ts,"a signed-in home redirects to Recents",desktop-chromium,1688,passed
+routes/_shell.recent.test.ts,"a signed-in home redirects to Recents",mobile-webkit,1777,passed
+routes/_shell.recent.test.ts,"a signed-in home redirects to Recents",desktop-webkit,2065,passed
+routes/_shell.recent.test.ts,"a signed-in cold start on home never shows the start form before Recents",mobile-chromium,1915,passed
+routes/_shell.recent.test.ts,"a signed-in cold start on home never shows the start form before Recents",desktop-chromium,1946,passed
+routes/_shell.recent.test.ts,"a signed-in cold start on home never shows the start form before Recents",mobile-webkit,1987,passed
+routes/_shell.recent.test.ts,"a signed-in cold start on home never shows the start form before Recents",desktop-webkit,2232,passed
+routes/_shell.recent.test.ts,"a signed-out listener opening SignedOutRecents is sent home in place of that history entry",mobile-chromium,1900,passed
+routes/_shell.recent.test.ts,"a signed-out listener opening SignedOutRecents is sent home in place of that history entry",desktop-chromium,1989,passed
+routes/_shell.recent.test.ts,"a signed-out listener opening SignedOutRecents is sent home in place of that history entry",mobile-webkit,1830,passed
+routes/_shell.recent.test.ts,"a signed-out listener opening SignedOutRecents is sent home in place of that history entry",desktop-webkit,2067,passed
+routes/_shell.recent.test.ts,"a signed-out listener opening SignedOutAddDialog is sent home in place of that history entry",mobile-chromium,1923,passed
+routes/_shell.recent.test.ts,"a signed-out listener opening SignedOutAddDialog is sent home in place of that history entry",desktop-chromium,1851,passed
+routes/_shell.recent.test.ts,"a signed-out listener opening SignedOutAddDialog is sent home in place of that history entry",mobile-webkit,1849,passed
+routes/_shell.recent.test.ts,"a signed-out listener opening SignedOutAddDialog is sent home in place of that history entry",desktop-webkit,1886,passed
+routes/_shell.recent.test.ts,"a signed-out listener opening SignedOutAccountDialog is sent home in place of that history entry",mobile-chromium,1936,passed
+routes/_shell.recent.test.ts,"a signed-out listener opening SignedOutAccountDialog is sent home in place of that history entry",desktop-chromium,1895,passed
+routes/_shell.recent.test.ts,"a signed-out listener opening SignedOutAccountDialog is sent home in place of that history entry",mobile-webkit,1824,passed
+routes/_shell.recent.test.ts,"a signed-out listener opening SignedOutAccountDialog is sent home in place of that history entry",desktop-webkit,1865,passed
+routes/_shell.recent.test.ts,"a URL shared while signed in opens the Add dialog and starts its conversion",mobile-chromium,1992,passed
+routes/_shell.recent.test.ts,"a URL shared while signed in opens the Add dialog and starts its conversion",desktop-chromium,1938,passed
+routes/_shell.recent.test.ts,"a URL shared while signed in opens the Add dialog and starts its conversion",mobile-webkit,1826,passed
+routes/_shell.recent.test.ts,"a URL shared while signed in opens the Add dialog and starts its conversion",desktop-webkit,1987,passed
+routes/_shell.recent.test.ts,"the empty state's link opens the Add dialog",mobile-chromium,1907,passed
+routes/_shell.recent.test.ts,"the empty state's link opens the Add dialog",desktop-chromium,1936,passed
+routes/_shell.recent.test.ts,"the empty state's link opens the Add dialog",mobile-webkit,1960,passed
+routes/_shell.recent.test.ts,"the empty state's link opens the Add dialog",desktop-webkit,2013,passed
+routes/_shell.recent.test.ts,"does not poll settled empty recents",mobile-chromium,1852,passed
+routes/_shell.recent.test.ts,"does not poll settled empty recents",desktop-chromium,1814,passed
+routes/_shell.recent.test.ts,"does not poll settled empty recents",mobile-webkit,1807,passed
+routes/_shell.recent.test.ts,"does not poll settled empty recents",desktop-webkit,1805,passed
+routes/_shell.recent.test.ts,"renders the idle Add dialog over Recents",mobile-chromium,2124,passed
+routes/_shell.recent.test.ts,"renders the idle Add dialog over Recents",desktop-chromium,2126,passed
+routes/_shell.recent.test.ts,"renders the idle Add dialog over Recents",mobile-webkit,2059,passed
+routes/_shell.recent.test.ts,"renders the idle Add dialog over Recents",desktop-webkit,2101,passed
+routes/_shell.recent.test.ts,"the Add dialog is a sheet along the bottom edge, inside the app column's gutter",mobile-chromium,2434,passed
+routes/_shell.recent.test.ts,"the Add dialog is a sheet along the bottom edge, inside the app column's gutter",desktop-chromium,2268,passed
+routes/_shell.recent.test.ts,"the Add dialog is a sheet along the bottom edge, inside the app column's gutter",mobile-webkit,2178,passed
+routes/_shell.recent.test.ts,"the Add dialog is a sheet along the bottom edge, inside the app column's gutter",desktop-webkit,2603,passed
+routes/_shell.recent.test.ts,"renders the Add dialog while the start is pending",mobile-chromium,2280,passed
+routes/_shell.recent.test.ts,"renders the Add dialog while the start is pending",desktop-chromium,2159,passed
+routes/_shell.recent.test.ts,"renders the Add dialog while the start is pending",mobile-webkit,2327,passed
+routes/_shell.recent.test.ts,"renders the Add dialog while the start is pending",desktop-webkit,2413,passed
+routes/_shell.recent.test.ts,"renders a refused start inside the Add dialog",mobile-chromium,2066,passed
+routes/_shell.recent.test.ts,"renders a refused start inside the Add dialog",desktop-chromium,2183,passed
+routes/_shell.recent.test.ts,"renders a refused start inside the Add dialog",mobile-webkit,2219,passed
+routes/_shell.recent.test.ts,"renders a refused start inside the Add dialog",desktop-webkit,2496,passed
+routes/_shell.recent.test.ts,"a refused start in the Add dialog leaves nothing for home or a reopened dialog",mobile-chromium,2830,passed
+routes/_shell.recent.test.ts,"a refused start in the Add dialog leaves nothing for home or a reopened dialog",desktop-chromium,2824,passed
+routes/_shell.recent.test.ts,"a refused start in the Add dialog leaves nothing for home or a reopened dialog",mobile-webkit,3059,passed
+routes/_shell.recent.test.ts,"a refused start in the Add dialog leaves nothing for home or a reopened dialog",desktop-webkit,3139,passed
+routes/_shell.recent.test.ts,"validates the source URL in the Add dialog before starting",mobile-chromium,2271,passed
+routes/_shell.recent.test.ts,"validates the source URL in the Add dialog before starting",desktop-chromium,2728,passed
+routes/_shell.recent.test.ts,"validates the source URL in the Add dialog before starting",mobile-webkit,2324,passed
+routes/_shell.recent.test.ts,"validates the source URL in the Add dialog before starting",desktop-webkit,2728,passed
+routes/_shell.recent.test.ts,"Close slides the Add dialog away and closes it, opened from Recents",mobile-chromium,2973,passed
+routes/_shell.recent.test.ts,"Close slides the Add dialog away and closes it, opened from Recents",desktop-chromium,2876,passed
+routes/_shell.recent.test.ts,"Close slides the Add dialog away and closes it, opened from Recents",mobile-webkit,2892,passed
+routes/_shell.recent.test.ts,"Close slides the Add dialog away and closes it, opened from Recents",desktop-webkit,3205,passed
+routes/_shell.recent.test.ts,"Escape slides the Add dialog away and closes it, opened from Recents",mobile-chromium,2761,passed
+routes/_shell.recent.test.ts,"Escape slides the Add dialog away and closes it, opened from Recents",desktop-chromium,2814,passed
+routes/_shell.recent.test.ts,"Escape slides the Add dialog away and closes it, opened from Recents",mobile-webkit,2897,passed
+routes/_shell.recent.test.ts,"Escape slides the Add dialog away and closes it, opened from Recents",desktop-webkit,3140,passed
+routes/_shell.recent.test.ts,"a press outside slides the Add dialog away and closes it, opened from Recents",mobile-chromium,2671,passed
+routes/_shell.recent.test.ts,"a press outside slides the Add dialog away and closes it, opened from Recents",desktop-chromium,2621,passed
+routes/_shell.recent.test.ts,"a press outside slides the Add dialog away and closes it, opened from Recents",mobile-webkit,3117,passed
+routes/_shell.recent.test.ts,"a press outside slides the Add dialog away and closes it, opened from Recents",desktop-webkit,3214,passed
+routes/_shell.recent.test.ts,"Pulling the grabber down slides the Add dialog away and closes it, opened from Recents",mobile-chromium,3047,passed
+routes/_shell.recent.test.ts,"Pulling the grabber down slides the Add dialog away and closes it, opened from Recents",desktop-chromium,3022,passed
+routes/_shell.recent.test.ts,"Pulling the grabber down slides the Add dialog away and closes it, opened from Recents",mobile-webkit,3174,passed
+routes/_shell.recent.test.ts,"Pulling the grabber down slides the Add dialog away and closes it, opened from Recents",desktop-webkit,3414,passed
+routes/_shell.recent.test.ts,"a short pull on the Add dialog's grabber lets it settle back",mobile-chromium,3062,passed
+routes/_shell.recent.test.ts,"a short pull on the Add dialog's grabber lets it settle back",desktop-chromium,3162,passed
+routes/_shell.recent.test.ts,"a short pull on the Add dialog's grabber lets it settle back",mobile-webkit,3254,passed
+routes/_shell.recent.test.ts,"a short pull on the Add dialog's grabber lets it settle back",desktop-webkit,3508,passed
+routes/_shell.recent.test.ts,"renders the Add dialog held partway down by a pull",mobile-chromium,2338,passed
+routes/_shell.recent.test.ts,"renders the Add dialog held partway down by a pull",desktop-chromium,2464,passed
+routes/_shell.recent.test.ts,"renders the Add dialog held partway down by a pull",mobile-webkit,2436,passed
+routes/_shell.recent.test.ts,"renders the Add dialog held partway down by a pull",desktop-webkit,2807,passed
+routes/_shell.recent.test.ts,"a mouse drag inside the Add dialog's form leaves it in place",mobile-chromium,2167,passed
+routes/_shell.recent.test.ts,"a mouse drag inside the Add dialog's form leaves it in place",desktop-chromium,2213,passed
+routes/_shell.recent.test.ts,"a mouse drag inside the Add dialog's form leaves it in place",mobile-webkit,2350,passed
+routes/_shell.recent.test.ts,"a mouse drag inside the Add dialog's form leaves it in place",desktop-webkit,2642,passed
+routes/_shell.recent.test.ts,"the Add dialog slides up from the bottom edge as it opens",mobile-chromium,2158,passed
+routes/_shell.recent.test.ts,"the Add dialog slides up from the bottom edge as it opens",desktop-chromium,2145,passed
+routes/_shell.recent.test.ts,"the Add dialog slides up from the bottom edge as it opens",mobile-webkit,2492,passed
+routes/_shell.recent.test.ts,"the Add dialog slides up from the bottom edge as it opens",desktop-webkit,2605,passed
+routes/_shell.recent.test.ts,"with reduced motion, the Add dialog appears and leaves without sliding",mobile-chromium,1824,passed
+routes/_shell.recent.test.ts,"with reduced motion, the Add dialog appears and leaves without sliding",desktop-chromium,1904,passed
+routes/_shell.recent.test.ts,"with reduced motion, the Add dialog appears and leaves without sliding",mobile-webkit,2152,passed
+routes/_shell.recent.test.ts,"with reduced motion, the Add dialog appears and leaves without sliding",desktop-webkit,2144,passed
+routes/_shell.recent.test.ts,"a start that succeeds after Back closed the Add dialog leaves the listener where they went",mobile-chromium,2790,passed
+routes/_shell.recent.test.ts,"a start that succeeds after Back closed the Add dialog leaves the listener where they went",desktop-chromium,2917,passed
+routes/_shell.recent.test.ts,"a start that succeeds after Back closed the Add dialog leaves the listener where they went",mobile-webkit,2753,passed
+routes/_shell.recent.test.ts,"a start that succeeds after Back closed the Add dialog leaves the listener where they went",desktop-webkit,3231,passed
+routes/_shell.recent.test.ts,"closing an Add dialog that was not opened from Recents shows Recents",mobile-chromium,1822,passed
+routes/_shell.recent.test.ts,"closing an Add dialog that was not opened from Recents shows Recents",desktop-chromium,1802,passed
+routes/_shell.recent.test.ts,"closing an Add dialog that was not opened from Recents shows Recents",mobile-webkit,2180,passed
+routes/_shell.recent.test.ts,"closing an Add dialog that was not opened from Recents shows Recents",desktop-webkit,2162,passed
+routes/_shell.recent.test.ts,"a successful start closes the Add dialog and lists the new item",mobile-chromium,2695,passed
+routes/_shell.recent.test.ts,"a successful start closes the Add dialog and lists the new item",desktop-chromium,2631,passed
+routes/_shell.recent.test.ts,"a successful start closes the Add dialog and lists the new item",mobile-webkit,2911,passed
+routes/_shell.recent.test.ts,"a successful start closes the Add dialog and lists the new item",desktop-webkit,3052,passed
+routes/_shell.recent.test.ts,"the tracks still loading are marked as a loading state",mobile-chromium,2351,passed
+routes/_shell.recent.test.ts,"the tracks still loading are marked as a loading state",desktop-chromium,2319,passed
+routes/_shell.recent.test.ts,"the tracks still loading are marked as a loading state",mobile-webkit,2382,passed
+routes/_shell.recent.test.ts,"the tracks still loading are marked as a loading state",desktop-webkit,2503,passed
+routes/_shell.recent.test.ts,"going back from a detail view shows Recents' cached cards while its history is requested again",mobile-chromium,2064,passed
+routes/_shell.recent.test.ts,"going back from a detail view shows Recents' cached cards while its history is requested again",desktop-chromium,2132,passed
+routes/_shell.recent.test.ts,"going back from a detail view shows Recents' cached cards while its history is requested again",mobile-webkit,2449,passed
+routes/_shell.recent.test.ts,"going back from a detail view shows Recents' cached cards while its history is requested again",desktop-webkit,2551,passed
+routes/_shell.recent.test.ts,"returning to Recents from a screen that does not show the history shows its cached cards",mobile-chromium,1512,passed
+routes/_shell.recent.test.ts,"returning to Recents from a screen that does not show the history shows its cached cards",desktop-chromium,1565,passed
+routes/_shell.recent.test.ts,"returning to Recents from a screen that does not show the history shows its cached cards",mobile-webkit,1850,passed
+routes/_shell.recent.test.ts,"returning to Recents from a screen that does not show the history shows its cached cards",desktop-webkit,2007,passed
+routes/_shell.recent.test.ts,"reopening a track shows its cached content while the audiobook is requested again",mobile-chromium,2775,passed
+routes/_shell.recent.test.ts,"reopening a track shows its cached content while the audiobook is requested again",desktop-chromium,2710,passed
+routes/_shell.recent.test.ts,"reopening a track shows its cached content while the audiobook is requested again",mobile-webkit,3257,passed
+routes/_shell.recent.test.ts,"reopening a track shows its cached content while the audiobook is requested again",desktop-webkit,3153,passed
+routes/_shell.recent.test.ts,"reopening a track still being prepared shows it preparing, not as a failure",mobile-chromium,2536,passed
+routes/_shell.recent.test.ts,"reopening a track still being prepared shows it preparing, not as a failure",desktop-chromium,2669,passed
+routes/_shell.recent.test.ts,"reopening a track still being prepared shows it preparing, not as a failure",mobile-webkit,3205,passed
+routes/_shell.recent.test.ts,"reopening a track still being prepared shows it preparing, not as a failure",desktop-webkit,3187,passed
+routes/_shell.recent.test.ts,"reopening a track whose refetch answers 404 replaces its cached content by the error screen",mobile-chromium,2891,passed
+routes/_shell.recent.test.ts,"reopening a track whose refetch answers 404 replaces its cached content by the error screen",desktop-chromium,2727,passed
+routes/_shell.recent.test.ts,"reopening a track whose refetch answers 404 replaces its cached content by the error screen",mobile-webkit,3281,passed
+routes/_shell.recent.test.ts,"reopening a track whose refetch answers 404 replaces its cached content by the error screen",desktop-webkit,3450,passed
+routes/_shell.recent.test.ts,"returning to Recents whose refetch answers 404 replaces its cached cards by the error screen",mobile-chromium,1996,passed
+routes/_shell.recent.test.ts,"returning to Recents whose refetch answers 404 replaces its cached cards by the error screen",desktop-chromium,1988,passed
+routes/_shell.recent.test.ts,"returning to Recents whose refetch answers 404 replaces its cached cards by the error screen",mobile-webkit,1999,passed
+routes/_shell.recent.test.ts,"returning to Recents whose refetch answers 404 replaces its cached cards by the error screen",desktop-webkit,2372,passed
+routes/_shell.recent.test.ts,"reopening a track whose refetch answers 403 replaces its cached content by the error screen",mobile-chromium,2688,passed
+routes/_shell.recent.test.ts,"reopening a track whose refetch answers 403 replaces its cached content by the error screen",desktop-chromium,2691,passed
+routes/_shell.recent.test.ts,"reopening a track whose refetch answers 403 replaces its cached content by the error screen",mobile-webkit,3040,passed
+routes/_shell.recent.test.ts,"reopening a track whose refetch answers 403 replaces its cached content by the error screen",desktop-webkit,3319,passed
+routes/_shell.recent.test.ts,"returning to Recents whose refetch answers 403 replaces its cached cards by the error screen",mobile-chromium,1827,passed
+routes/_shell.recent.test.ts,"returning to Recents whose refetch answers 403 replaces its cached cards by the error screen",desktop-chromium,1953,passed
+routes/_shell.recent.test.ts,"returning to Recents whose refetch answers 403 replaces its cached cards by the error screen",mobile-webkit,1999,passed
+routes/_shell.recent.test.ts,"returning to Recents whose refetch answers 403 replaces its cached cards by the error screen",desktop-webkit,2167,passed
+routes/_shell.recent.test.ts,"reopening a track whose refetch fails on the server keeps its cached content and shows a toast",mobile-chromium,2704,passed
+routes/_shell.recent.test.ts,"reopening a track whose refetch fails on the server keeps its cached content and shows a toast",desktop-chromium,2970,passed
+routes/_shell.recent.test.ts,"reopening a track whose refetch fails on the server keeps its cached content and shows a toast",mobile-webkit,3197,passed
+routes/_shell.recent.test.ts,"reopening a track whose refetch fails on the server keeps its cached content and shows a toast",desktop-webkit,3426,passed
+routes/_shell.recent.test.ts,"returning to Recents whose refetch fails on the server keeps its cached cards and shows a toast",mobile-chromium,1770,passed
+routes/_shell.recent.test.ts,"returning to Recents whose refetch fails on the server keeps its cached cards and shows a toast",desktop-chromium,1930,passed
+routes/_shell.recent.test.ts,"returning to Recents whose refetch fails on the server keeps its cached cards and shows a toast",mobile-webkit,2034,passed
+routes/_shell.recent.test.ts,"returning to Recents whose refetch fails on the server keeps its cached cards and shows a toast",desktop-webkit,2285,passed
+routes/_shell.recent.test.ts,"reopening the account dialog shows the cached account while it is requested again",mobile-chromium,1866,passed
+routes/_shell.recent.test.ts,"reopening the account dialog shows the cached account while it is requested again",desktop-chromium,1884,passed
+routes/_shell.recent.test.ts,"reopening the account dialog shows the cached account while it is requested again",mobile-webkit,2430,passed
+routes/_shell.recent.test.ts,"reopening the account dialog shows the cached account while it is requested again",desktop-webkit,2529,passed
+routes/_shell.recent.test.ts,"reopening the Add dialog shows it at once",mobile-chromium,2880,passed
+routes/_shell.recent.test.ts,"reopening the Add dialog shows it at once",desktop-chromium,1931,passed
+routes/_shell.recent.test.ts,"reopening the Add dialog shows it at once",mobile-webkit,2515,passed
+routes/_shell.recent.test.ts,"reopening the Add dialog shows it at once",desktop-webkit,2357,passed
+routes/_shell.recent.test.ts,"a first visit to a track holds Recents behind the progress bar, then shows the skeleton for at least 300 ms",mobile-chromium,2039,passed
+routes/_shell.recent.test.ts,"a first visit to a track holds Recents behind the progress bar, then shows the skeleton for at least 300 ms",desktop-chromium,1945,passed
+routes/_shell.recent.test.ts,"a first visit to a track holds Recents behind the progress bar, then shows the skeleton for at least 300 ms",mobile-webkit,2352,passed
+routes/_shell.recent.test.ts,"a first visit to a track holds Recents behind the progress bar, then shows the skeleton for at least 300 ms",desktop-webkit,2444,passed
+routes/_shell.recent.test.ts,"a card in view preloads its track, so opening it shows no loading state",mobile-chromium,2192,passed
+routes/_shell.recent.test.ts,"a card in view preloads its track, so opening it shows no loading state",desktop-chromium,1894,passed
+routes/_shell.recent.test.ts,"a card in view preloads its track, so opening it shows no loading state",mobile-webkit,2219,passed
+routes/_shell.recent.test.ts,"a card in view preloads its track, so opening it shows no loading state",desktop-webkit,2304,passed
+routes/_shell.recent.test.ts,"a preloaded track shows no progress bar while the browser captures its cover transition",mobile-chromium,2552,passed
+routes/_shell.recent.test.ts,"a preloaded track shows no progress bar while the browser captures its cover transition",desktop-chromium,2756,passed
+routes/_shell.recent.test.ts,"a preloaded track shows no progress bar while the browser captures its cover transition",mobile-webkit,2815,passed
+routes/_shell.recent.test.ts,"a preloaded track shows no progress bar while the browser captures its cover transition",desktop-webkit,2578,passed
+routes/_shell.recent.test.ts,"leaving a track being prepared stops polling it, and reopening it polls again",mobile-chromium,2476,passed
+routes/_shell.recent.test.ts,"leaving a track being prepared stops polling it, and reopening it polls again",desktop-chromium,2652,passed
+routes/_shell.recent.test.ts,"leaving a track being prepared stops polling it, and reopening it polls again",mobile-webkit,3118,passed
+routes/_shell.recent.test.ts,"leaving a track being prepared stops polling it, and reopening it polls again",desktop-webkit,3092,passed
+routes/_shell.recent.test.ts,"opening a track from Recents and going back runs the cover transition between the card and the detail view",mobile-chromium,2286,passed
+routes/_shell.recent.test.ts,"opening a track from Recents and going back runs the cover transition between the card and the detail view",desktop-chromium,2395,passed
+routes/_shell.recent.test.ts,"opening a track from Recents and going back runs the cover transition between the card and the detail view",mobile-webkit,2992,passed
+routes/_shell.recent.test.ts,"opening a track from Recents and going back runs the cover transition between the card and the detail view",desktop-webkit,3104,passed
+routes/_shell.recent.test.ts,"going back from a detail view scrolled past its cover only cross-fades",mobile-chromium,2113,passed
+routes/_shell.recent.test.ts,"going back from a detail view scrolled past its cover only cross-fades",desktop-chromium,2172,passed
+routes/_shell.recent.test.ts,"going back from a detail view scrolled past its cover only cross-fades",mobile-webkit,2721,passed
+routes/_shell.recent.test.ts,"going back from a detail view scrolled past its cover only cross-fades",desktop-webkit,2745,passed
+routes/_shell.recent.test.ts,"going back from a detail view with its cover partly in view moves the cover",mobile-chromium,2080,passed
+routes/_shell.recent.test.ts,"going back from a detail view with its cover partly in view moves the cover",desktop-chromium,2190,passed
+routes/_shell.recent.test.ts,"going back from a detail view with its cover partly in view moves the cover",mobile-webkit,2675,passed
+routes/_shell.recent.test.ts,"going back from a detail view with its cover partly in view moves the cover",desktop-webkit,3027,passed
+routes/_shell.recent.test.ts,"opening a track from Recents scrolled past its card only cross-fades",mobile-chromium,2491,passed
+routes/_shell.recent.test.ts,"opening a track from Recents scrolled past its card only cross-fades",desktop-chromium,2606,passed
+routes/_shell.recent.test.ts,"opening a track from Recents scrolled past its card only cross-fades",mobile-webkit,3108,passed
+routes/_shell.recent.test.ts,"opening a track from Recents scrolled past its card only cross-fades",desktop-webkit,3567,passed
+routes/_shell.recent.test.ts,"opening a track from the mini player and going back only cross-fade, even with its card in view",mobile-chromium,3115,passed
+routes/_shell.recent.test.ts,"opening a track from the mini player and going back only cross-fade, even with its card in view",desktop-chromium,3151,passed
+routes/_shell.recent.test.ts,"opening a track from the mini player and going back only cross-fade, even with its card in view",mobile-webkit,3885,passed
+routes/_shell.recent.test.ts,"opening a track from the mini player and going back only cross-fade, even with its card in view",desktop-webkit,4124,passed
+routes/_shell.recent.test.ts,"with reduced motion, opening a track and going back start no view transition",mobile-chromium,1911,passed
+routes/_shell.recent.test.ts,"with reduced motion, opening a track and going back start no view transition",desktop-chromium,1972,passed
+routes/_shell.recent.test.ts,"with reduced motion, opening a track and going back start no view transition",mobile-webkit,2345,passed
+routes/_shell.recent.test.ts,"with reduced motion, opening a track and going back start no view transition",desktop-webkit,2409,passed
+routes/_shell.recent.test.ts,"the page title names Recent, and the Add dialog while it is open",mobile-chromium,3325,passed
+routes/_shell.recent.test.ts,"the page title names Recent, and the Add dialog while it is open",desktop-chromium,3272,passed
+routes/_shell.recent.test.ts,"the page title names Recent, and the Add dialog while it is open",mobile-webkit,3229,passed
+routes/_shell.recent.test.ts,"the page title names Recent, and the Add dialog while it is open",desktop-webkit,3639,passed
+routes/_shell.recent.test.ts,"the page title names the account dialog while it is open",mobile-chromium,1574,passed
+routes/_shell.recent.test.ts,"the page title names the account dialog while it is open",desktop-chromium,1688,passed
+routes/_shell.recent.test.ts,"the page title names the account dialog while it is open",mobile-webkit,2095,passed
+routes/_shell.recent.test.ts,"the page title names the account dialog while it is open",desktop-webkit,2568,passed
+routes/_shell.recent.test.ts,"the page title names Recent while its tracks load",mobile-chromium,2233,passed
+routes/_shell.recent.test.ts,"the page title names Recent while its tracks load",desktop-chromium,2421,passed
+routes/_shell.recent.test.ts,"the page title names Recent while its tracks load",mobile-webkit,2561,passed
+routes/_shell.recent.test.ts,"the page title names Recent while its tracks load",desktop-webkit,2689,passed
+routes/account-recovery.test.ts,"renders signed-out",mobile-chromium,1367,passed
+routes/account-recovery.test.ts,"renders signed-out",desktop-chromium,1512,passed
+routes/account-recovery.test.ts,"renders signed-out",mobile-webkit,1305,passed
+routes/account-recovery.test.ts,"renders signed-out",desktop-webkit,1589,passed
+routes/account-recovery.test.ts,"renders deletion-scheduled",mobile-chromium,1465,passed
+routes/account-recovery.test.ts,"renders deletion-scheduled",desktop-chromium,1368,passed
+routes/account-recovery.test.ts,"renders deletion-scheduled",mobile-webkit,1426,passed
+routes/account-recovery.test.ts,"renders deletion-scheduled",desktop-webkit,1568,passed
+routes/account-recovery.test.ts,"renders confirm-recovery",mobile-chromium,1807,passed
+routes/account-recovery.test.ts,"renders confirm-recovery",desktop-chromium,1486,passed
+routes/account-recovery.test.ts,"renders confirm-recovery",mobile-webkit,1498,passed
+routes/account-recovery.test.ts,"renders confirm-recovery",desktop-webkit,1612,passed
+routes/account-recovery.test.ts,"the page shows no account chrome",mobile-chromium,1725,passed
+routes/account-recovery.test.ts,"the page shows no account chrome",desktop-chromium,1548,passed
+routes/account-recovery.test.ts,"the page shows no account chrome",mobile-webkit,1557,passed
+routes/account-recovery.test.ts,"the page shows no account chrome",desktop-webkit,1711,passed
+routes/account-recovery.test.ts,"an active account has nothing to restore and is sent to Recents",mobile-chromium,1831,passed
+routes/account-recovery.test.ts,"an active account has nothing to restore and is sent to Recents",desktop-chromium,1939,passed
+routes/account-recovery.test.ts,"an active account has nothing to restore and is sent to Recents",mobile-webkit,1687,passed
+routes/account-recovery.test.ts,"an active account has nothing to restore and is sent to Recents",desktop-webkit,1758,passed
+routes/account-recovery.test.ts,"a deletion left unconfirmed in the account dialog is not offered for confirmation",mobile-chromium,1621,passed
+routes/account-recovery.test.ts,"a deletion left unconfirmed in the account dialog is not offered for confirmation",desktop-chromium,1777,passed
+routes/account-recovery.test.ts,"a deletion left unconfirmed in the account dialog is not offered for confirmation",mobile-webkit,1573,passed
+routes/account-recovery.test.ts,"a deletion left unconfirmed in the account dialog is not offered for confirmation",desktop-webkit,1645,passed
+routes/account-recovery.test.ts,"the account still loading shows the page skeleton, marked as a loading state",mobile-chromium,2323,passed
+routes/account-recovery.test.ts,"the account still loading shows the page skeleton, marked as a loading state",desktop-chromium,2327,passed
+routes/account-recovery.test.ts,"the account still loading shows the page skeleton, marked as a loading state",mobile-webkit,2363,passed
+routes/account-recovery.test.ts,"the account still loading shows the page skeleton, marked as a loading state",desktop-webkit,2446,passed
+routes/account-recovery.test.ts,"the page title of SignedOut names account recovery",mobile-chromium,1675,passed
+routes/account-recovery.test.ts,"the page title of SignedOut names account recovery",desktop-chromium,1675,passed
+routes/account-recovery.test.ts,"the page title of SignedOut names account recovery",mobile-webkit,1493,passed
+routes/account-recovery.test.ts,"the page title of SignedOut names account recovery",desktop-webkit,1463,passed
+routes/account-recovery.test.ts,"the page title of DeletionScheduled names account recovery",mobile-chromium,1727,passed
+routes/account-recovery.test.ts,"the page title of DeletionScheduled names account recovery",desktop-chromium,1579,passed
+routes/account-recovery.test.ts,"the page title of DeletionScheduled names account recovery",mobile-webkit,1399,passed
+routes/account-recovery.test.ts,"the page title of DeletionScheduled names account recovery",desktop-webkit,1427,passed
+routes/account-recovery.test.ts,"the page title of LoadingAccount names account recovery",mobile-chromium,2368,passed
+routes/account-recovery.test.ts,"the page title of LoadingAccount names account recovery",desktop-chromium,2353,passed
+routes/account-recovery.test.ts,"the page title of LoadingAccount names account recovery",mobile-webkit,2014,passed
+routes/account-recovery.test.ts,"the page title of LoadingAccount names account recovery",desktop-webkit,2069,passed
+routes/index.test.ts,"renders landing",mobile-chromium,1685,passed
+routes/index.test.ts,"renders landing",desktop-chromium,1758,passed
+routes/index.test.ts,"renders landing",mobile-webkit,1586,passed
+routes/index.test.ts,"renders landing",desktop-webkit,1737,passed
+routes/index.test.ts,"a signed-in listener whose start is pending on home sees no sign-in line",mobile-chromium,1547,passed
+routes/index.test.ts,"a signed-in listener whose start is pending on home sees no sign-in line",desktop-chromium,1679,passed
+routes/index.test.ts,"a signed-in listener whose start is pending on home sees no sign-in line",mobile-webkit,1656,passed
+routes/index.test.ts,"a signed-in listener whose start is pending on home sees no sign-in line",desktop-webkit,1655,passed
+routes/index.test.ts,"the sign-in line unmounts while a sign-in initializes auth again",mobile-chromium,1963,passed
+routes/index.test.ts,"the sign-in line unmounts while a sign-in initializes auth again",desktop-chromium,1774,passed
+routes/index.test.ts,"the sign-in line unmounts while a sign-in initializes auth again",mobile-webkit,1747,passed
+routes/index.test.ts,"the sign-in line unmounts while a sign-in initializes auth again",desktop-webkit,1780,passed
+routes/index.test.ts,"renders landing when served from the iOS app's capacitor:// origin",mobile-chromium,1791,passed
+routes/index.test.ts,"renders landing when served from the iOS app's capacitor:// origin",desktop-chromium,1808,passed
+routes/index.test.ts,"renders landing when served from the iOS app's capacitor:// origin",mobile-webkit,1618,passed
+routes/index.test.ts,"renders landing when served from the iOS app's capacitor:// origin",desktop-webkit,1640,passed
+routes/index.test.ts,"the focused URL input shows only its wavy rule, without a focus ring",mobile-chromium,2080,passed
+routes/index.test.ts,"the focused URL input shows only its wavy rule, without a focus ring",desktop-chromium,1979,passed
+routes/index.test.ts,"the focused URL input shows only its wavy rule, without a focus ring",mobile-webkit,1756,passed
+routes/index.test.ts,"the focused URL input shows only its wavy rule, without a focus ring",desktop-webkit,1997,passed
+routes/index.test.ts,"renders sign-in dialog",mobile-chromium,2120,passed
+routes/index.test.ts,"renders sign-in dialog",desktop-chromium,2169,passed
+routes/index.test.ts,"renders sign-in dialog",mobile-webkit,2106,passed
+routes/index.test.ts,"renders sign-in dialog",desktop-webkit,2198,passed
+routes/index.test.ts,"offers only the sign-in methods the auth configuration advertises",mobile-chromium,1982,passed
+routes/index.test.ts,"offers only the sign-in methods the auth configuration advertises",desktop-chromium,2085,passed
+routes/index.test.ts,"offers only the sign-in methods the auth configuration advertises",mobile-webkit,1944,passed
+routes/index.test.ts,"offers only the sign-in methods the auth configuration advertises",desktop-webkit,2068,passed
+routes/index.test.ts,"anonymous submission asks for sign-in and cancellation preserves the URL",mobile-chromium,3294,passed
+routes/index.test.ts,"anonymous submission asks for sign-in and cancellation preserves the URL",desktop-chromium,3223,passed
+routes/index.test.ts,"anonymous submission asks for sign-in and cancellation preserves the URL",mobile-webkit,3701,passed
+routes/index.test.ts,"anonymous submission asks for sign-in and cancellation preserves the URL",desktop-webkit,3562,passed
+routes/index.test.ts,"invalid account URL shows a field error and becomes submittable after correction",mobile-chromium,2066,passed
+routes/index.test.ts,"invalid account URL shows a field error and becomes submittable after correction",desktop-chromium,1960,passed
+routes/index.test.ts,"invalid account URL shows a field error and becomes submittable after correction",mobile-webkit,2127,passed
+routes/index.test.ts,"invalid account URL shows a field error and becomes submittable after correction",desktop-webkit,2117,passed
+routes/index.test.ts,"the sign-in link opens the dialog with the returning listener's copy",mobile-chromium,1960,passed
+routes/index.test.ts,"the sign-in link opens the dialog with the returning listener's copy",desktop-chromium,1922,passed
+routes/index.test.ts,"the sign-in link opens the dialog with the returning listener's copy",mobile-webkit,2112,passed
+routes/index.test.ts,"the sign-in link opens the dialog with the returning listener's copy",desktop-webkit,2092,passed
+routes/index.test.ts,"a submission's dialog keeps the new account copy",mobile-chromium,1976,passed
+routes/index.test.ts,"a submission's dialog keeps the new account copy",desktop-chromium,2045,passed
+routes/index.test.ts,"a submission's dialog keeps the new account copy",mobile-webkit,2238,passed
+routes/index.test.ts,"a submission's dialog keeps the new account copy",desktop-webkit,2108,passed
+routes/index.test.ts,"Cancel and Escape on the link's dialog return to the link and keep the typed URL",mobile-chromium,2001,passed
+routes/index.test.ts,"Cancel and Escape on the link's dialog return to the link and keep the typed URL",desktop-chromium,2097,passed
+routes/index.test.ts,"Cancel and Escape on the link's dialog return to the link and keep the typed URL",mobile-webkit,2037,passed
+routes/index.test.ts,"Cancel and Escape on the link's dialog return to the link and keep the typed URL",desktop-webkit,2171,passed
+routes/index.test.ts,"reopening the dialog from the link drops a previous sign-in error",mobile-chromium,2006,passed
+routes/index.test.ts,"reopening the dialog from the link drops a previous sign-in error",desktop-chromium,1995,passed
+routes/index.test.ts,"reopening the dialog from the link drops a previous sign-in error",mobile-webkit,2108,passed
+routes/index.test.ts,"reopening the dialog from the link drops a previous sign-in error",desktop-webkit,2154,passed
+routes/index.test.ts,"the link's dialog offers only the sign-in methods the auth configuration advertises",mobile-chromium,1996,passed
+routes/index.test.ts,"the link's dialog offers only the sign-in methods the auth configuration advertises",desktop-chromium,1928,passed
+routes/index.test.ts,"the link's dialog offers only the sign-in methods the auth configuration advertises",mobile-webkit,1757,passed
+routes/index.test.ts,"the link's dialog offers only the sign-in methods the auth configuration advertises",desktop-webkit,1882,passed
+routes/index.test.ts,"a URL shared while signed out fills the start form and asks for sign-in",mobile-chromium,1908,passed
+routes/index.test.ts,"a URL shared while signed out fills the start form and asks for sign-in",desktop-chromium,1854,passed
+routes/index.test.ts,"a URL shared while signed out fills the start form and asks for sign-in",mobile-webkit,1840,passed
+routes/index.test.ts,"a URL shared while signed out fills the start form and asks for sign-in",desktop-webkit,1860,passed
+routes/trials.$grantId.test.ts,"renders an open Trial",mobile-chromium,1900,passed
+routes/trials.$grantId.test.ts,"renders an open Trial",desktop-chromium,1794,passed
+routes/trials.$grantId.test.ts,"renders an open Trial",mobile-webkit,1598,passed
+routes/trials.$grantId.test.ts,"renders an open Trial",desktop-webkit,1817,passed
+routes/trials.$grantId.test.ts,"rejects a malformed Trial credential",mobile-chromium,1730,passed
+routes/trials.$grantId.test.ts,"rejects a malformed Trial credential",desktop-chromium,1589,passed
+routes/trials.$grantId.test.ts,"rejects a malformed Trial credential",mobile-webkit,1651,passed
+routes/trials.$grantId.test.ts,"rejects a malformed Trial credential",desktop-webkit,1722,passed
+routes/trials.$grantId.test.ts,"renders revoked-trial-link",mobile-chromium,1797,passed
+routes/trials.$grantId.test.ts,"renders revoked-trial-link",desktop-chromium,1657,passed
+routes/trials.$grantId.test.ts,"renders revoked-trial-link",mobile-webkit,1591,passed
+routes/trials.$grantId.test.ts,"renders revoked-trial-link",desktop-webkit,1774,passed
+routes/trials.$grantId.test.ts,"renders credential-exchange-error",mobile-chromium,1730,passed
+routes/trials.$grantId.test.ts,"renders credential-exchange-error",desktop-chromium,1889,passed
+routes/trials.$grantId.test.ts,"renders credential-exchange-error",mobile-webkit,1649,passed
+routes/trials.$grantId.test.ts,"renders credential-exchange-error",desktop-webkit,1699,passed
+routes/trials.$grantId.test.ts,"renders grant-load-error",mobile-chromium,1804,passed
+routes/trials.$grantId.test.ts,"renders grant-load-error",desktop-chromium,1706,passed
+routes/trials.$grantId.test.ts,"renders grant-load-error",mobile-webkit,1547,passed
+routes/trials.$grantId.test.ts,"renders grant-load-error",desktop-webkit,1712,passed
+routes/trials.$grantId.test.ts,"renders grant-session-invalid",mobile-chromium,1675,passed
+routes/trials.$grantId.test.ts,"renders grant-session-invalid",desktop-chromium,1679,passed
+routes/trials.$grantId.test.ts,"renders grant-session-invalid",mobile-webkit,1672,passed
+routes/trials.$grantId.test.ts,"renders grant-session-invalid",desktop-webkit,1750,passed
+routes/trials.$grantId.test.ts,"explains a missing grant session as lost access",mobile-chromium,1699,passed
+routes/trials.$grantId.test.ts,"explains a missing grant session as lost access",desktop-chromium,1759,passed
+routes/trials.$grantId.test.ts,"explains a missing grant session as lost access",mobile-webkit,1560,passed
+routes/trials.$grantId.test.ts,"explains a missing grant session as lost access",desktop-webkit,1735,passed
+routes/trials.$grantId.test.ts,"renders an invalid source URL",mobile-chromium,1990,passed
+routes/trials.$grantId.test.ts,"renders an invalid source URL",desktop-chromium,1999,passed
+routes/trials.$grantId.test.ts,"renders an invalid source URL",mobile-webkit,1892,passed
+routes/trials.$grantId.test.ts,"renders an invalid source URL",desktop-webkit,1967,passed
+routes/trials.$grantId.test.ts,"renders a pending conversion start",mobile-chromium,2061,passed
+routes/trials.$grantId.test.ts,"renders a pending conversion start",desktop-chromium,1801,passed
+routes/trials.$grantId.test.ts,"renders a pending conversion start",mobile-webkit,1858,passed
+routes/trials.$grantId.test.ts,"renders a pending conversion start",desktop-webkit,1975,passed
+routes/trials.$grantId.test.ts,"starting a conversion requests the grant again, for its duration and conversions",mobile-chromium,1976,passed
+routes/trials.$grantId.test.ts,"starting a conversion requests the grant again, for its duration and conversions",desktop-chromium,1796,passed
+routes/trials.$grantId.test.ts,"starting a conversion requests the grant again, for its duration and conversions",mobile-webkit,1856,passed
+routes/trials.$grantId.test.ts,"starting a conversion requests the grant again, for its duration and conversions",desktop-webkit,1971,passed
+routes/trials.$grantId.test.ts,"retrying a trial submission reuses its key and sends only the source URL",mobile-chromium,1798,passed
+routes/trials.$grantId.test.ts,"retrying a trial submission reuses its key and sends only the source URL",desktop-chromium,1853,passed
+routes/trials.$grantId.test.ts,"retrying a trial submission reuses its key and sends only the source URL",mobile-webkit,1891,passed
+routes/trials.$grantId.test.ts,"retrying a trial submission reuses its key and sends only the source URL",desktop-webkit,1968,passed
+routes/trials.$grantId.test.ts,"the page title of OpenGrant names the free trial",mobile-chromium,1863,passed
+routes/trials.$grantId.test.ts,"the page title of OpenGrant names the free trial",desktop-chromium,1940,passed
+routes/trials.$grantId.test.ts,"the page title of OpenGrant names the free trial",mobile-webkit,1587,passed
+routes/trials.$grantId.test.ts,"the page title of OpenGrant names the free trial",desktop-webkit,1756,passed
+routes/trials.$grantId.test.ts,"the page title of MalformedCredential names the free trial",mobile-chromium,1654,passed
+routes/trials.$grantId.test.ts,"the page title of MalformedCredential names the free trial",desktop-chromium,1566,passed
+routes/trials.$grantId.test.ts,"the page title of MalformedCredential names the free trial",mobile-webkit,1378,passed
+routes/trials.$grantId.test.ts,"the page title of MalformedCredential names the free trial",desktop-webkit,1188,passed
+routes/trials.$grantId.test.ts,"the page title of GrantLoadError names the free trial",mobile-chromium,1757,passed
+routes/trials.$grantId.test.ts,"the page title of GrantLoadError names the free trial",desktop-chromium,1529,passed
+routes/trials.$grantId.test.ts,"the page title of GrantLoadError names the free trial",mobile-webkit,1480,passed
+routes/trials.$grantId.test.ts,"the page title of GrantLoadError names the free trial",desktop-webkit,1184,passed

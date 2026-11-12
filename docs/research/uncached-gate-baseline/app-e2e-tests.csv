@@ -1,0 +1,181 @@
+file,title,project,duration_ms,status
+accounts.test.ts,"Google PKCE signup resumes conversion, protects Recents and media, and supports deletion recovery",mobile-chromium,8967,passed
+accounts.test.ts,"Google PKCE signup resumes conversion, protects Recents and media, and supports deletion recovery",desktop-chromium,8814,passed
+accounts.test.ts,"Google PKCE signup resumes conversion, protects Recents and media, and supports deletion recovery",mobile-webkit,8685,passed
+accounts.test.ts,"Google PKCE signup resumes conversion, protects Recents and media, and supports deletion recovery",desktop-webkit,8626,passed
+accounts.test.ts,"signup keeps trial conversions separate from the new account and its Recents",mobile-chromium,5132,passed
+accounts.test.ts,"signup keeps trial conversions separate from the new account and its Recents",desktop-chromium,4890,passed
+accounts.test.ts,"signup keeps trial conversions separate from the new account and its Recents",mobile-webkit,5124,passed
+accounts.test.ts,"signup keeps trial conversions separate from the new account and its Recents",desktop-webkit,5126,passed
+accounts.test.ts,"signed-in accounts skip trial credentials and signed-out users can reopen trial links",mobile-chromium,4019,passed
+accounts.test.ts,"signed-in accounts skip trial credentials and signed-out users can reopen trial links",desktop-chromium,3906,passed
+accounts.test.ts,"signed-in accounts skip trial credentials and signed-out users can reopen trial links",mobile-webkit,4204,passed
+accounts.test.ts,"signed-in accounts skip trial credentials and signed-out users can reopen trial links",desktop-webkit,4172,passed
+accounts.test.ts,"trial OAuth callback redirect does not depend on working authentication",mobile-chromium,1573,passed
+accounts.test.ts,"trial OAuth callback redirect does not depend on working authentication",desktop-chromium,1512,passed
+accounts.test.ts,"trial OAuth callback redirect does not depend on working authentication",mobile-webkit,1566,passed
+accounts.test.ts,"trial OAuth callback redirect does not depend on working authentication",desktop-webkit,1616,passed
+accounts.test.ts,"root auth handles signup and session restoration without account navigation",mobile-chromium,4224,passed
+accounts.test.ts,"root auth handles signup and session restoration without account navigation",desktop-chromium,4159,passed
+accounts.test.ts,"root auth handles signup and session restoration without account navigation",mobile-webkit,4388,passed
+accounts.test.ts,"root auth handles signup and session restoration without account navigation",desktop-webkit,4365,passed
+accounts.test.ts,"a signed-in session refreshes its expired access token and keeps working, also after a reload",mobile-chromium,20380,passed
+accounts.test.ts,"a signed-in session refreshes its expired access token and keeps working, also after a reload",desktop-chromium,20576,passed
+accounts.test.ts,"a signed-in session refreshes its expired access token and keeps working, also after a reload",mobile-webkit,20524,passed
+accounts.test.ts,"a signed-in session refreshes its expired access token and keeps working, also after a reload",desktop-webkit,20631,passed
+accounts.test.ts,"failed sign-in leaves anonymous trial access available",mobile-chromium,2001,passed
+accounts.test.ts,"failed sign-in leaves anonymous trial access available",desktop-chromium,1933,passed
+accounts.test.ts,"failed sign-in leaves anonymous trial access available",mobile-webkit,2135,passed
+accounts.test.ts,"failed sign-in leaves anonymous trial access available",desktop-webkit,2019,passed
+accounts.test.ts,"a listener deletes a track from its detail view, and the duration it used stays spent",mobile-chromium,2713,passed
+accounts.test.ts,"a listener deletes a track from its detail view, and the duration it used stays spent",desktop-chromium,2637,passed
+accounts.test.ts,"a listener deletes a track from its detail view, and the duration it used stays spent",mobile-webkit,3062,passed
+accounts.test.ts,"a listener deletes a track from its detail view, and the duration it used stays spent",desktop-webkit,2990,passed
+accounts.test.ts,"a rate-limited resumed conversion waits for explicit retry and keeps its idempotency key",mobile-chromium,1905,passed
+accounts.test.ts,"a rate-limited resumed conversion waits for explicit retry and keeps its idempotency key",desktop-chromium,1938,passed
+accounts.test.ts,"a rate-limited resumed conversion waits for explicit retry and keeps its idempotency key",mobile-webkit,2055,passed
+accounts.test.ts,"a rate-limited resumed conversion waits for explicit retry and keeps its idempotency key",desktop-webkit,2031,passed
+accounts.test.ts,"account positions restore once and use last-write-wins across players",mobile-chromium,2623,passed
+accounts.test.ts,"account positions restore once and use last-write-wins across players",desktop-chromium,2647,passed
+accounts.test.ts,"account positions restore once and use last-write-wins across players",mobile-webkit,2811,passed
+accounts.test.ts,"account positions restore once and use last-write-wins across players",desktop-webkit,2855,passed
+conversion.test.ts,"generates audio for the whole document, then plays its narration track",mobile-chromium,7800,passed
+conversion.test.ts,"generates audio for the whole document, then plays its narration track",desktop-chromium,7919,passed
+conversion.test.ts,"generates audio for the whole document, then plays its narration track",mobile-webkit,8004,passed
+conversion.test.ts,"generates audio for the whole document, then plays its narration track",desktop-webkit,8151,passed
+conversion.test.ts,"trial article links require the owning grant session for reading, and media its signed URL",mobile-chromium,2364,passed
+conversion.test.ts,"trial article links require the owning grant session for reading, and media its signed URL",desktop-chromium,2267,passed
+conversion.test.ts,"trial article links require the owning grant session for reading, and media its signed URL",mobile-webkit,2449,passed
+conversion.test.ts,"trial article links require the owning grant session for reading, and media its signed URL",desktop-webkit,2577,passed
+conversion.test.ts,"keeps prepared text after synthesis failure and retries the failed segments",mobile-chromium,18505,passed
+conversion.test.ts,"keeps prepared text after synthesis failure and retries the failed segments",desktop-chromium,18539,passed
+conversion.test.ts,"keeps prepared text after synthesis failure and retries the failed segments",mobile-webkit,18632,passed
+conversion.test.ts,"keeps prepared text after synthesis failure and retries the failed segments",desktop-webkit,18862,passed
+conversion.test.ts,"retries preparation on the same article and then generates its audio",mobile-chromium,4608,passed
+conversion.test.ts,"retries preparation on the same article and then generates its audio",desktop-chromium,4536,passed
+conversion.test.ts,"retries preparation on the same article and then generates its audio",mobile-webkit,4812,passed
+conversion.test.ts,"retries preparation on the same article and then generates its audio",desktop-webkit,4874,passed
+duration-allowance.test.ts,"charges every segment by encoded duration and reuses audio across reloads and retries",mobile-chromium,1927,passed
+duration-allowance.test.ts,"charges every segment by encoded duration and reuses audio across reloads and retries",desktop-chromium,1870,passed
+duration-allowance.test.ts,"charges every segment by encoded duration and reuses audio across reloads and retries",mobile-webkit,2007,passed
+duration-allowance.test.ts,"charges every segment by encoded duration and reuses audio across reloads and retries",desktop-webkit,2014,passed
+duration-allowance.test.ts,"a document exceeding the allowance stays readable, reserves nothing, and can be retried",mobile-chromium,1699,passed
+duration-allowance.test.ts,"a document exceeding the allowance stays readable, reserves nothing, and can be retried",desktop-chromium,1769,passed
+duration-allowance.test.ts,"a document exceeding the allowance stays readable, reserves nothing, and can be retried",mobile-webkit,1873,passed
+duration-allowance.test.ts,"a document exceeding the allowance stays readable, reserves nothing, and can be retried",desktop-webkit,2015,passed
+duration-allowance.test.ts,"reserves the whole document while every segment is generated at once",mobile-chromium,2682,passed
+duration-allowance.test.ts,"reserves the whole document while every segment is generated at once",desktop-chromium,2453,passed
+duration-allowance.test.ts,"reserves the whole document while every segment is generated at once",mobile-webkit,2812,passed
+duration-allowance.test.ts,"reserves the whole document while every segment is generated at once",desktop-webkit,2814,passed
+duration-allowance.test.ts,"a second conversion reserves nothing while the first holds the allowance, and overruns are capped",mobile-chromium,1723,passed
+duration-allowance.test.ts,"a second conversion reserves nothing while the first holds the allowance, and overruns are capped",desktop-chromium,1670,passed
+duration-allowance.test.ts,"a second conversion reserves nothing while the first holds the allowance, and overruns are capped",mobile-webkit,1847,passed
+duration-allowance.test.ts,"a second conversion reserves nothing while the first holds the allowance, and overruns are capped",desktop-webkit,1846,passed
+navigation.test.ts,"Recents and a track opened again show their cached content while each is requested again",mobile-chromium,3139,passed
+navigation.test.ts,"Recents and a track opened again show their cached content while each is requested again",desktop-chromium,3018,passed
+navigation.test.ts,"Recents and a track opened again show their cached content while each is requested again",mobile-webkit,3259,passed
+navigation.test.ts,"Recents and a track opened again show their cached content while each is requested again",desktop-webkit,3383,passed
+routing.test.ts,"carries trial credentials across the redirect from https://cup-audio.com and redeems them",mobile-chromium,2046,passed
+routing.test.ts,"carries trial credentials across the redirect from https://cup-audio.com and redeems them",desktop-chromium,1978,passed
+routing.test.ts,"carries trial credentials across the redirect from https://cup-audio.com and redeems them",mobile-webkit,1176,skipped
+routing.test.ts,"carries trial credentials across the redirect from https://cup-audio.com and redeems them",desktop-webkit,1166,skipped
+routing.test.ts,"carries trial credentials across the redirect from https://create-audiobook-from-url.patricktree.me and redeems them",mobile-chromium,2056,passed
+routing.test.ts,"carries trial credentials across the redirect from https://create-audiobook-from-url.patricktree.me and redeems them",desktop-chromium,2015,passed
+routing.test.ts,"carries trial credentials across the redirect from https://create-audiobook-from-url.patricktree.me and redeems them",mobile-webkit,1155,skipped
+routing.test.ts,"carries trial credentials across the redirect from https://create-audiobook-from-url.patricktree.me and redeems them",desktop-webkit,1203,skipped
+routing.test.ts,"redirects the homepage, app entry, and legacy trial URLs",mobile-chromium,1056,passed
+routing.test.ts,"redirects the homepage, app entry, and legacy trial URLs",desktop-chromium,1080,passed
+routing.test.ts,"redirects the homepage, app entry, and legacy trial URLs",mobile-webkit,1042,passed
+routing.test.ts,"redirects the homepage, app entry, and legacy trial URLs",desktop-webkit,1046,passed
+routing.test.ts,"follows homepage and app entry redirects and loads assets under app",mobile-chromium,1581,passed
+routing.test.ts,"follows homepage and app entry redirects and loads assets under app",desktop-chromium,1546,passed
+routing.test.ts,"follows homepage and app entry redirects and loads assets under app",mobile-webkit,1595,passed
+routing.test.ts,"follows homepage and app entry redirects and loads assets under app",desktop-webkit,1625,passed
+routing.test.ts,"exchanges a legacy trial link's credential after redirect and supports refresh",mobile-chromium,1569,passed
+routing.test.ts,"exchanges a legacy trial link's credential after redirect and supports refresh",desktop-chromium,1560,passed
+routing.test.ts,"exchanges a legacy trial link's credential after redirect and supports refresh",mobile-webkit,1615,passed
+routing.test.ts,"exchanges a legacy trial link's credential after redirect and supports refresh",desktop-webkit,1660,passed
+routing.test.ts,"returns real 404s outside the app and for missing assets",mobile-chromium,1066,passed
+routing.test.ts,"returns real 404s outside the app and for missing assets",desktop-chromium,1074,passed
+routing.test.ts,"returns real 404s outside the app and for missing assets",mobile-webkit,1071,passed
+routing.test.ts,"returns real 404s outside the app and for missing assets",desktop-webkit,1096,passed
+routing.test.ts,"signed out, Recents and its dialogs redirect home, account recovery offers sign-in, and the old History and account pages are gone",mobile-chromium,2289,passed
+routing.test.ts,"signed out, Recents and its dialogs redirect home, account recovery offers sign-in, and the old History and account pages are gone",desktop-chromium,2295,passed
+routing.test.ts,"signed out, Recents and its dialogs redirect home, account recovery offers sign-in, and the old History and account pages are gone",mobile-webkit,2043,passed
+routing.test.ts,"signed out, Recents and its dialogs redirect home, account recovery offers sign-in, and the old History and account pages are gone",desktop-webkit,2125,passed
+routing.test.ts,"a Google sign-in from the home page's sign-in link lands on Recents",mobile-chromium,1755,passed
+routing.test.ts,"a Google sign-in from the home page's sign-in link lands on Recents",desktop-chromium,1700,passed
+routing.test.ts,"a Google sign-in from the home page's sign-in link lands on Recents",mobile-webkit,2047,passed
+routing.test.ts,"a Google sign-in from the home page's sign-in link lands on Recents",desktop-webkit,1883,passed
+routing.test.ts,"after a cancelled submission, a Google sign-in from the sign-in link lands on Recents, not on the submitted URL",mobile-chromium,1797,passed
+routing.test.ts,"after a cancelled submission, a Google sign-in from the sign-in link lands on Recents, not on the submitted URL",desktop-chromium,1798,passed
+routing.test.ts,"after a cancelled submission, a Google sign-in from the sign-in link lands on Recents, not on the submitted URL",mobile-webkit,1966,passed
+routing.test.ts,"after a cancelled submission, a Google sign-in from the sign-in link lands on Recents, not on the submitted URL",desktop-webkit,2037,passed
+routing.test.ts,"signed in, home redirects to Recents, which opens the account dialog and the masked Add dialog",mobile-chromium,4799,passed
+routing.test.ts,"signed in, home redirects to Recents, which opens the account dialog and the masked Add dialog",desktop-chromium,4701,passed
+routing.test.ts,"signed in, home redirects to Recents, which opens the account dialog and the masked Add dialog",mobile-webkit,5084,passed
+routing.test.ts,"signed in, home redirects to Recents, which opens the account dialog and the masked Add dialog",desktop-webkit,5036,passed
+routing.test.ts,"a test-account sign-in from the sign-in link replaces home with Recents without a page load",mobile-chromium,1537,passed
+routing.test.ts,"a test-account sign-in from the sign-in link replaces home with Recents without a page load",desktop-chromium,1544,passed
+routing.test.ts,"a test-account sign-in from the sign-in link replaces home with Recents without a page load",mobile-webkit,1655,passed
+routing.test.ts,"a test-account sign-in from the sign-in link replaces home with Recents without a page load",desktop-webkit,1666,passed
+visual-states.test.ts,"shows the conversion entry page",mobile-chromium,1355,passed
+visual-states.test.ts,"shows the conversion entry page",desktop-chromium,1312,passed
+visual-states.test.ts,"shows the conversion entry page",mobile-webkit,1471,passed
+visual-states.test.ts,"shows the conversion entry page",desktop-webkit,1457,passed
+visual-states.test.ts,"shows the conversion entry page instead of Recents when signed out",mobile-chromium,1375,passed
+visual-states.test.ts,"shows the conversion entry page instead of Recents when signed out",desktop-chromium,1331,passed
+visual-states.test.ts,"shows the conversion entry page instead of Recents when signed out",mobile-webkit,1506,passed
+visual-states.test.ts,"shows the conversion entry page instead of Recents when signed out",desktop-webkit,1602,passed
+visual-states.test.ts,"shows the open trial URL input screen",mobile-chromium,1342,passed
+visual-states.test.ts,"shows the open trial URL input screen",desktop-chromium,1328,passed
+visual-states.test.ts,"shows the open trial URL input screen",mobile-webkit,1542,passed
+visual-states.test.ts,"shows the open trial URL input screen",desktop-webkit,1686,passed
+visual-states.test.ts,"rejects malformed and invalid trial links",mobile-chromium,1682,passed
+visual-states.test.ts,"rejects malformed and invalid trial links",desktop-chromium,1645,passed
+visual-states.test.ts,"rejects malformed and invalid trial links",mobile-webkit,1704,passed
+visual-states.test.ts,"rejects malformed and invalid trial links",desktop-webkit,1734,passed
+visual-states.test.ts,"shows a revoked trial link",mobile-chromium,1339,passed
+visual-states.test.ts,"shows a revoked trial link",desktop-chromium,1320,passed
+visual-states.test.ts,"shows a revoked trial link",mobile-webkit,1446,passed
+visual-states.test.ts,"shows a revoked trial link",desktop-webkit,1445,passed
+visual-states.test.ts,"recovers from an operational credential exchange error",mobile-chromium,1627,passed
+visual-states.test.ts,"recovers from an operational credential exchange error",desktop-chromium,1583,passed
+visual-states.test.ts,"recovers from an operational credential exchange error",mobile-webkit,1660,passed
+visual-states.test.ts,"recovers from an operational credential exchange error",desktop-webkit,1668,passed
+visual-states.test.ts,"retries an initial grant loading failure",mobile-chromium,1633,passed
+visual-states.test.ts,"retries an initial grant loading failure",desktop-chromium,1598,passed
+visual-states.test.ts,"retries an initial grant loading failure",mobile-webkit,1600,passed
+visual-states.test.ts,"retries an initial grant loading failure",desktop-webkit,1619,passed
+visual-states.test.ts,"validates a source URL before starting",mobile-chromium,1435,passed
+visual-states.test.ts,"validates a source URL before starting",desktop-chromium,1411,passed
+visual-states.test.ts,"validates a source URL before starting",mobile-webkit,1548,passed
+visual-states.test.ts,"validates a source URL before starting",desktop-webkit,1573,passed
+visual-states.test.ts,"disables duplicate submission while a conversion start is pending",mobile-chromium,1449,passed
+visual-states.test.ts,"disables duplicate submission while a conversion start is pending",desktop-chromium,1395,passed
+visual-states.test.ts,"disables duplicate submission while a conversion start is pending",mobile-webkit,1534,passed
+visual-states.test.ts,"disables duplicate submission while a conversion start is pending",desktop-webkit,1618,passed
+visual-states.test.ts,"shows a deterministic pending conversion",mobile-chromium,1356,passed
+visual-states.test.ts,"shows a deterministic pending conversion",desktop-chromium,1295,passed
+visual-states.test.ts,"shows a deterministic pending conversion",mobile-webkit,1447,passed
+visual-states.test.ts,"shows a deterministic pending conversion",desktop-webkit,1463,passed
+visual-states.test.ts,"shows a deterministic failed conversion",mobile-chromium,1349,passed
+visual-states.test.ts,"shows a deterministic failed conversion",desktop-chromium,1296,passed
+visual-states.test.ts,"shows a deterministic failed conversion",mobile-webkit,1464,passed
+visual-states.test.ts,"shows a deterministic failed conversion",desktop-webkit,1465,passed
+visual-states.test.ts,"retries a conversion loading failure",mobile-chromium,2178,passed
+visual-states.test.ts,"retries a conversion loading failure",desktop-chromium,2148,passed
+visual-states.test.ts,"retries a conversion loading failure",mobile-webkit,1790,passed
+visual-states.test.ts,"retries a conversion loading failure",desktop-webkit,1836,passed
+visual-states.test.ts,"shows a ready article with its player",mobile-chromium,1322,passed
+visual-states.test.ts,"shows a ready article with its player",desktop-chromium,1311,passed
+visual-states.test.ts,"shows a ready article with its player",mobile-webkit,1440,passed
+visual-states.test.ts,"shows a ready article with its player",desktop-webkit,1481,passed
+visual-states.test.ts,"shows a track not-found state",mobile-chromium,1333,passed
+visual-states.test.ts,"shows a track not-found state",desktop-chromium,1315,passed
+visual-states.test.ts,"shows a track not-found state",mobile-webkit,1432,passed
+visual-states.test.ts,"shows a track not-found state",desktop-webkit,1476,passed
+visual-states.test.ts,"retries an audiobook loading failure",mobile-chromium,1737,passed
+visual-states.test.ts,"retries an audiobook loading failure",desktop-chromium,1679,passed
+visual-states.test.ts,"retries an audiobook loading failure",mobile-webkit,1795,passed
+visual-states.test.ts,"retries an audiobook loading failure",desktop-webkit,1806,passed

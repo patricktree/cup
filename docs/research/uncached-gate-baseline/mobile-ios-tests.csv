@@ -1,0 +1,23 @@
+file,title,duration_ms,status
+launch.test.ts,"launches to the landing page, loaded from the test Worker",7019.32699999999,passed
+native-networking.test.ts,"a conversion started from the Add dialog reaches the Worker through native networking",11380.110167000035,passed
+sign-in.test.ts,"signs in with Google and sees Recents loaded from the test Worker",10284.149749999997,passed
+sign-in.test.ts,"signs in from the home page's sign-in link and lands on Recents loaded from the test Worker",8861.774542,passed
+sign-in.test.ts,"stays signed in after Cup is stopped and relaunched",14303.62945800001,passed
+sign-in.test.ts,"refreshes the session when Cup comes back from the background after its access token expired",16820.24883299999,passed
+sign-in.test.ts,"stays signed out after signing out and relaunching",17145.646792000014,passed
+ios/safe-area.test.ts,"the audiobook page's Back link stays below the status bar",10530.209208000015,passed
+ios/safe-area.test.ts,"a backdrop covers the status bar on Recents",9504.202042000019,passed
+ios/share-sheet.test.ts,"a share from Safari starts Cup, fills the landing page's start form and asks to sign in",18678.297582999978,passed
+ios/share-sheet.test.ts,"a share from Safari fills the start form of a running Cup and asks to sign in",13686.829874999996,passed
+ios/share-sheet.test.ts,"cancelling the share leaves Safari in front and Cup closed",11896.81812499999,passed
+ios/share.test.ts,"a share fills the landing page's start form and asks to sign in",11053.40675,passed
+ios/share.test.ts,"a share that starts Cup fills the landing page's start form and asks to sign in",9220.59925,passed
+ios/share.test.ts,"a second share replaces the first one's URL",7810.4750829999975,passed
+ios/share.test.ts,"a shared cup.audio link is ignored",10102.643499999998,passed
+ios/share.test.ts,"a shared cup.audio link that starts Cup is ignored",9690.232750000003,passed
+ios/share.test.ts,"a share link with 'no url' is ignored",9974.290083,passed
+ios/share.test.ts,"a share link with 'a url that is no URL' is ignored",10083.534791999991,passed
+ios/share.test.ts,"a share link with 'a url that is not HTTP(S)' is ignored",10318.741125,passed
+ios/share.test.ts,"a signed-in share while Cup is running starts its conversion",12538.462,passed
+ios/share.test.ts,"a signed-in share that starts Cup starts its conversion",14818.633667000002,passed
