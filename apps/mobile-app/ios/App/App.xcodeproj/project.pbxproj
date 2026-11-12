@@ -5,51 +5,64 @@
 	};
 	objectVersion = 60;
 	objects = {
-		C0A000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ShareViewController.m; sourceTree = "<group>"; };
-		C0A000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		C0A000000000000000000003 = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CupShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		C0A000000000000000000004 = {isa = PBXBuildFile; fileRef = C0A000000000000000000001; };
-		C0A000000000000000000005 = {isa = PBXBuildFile; fileRef = C0A000000000000000000003; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		C0A000000000000000000006 = {isa = PBXGroup; children = (C0A000000000000000000001, C0A000000000000000000002, ); path = CupShare; sourceTree = "<group>"; };
-		C0A000000000000000000007 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (C0A000000000000000000004, ); runOnlyForDeploymentPostprocessing = 0; };
-		C0A000000000000000000008 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		C0A000000000000000000009 = {isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = ""; dstSubfolderSpec = 13; files = (C0A000000000000000000005, ); name = "Embed App Extensions"; runOnlyForDeploymentPostprocessing = 0; };
-		C0A000000000000000000010 = {isa = PBXNativeTarget; buildConfigurationList = C0A000000000000000000013; buildPhases = (C0A000000000000000000007, C0A000000000000000000008, ); buildRules = (); dependencies = (); name = CupShare; productName = CupShare; productReference = C0A000000000000000000003; productType = "com.apple.product-type.app-extension"; };
-		C0A000000000000000000011 = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; MARKETING_VERSION = 1.0; INFOPLIST_FILE = CupShare/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 15.0; PRODUCT_BUNDLE_IDENTIFIER = audio.cup.app.share; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
-		C0A000000000000000000012 = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; MARKETING_VERSION = 1.0; INFOPLIST_FILE = CupShare/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 15.0; PRODUCT_BUNDLE_IDENTIFIER = audio.cup.app.share; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
-		C0A000000000000000000013 = {isa = XCConfigurationList; buildConfigurations = (C0A000000000000000000011, C0A000000000000000000012, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		C0A000000000000000000014 = {isa = PBXContainerItemProxy; containerPortal = 504EC2FC1FED79650016851F; proxyType = 1; remoteGlobalIDString = C0A000000000000000000010; remoteInfo = CupShare; };
-		C0A000000000000000000015 = {isa = PBXTargetDependency; target = C0A000000000000000000010; targetProxy = C0A000000000000000000014; };
-
 
 /* Begin PBXBuildFile section */
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
-		C0B000000000000000000002 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0B000000000000000000001 /* MainViewController.swift */; };
-		C0B000000000000000000004 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0B000000000000000000003 /* SceneDelegate.swift */; };
-		C0B000000000000000000006 /* WebAuthenticationPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0B000000000000000000005 /* WebAuthenticationPlugin.swift */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
+		C0A000000000000000000004 /* ShareViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = C0A000000000000000000001 /* ShareViewController.m */; };
+		C0A000000000000000000005 /* CupShare.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = C0A000000000000000000003 /* CupShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C0B000000000000000000002 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0B000000000000000000001 /* MainViewController.swift */; };
+		C0B000000000000000000004 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0B000000000000000000003 /* SceneDelegate.swift */; };
+		C0B000000000000000000006 /* WebAuthenticationPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0B000000000000000000005 /* WebAuthenticationPlugin.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C0A000000000000000000014 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C0A000000000000000000010;
+			remoteInfo = CupShare;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C0A000000000000000000009 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C0A000000000000000000005 /* CupShare.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		C0B000000000000000000001 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
-		C0B000000000000000000003 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
-		C0B000000000000000000005 /* WebAuthenticationPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebAuthenticationPlugin.swift; sourceTree = "<group>"; };
 		504EC30C1FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		504EC30E1FED79650016851F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		504EC3111FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		C0A000000000000000000001 /* ShareViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ShareViewController.m; sourceTree = "<group>"; };
+		C0A000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		C0A000000000000000000003 /* CupShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CupShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0B000000000000000000001 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
+		C0B000000000000000000003 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		C0B000000000000000000005 /* WebAuthenticationPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebAuthenticationPlugin.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,6 +71,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0A000000000000000000008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -101,6 +121,15 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		C0A000000000000000000006 /* CupShare */ = {
+			isa = PBXGroup;
+			children = (
+				C0A000000000000000000001 /* ShareViewController.m */,
+				C0A000000000000000000002 /* Info.plist */,
+			);
+			path = CupShare;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -116,7 +145,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				C0A000000000000000000015,
+				C0A000000000000000000015 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -125,6 +154,22 @@
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
+		};
+		C0A000000000000000000010 /* CupShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0A000000000000000000013 /* Build configuration list for PBXNativeTarget "CupShare" */;
+			buildPhases = (
+				C0A000000000000000000007 /* Sources */,
+				C0A000000000000000000008 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CupShare;
+			productName = CupShare;
+			productReference = C0A000000000000000000003 /* CupShare.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -158,7 +203,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				C0A000000000000000000010,
+				C0A000000000000000000010 /* CupShare */,
 				504EC3031FED79650016851F /* App */,
 			);
 		};
@@ -192,7 +237,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C0A000000000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0A000000000000000000004 /* ShareViewController.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		C0A000000000000000000015 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C0A000000000000000000010 /* CupShare */;
+			targetProxy = C0A000000000000000000014 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		504EC30B1FED79650016851F /* Main.storyboard */ = {
@@ -330,6 +391,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4GQ2V3WJW8;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -352,6 +414,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4GQ2V3WJW8;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -363,6 +426,40 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		C0A000000000000000000011 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4GQ2V3WJW8;
+				INFOPLIST_FILE = CupShare/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = audio.cup.app.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C0A000000000000000000012 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4GQ2V3WJW8;
+				INFOPLIST_FILE = CupShare/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = audio.cup.app.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -384,6 +481,15 @@
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,
 				504EC3181FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C0A000000000000000000013 /* Build configuration list for PBXNativeTarget "CupShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0A000000000000000000011 /* Debug */,
+				C0A000000000000000000012 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
