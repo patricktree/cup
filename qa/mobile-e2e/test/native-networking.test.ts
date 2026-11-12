@@ -20,6 +20,15 @@ test("a conversion started from the Add dialog reaches the Worker through native
   const requestCount = app.worker.requests().length;
   await webView.$('nav[aria-label="Tabs"]').$("a*=Add").click();
   const addDialog = webView.$('[role="dialog"]');
+  // The sheet slides in, and WebKit refuses to type into its URL field until it is in place.
+  await webView.waitUntil(
+    () =>
+      webView.execute(() => {
+        const dialog = document.querySelector('[role="dialog"]');
+        return dialog !== null && dialog.getAnimations({ subtree: true }).length === 0;
+      }),
+    { timeout: 10_000, timeoutMsg: "The Add sheet did not finish sliding in." },
+  );
   await addDialog.$('input[type="url"]').setValue(SOURCE_URL);
   await addDialog.$("button=Add").click();
   await addDialog.waitForExist({ reverse: true, timeout: 60_000 });
