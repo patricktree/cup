@@ -78,10 +78,14 @@ export default defineConfig({
     {
       // Each run starts its own gallery on a port the operating system assigns, so concurrent runs and
       // gallery servers from other checkouts cannot collide with or stand in for this one.
-      command: "pnpm run dev:gallery --port 0",
+      // The tests load a build of the gallery rather than the development server, which transforms
+      // modules on request and can push hot updates into a running test (web app README, "Runtime").
+      command: "pnpm run build:gallery && pnpm run preview:gallery --port 0",
+      // React's development build keeps the warnings that tests record (`src/test-utils/react-use-warnings.ts`).
+      env: { NODE_ENV: "development" },
       // Playwright exports the named capture group to the environment that workers read above.
       wait: { stdout: /Local:\s+http:\/\/127\.0\.0\.1:(?<CUP_UI_GALLERY_PORT>\d+)\// },
-      timeout: 30_000,
+      timeout: 60_000,
     },
   ],
 });

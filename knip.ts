@@ -33,7 +33,6 @@ const config: KnipConfig = {
     "apps/web-app": {
       /* Playwright and Vite load these component-testing modules indirectly. */
       entry: [
-        "ui-gallery/main.tsx",
         "src/**/*.story.tsx",
         /* fidelity-check/cli.ts starts Playwright with this config, which runs run.ts. */
         "playwright.fidelity-check.config.ts",
