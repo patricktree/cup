@@ -23,6 +23,8 @@ export type RecordedRequest = {
   readonly path: string;
   /** Header names are lowercase. */
   readonly headers: Readonly<Record<string, string>>;
+  /** The body of a POST request, as text. */
+  readonly body?: string;
 };
 
 export type TestWorker = {
@@ -168,7 +170,8 @@ function parseRequestLog(logs: readonly string[]): RecordedRequest[] {
         !isRecord(entry) ||
         typeof entry["method"] !== "string" ||
         typeof entry["path"] !== "string" ||
-        !isRecord(entry["headers"])
+        !isRecord(entry["headers"]) ||
+        (entry["body"] !== undefined && typeof entry["body"] !== "string")
       ) {
         throw new Error(`The test Worker logged an invalid request: ${line}`);
       }
@@ -177,7 +180,15 @@ function parseRequestLog(logs: readonly string[]): RecordedRequest[] {
           (header): header is [string, string] => typeof header[1] === "string",
         ),
       );
-      return [{ method: entry["method"], path: entry["path"], headers }];
+      const body = entry["body"];
+      return [
+        {
+          method: entry["method"],
+          path: entry["path"],
+          headers,
+          ...(body !== undefined && { body }),
+        },
+      ];
     });
 }
 

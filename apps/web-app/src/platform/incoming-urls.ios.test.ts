@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-test("delivers share URLs to the form", async ({ page, mount }) => {
+import { recordConversionStarts } from "#src/test-utils/conversion-starts.ts";
+
+test("submits share URLs through the form", async ({ page, mount }) => {
+  const starts = recordConversionStarts(page);
   await page.addInitScript(() => {
     Object.assign(window, {
       webkit: { messageHandlers: { bridge: {} } },
@@ -32,7 +35,7 @@ test("delivers share URLs to the form", async ({ page, mount }) => {
       },
     });
   });
-  await mount("routes/trials.$grantId/OpenGrant");
+  await mount("routes/trials.$grantId/OpenGrantForShares");
   await page.evaluate(async () => {
     const modulePath = "/src/platform/incoming-urls.ios.ts";
     const { initializeIosIncomingUrls } = await import(modulePath);
@@ -40,6 +43,9 @@ test("delivers share URLs to the form", async ({ page, mount }) => {
   });
   const input = page.getByRole("textbox", { name: "URL", exact: true });
   await expect(input).toHaveValue("https://example.com/first?a=1&b=2#section");
+  // A share that arrives while this start is pending waits for it to settle.
+  await expect.poll(() => starts).toEqual(["https://example.com/first?a=1&b=2#section"]);
+  await expect(page.getByRole("button", { name: "Listen" })).toBeEnabled();
   for (const value of [
     "https://example.com/second",
     "javascript:alert(1)",
@@ -55,6 +61,9 @@ test("delivers share URLs to the form", async ({ page, mount }) => {
   }
   await expect(input).toHaveValue("https://example.com/second");
   await expect(page.getByRole("button", { name: "Listen" })).toBeEnabled();
+  await expect
+    .poll(() => starts)
+    .toEqual(["https://example.com/first?a=1&b=2#section", "https://example.com/second"]);
 });
 
 test("ignores shared Cup links and URLs other than share handoffs", async ({ page, mount }) => {

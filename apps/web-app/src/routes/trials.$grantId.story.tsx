@@ -12,6 +12,7 @@ import type {
 
 import { createAppRouter, GlobalProviders } from "#src/app/global-providers.js";
 import { Route as trialRoute } from "#src/routes/trials.$grantId.js";
+import { waitWhileHeld } from "#src/ui-gallery/held-responses.js";
 import type { Story } from "#src/ui-gallery/story.js";
 
 const GRANT_ID = "b4ad28a8-bbd7-46af-a17c-59527becd745";
@@ -48,6 +49,31 @@ export const OpenGrant = {
         },
       } satisfies GrantSnapshot),
     ),
+  ],
+} satisfies Story;
+
+/**
+ * The open grant as the native share tests mount it: a shared URL submits the start form, and the
+ * start answers locally with a refusal instead of reaching the production API origin. A test can
+ * hold that answer as `"share-start"`.
+ */
+export const OpenGrantForShares = {
+  ...OpenGrant,
+  handlers: [
+    ...OpenGrant.handlers,
+    http.post(`*/api/grants/${GRANT_ID}/conversions`, async () => {
+      await waitWhileHeld("share-start");
+      return HttpResponse.json(
+        {
+          error: {
+            code: "operational-error",
+            message: "Starting is unavailable in this share story.",
+            requestId: "trial-story",
+          },
+        } satisfies ErrorResponse,
+        { status: 503 },
+      );
+    }),
   ],
 } satisfies Story;
 

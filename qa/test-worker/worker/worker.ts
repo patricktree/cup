@@ -90,7 +90,7 @@ const apiServer = createApiServer({
 
 export default {
   async fetch(request, env, context) {
-    logRequest(request);
+    await logRequest(request);
     const control = await handleSpeechControl(request, env.AUDIO_BUCKET);
     return control ?? apiServer.fetch(request, env, context);
   },
@@ -98,15 +98,17 @@ export default {
 
 /**
  * Writes one line per request to Wrangler's output, which the harness reads back as the request
- * log. The prefix must match `REQUEST_LOG_PREFIX` in `src/test-worker.ts`.
+ * log. The prefix must match `REQUEST_LOG_PREFIX` in `src/test-worker.ts`. A POST also logs its
+ * body, read from a clone so the API still reads the original.
  */
-function logRequest(request: Request): void {
+async function logRequest(request: Request): Promise<void> {
   const url = new URL(request.url);
   console.log(
     `[test-worker:request] ${JSON.stringify({
       method: request.method,
       path: url.pathname + url.search,
       headers: Object.fromEntries(request.headers),
+      ...(request.method === "POST" && { body: await request.clone().text() }),
     })}`,
   );
 }

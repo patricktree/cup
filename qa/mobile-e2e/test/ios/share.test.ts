@@ -4,37 +4,37 @@ import { useMobileApp } from "#src/fixtures.ts";
 import { asIosAppDevice, type IosAppDevice } from "#src/ios/ios-app-device.ts";
 import { signInFromLandingPage, waitForLandingPage, waitForRecents } from "#src/journeys.ts";
 import {
-  addDialogUrl,
   conversionStartsSince,
   expectShareIgnored,
-  expectStartFormUrl,
+  expectSignInForStartFormUrl,
+  waitForSharedConversions,
 } from "#src/share-assertions.ts";
 
 /**
  * Share intake through `audio.cup.app://share?url=…` links, as the Share Extension hands a share to
- * Cup. Signed out, each test opens the link in a Cup that is running or started by the link and
- * checks the landing page's start form; signed in, the Add dialog over Recents. Every test checks
- * that the share started no conversion.
+ * Cup. Signed out, each test opens the link in a Cup that is running or started by the link, checks
+ * that the landing page's start form took the URL and asked to sign in, and that the share started
+ * no conversion; signed in, that the share started a conversion of the URL, which Recents lists.
  */
 const app = useMobileApp();
 
 const SHARED_URL = "https://source.example.test/fixture";
 
-test("a share fills the landing page's start form", async () => {
+test("a share fills the landing page's start form and asks to sign in", async () => {
   const device = await launchToLandingPage();
 
   await device.openUrl(shareLink(SHARED_URL));
 
-  await expectStartFormUrl(await device.webView(), SHARED_URL);
+  await expectSignInForStartFormUrl(await device.webView(), SHARED_URL);
   expect(conversionStartsSince(app.worker, 0)).toEqual([]);
 });
 
-test("a share that starts Cup fills the landing page's start form", async () => {
+test("a share that starts Cup fills the landing page's start form and asks to sign in", async () => {
   const device = await prepareColdStart();
 
   await device.openUrl(shareLink(SHARED_URL));
 
-  await expectStartFormUrl(await device.webView(), SHARED_URL);
+  await expectSignInForStartFormUrl(await device.webView(), SHARED_URL);
   // The web app asks for the auth configuration at startup, here from the test Worker.
   expect(app.worker.requests()).toContainEqual(
     expect.objectContaining({ method: "GET", path: "/api/auth/config" }),
@@ -47,10 +47,10 @@ test("a second share replaces the first one's URL", async () => {
   const secondUrl = "https://source.example.test/second";
 
   await device.openUrl(shareLink(SHARED_URL));
-  await expectStartFormUrl(await device.webView(), SHARED_URL);
+  await expectSignInForStartFormUrl(await device.webView(), SHARED_URL);
   await device.openUrl(shareLink(secondUrl));
 
-  await expectStartFormUrl(await device.webView(), secondUrl);
+  await expectSignInForStartFormUrl(await device.webView(), secondUrl);
   expect(conversionStartsSince(app.worker, 0)).toEqual([]);
 });
 
@@ -89,17 +89,22 @@ test.each([
   expect(conversionStartsSince(app.worker, 0)).toEqual([]);
 });
 
-test("a signed-in share while Cup is running opens the Add dialog with the URL", async () => {
+test("a signed-in share while Cup is running starts its conversion", async () => {
   const device = await signIn();
 
   const requestCount = app.worker.requests().length;
   await device.openUrl(shareLink(SHARED_URL));
 
-  expect(await addDialogUrl(await device.webView())).toBe(SHARED_URL);
-  expect(conversionStartsSince(app.worker, requestCount)).toEqual([]);
+  expect(
+    await waitForSharedConversions(await device.webView(), app.worker, {
+      requestCount,
+      starts: 1,
+      tracks: 2,
+    }),
+  ).toEqual([SHARED_URL]);
 });
 
-test("a signed-in share that starts Cup opens the Add dialog with the URL", async () => {
+test("a signed-in share that starts Cup starts its conversion", async () => {
   const device = await signIn();
   // A share that starts Cup passes no launch arguments.
   await device.storeApiOrigin(app.apiOrigin);
@@ -108,8 +113,13 @@ test("a signed-in share that starts Cup opens the Add dialog with the URL", asyn
   const requestCount = app.worker.requests().length;
   await device.openUrl(shareLink(SHARED_URL));
 
-  expect(await addDialogUrl(await device.webView())).toBe(SHARED_URL);
-  expect(conversionStartsSince(app.worker, requestCount)).toEqual([]);
+  expect(
+    await waitForSharedConversions(await device.webView(), app.worker, {
+      requestCount,
+      starts: 1,
+      tracks: 2,
+    }),
+  ).toEqual([SHARED_URL]);
 });
 
 /** Launches Cup, signs in from the landing page and ends on Recents, which lists one conversion. */

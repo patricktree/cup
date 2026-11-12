@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { readLoadingStateRecord, recordLoadingStates } from "@cup/loading-state-recorder";
 
+import { recordConversionStarts } from "#src/test-utils/conversion-starts.ts";
 import { failResponses, holdResponses, releaseResponses } from "#src/test-utils/held-responses.ts";
 import { recordReactUseWarnings } from "#src/test-utils/react-use-warnings.ts";
 import {
@@ -312,17 +313,12 @@ for (const path of ["SignedOutRecents", "SignedOutAddDialog", "SignedOutAccountD
   });
 }
 
-test("a URL shared while signed in opens the Add dialog with it filled in and submits nothing", async ({
+test("a URL shared while signed in opens the Add dialog and starts its conversion", async ({
   mount,
   page,
 }) => {
-  const starts: string[] = [];
-  page.on("request", (request) => {
-    if (request.method() === "POST") {
-      starts.push(new URL(request.url()).pathname);
-    }
-  });
-  await mount("routes/_shell.recent/EmptyRecents");
+  const starts = recordConversionStarts(page);
+  const component = await mount("routes/_shell.recent/EmptyRecents");
   // The native share plugins hand the URL to share intake, and a cold start then opens the app's
   // home. The gallery's own mount keeps this page, and with it the pending URL; the mount fixture
   // would load a new one.
@@ -334,13 +330,14 @@ test("a URL shared while signed in opens the Add dialog with it filled in and su
     if (typeof mountInPage !== "function") {
       throw new TypeError("The component gallery exposes no mount function");
     }
-    await Reflect.apply(mountInPage, window, [{ story: "routes/_shell.recent/SignedInHome" }]);
+    await Reflect.apply(mountInPage, window, [
+      { story: "routes/_shell.recent/SignedInHomeStarts" },
+    ]);
   }, ADDED_SOURCE_URL);
 
-  const dialog = page.getByRole("dialog", { name: "Add a track" });
-  await expect(dialog.getByRole("textbox", { name: "URL" })).toHaveValue(ADDED_SOURCE_URL);
-  await expect(dialog.getByRole("button", { name: "Add" })).toBeEnabled();
-  expect(starts).not.toContain("/api/account/conversions");
+  await expect(page.getByRole("dialog", { name: "Add a track" })).toHaveCount(0);
+  await expect(cardsOf(component).getByRole("link")).toHaveAccessibleName("Preparing");
+  expect(starts).toEqual([ADDED_SOURCE_URL]);
 });
 
 test("the empty state's link opens the Add dialog", async ({ mount, page }) => {
