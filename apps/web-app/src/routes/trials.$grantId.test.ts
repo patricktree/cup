@@ -1,4 +1,8 @@
+import type { Page } from "@playwright/test";
+
 import { expect, test } from "#src/test-utils/component-test.ts";
+
+const GRANT_ID = "b4ad28a8-bbd7-46af-a17c-59527becd745";
 
 test("renders an open Trial", { tag: "@visual" }, async ({ mount, page }) => {
   const component = await mount("routes/trials.$grantId/OpenGrant");
@@ -20,6 +24,13 @@ test("rejects a malformed Trial credential", { tag: "@visual" }, async ({ mount,
   await expect(component).toHaveScreenshot("malformed-credential.png");
 });
 
+test("rejects a Trial credential that the server finds invalid", async ({ mount }) => {
+  const component = await mount("routes/trials.$grantId/InvalidCredential");
+  await expect(
+    component.getByRole("heading", { name: "This trial link is invalid." }),
+  ).toBeVisible();
+});
+
 test("renders revoked-trial-link", { tag: "@visual" }, async ({ mount }) => {
   const component = await mount("routes/trials.$grantId/RevokedCredential");
   await expect(
@@ -28,12 +39,16 @@ test("renders revoked-trial-link", { tag: "@visual" }, async ({ mount }) => {
   await expect(component).toHaveScreenshot("revoked-trial-link.png");
 });
 
-test("renders credential-exchange-error", { tag: "@visual" }, async ({ mount }) => {
+test("renders credential-exchange-error", { tag: "@visual" }, async ({ mount, page }) => {
   const component = await mount("routes/trials.$grantId/CredentialExchangeError");
   await expect(
     component.getByRole("heading", { name: "The trial link could not be opened." }),
   ).toBeVisible();
   await expect(component).toHaveScreenshot("credential-exchange-error.png");
+
+  await expectTryAgainToReloadTheTrialWithoutItsCredential(page, async () => {
+    await component.getByRole("button", { name: "Try again" }).click();
+  });
 });
 
 test("renders grant-load-error", { tag: "@visual" }, async ({ mount, page }) => {
@@ -43,6 +58,10 @@ test("renders grant-load-error", { tag: "@visual" }, async ({ mount, page }) => 
     component.getByRole("heading", { name: "The trial link could not be opened." }),
   ).toBeVisible();
   await expect(component).toHaveScreenshot("grant-load-error.png");
+
+  await expectTryAgainToReloadTheTrialWithoutItsCredential(page, async () => {
+    await component.getByRole("button", { name: "Try again" }).click();
+  });
 });
 
 test("renders grant-session-invalid", { tag: "@visual" }, async ({ mount }) => {
@@ -145,3 +164,38 @@ test("retrying a trial submission reuses its key and sends only the source URL",
   expect(keys).toEqual([keys[0], keys[0]]);
   expect(payloads).toEqual([{ sourceUrl }, { sourceUrl }]);
 });
+
+/**
+ * Try again loads the trial page again as a new document, without the credential fragment, so the
+ * reloaded page opens the Trial with the grant session instead of exchanging the credential again
+ * ("renders an open Trial" shows that page). The gallery serves no app at the trial path, so the
+ * reloaded document is answered with an empty page.
+ */
+async function expectTryAgainToReloadTheTrialWithoutItsCredential(
+  page: Page,
+  pressTryAgain: () => Promise<void>,
+): Promise<void> {
+  const { origin } = new URL(page.url());
+  const trialUrl = `${origin}/app/trials/${GRANT_ID}`;
+  let credentialExchanges = 0;
+  page.on("request", (request) => {
+    if (request.method() === "POST" && new URL(request.url()).pathname.endsWith("/sessions")) {
+      credentialExchanges += 1;
+    }
+  });
+  await page.route(trialUrl, async (route) => {
+    await route.fulfill({
+      contentType: "text/html",
+      body: "<!doctype html><title>Reloaded</title>",
+    });
+  });
+  const reload = page.waitForRequest(
+    (request) => request.isNavigationRequest() && request.frame() === page.mainFrame(),
+  );
+
+  await pressTryAgain();
+
+  expect((await reload).url()).toBe(trialUrl);
+  await expect(page).toHaveURL(trialUrl);
+  expect(credentialExchanges).toBe(0);
+}

@@ -81,6 +81,25 @@ export function MalformedCredential(): React.ReactNode {
   return <TrialRoute hash="credential=malformed" />;
 }
 
+/** A well-formed credential that the server refuses. */
+export const InvalidCredential = {
+  component: () => <TrialRoute hash={`credential=v1.${"a".repeat(43)}`} />,
+  handlers: [
+    http.post(`/api/grants/${GRANT_ID}/sessions`, () =>
+      HttpResponse.json(
+        {
+          error: {
+            requestId: "09e6d824-d41d-43bb-9417-18f89232ba56",
+            code: "invalid-credential",
+            message: "The grant credential is invalid.",
+          },
+        } satisfies ErrorResponse,
+        { status: 401 },
+      ),
+    ),
+  ],
+} satisfies Story;
+
 export const RevokedCredential = {
   component: () => <TrialRoute hash={`credential=v1.${"a".repeat(43)}`} />,
   handlers: [

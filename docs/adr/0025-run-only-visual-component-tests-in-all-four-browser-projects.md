@@ -22,3 +22,13 @@ The web app component tests ran every test in four Playwright projects, Chromium
 
 - The tag is a judgement for engine- and viewport-dependent tests without a screenshot; the README lists the kinds, and reviewers check new tests against it. A behaviour that turns out to differ by engine in a two-project test is still caught in one engine and one viewport, never in neither.
 - A screenshot baseline exists for all four projects of every visual test, and for no other test.
+
+## Extension to app E2E (2026-11-13)
+
+[#308](https://github.com/patricktree/cup/issues/308) applied the same rule to the app E2E suite, which had also run every test in all four projects. In the run of 2026-11-12, its Worker, Workflow and account journeys took 395 s of 572 s test time without checking anything engine-specific ([redundant tests research](https://github.com/patricktree/cup/issues/300)).
+
+- **The same tag decides the projects.** A test tagged `@visual` runs in all four projects; every other test runs in desktop Chromium and mobile WebKit, which keeps WebKit's HTTPS-only `__Secure-` cookie path covered (`grep` in [`qa/e2e/playwright.config.ts`](../../qa/e2e/playwright.config.ts)). The suite's `expect` from [`test-e2e/fixtures.ts`](../../qa/e2e/test-e2e/fixtures.ts) fails a screenshot in an untagged test, as the component tests' does.
+- **In app E2E, a visual test is one that asserts a screenshot or checks how the browser handles redirects, URL fragments, history and reloads**: the routing tests. The accounts, conversion, duration allowance and navigation journeys run in the two projects, except the signup journey that asserts the signup prompt and private Recents screenshots.
+- **A test that uses only Playwright's `request` fixture runs in desktop Chromium alone**, tagged `@request-only`: no browser takes part, so another project would repeat it unchanged.
+
+Lint does not yet forbid importing `expect` from `@playwright/test` in app E2E test files; every test file imports it from the fixtures today.

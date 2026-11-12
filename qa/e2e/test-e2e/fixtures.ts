@@ -1,6 +1,6 @@
 /* oxlint-disable node/no-process-env -- The fixture reads the certificate paths from global setup and honors debug flags. */
-import { expect, test as base } from "@playwright/test";
-import type { Page, TestInfo } from "@playwright/test";
+import { expect as baseExpect, test as base } from "@playwright/test";
+import type { Locator, Page, TestInfo } from "@playwright/test";
 import fs from "node:fs/promises";
 
 import {
@@ -11,6 +11,7 @@ import {
   type TestWorkerScenario,
 } from "@cup/test-worker";
 
+import { VISUAL_TAG } from "#test-e2e/browser-project-tags.ts";
 import {
   HTTPS_CERT_PATH_ENV_VAR_NAME,
   HTTPS_KEY_PATH_ENV_VAR_NAME,
@@ -115,28 +116,52 @@ export const test = base.extend<Fixtures>({
     await attachText(testInfo, "outgoing-document-errors", outgoingDocumentErrors);
     await attachText(testInfo, "browser-console-errors", consoleErrors);
     await attachText(testInfo, "browser-page-errors", pageErrors);
-    expect(unexpectedRequests, "The browser made an unapproved external request").toEqual([]);
+    baseExpect(unexpectedRequests, "The browser made an unapproved external request").toEqual([]);
     // A test may expect an error when its route answers a request, before the browser logs it.
-    await expect(() => {
-      expect(
+    await baseExpect(() => {
+      baseExpect(
         consoleErrors,
         "The browser logged an unexpected number of console errors",
       ).toHaveLength(expectConsoleError.messages.length);
     }).toPass({ timeout: 5_000 });
     for (const [index, expectedMessage] of expectConsoleError.messages.entries()) {
       const actualMessage = consoleErrors[index];
-      expect(actualMessage, `Unexpected browser console error at index ${index}`).toBeDefined();
+      baseExpect(actualMessage, `Unexpected browser console error at index ${index}`).toBeDefined();
       if (typeof expectedMessage === "string") {
-        expect(actualMessage).toBe(expectedMessage);
+        baseExpect(actualMessage).toBe(expectedMessage);
       } else {
-        expect(actualMessage).toMatch(expectedMessage);
+        baseExpect(actualMessage).toMatch(expectedMessage);
       }
     }
-    expect(pageErrors, "The browser raised page errors").toEqual([]);
+    baseExpect(pageErrors, "The browser raised page errors").toEqual([]);
   },
 });
 
-export { expect } from "@playwright/test";
+/**
+ * Playwright's `expect`, whose `toHaveScreenshot` fails in a test without {@link VISUAL_TAG}, so a
+ * screenshot cannot silently lose the two browser projects that run only visual tests.
+ */
+export const expect = baseExpect.extend({
+  async toHaveScreenshot(receiver: Locator | Page, name: string) {
+    if (!test.info().tags.includes(VISUAL_TAG)) {
+      return {
+        name: "toHaveScreenshot",
+        pass: false,
+        message: () =>
+          `Tag a test that asserts a screenshot with "${VISUAL_TAG}", so that it runs in all four browser projects: test(title, { tag: "${VISUAL_TAG}" }, body).`,
+      };
+    }
+
+    await (isPage(receiver)
+      ? baseExpect(receiver).toHaveScreenshot(name)
+      : baseExpect(receiver).toHaveScreenshot(name));
+    return { name: "toHaveScreenshot", pass: true, message: () => "" };
+  },
+});
+
+function isPage(receiver: Locator | Page): receiver is Page {
+  return "goto" in receiver;
+}
 
 type InternalWorkerEnvironment = WorkerEnvironment & {
   dispose(testInfo: TestInfo): Promise<void>;

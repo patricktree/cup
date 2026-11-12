@@ -20,7 +20,7 @@ From the repository root, run:
 pnpm run test:e2e:app
 ```
 
-This command runs the suite as the cached Turbo task `turbo:e2e`, after Turbo has built the web app, the Worker and the test Worker it depends on. The tests run with at most two parallel workers. Each test starts an isolated Wrangler process with its own port and persistence directory.
+This command runs the suite as the cached Turbo task `turbo:e2e`, after Turbo has built the web app, the Worker and the test Worker it depends on. The tests run with at most eight parallel workers ([Runtime](#runtime)). Each test starts an isolated Wrangler process with its own port and persistence directory.
 
 Turbo replays a passing run instead of running the suite again when nothing it hashes has changed: the package's files, the built packages it depends on, the Git-ignored `qa/test-worker/.env.local`, and a toolchain key. The uncached task `turbo:e2e:toolchain` writes that key to `.toolchain/playwright.json` before each run: the base image tag and the ID of the locally built Playwright Server image the browsers run in, so a rebuilt image misses the cache. When the image ID cannot be read, for example before the first run builds the image, the key holds a random value and the suite runs. A replayed run keeps only its log; reports and traces exist only for runs that executed. Add `--force` to run the suite even when a pass is cached. [ADR 0024](../../docs/adr/0024-replay-e2e-suite-passes-from-the-turbo-cache-with-a-toolchain-key.md) records why.
 
@@ -30,15 +30,32 @@ The [routing tests](test-e2e/routing.test.ts) exercise the built Worker's redire
 
 ## Browsers and HTTPS
 
-Every test runs in Chromium and WebKit, each on a desktop and a mobile device. The two old-origin redirect tests in [`routing.test.ts`](test-e2e/routing.test.ts) run in Chromium only, because Playwright's WebKit cannot fulfill a route with a redirect status.
+The suite has four Playwright projects, Chromium and WebKit each on a desktop and a mobile device, and a test's tag decides which of them run it ([ADR 0025](../../docs/adr/0025-run-only-visual-component-tests-in-all-four-browser-projects.md#extension-to-app-e2e-2026-11-13), tags in [`browser-project-tags.ts`](test-e2e/browser-project-tags.ts)):
+
+- **Untagged tests run in desktop Chromium and mobile WebKit**, so each journey meets both engines and both viewports. These are the Worker, Workflow and account journeys: accounts, conversion, duration allowance and navigation, except the signup journey whose screenshots make it visual.
+- **Tests tagged `@visual` run in all four projects.** Tag a test that asserts a screenshot, or that checks how the browser handles redirects, URL fragments, history and reloads, as the [routing tests](test-e2e/routing.test.ts) do. The suite's `expect` fails a screenshot in an untagged test.
+- **Tests tagged `@request-only` run in desktop Chromium alone.** Tag a test that uses only the `request` fixture, which no browser takes part in.
+
+The two old-origin redirect tests in [`routing.test.ts`](test-e2e/routing.test.ts) skip WebKit, because Playwright's WebKit cannot fulfill a route with a redirect status.
 
 Each test's Worker and the fake auth provider serve HTTPS on `127.0.0.1`, as production does. The grant session cookie has the `__Secure-` prefix, and WebKit stores such a cookie only from an HTTPS response; it also blocks an HTTPS page from calling HTTP. [Global setup](test-e2e/https-certificate.global-setup.ts) signs a certificate for the run, which the [fixtures](test-e2e/fixtures.ts) pass to the test Worker and the fake auth provider; the browsers ignore certificate errors, and the tests' own requests trust it through `NODE_EXTRA_CA_CERTS`.
 
 When a navigation replaces a page, WebKit fails that page's pending loads, which logs errors no listener sees. In WebKit, the [fixtures](test-e2e/fixtures.ts) attach the errors logged between a page's navigation request and the next page's commit to the report and leave them out of the console-error check.
 
+## Runtime
+
+Measured on an Apple M4 Max (14 cores, 36 GB) on 2026-11-13 with the Mac otherwise idle, as `pnpm test:e2e:app` with the workspace build cached and `turbo:e2e` missing the cache:
+
+| Setup                                                                               | Test runs | Playwright  | `pnpm test:e2e:app` |
+| ----------------------------------------------------------------------------------- | --------- | ----------- | ------------------- |
+| Every test in four projects, 2 workers                                              | 180       | 4.8 min     | 290 s, 290 s, 290 s |
+| Journeys in two projects, request-only tests in one, repeated states cut, 8 workers | 78        | 1.0–1.2 min | 59 s, 71 s, 73 s    |
+
+The worker count in [`playwright.config.ts`](playwright.config.ts) is the one with the lowest wall-clock time that passed three consecutive runs without a timeout. Single Playwright runs of the new setup took 149 s at 2 workers, 105 s at 3, 83 s at 4, 62 s at 6, 55 s at 8, 57 s at 10 and 65 s at 12; at 14 workers a run took 79 s and five account tests failed on 5-second expectation timeouts. At 8 workers, six consecutive runs of `pnpm test:e2e:app` passed: 63 s, 63 s, 71 s, then the 59 s, 71 s and 73 s in the table.
+
 ## Update screenshots
 
-The E2E suite keeps a few screenshot assertions (the open-trial URL input screen, the signup prompt and private Recents), with desktop and mobile baselines in each browser. Detailed visual coverage lives in the [web app component tests](../../apps/web-app/README.md#component-tests-and-visual-coverage); the E2E tests retain their behavior assertions.
+The E2E suite keeps a few screenshot assertions (the open-trial URL input screen, the signup prompt and private Recents), with desktop and mobile baselines in each browser. Detailed visual coverage, and the trial, conversion and track error and loading states, live in the [web app component tests](../../apps/web-app/README.md#component-tests-and-visual-coverage).
 
 After an intentional visual change, run:
 
