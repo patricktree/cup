@@ -1,4 +1,27 @@
 {
   "$schema": "../../node_modules/turbo/schema.json",
   "extends": ["//", "@patricktree-stack/config-turbo-typescript"],
+  "tasks": {
+    /* Writes the toolchain key that `turbo:e2e` hashes; never cached, so it reads the machine on every run. */
+    "turbo:e2e:toolchain": {
+      "cache": false,
+      "passThroughEnv": ["DOCKER_CONFIG", "DOCKER_CONTEXT", "DOCKER_HOST"],
+    },
+    /* The source-material E2E suite; a cached pass is replayed, see ADR 0024. */
+    "turbo:e2e": {
+      "cache": true,
+      "dependsOn": ["^turbo:build", "turbo:e2e:toolchain"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!*.md",
+        /* Written by `turbo:e2e:toolchain` after Turbo starts, so it is hashed just before the task runs. */
+        { "mode": "jit", "globs": [".toolchain/playwright.json"] },
+      ],
+      /* Only the log is replayed: reports and traces hold absolute paths of the checkout that ran them. */
+      "outputs": [],
+      /* `CI` turns on `forbidOnly` and `PWDEBUG` moves the browser to the host, so both change what a pass means. */
+      "env": ["CI", "PWDEBUG"],
+      "passThroughEnv": ["DOCKER_CONFIG", "DOCKER_CONTEXT", "DOCKER_HOST"],
+    },
+  },
 }

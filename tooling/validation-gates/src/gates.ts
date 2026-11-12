@@ -120,8 +120,11 @@ const REVIEW_GATE: Gate = {
     { name: "Knip", command: ["pnpm", "run", "declutter"] },
     { name: "Brand-assets check", command: ["pnpm", "run", "brand-assets:check"] },
     { name: "Zizmor", command: ["pnpm", "run", "zizmor"] },
+    // A cached Turbo task whose hash includes the Playwright Server image, so a pass on unchanged
+    // inputs is replayed (ADR 0024).
     { name: "Source-material E2E", command: ["pnpm", "run", "test:e2e:source-material"] },
     {
+      // Outside Turbo, so the paid evals always run fresh.
       name: "Narration evals",
       command: ["pnpm", "run", "evals"],
       findSkipReason: async () =>
@@ -138,7 +141,7 @@ const MERGE_GATE: Gate = {
   prerequisites: [...REVIEW_GATE.prerequisites],
   steps: [
     ...REVIEW_GATE.steps,
-    // Outside turbo, so the suite always runs fresh.
+    // A cached Turbo task like source-material E2E, so a pass on unchanged inputs is replayed.
     { name: "App E2E", command: ["pnpm", "run", "test:e2e:app"] },
   ],
 };

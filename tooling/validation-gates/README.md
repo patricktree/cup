@@ -10,7 +10,7 @@ Each gate's prerequisites and steps are data in [`src/gates.ts`](src/gates.ts). 
 
 1. It describes the commit: the short SHA, marked "with uncommitted changes" when tracked files differ from it, since the gate then ran on other code.
 2. It checks every prerequisite at once, before any step starts. The deploy gate's checkout prerequisite fetches `origin` first. Any problem fails the run before its first step.
-3. It runs the steps in order, each with its output streamed to the terminal, and times each one. The first failing step stops the run, which exits non-zero.
+3. It runs the steps in order, each with its output streamed to the terminal, and times each one. The first failing step stops the run, which exits non-zero. The runner does not know about caching: a step that runs a cached Turbo task, such as the app and source-material E2E suites ([ADR 0024](../../docs/adr/0024-replay-e2e-suite-passes-from-the-turbo-cache-with-a-toolchain-key.md)), passes when Turbo replays the task, and its output says `cache hit` and its duration is seconds.
 4. Pass or fail, it prints a Markdown summary as the last output: the gate, the commit, the result, why the run stopped, and each step's duration, with skipped and not-run steps shown as such. The runner never posts anything itself.
 
 An error in the runner's own git or turbo calls, such as a missing `git` or a failing `turbo ls`, fails the run with that error named in the summary instead of crashing: while describing the commit, it stops the run before the prerequisites; while checking a prerequisite, it is that prerequisite's problem; while deciding whether to skip a step, it fails that step.

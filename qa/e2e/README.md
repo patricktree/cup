@@ -20,7 +20,9 @@ From the repository root, run:
 pnpm run test:e2e:app
 ```
 
-This command builds the workspace and runs the tests with at most two parallel workers. Each test starts an isolated Wrangler process with its own port and persistence directory.
+This command runs the suite as the cached Turbo task `turbo:e2e`, after Turbo has built the web app, the Worker and the test Worker it depends on. The tests run with at most two parallel workers. Each test starts an isolated Wrangler process with its own port and persistence directory.
+
+Turbo replays a passing run instead of running the suite again when nothing it hashes has changed: the package's files, the built packages it depends on, the Git-ignored `qa/test-worker/.env.local`, and a toolchain key. The uncached task `turbo:e2e:toolchain` writes that key to `.toolchain/playwright.json` before each run: the base image tag and the ID of the locally built Playwright Server image the browsers run in, so a rebuilt image misses the cache. When the image ID cannot be read, for example before the first run builds the image, the key holds a random value and the suite runs. A replayed run keeps only its log; reports and traces exist only for runs that executed. Add `--force` to run the suite even when a pass is cached. [ADR 0024](../../docs/adr/0024-replay-e2e-suite-passes-from-the-turbo-cache-with-a-toolchain-key.md) records why.
 
 This suite runs in the merge and deploy [validation gates](../../AGENTS.md#validation-gates). The root `pnpm test:e2e` command runs this suite followed by the live source-material extraction suite.
 
@@ -48,10 +50,11 @@ Review every changed image under `qa/e2e/snapshots` before accepting it. Screens
 
 ## Debug a test
 
-Run Playwright's debug mode from the repository root:
+Build the workspace, then run Playwright's debug mode directly, outside Turbo:
 
 ```sh
-pnpm run test:e2e:app --debug
+pnpm run build
+pnpm --filter '@cup/e2e' test:e2e --debug
 ```
 
 Debug mode uses the locally installed browser instead of the Docker browser. Its snapshots have a platform-specific suffix and do not replace the Docker reference images.
@@ -59,7 +62,7 @@ Debug mode uses the locally installed browser instead of the Docker browser. Its
 Playwright writes reports, traces, and failure screenshots to `qa/e2e/playwright-output`. To keep a failed test's Wrangler persistence directory for inspection, run:
 
 ```sh
-E2E_RETAIN_STATE=1 pnpm run test:e2e:app
+E2E_RETAIN_STATE=1 pnpm run test:e2e:app --force
 ```
 
 The report contains an attachment with the retained directory path.

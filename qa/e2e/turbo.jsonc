@@ -1,4 +1,36 @@
 {
   "$schema": "../../node_modules/turbo/schema.json",
   "extends": ["//", "@patricktree-stack/config-turbo-typescript"],
+  "tasks": {
+    /* Writes the toolchain key that `turbo:e2e` hashes; never cached, so it reads the machine on every run. */
+    "turbo:e2e:toolchain": {
+      "cache": false,
+      "passThroughEnv": ["DOCKER_CONFIG", "DOCKER_CONTEXT", "DOCKER_HOST"],
+    },
+    /* A cached pass is replayed; see ADR 0024 for why every input below is needed. */
+    "turbo:e2e": {
+      "cache": true,
+      /* `^turbo:build` builds and hashes the web app, the Worker and the test Worker the suite runs against. */
+      "dependsOn": ["^turbo:build", "turbo:e2e:toolchain"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!*.md",
+        /* Git-ignored, so not a default input of `@cup/test-worker`, but Wrangler loads it into the test Worker. */
+        "$TURBO_ROOT$/qa/test-worker/.env.local",
+        /* Written by `turbo:e2e:toolchain` after Turbo starts, so it is hashed just before the task runs. */
+        { "mode": "jit", "globs": [".toolchain/playwright.json"] },
+      ],
+      /* Only the log is replayed: reports and traces hold absolute paths of the checkout that ran them. */
+      "outputs": [],
+      /* `CI` turns on `forbidOnly` and `PWDEBUG` moves the browsers to the host, so both change what a pass means. */
+      "env": ["CI", "PWDEBUG"],
+      "passThroughEnv": [
+        "DOCKER_CONFIG",
+        "DOCKER_CONTEXT",
+        "DOCKER_HOST",
+        "E2E_RETAIN_STATE",
+        "E2E_STREAM_WRANGLER",
+      ],
+    },
+  },
 }

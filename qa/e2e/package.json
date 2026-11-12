@@ -14,6 +14,8 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:update": "playwright test --update-snapshots",
     "turbo:build": "tsc --build ./tsconfig.json",
+    "turbo:e2e": "pnpm run test:e2e",
+    "turbo:e2e:toolchain": "toolchain-key playwright --output .toolchain/playwright.json",
     "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
     "turbo:lint:fix": "pnpm run turbo:lint --fix",
     "turbo:test": "vitest run"
@@ -27,6 +29,7 @@
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",
     "@cup/loading-state-recorder": "workspace:*",
+    "@cup/toolchain-key": "workspace:*",
     "@patricktree-stack/config-playwright": "workspace:*",
     "@patricktree-stack/config-typescript": "workspace:*",
     "@patricktree-stack/config-vitest": "workspace:*",
