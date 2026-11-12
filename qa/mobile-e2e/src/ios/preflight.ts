@@ -46,7 +46,7 @@ export async function checkIosHost(): Promise<IosHost> {
   };
 }
 
-async function readXcodeVersion(): Promise<{ version: string; buildVersion: string }> {
+export async function readXcodeVersion(): Promise<{ version: string; buildVersion: string }> {
   let output: string;
   try {
     output = (await run("xcodebuild", ["-version"])).stdout;
@@ -66,6 +66,8 @@ async function readXcodeVersion(): Promise<{ version: string; buildVersion: stri
 type SimulatorRuntime = {
   identifier: string;
   version: string;
+  /** Such as `24B8117`; differs from the simulator SDK's build version. */
+  buildVersion: string;
   supportedDeviceTypes: { identifier: string; name: string; productFamily: string }[];
 };
 
@@ -75,7 +77,7 @@ type SimulatorRuntime = {
  * newer macOS is not enough: on macOS 27.2, WebKit's content process crashed under the iOS 26.3.1
  * runtime in about one launch in seven.
  */
-async function findIosRuntime(): Promise<SimulatorRuntime> {
+export async function findIosRuntime(): Promise<SimulatorRuntime> {
   const sdkVersion = (
     await run("xcrun", ["--sdk", "iphonesimulator", "--show-sdk-version"])
   ).stdout.trim();
@@ -116,6 +118,7 @@ function parseIosRuntimes(json: string): SimulatorRuntime[] {
       runtime["platform"] !== "iOS" ||
       typeof runtime["identifier"] !== "string" ||
       typeof runtime["version"] !== "string" ||
+      typeof runtime["buildversion"] !== "string" ||
       !Array.isArray(runtime["supportedDeviceTypes"])
     ) {
       return [];
@@ -135,7 +138,12 @@ function parseIosRuntimes(json: string): SimulatorRuntime[] {
         : [],
     );
     return [
-      { identifier: runtime["identifier"], version: runtime["version"], supportedDeviceTypes },
+      {
+        identifier: runtime["identifier"],
+        version: runtime["version"],
+        buildVersion: runtime["buildversion"],
+        supportedDeviceTypes,
+      },
     ];
   });
 }

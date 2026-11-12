@@ -2032,6 +2032,9 @@ importers:
       '@cup/config-oxlint':
         specifier: workspace:*
         version: link:../../tooling/config-oxlint
+      '@cup/mobile-app':
+        specifier: workspace:*
+        version: link:../../apps/mobile-app
       '@patricktree-stack/config-typescript':
         specifier: workspace:*
         version: link:../../.patricktree-stack/tooling/config-typescript

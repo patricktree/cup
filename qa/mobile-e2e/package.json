@@ -13,6 +13,9 @@
     "test": "vitest run --config vitest.unit.config.ts",
     "test:e2e": "node src/run-e2e.ts",
     "turbo:build": "tsc --build ./tsconfig.json",
+    "turbo:e2e:android": "vitest run --project android",
+    "turbo:e2e:ios": "vitest run --project ios",
+    "turbo:e2e:toolchain": "node src/toolchain-key.ts --output-dir .toolchain",
     "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
     "turbo:lint:fix": "pnpm run turbo:lint --fix",
     "turbo:test": "pnpm run test"
@@ -25,6 +28,7 @@
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",
+    "@cup/mobile-app": "workspace:*",
     "@patricktree-stack/config-typescript": "workspace:*",
     "@patricktree-stack/config-vitest": "workspace:*",
     "@types/node": "catalog:",

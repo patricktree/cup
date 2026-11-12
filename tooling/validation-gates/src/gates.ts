@@ -152,12 +152,9 @@ const DEPLOY_GATE: Gate = {
   prerequisites: [CHECKOUT_DEPLOYABLE, ...MERGE_GATE.prerequisites, MOBILE_TOOLCHAINS_READY],
   steps: [
     ...MERGE_GATE.steps,
-    // One platform after the other until the parallel mobile runner has proven itself.
-    {
-      name: "Mobile E2E (Android)",
-      command: ["pnpm", "run", "test:e2e:mobile", "--project", "android"],
-    },
-    { name: "Mobile E2E (iOS)", command: ["pnpm", "run", "test:e2e:mobile", "--project", "ios"] },
+    // Turbo runs the cached Android and iOS tasks at the same time, which five consecutive warm
+    // runs passed (#301); a platform whose inputs and toolchain are unchanged is replayed (ADR 0026).
+    { name: "Mobile E2E", command: ["pnpm", "run", "test:e2e:mobile"] },
   ],
 };
 

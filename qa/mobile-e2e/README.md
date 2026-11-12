@@ -30,18 +30,35 @@ From the repository root:
 pnpm run test:e2e:mobile
 ```
 
-This builds the workspace once, then [`src/run-e2e.ts`](src/run-e2e.ts) starts the Android and iOS Vitest projects as two Vitest processes at the same time. Each platform syncs the production web bundle into its native project, builds the debug app (the APK with Gradle, the simulator app with `xcodebuild`), starts its device and Appium, installs the app and runs its specs one after another. Every line of output starts with `[android]` or `[ios]`, so the interleaved logs stay readable; the run waits for both processes, names the platforms that failed, and exits non-zero unless both passed. The suite runs in the [deploy gate](../../AGENTS.md#validation-gates), after the web E2E suites, for now one platform after the other with `--project`, until five consecutive warm parallel runs have passed.
+This runs this package's Turbo tasks `turbo:e2e:android` and `turbo:e2e:ios` at the same time, each one Vitest project, after Turbo has built what they need: the mobile app, the web app it ships and the test Worker. Each platform syncs the production web bundle into its native project, builds the debug app (the APK with Gradle, the simulator app with `xcodebuild`), starts its device and Appium, installs the app and runs its specs one after another. Turbo prefixes every line of output with the task name, so the interleaved logs stay readable, lets one platform finish when the other fails, and exits non-zero unless both passed. The suite runs in the [deploy gate](../../AGENTS.md#validation-gates) as one step, both platforms in parallel, as five consecutive warm parallel runs allowed ([#301](https://github.com/patricktree/cup/issues/301)).
 
-The two platforms run in separate processes because one Vitest process cannot run them at the same time: it awaits each project's global setup in turn, and `fileParallelism: false` puts the specs of both projects into one sequential group. [Isolation](#isolation) lists what the two processes keep apart.
-
-To run one platform, name its Vitest project; the runner then starts a single Vitest process with its output unprefixed:
+To run one platform:
 
 ```sh
-pnpm run test:e2e:mobile --project android
-pnpm run test:e2e:mobile --project ios
+pnpm run test:e2e:mobile:android
+pnpm run test:e2e:mobile:ios
 ```
 
-Other arguments, such as a spec file filter, go to each Vitest process unchanged.
+### Cached passes
+
+Each platform's task is cached ([ADR 0026](../../docs/adr/0026-replay-mobile-e2e-passes-per-platform-and-run-both-platforms-in-parallel.md)): a run whose inputs are unchanged replays the platform's last pass, from any checkout or worktree on the Mac, with `cache hit` in its output. Its hash covers this package's files (without the other platform's `test/<platform>/` folder), the mobile app's tracked native projects, Capacitor configuration and plugin versions, the web app, the test Worker, the Git-ignored `apps/mobile-app/android/local.properties` (Android only) and `qa/test-worker/.env.local`, and the platform's toolchain key. A failed run is not cached. Add `--force` to run fresh anyway, for example with `E2E_RETAIN_STATE`.
+
+The toolchain key holds the host versions the platform runs on, which no file in the repository records. Before the platform tasks, the uncached task `turbo:e2e:toolchain` runs [`src/toolchain-key.ts`](src/toolchain-key.ts), which writes them to the Git-ignored `.toolchain/android.json` and `.toolchain/ios.json` in about 0.2 seconds, and each platform task hashes its own file just before it runs:
+
+- iOS: the Xcode version and build, the simulator runtime the preflight check picks (identifier, version and build), and the macOS version and build
+- Android: the revisions of Platform-Tools, SDK platform 36, the emulator (with its build ID) and the system image, the runtime version and vendor of the JDK Gradle uses, and the macOS version and build
+
+The key finds the toolchain as the preflight check does, through `ANDROID_HOME`, `ANDROID_SDK_ROOT`, `JAVA_HOME` and `DEVELOPER_DIR`. A version it cannot read is written as the reason plus a random value, so that platform misses the cache and its preflight check reports what is missing.
+
+### Vitest arguments
+
+To pass Vitest arguments, such as a spec file filter, run the package's runner [`src/run-e2e.ts`](src/run-e2e.ts). It starts the Android and iOS projects as two Vitest processes, every line prefixed with `[android]` or `[ios]`, or one process for a named `--project`, and passes other arguments to each unchanged. It neither builds nor uses the cache, so build first:
+
+```sh
+pnpm run build && pnpm --filter @cup/mobile-e2e test:e2e --project ios test/sign-in.test.ts
+```
+
+The two platforms run in separate processes, in Turbo as in the runner, because one Vitest process cannot run them at the same time: it awaits each project's global setup in turn, and `fileParallelism: false` puts the specs of both projects into one sequential group. [Isolation](#isolation) lists what the two processes keep apart.
 
 ## Runtime
 
@@ -81,7 +98,7 @@ An artifact the suite could not capture, such as the WebView's DOM when Cup show
 To keep a failed test's Worker persistence directory for inspection, run:
 
 ```sh
-E2E_RETAIN_STATE=1 pnpm run test:e2e:mobile
+E2E_RETAIN_STATE=1 pnpm run test:e2e:mobile --force
 ```
 
 The test's folder then holds `worker-persistence-directory.txt` with the retained directory's path.
@@ -168,7 +185,8 @@ One Android test launches with the real plugin (`realGoogleSignIn: true`) on the
 
 ## Layout
 
-- [`src/run-e2e.ts`](src/run-e2e.ts): the runner behind `test:e2e`, which starts one Vitest process per platform, or one for a named project.
+- [`src/run-e2e.ts`](src/run-e2e.ts): the runner behind the package's `test:e2e`, which starts one Vitest process per platform, or one for a named project.
+- [`src/toolchain-key.ts`](src/toolchain-key.ts): writes each platform's [toolchain key](#cached-passes) with the readers in `src/<platform>/toolchain-key.ts`.
 - [`src/app-device.ts`](src/app-device.ts): the device-control interface every spec uses. Platform-only steps live on the platform's class, such as [`AndroidAppDevice`](src/android/android-app-device.ts).
 - [`src/fixtures.ts`](src/fixtures.ts): `useMobileApp()` opens the spec file's session, gives each test its own Worker and keeps a failed test's artifacts.
 - [`src/failure-artifacts.ts`](src/failure-artifacts.ts): the output folder and the artifacts captured through the Appium session.
