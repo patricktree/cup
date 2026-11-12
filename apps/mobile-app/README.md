@@ -69,6 +69,8 @@ It has no effect without `cupTestApiOrigin`.
 
 After building, open `apps/mobile-app/ios/App/App.xcodeproj` in Xcode and choose a simulator or a device. The project uses Swift Package Manager, matching Content Relay. Both targets, `App` and `CupShare`, sign automatically with the Apple Developer team `4GQ2V3WJW8`, which owns both bundle identifiers; signing for a device or the App Store needs an Xcode account in that team.
 
+The app's `Info.plist` names it Cup in both `CFBundleDisplayName`, shown under its icon, and `CFBundleName`, which iOS shows in system prompts such as the one before the sign-in sheet; the target and its product stay named `App`. It declares `ITSAppUsesNonExemptEncryption` as false, because Cup uses only the encryption iOS provides, such as HTTPS and the Keychain, so App Store Connect asks no export compliance question for an uploaded build.
+
 The [mobile E2E tests](../../qa/mobile-e2e/README.md) launch the debug build on their own simulator against a local test Worker; [automated and manual checks](#automated-and-manual-checks) lists what they cover.
 
 ### iOS debug launch arguments
