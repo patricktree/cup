@@ -363,10 +363,14 @@ export const AddDialogError = accountStory({
 });
 
 /** Recents lists the started conversion once the history query is fetched again. */
-export const AddDialogStarts = (() => {
+export const AddDialogStarts = createAddDialogStartsStory("/recent");
+/** A signed-in listener opening the home page, where a start succeeds as in `AddDialogStarts`. */
+export const SignedInHomeStarts = createAddDialogStartsStory("/");
+
+function createAddDialogStartsStory(path: string): Story {
   let isStarted = false;
   return accountStory({
-    path: "/recent",
+    path,
     handlers: [
       http.post("/api/account/conversions", () => {
         isStarted = true;
@@ -380,7 +384,7 @@ export const AddDialogStarts = (() => {
       ),
     ],
   });
-})();
+}
 
 function createAddedItem() {
   return {

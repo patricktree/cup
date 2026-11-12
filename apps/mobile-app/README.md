@@ -99,7 +99,7 @@ The iOS app signs in with Google through Supabase's OAuth flow in an `ASWebAuthe
 
 The apps intentionally don't support trial links ([ADR 0017](../../docs/adr/0017-keep-trial-links-out-of-the-mobile-apps.md)). Neither app claims web links, so tapping a link to `cup.audio`, such as a trial link, opens the browser, and share intake ignores URLs on Cup's hostnames.
 
-The Android app accepts shared plain text containing an HTTP or HTTPS URL and fills a conversion form without submitting it. A signed-in account gets the Add dialog over Recents (`/recent/add`). Signed out, the URL fills the landing page's start form, which asks the listener to sign in when submitted.
+The Android app accepts shared plain text containing an HTTP or HTTPS URL, fills a conversion form with it and submits that form right away. A signed-in account gets the Add dialog over Recents (`/recent/add`), which starts the conversion and closes, so the new track appears on Recents. Signed out, the URL fills the landing page's start form, whose submission asks the listener to sign in and starts the conversion once they have. A share that arrives while a start is still pending or rate-limited waits until the form can submit again.
 
 ## Backend access and grant sessions
 
@@ -113,9 +113,9 @@ Capacitor's native HTTP response headers can expose Set-Cookie to JavaScript, so
 
 ## iOS Share Extension
 
-The iOS app bundles `CupShare.appex`, displayed as **Cup** in Safari and Chrome's Share Sheets. Share a web URL or text containing an HTTP(S) URL, then tap **Open in Cup** to open the main app and prefill the conversion form.
+The iOS app bundles `CupShare.appex`, displayed as **Cup** in Safari and Chrome's Share Sheets. Share a web URL or text containing an HTTP(S) URL, then tap **Open in Cup** to open the main app and start converting the URL.
 
-The handoff uses `audio.cup.app://share?url=<encoded-url>`, the app's only URL scheme. The URL prefills a conversion form as on [Android](#links-and-sharing), and Cup links are ignored there too; a URL still pending in memory is discarded when the app closes.
+The handoff uses `audio.cup.app://share?url=<encoded-url>`, the app's only URL scheme. The URL fills and submits a conversion form as on [Android](#links-and-sharing), and Cup links are ignored there too; a URL still pending in memory is discarded when the app closes.
 
 The app uses the UIScene lifecycle, which iOS 27 requires: an app built with the iOS 27 SDK that keeps the app-delegate lifecycle stops at launch. [`SceneDelegate`](ios/App/App/SceneDelegate.swift) receives incoming URLs, both at a cold start and while Cup runs, and hands them to Capacitor's `SceneDelegateProxy`, which passes them on to the App plugin's `appUrlOpen` event and launch URL.
 
@@ -132,15 +132,15 @@ The [mobile E2E tests](../../qa/mobile-e2e/README.md) run the debug build of eac
 - **Both platforms**: launch to the landing page, loaded from the test Worker.
 - **Smoke journey, both platforms**: launch, sign in from the landing page and see Recents loaded from the test Worker ([`test/sign-in.test.ts`](../../qa/mobile-e2e/test/sign-in.test.ts)).
 - **Both platforms, signed in**: the session in Secure Storage across a relaunch after signing in and after signing out, and native networking: bearer-token requests and an Origin-less mutation through `CapacitorHttp`.
-- **Android**: sign-in through the native adapter with a fake of the Google sign-in plugin, cancelling Google's real add-account screen, share intake through `ACTION_SEND` intents (Cup stopped or running, repeated shares, `&`, `+` and fragments, a URL inside text, text without a URL and `cup.audio` links ignored, signed out), and the back button.
-- **iOS**: sign-in through the real `ASWebAuthenticationSession` against the fake auth provider, share links into the Add dialog when signed in (Cup started by the link or running) and into the landing page's start form when signed out (Cup started by the link or running, repeated shares, `cup.audio` links ignored also when they start Cup, malformed links ignored), and sharing from Safari through the Share Sheet and `CupShare` with Cup terminated or running and a cancelled share.
+- **Android**: sign-in through the native adapter with a fake of the Google sign-in plugin, cancelling Google's real add-account screen, share intake through `ACTION_SEND` intents starting conversions (Cup stopped or running, repeated shares, `&`, `+` and fragments, a URL inside text, text without a URL and `cup.audio` links ignored, signed out), and the back button.
+- **iOS**: sign-in through the real `ASWebAuthenticationSession` against the fake auth provider, share links starting a conversion when signed in (Cup started by the link or running) and filling the landing page's start form and asking to sign in when signed out (Cup started by the link or running, repeated shares, `cup.audio` links ignored also when they start Cup, malformed links ignored), and sharing from Safari through the Share Sheet and `CupShare` with Cup terminated or running and a cancelled share.
 
 The rest stays manual on physical devices with release-signed builds, listed in [CUP-44](https://linear.app/cup-audio/issue/CUP-44/test-the-android-and-ios-apps-native-functionality-on-physical-devices):
 
 1. Playback through a locked device, lock-screen, notification and headset controls, audio focus, and the narration track's signed URL from the shells' origins.
 2. Release-signed builds: install and run, reach `https://cup.audio` through `CapacitorHttp`, and carry no debug override, cleartext exception or sign-in fake.
 3. Real Google sign-in: the Android account picker with a real account, switching accounts after signing out, and on iOS Google's page in the sign-in sheet, which the tests replace with the fake auth provider's redirect.
-4. Sharing from real apps: Cup in the Android Sharesheet, sharing from Chrome on iOS, and the `CupShare` handoff on a physical iPhone after each iOS update.
+4. Sharing from real apps: Cup in the Android Sharesheet, sharing from Chrome on iOS, and the `CupShare` handoff on a physical iPhone after each iOS update, each starting the conversion signed in without a further tap.
 5. App shell: icons and splash screen, and a tapped `cup.audio` link opening the browser, not the app.
 6. Navigation without loading flashes.
 

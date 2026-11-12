@@ -4,14 +4,14 @@ import { useMobileApp } from "#src/fixtures.ts";
 import { asIosAppDevice } from "#src/ios/ios-app-device.ts";
 import { startSharedPage, type SharedPage } from "#src/ios/shared-page.ts";
 import { waitForLandingPage } from "#src/journeys.ts";
-import { conversionStartsSince, expectStartFormUrl } from "#src/share-assertions.ts";
+import { conversionStartsSince, expectSignInForStartFormUrl } from "#src/share-assertions.ts";
 
 /**
  * Sharing a page from Safari through the real Share Sheet: **Cup** in the app row, then **Open in
  * Cup** or **Cancel** in the `CupShare` extension, which hands the URL to Cup as an
  * `audio.cup.app://share` link. These tests depend on Safari's system UI and fail when an iOS
- * update changes it. Signing in does not work on iOS yet, so Cup runs signed out and a share fills
- * the landing page's start form.
+ * update changes it. Cup runs signed out, so a share fills the landing page's start form and asks
+ * to sign in.
  */
 const app = useMobileApp();
 
@@ -28,7 +28,7 @@ afterEach(async () => {
   await page.close();
 });
 
-test("a share from Safari starts Cup and fills the landing page's start form", async () => {
+test("a share from Safari starts Cup, fills the landing page's start form and asks to sign in", async () => {
   const device = asIosAppDevice(app.device);
   // `&`, `+` and the fragment must arrive unchanged.
   const sharedUrl = page.url("/article?a=1&b=2+3#fragment");
@@ -37,7 +37,7 @@ test("a share from Safari starts Cup and fills the landing page's start form", a
 
   await device.shareFromSafari(sharedUrl, "open in cup");
 
-  await expectStartFormUrl(await device.webView(), sharedUrl);
+  await expectSignInForStartFormUrl(await device.webView(), sharedUrl);
   // The web app asks for the auth configuration at startup, here from the test Worker.
   expect(app.worker.requests()).toContainEqual(
     expect.objectContaining({ method: "GET", path: "/api/auth/config" }),
@@ -45,7 +45,7 @@ test("a share from Safari starts Cup and fills the landing page's start form", a
   expect(conversionStartsSince(app.worker, 0)).toEqual([]);
 });
 
-test("a share from Safari fills the start form of a running Cup", async () => {
+test("a share from Safari fills the start form of a running Cup and asks to sign in", async () => {
   const device = asIosAppDevice(app.device);
   const sharedUrl = page.url("/running?x=%20y&z=1");
   await device.launch({ apiOrigin: app.apiOrigin });
@@ -53,7 +53,7 @@ test("a share from Safari fills the start form of a running Cup", async () => {
 
   await device.shareFromSafari(sharedUrl, "open in cup");
 
-  await expectStartFormUrl(await device.webView(), sharedUrl);
+  await expectSignInForStartFormUrl(await device.webView(), sharedUrl);
   expect(conversionStartsSince(app.worker, 0)).toEqual([]);
 });
 

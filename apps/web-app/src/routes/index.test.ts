@@ -202,3 +202,21 @@ test("the link's dialog offers only the sign-in methods the auth configuration a
   await expect(dialog.getByRole("button", { name: "Sign in with test account" })).toBeFocused();
   await expect(dialog.getByRole("button")).toHaveText(["Cancel", "Sign in with test account"]);
 });
+
+test("a URL shared while signed out fills the start form and asks for sign-in", async ({
+  mount,
+  page,
+}) => {
+  const sharedUrl = "https://example.com/shared";
+  const component = await mount("routes/index/LandingPage");
+  await expect(component.getByRole("button", { name: "Listen" })).toBeVisible();
+  await page.evaluate(async (url) => {
+    const modulePath = "/src/platform/share-intake.ts";
+    const { receiveSharedUrl } = await import(modulePath);
+    receiveSharedUrl(url, () => {});
+  }, sharedUrl);
+
+  await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(component.getByRole("textbox", { name: "URL" })).toHaveValue(sharedUrl);
+});

@@ -46,7 +46,8 @@ export function AddAudiobookDialog({ onClose }: { onClose: () => void }): React.
       >
         <SourceUrlForm
           initialSourceUrl={submission.initialSourceUrl}
-          shouldReceiveSharedUrl
+          // A closing sheet leaves a shared URL for the next form.
+          shouldReceiveSharedUrl={open}
           isPending={submission.isPending}
           retryIn={submission.retryIn}
           // Sign-in explains itself in place of the failure.
