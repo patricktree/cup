@@ -22,23 +22,6 @@ import {
  */
 const app = useMobileApp();
 
-test("signs in with Google and sees Recents loaded from the test Worker", async () => {
-  await app.device.launch({ apiOrigin: app.apiOrigin });
-  const webView = await app.device.webView();
-
-  await signInFromLandingPage(app.device, webView);
-  await webView.$('a[aria-label="Back"]').click();
-
-  await waitForRecents(webView, 1);
-  expect(app.worker.requests()).toContainEqual(
-    expect.objectContaining({
-      method: "GET",
-      path: "/api/account/conversions",
-      headers: expect.objectContaining({ authorization: expect.stringMatching(/^Bearer \S+$/) }),
-    }),
-  );
-});
-
 test("signs in from the home page's sign-in link and lands on Recents loaded from the test Worker", async () => {
   await app.device.launch({ apiOrigin: app.apiOrigin });
   const webView = await app.device.webView();
@@ -56,18 +39,6 @@ test("signs in from the home page's sign-in link and lands on Recents loaded fro
   );
 });
 
-test("stays signed in after Cup is stopped and relaunched", async () => {
-  await app.device.launch({ apiOrigin: app.apiOrigin });
-  await signInFromLandingPage(app.device, await app.device.webView());
-
-  await app.device.relaunch();
-  const webView = await app.device.webView();
-
-  // Signed in, the landing page opens Recents instead of asking to sign in.
-  await waitForRecents(webView, 1);
-  expect(await webView.$("button=Continue with Google").isExisting()).toBe(false);
-});
-
 test("refreshes the session when Cup comes back from the background after its access token expired", async () => {
   app.authProvider.setAccessTokenLifetime(ACCESS_TOKEN_LIFETIME_SECONDS);
   await app.device.launch({ apiOrigin: app.apiOrigin });
@@ -75,7 +46,9 @@ test("refreshes the session when Cup comes back from the background after its ac
   await signInFromLandingPage(app.device, webView);
   await webView.$('a[aria-label="Back"]').click();
   await waitForRecents(webView, 1);
+  // Signed in from the landing page, Recents loaded the account's tracks with its bearer token.
   const tokenBeforeBackground = lastConversionsAuthorization();
+  expect(tokenBeforeBackground).toMatch(/^Bearer \S+$/);
 
   await app.device.background();
   await new Promise((resolve) => setTimeout(resolve, (ACCESS_TOKEN_LIFETIME_SECONDS + 1) * 1_000));

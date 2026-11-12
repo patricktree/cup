@@ -1,23 +1,16 @@
 /**
  * Assertions the share specs of every platform share. A share taken while signed in starts a
  * conversion of the shared URL exactly; one taken while signed out fills the landing page's start
- * form with it and asks to sign in, starting no conversion. An ignored share leaves Cup on its
- * screen with no form filled.
+ * form with it and asks to sign in, starting no conversion.
  */
 import { expect } from "vitest";
 
 import type { TestWorker } from "@cup/test-worker";
 
-import { pathname, waitForLandingPage, waitForRecents } from "#src/journeys.ts";
+import { pathname, waitForRecents } from "#src/journeys.ts";
 
 /** How long a taken share has to reach the Worker as a conversion start. */
 const CONVERSION_START_TIMEOUT_MS = 30_000;
-
-/** How long an ignored share is watched for a form opening or filling anyway. */
-const IGNORED_SHARE_OBSERVATION_MS = 3000;
-
-/** The screens an ignored share is checked to leave Cup on. */
-export type ShareScreen = "recents" | "landing page";
 
 /**
  * Waits until `starts` conversions started after the first `requestCount` requests and the Add
@@ -55,33 +48,6 @@ export async function expectSignInForStartFormUrl(
   await expect
     .poll(() => webView.$('input[type="url"]').getValue(), { timeout: 10_000, interval: 250 })
     .toBe(url);
-}
-
-/**
- * Checks for a while that Cup keeps showing `screen` with no form open or filled. A share that is
- * taken fills a form within a second of reaching Cup.
- */
-export async function expectShareIgnored(
-  webView: WebdriverIO.Browser,
-  screen: ShareScreen,
-): Promise<void> {
-  const deadline = performance.now() + IGNORED_SHARE_OBSERVATION_MS;
-  while (performance.now() < deadline) {
-    expect(await webView.$('[role="dialog"]').isExisting()).toBe(false);
-    if (screen === "recents") {
-      expect(await pathname(webView)).toBe("/app/recent");
-      expect(await webView.$('input[type="url"]').isExisting()).toBe(false);
-    } else {
-      expect(await pathname(webView)).toBe("/app/");
-      expect(await webView.$('input[type="url"]').getValue()).toBe("");
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-  if (screen === "recents") {
-    await waitForRecents(webView, 1);
-  } else {
-    await waitForLandingPage(webView);
-  }
 }
 
 /**

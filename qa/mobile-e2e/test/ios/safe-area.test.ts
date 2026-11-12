@@ -17,7 +17,7 @@ const BACK_LINK = '-ios predicate string:type == "XCUIElementTypeLink" AND label
  * stuck after scrolling. Its position is the native one in screen points, which the WebView's own
  * coordinates would not reveal.
  */
-test("the audiobook page's Back link stays below the status bar", async () => {
+test("the audiobook page's Back link stays below the status bar, and a backdrop covers it on Recents", async () => {
   const device = asIosAppDevice(app.device);
   await device.launch({ apiOrigin: app.apiOrigin });
   // One Appium session, switched between the WebView and the native context.
@@ -48,21 +48,15 @@ test("the audiobook page's Back link stays below the status bar", async () => {
   await session.switchContext("NATIVE_APP");
 
   expect((await session.$(BACK_LINK).getLocation()).y).toBeGreaterThanOrEqual(statusBarHeight);
-});
 
-/**
- * Recents has no sticky header, so its list scrolls up to the status bar, where a fixed backdrop in
- * the page's background covers it. WebKit hit-tests nothing under the status bar, so the test
- * checks that the backdrop spans the top safe area rather than what is drawn there.
- */
-test("a backdrop covers the status bar on Recents", async () => {
-  await app.device.launch({ apiOrigin: app.apiOrigin });
-  const webView = await app.device.webView();
-  await signInFromLandingPage(app.device, webView);
-  await webView.$('a[aria-label="Back"]').click();
-  await waitForRecents(webView, 1);
+  // Recents has no sticky header, so its list scrolls up to the status bar, where a fixed backdrop
+  // in the page's background covers it. WebKit hit-tests nothing under the status bar, so the test
+  // checks that the backdrop spans the top safe area rather than what is drawn there.
+  await device.webView();
+  await session.$('a[aria-label="Back"]').click();
+  await waitForRecents(session, 1);
 
-  const geometry = await webView.execute(() => {
+  const geometry = await session.execute(() => {
     const probe = document.createElement("div");
     probe.style.height = "env(safe-area-inset-top, 0)";
     document.body.append(probe);

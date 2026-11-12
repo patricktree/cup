@@ -3,7 +3,6 @@ import { afterEach, beforeEach, expect, test } from "vitest";
 import { useMobileApp } from "#src/fixtures.ts";
 import { asIosAppDevice } from "#src/ios/ios-app-device.ts";
 import { startSharedPage, type SharedPage } from "#src/ios/shared-page.ts";
-import { waitForLandingPage } from "#src/journeys.ts";
 import { conversionStartsSince, expectSignInForStartFormUrl } from "#src/share-assertions.ts";
 
 /**
@@ -11,7 +10,7 @@ import { conversionStartsSince, expectSignInForStartFormUrl } from "#src/share-a
  * Cup** or **Cancel** in the `CupShare` extension, which hands the URL to Cup as an
  * `audio.cup.app://share` link. These tests depend on Safari's system UI and fail when an iOS
  * update changes it. Cup runs signed out, so a share fills the landing page's start form and asks
- * to sign in.
+ * to sign in. A share that reaches a running Cup is covered by the link alone, in `share.test.ts`.
  */
 const app = useMobileApp();
 
@@ -42,18 +41,6 @@ test("a share from Safari starts Cup, fills the landing page's start form and as
   expect(app.worker.requests()).toContainEqual(
     expect.objectContaining({ method: "GET", path: "/api/auth/config" }),
   );
-  expect(conversionStartsSince(app.worker, 0)).toEqual([]);
-});
-
-test("a share from Safari fills the start form of a running Cup and asks to sign in", async () => {
-  const device = asIosAppDevice(app.device);
-  const sharedUrl = page.url("/running?x=%20y&z=1");
-  await device.launch({ apiOrigin: app.apiOrigin });
-  await waitForLandingPage(await device.webView());
-
-  await device.shareFromSafari(sharedUrl, "open in cup");
-
-  await expectSignInForStartFormUrl(await device.webView(), sharedUrl);
   expect(conversionStartsSince(app.worker, 0)).toEqual([]);
 });
 
