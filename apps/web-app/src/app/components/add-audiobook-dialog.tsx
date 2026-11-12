@@ -23,15 +23,11 @@ export function AddAudiobookDialog({ onClose }: { onClose: () => void }): React.
     // The start mutation has already invalidated the history query that Recents lists.
     onStarted: async () => setOpen(false),
   });
-  const inputRef = React.useRef<HTMLInputElement>(null);
-
   return (
     <DSSheet
       open={open}
       onOpenChange={setOpen}
       onClosed={onClose}
-      // The close button comes first in the sheet; the field is where adding starts.
-      initialFocus={inputRef}
       finalFocus={undefined}
       title={<>Add a track</>}
       closeButtonDisabled={submission.signIn.isPending}
@@ -61,7 +57,6 @@ export function AddAudiobookDialog({ onClose }: { onClose: () => void }): React.
           submitLabel="Add"
           submittingLabel="Adding…"
           submitIcon={<ArrowRightIcon />}
-          refs={{ input: inputRef }}
           sx={{
             form: css`
               display: grid;

@@ -27,7 +27,6 @@ type SourceUrlFormProps = {
   submitIcon?: React.ReactNode;
   sx: { form: string; input?: string; submitButton?: string };
   refs?: {
-    input?: React.Ref<HTMLInputElement> | undefined;
     submitButton?: React.Ref<HTMLButtonElement> | undefined;
   };
 };
@@ -129,7 +128,6 @@ export function SourceUrlForm({
                 type="url"
                 placeholder={placeholder}
                 hideLabel
-                refs={{ input: refs?.input }}
               />
             )}
           </form.AppField>

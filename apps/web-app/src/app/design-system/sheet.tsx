@@ -12,7 +12,6 @@ export type DSSheetProps = {
   onOpenChange: Drawer.Root.Props["onOpenChange"];
   /** Called once the sheet has finished sliding away after closing. */
   onClosed: () => void;
-  initialFocus: Drawer.Popup.Props["initialFocus"];
   finalFocus: Drawer.Popup.Props["finalFocus"];
   title: React.ReactNode;
   /** Content below the title row, such as a form. */
@@ -37,18 +36,21 @@ const OFFSCREEN_TRANSFORM = "translateY(calc(100% + 24px))";
  * closes. Pulling it down closes it: by touch anywhere on the sheet, by mouse anywhere outside the
  * content (the grabber, the title row and the blank space around them), so text in the content
  * stays selectable. Escape and a press outside close it too. Base UI marks no starting style on a
- * sheet mounted open, so `@starting-style` slides that one in as well.
+ * sheet mounted open, so `@starting-style` slides that one in as well. Opening focuses the sheet
+ * itself, not a control in it: a focused field would raise the on-screen keyboard over the sheet,
+ * and a focused button would show its focus ring.
  */
 export const DSSheet: React.FC<DSSheetProps> = ({
   open,
   onOpenChange,
   onClosed,
-  initialFocus,
   finalFocus,
   title,
   children,
   closeButtonDisabled,
 }) => {
+  const popupRef = React.useRef<HTMLDivElement>(null);
+
   return (
     <Drawer.Root
       open={open}
@@ -107,7 +109,8 @@ export const DSSheet: React.FC<DSSheetProps> = ({
         >
           <Drawer.Popup
             {...interTypefaceScope}
-            initialFocus={initialFocus}
+            ref={popupRef}
+            initialFocus={popupRef}
             finalFocus={finalFocus}
             className={css`
               /* the grabber is placed against the sheet */
