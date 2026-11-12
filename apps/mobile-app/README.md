@@ -121,7 +121,7 @@ The extension uses the same responder-chain URL-opening approach as Chromium, ca
 
 The [mobile E2E tests](../../qa/mobile-e2e/README.md#share-intake-ios) cover what the app does with a share link once it arrives, and a share from Safari through the real Share Sheet and this extension on a simulator; sharing from Chrome and the handoff on a physical iPhone stay [manual](#automated-and-manual-checks).
 
-Build the App scheme with a local `DEVELOPMENT_TEAM` override; it builds, signs, and embeds the extension. Both bundle identifiers need provisioning: `audio.cup.app` and `audio.cup.app.share`. If Cup is hidden in the Share Sheet, look under More in its app row.
+Build the App scheme; it builds, signs, and embeds the extension. A developer outside the project's signing team passes their own `DEVELOPMENT_TEAM` to `xcodebuild` instead of changing the project. Both bundle identifiers need provisioning: `audio.cup.app` and `audio.cup.app.share`. If Cup is hidden in the Share Sheet, look under More in its app row.
 
 ## Automated and manual checks
 
