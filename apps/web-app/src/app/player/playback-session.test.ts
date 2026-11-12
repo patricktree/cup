@@ -1,5 +1,3 @@
-import { expect, test } from "@playwright/test";
-
 import type { PlaybackPosition } from "@cup/listener-api.routes";
 
 import {
@@ -8,6 +6,7 @@ import {
   type PlayableAudiobook,
   type PlaybackSessionServices,
 } from "#src/app/player/playback-session.ts";
+import { expect, test } from "#src/test-utils/component-test.ts";
 
 /** The session ignores a ready segment's own audio; only the narration track plays. */
 const ready = (sequence: number) => ({

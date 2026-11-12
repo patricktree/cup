@@ -48,7 +48,7 @@ The shared bundle includes a CSP nonce placeholder. The API server replaces it w
 
 ## Component tests and visual coverage
 
-Route stories in `src/routes/*.story.tsx` render the application with deterministic MSW responses, and the component tests screenshot them on desktop and mobile in Chromium and WebKit. The browsers reach the gallery through their connection to the [Docker Playwright Server](../../.patricktree-stack/tooling/config-playwright/README.md) (`exposeNetwork` in [`playwright.config.ts`](playwright.config.ts)): on Docker Desktop for macOS about 2–10% of new connections from the container to the host never completed, and WebKit, unlike Chromium, opens no second connection, so its gallery navigations stalled. The [app E2E suite](../../qa/e2e/README.md) connects directly, because in it the tunnel made 7 of 60 runs of three tests fail, against none without it (2026-11-09, Playwright 1.65.0). The [E2E suite](../../qa/e2e/README.md#update-screenshots) keeps only a few screenshot assertions.
+Route stories in `src/routes/*.story.tsx` render the application with deterministic MSW responses, and the component tests screenshot them on desktop and mobile in Chromium and WebKit ([browser projects](#browser-projects-and-the-visual-tag)). The browsers reach the gallery through their connection to the [Docker Playwright Server](../../.patricktree-stack/tooling/config-playwright/README.md) (`exposeNetwork` in [`playwright.config.ts`](playwright.config.ts)): on Docker Desktop for macOS about 2–10% of new connections from the container to the host never completed, and WebKit, unlike Chromium, opens no second connection, so its gallery navigations stalled. The [app E2E suite](../../qa/e2e/README.md) connects directly, because in it the tunnel made 7 of 60 runs of three tests fail, against none without it (2026-11-09, Playwright 1.65.0). The [E2E suite](../../qa/e2e/README.md#update-screenshots) keeps only a few screenshot assertions.
 
 MSW's service worker answers the stories' requests, so `page.route` never sees them; a story holds a response with its own handler, such as `delay("infinite")`. A story's narration track is a `data:` URL of a generated silent WAV rather than a handler's response ([`src/ui-gallery/narration-track.ts`](src/ui-gallery/narration-track.ts)), because MSW drops a media request's `Range` header and browsers seek only in media served with byte ranges. It is not a `blob:` URL, because WebKit's GStreamer media backend on Linux intermittently failed to load a blob while it detected the track's format. To hold or fail a response only for part of a test, such as a revisit's refetch, the handler awaits `waitWhileHeld(name)` and answers `readFailedStoryResponse(name)` from [`src/ui-gallery/held-responses.ts`](src/ui-gallery/held-responses.ts), and the test calls `holdResponses`, `releaseResponses` and `failResponses` from [`src/test-utils/held-responses.ts`](src/test-utils/held-responses.ts). A test that guards against a loading flash calls [`recordLoadingStates`](../../qa/loading-state-recorder/README.md) before mounting and asserts on the record ([loading states](../../docs/architecture/web-app.md#loading-states)).
 
@@ -71,3 +71,31 @@ These baselines come from the implementation, so they cannot show that a screen 
 Each run starts its own gallery server on a port the operating system assigns. It never attaches to a gallery that is already running, so runs in several checkouts do not interfere with each other or with an interactive gallery.
 
 Explore the stories with `pnpm --filter '@cup/web-app' dev:gallery`, which serves the gallery at <http://127.0.0.1:3100/ui-gallery/index.html>.
+
+### Browser projects and the visual tag
+
+The component tests run in four Playwright projects, but not every test runs in all four ([ADR 0025](../../docs/adr/0025-run-only-visual-component-tests-in-all-four-browser-projects.md)):
+
+- **Desktop Chromium and mobile WebKit run every test**, so each behaviour meets both engines and both viewports.
+- **Mobile Chromium and desktop WebKit run only tests tagged `@visual`** (`grep` in [`playwright.config.ts`](playwright.config.ts)).
+
+Tag a test with `test(title, { tag: "@visual" }, body)` when it asserts a screenshot, or when its behaviour depends on the engine or the viewport:
+
+- view transitions, such as the cover transition between Recents and the detail view;
+- pointer and touch input, such as pulling the Add dialog's grabber or pressing a point of the mini player;
+- layout measured against the viewport, such as horizontal overflow, the Add dialog's geometry, the masonry's order and scrolling;
+- animations, such as the Add dialog sliding in and out, and reduced motion;
+- playback of the narration track, whose `data:` URL works around WebKit's media backend (see above).
+
+Every other test, including the pure-logic files, runs in the two projects. Test files import `test` and `expect` from [`src/test-utils/component-test.ts`](src/test-utils/component-test.ts), not from `@playwright/test` (lint enforces it): its `toHaveScreenshot` fails a test without the tag with a message naming it, so a screenshot cannot lose two of its four projects by accident.
+
+### Runtime
+
+Measured on an Apple M4 Max (14 cores, 36 GB) on 2026-11-12 with the Mac otherwise idle, uncached (`pnpm turbo run turbo:test --filter=@cup/web-app --force`, which also rebuilds the packages the web app depends on):
+
+| Setup                                                     | Test runs | Playwright | `turbo:test` |
+| --------------------------------------------------------- | --------- | ---------- | ------------ |
+| Every test in four projects, 4 workers                    | 1,372     | 7 min 44 s | 7 min 50 s   |
+| Visual tests in four projects, the rest in two, 8 workers | 846       | 4 min 56 s | 5 min 0 s    |
+
+The worker count in [`playwright.config.ts`](playwright.config.ts) is the one with the lowest wall-clock time that passed three consecutive runs without a timeout. Single runs of the new setup took 5 min 15 s at 4 workers (one test failed as the gallery's MSW worker reported itself already started; it did not recur in the six runs at 6 and 8 workers), 4 min 54 s at 6 and 4 min 49 s at 8; three consecutive runs at 8 workers then passed in 4 min 54 s, 4 min 53 s and 4 min 56 s. At 10 workers a run took 5 min 9 s and at 12 workers 5 min 53 s, and each failed one test (at 12 workers the Add dialog's slide-away sampling). More workers probably stop helping because every test mounts its story in a fresh page from the gallery's single Vite development server.

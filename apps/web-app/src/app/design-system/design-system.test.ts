@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "#src/test-utils/component-test.ts";
 
-test("renders all design system variants", async ({ mount }) => {
+test("renders all design system variants", { tag: "@visual" }, async ({ mount }) => {
   const component = await mount("app/design-system/design-system/Components");
 
   await expect(component.getByRole("main")).toHaveScreenshot("design-system.png");
@@ -49,26 +49,26 @@ test("keeps Space Mono outside the Inter typeface scope only", async ({ mount })
   );
 });
 
-test("renders the color tokens", async ({ mount }) => {
+test("renders the color tokens", { tag: "@visual" }, async ({ mount }) => {
   const component = await mount("app/design-system/design-system/Colors");
 
   await expect(component.getByRole("main")).toHaveScreenshot("colors.png");
 });
 
-test("renders the text styles", async ({ mount }) => {
+test("renders the text styles", { tag: "@visual" }, async ({ mount }) => {
   const component = await mount("app/design-system/design-system/TextStyles");
 
   await expect(component.getByRole("main")).toHaveScreenshot("text-styles.png");
 });
 
-test("renders the drawn icons", async ({ mount }) => {
+test("renders the drawn icons", { tag: "@visual" }, async ({ mount }) => {
   const component = await mount("app/design-system/design-system/Icons");
 
   await expect(component.getByRole("listitem")).toHaveCount(13);
   await expect(component.getByRole("main")).toHaveScreenshot("icons.png");
 });
 
-test("renders enabled and disabled icon buttons", async ({ mount }) => {
+test("renders enabled and disabled icon buttons", { tag: "@visual" }, async ({ mount }) => {
   const component = await mount("app/design-system/design-system/IconButtons");
 
   await expect(
@@ -77,17 +77,21 @@ test("renders enabled and disabled icon buttons", async ({ mount }) => {
   await expect(component.getByRole("main")).toHaveScreenshot("icon-buttons.png");
 });
 
-test("shows the focus ring on a keyboard-focused icon button", async ({ mount, page }) => {
-  const component = await mount("app/design-system/design-system/IconButtons");
-  const enabled = component.getByRole("region", { name: "Enabled" });
+test(
+  "shows the focus ring on a keyboard-focused icon button",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    const component = await mount("app/design-system/design-system/IconButtons");
+    const enabled = component.getByRole("region", { name: "Enabled" });
 
-  await enabled.getByRole("button", { name: "More" }).focus();
-  await page.keyboard.press("Shift+Tab");
-  await expect(enabled.getByRole("button", { name: "Back", exact: true })).toBeFocused();
-  await expect(component.getByRole("main")).toHaveScreenshot("icon-button-focused.png");
-});
+    await enabled.getByRole("button", { name: "More" }).focus();
+    await page.keyboard.press("Shift+Tab");
+    await expect(enabled.getByRole("button", { name: "Back", exact: true })).toBeFocused();
+    await expect(component.getByRole("main")).toHaveScreenshot("icon-button-focused.png");
+  },
+);
 
-test("shows the overlay on a pressed icon button", async ({ mount, page }) => {
+test("shows the overlay on a pressed icon button", { tag: "@visual" }, async ({ mount, page }) => {
   const component = await mount("app/design-system/design-system/IconButtons");
   const enabled = component.getByRole("region", { name: "Enabled" });
 
@@ -97,7 +101,7 @@ test("shows the overlay on a pressed icon button", async ({ mount, page }) => {
   await page.mouse.up();
 });
 
-test("renders loaded, loading and circular cover images", async ({ mount }) => {
+test("renders loaded, loading and circular cover images", { tag: "@visual" }, async ({ mount }) => {
   const component = await mount("app/design-system/design-system/CoverImages");
 
   await expect(component.getByRole("img", { name: "Loaded cover" })).toBeVisible();

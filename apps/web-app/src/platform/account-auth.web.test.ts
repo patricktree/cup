@@ -1,4 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+import { expect, test } from "#src/test-utils/component-test.ts";
 
 /**
  * Runs the web adapter's Google sign-in against a fake Supabase client and returns the OAuth

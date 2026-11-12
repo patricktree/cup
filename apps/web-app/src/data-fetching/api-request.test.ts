@@ -1,8 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 import { ERROR_CODE } from "@cup/listener-api.client";
 
 import { ACCOUNT_SESSION_STORAGE_KEY } from "#src/auth/account-session-storage.ts";
+import { expect, test } from "#src/test-utils/component-test.ts";
 
 test.use({ serviceWorkers: "block" });
 

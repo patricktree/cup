@@ -1,5 +1,3 @@
-import { expect, test } from "@playwright/test";
-
 import type { Audiobook, PlaybackPosition } from "@cup/listener-api.routes";
 
 import type { NarrationAudioElement } from "#src/app/player/narration-track-player.ts";
@@ -9,6 +7,7 @@ import {
   type PreparedAudiobook,
 } from "#src/app/player/playback-session.ts";
 import { PlayerHost, type PlayerHostAccount } from "#src/app/player/player-host.ts";
+import { expect, test } from "#src/test-utils/component-test.ts";
 
 const HAVE_METADATA = 1;
 const HAVE_ENOUGH_DATA = 4;

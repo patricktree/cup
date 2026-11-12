@@ -1,7 +1,8 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import { readLoadingStateRecord, recordLoadingStates } from "@cup/loading-state-recorder";
 
+import { expect, test } from "#src/test-utils/component-test.ts";
 import { recordConversionStarts } from "#src/test-utils/conversion-starts.ts";
 import { failResponses, holdResponses, releaseResponses } from "#src/test-utils/held-responses.ts";
 import { recordReactUseWarnings } from "#src/test-utils/react-use-warnings.ts";
@@ -21,7 +22,7 @@ for (const state of [
   { story: "RecentsWithPendingAndFailed", name: "recents-pending-and-failed", cards: 5 },
   { story: "RecentsWithMiniPlayer", name: "recents-with-mini-player", cards: 1 },
 ]) {
-  test(`renders ${state.name}`, async ({ mount, page }) => {
+  test(`renders ${state.name}`, { tag: "@visual" }, async ({ mount, page }) => {
     const component = await mount(`routes/_shell.recent/${state.story}`);
     await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
     if (state.cards === 0) {
@@ -95,90 +96,100 @@ test("pending and failed cards show a muted line in the title slot and no cover"
   await expect(cardsOf(component).nth(1).getByText("theverge.com", { exact: true })).toBeVisible();
 });
 
-test("the masonry keeps newest-first order left to right, top down", async ({ mount, page }) => {
-  const component = await mount("routes/_shell.recent/Recents");
-  await expect(cardsOf(component)).toHaveCount(FIRST_PAGE_SIZE);
-  await expectCoversLoaded(page);
+test(
+  "the masonry keeps newest-first order left to right, top down",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    const component = await mount("routes/_shell.recent/Recents");
+    await expect(cardsOf(component)).toHaveCount(FIRST_PAGE_SIZE);
+    await expectCoversLoaded(page);
 
-  const boxes = await readCardBoxes(component);
-  const columnLefts = [...new Set(boxes.map((box) => box.left))].sort((a, b) => a - b);
-  expect(columnLefts.length).toBeGreaterThanOrEqual(2);
-  // the first row fills the columns left to right
-  for (const [column, left] of columnLefts.entries()) {
-    expect(boxes[column]).toMatchObject({ left, top: 0 });
-  }
-  // every later card goes into the column that ends highest, leftmost on a tie, so no card starts above its predecessor
-  const columnBottoms = columnLefts.map(() => 0);
-  for (const [index, box] of boxes.entries()) {
-    const shortestColumn = columnBottoms.indexOf(Math.min(...columnBottoms));
-    expect(box.left, `card ${index}`).toBe(columnLefts[shortestColumn]);
-    expect(box.top, `card ${index}`).toBeGreaterThanOrEqual(boxes[index - 1]?.top ?? 0);
-    columnBottoms[shortestColumn] = box.top + box.height;
-  }
-});
-
-test("scrolling to the end loads the next page without moving existing cards", async ({
-  mount,
-  page,
-}) => {
-  let nextPageRequests = 0;
-  page.on("request", (request) => {
-    if (new URL(request.url()).searchParams.has("cursor")) {
-      nextPageRequests += 1;
+    const boxes = await readCardBoxes(component);
+    const columnLefts = [...new Set(boxes.map((box) => box.left))].sort((a, b) => a - b);
+    expect(columnLefts.length).toBeGreaterThanOrEqual(2);
+    // the first row fills the columns left to right
+    for (const [column, left] of columnLefts.entries()) {
+      expect(boxes[column]).toMatchObject({ left, top: 0 });
     }
-  });
-  const component = await mount("routes/_shell.recent/Recents");
-  await expect(cardsOf(component)).toHaveCount(FIRST_PAGE_SIZE);
-  await expectCoversLoaded(page);
-  await expect(component.getByRole("button", { name: "Load more" })).toHaveCount(0);
-  const firstPageBoxes = await readCardBoxes(component);
+    // every later card goes into the column that ends highest, leftmost on a tie, so no card starts above its predecessor
+    const columnBottoms = columnLefts.map(() => 0);
+    for (const [index, box] of boxes.entries()) {
+      const shortestColumn = columnBottoms.indexOf(Math.min(...columnBottoms));
+      expect(box.left, `card ${index}`).toBe(columnLefts[shortestColumn]);
+      expect(box.top, `card ${index}`).toBeGreaterThanOrEqual(boxes[index - 1]?.top ?? 0);
+      columnBottoms[shortestColumn] = box.top + box.height;
+    }
+  },
+);
 
-  // the first page is longer than the sentinel's margin, so the next page waits for scrolling
-  expect(nextPageRequests).toBe(0);
-  await component.getByRole("main").evaluate((main) => main.scrollIntoView({ block: "end" }));
+test(
+  "scrolling to the end loads the next page without moving existing cards",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    let nextPageRequests = 0;
+    page.on("request", (request) => {
+      if (new URL(request.url()).searchParams.has("cursor")) {
+        nextPageRequests += 1;
+      }
+    });
+    const component = await mount("routes/_shell.recent/Recents");
+    await expect(cardsOf(component)).toHaveCount(FIRST_PAGE_SIZE);
+    await expectCoversLoaded(page);
+    await expect(component.getByRole("button", { name: "Load more" })).toHaveCount(0);
+    const firstPageBoxes = await readCardBoxes(component);
 
-  await expect(cardsOf(component)).toHaveCount(FIRST_PAGE_SIZE + 12);
-  await expectCoversLoaded(page);
-  expect((await readCardBoxes(component)).slice(0, FIRST_PAGE_SIZE)).toEqual(firstPageBoxes);
-});
+    // the first page is longer than the sentinel's margin, so the next page waits for scrolling
+    expect(nextPageRequests).toBe(0);
+    await component.getByRole("main").evaluate((main) => main.scrollIntoView({ block: "end" }));
 
-test("Back from a track opened on a scrolled Recents returns to the same card", async ({
-  mount,
-  page,
-}) => {
-  const component = await mount("routes/_shell.recent/Recents");
-  await expect(cardsOf(component)).toHaveCount(FIRST_PAGE_SIZE);
-  await expectCoversLoaded(page);
-  // a card far enough down that Recents opening at the top would not show it
-  const card = cardsOf(component).nth(FIRST_PAGE_SIZE - 4);
-  await card.scrollIntoViewIfNeeded();
-  const scrollPosition = await page.evaluate(() => window.scrollY);
-  expect(scrollPosition).toBeGreaterThan(0);
+    await expect(cardsOf(component)).toHaveCount(FIRST_PAGE_SIZE + 12);
+    await expectCoversLoaded(page);
+    expect((await readCardBoxes(component)).slice(0, FIRST_PAGE_SIZE)).toEqual(firstPageBoxes);
+  },
+);
 
-  await card.getByRole("link").click();
-  await expect(component.getByRole("region", { name: "Preparing track" })).toBeVisible();
-  await component.getByRole("link", { name: "Back", exact: true }).click();
+test(
+  "Back from a track opened on a scrolled Recents returns to the same card",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    const component = await mount("routes/_shell.recent/Recents");
+    await expect(cardsOf(component)).toHaveCount(FIRST_PAGE_SIZE);
+    await expectCoversLoaded(page);
+    // a card far enough down that Recents opening at the top would not show it
+    const card = cardsOf(component).nth(FIRST_PAGE_SIZE - 4);
+    await card.scrollIntoViewIfNeeded();
+    const scrollPosition = await page.evaluate(() => window.scrollY);
+    expect(scrollPosition).toBeGreaterThan(0);
 
-  await expect(cardsOf(component).nth(FIRST_PAGE_SIZE - 4)).toBeInViewport();
-  expect(await page.evaluate(() => window.scrollY)).toBe(scrollPosition);
-});
+    await card.getByRole("link").click();
+    await expect(component.getByRole("region", { name: "Preparing track" })).toBeVisible();
+    await component.getByRole("link", { name: "Back", exact: true }).click();
+
+    await expect(cardsOf(component).nth(FIRST_PAGE_SIZE - 4)).toBeInViewport();
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrollPosition);
+  },
+);
 
 for (const state of [
   { story: "RecentsWithMiniPlayer", name: "mini-player" },
   { story: "RecentsWithMiniPlayerWithoutCover", name: "mini-player-without-cover" },
 ]) {
-  test(`renders the ${state.name}, paused and playing`, async ({ mount, page }) => {
-    const component = await mount(`routes/_shell.recent/${state.story}`);
-    const player = component.getByRole("region", { name: "Player" });
-    await expectCoversLoaded(page);
+  test(
+    `renders the ${state.name}, paused and playing`,
+    { tag: "@visual" },
+    async ({ mount, page }) => {
+      const component = await mount(`routes/_shell.recent/${state.story}`);
+      const player = component.getByRole("region", { name: "Player" });
+      await expectCoversLoaded(page);
 
-    await expect(player.getByRole("button", { name: "Play", exact: true })).toBeVisible();
-    await expect(player).toHaveScreenshot(`${state.name}-paused.png`);
+      await expect(player.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+      await expect(player).toHaveScreenshot(`${state.name}-paused.png`);
 
-    await player.getByRole("button", { name: "Play", exact: true }).click();
-    await expect(player.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
-    await expect(player).toHaveScreenshot(`${state.name}-playing.png`);
-  });
+      await player.getByRole("button", { name: "Play", exact: true }).click();
+      await expect(player.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+      await expect(player).toHaveScreenshot(`${state.name}-playing.png`);
+    },
+  );
 }
 
 test("the mini player names the loaded audiobook and its host", async ({ mount }) => {
@@ -193,49 +204,51 @@ test("the mini player names the loaded audiobook and its host", async ({ mount }
   await expect(player.getByRole("progressbar")).toHaveCount(0);
 });
 
-test("the mini player's −15 s skips the narration track back 15 seconds", async ({
-  mount,
-  page,
-}) => {
-  await captureNarrationAudio(page);
-  const component = await mount("routes/_shell.recent/RecentsWithMiniPlayer");
-  const player = component.getByRole("region", { name: "Player" });
+test(
+  "the mini player's −15 s skips the narration track back 15 seconds",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    await captureNarrationAudio(page);
+    const component = await mount("routes/_shell.recent/RecentsWithMiniPlayer");
+    const player = component.getByRole("region", { name: "Player" });
 
-  await setNarrationAudioTime(page, 40);
-  await player.getByRole("button", { name: "Back 15 seconds" }).click();
-  await expect.poll(() => readNarrationAudioTime(page)).toBe(25);
+    await setNarrationAudioTime(page, 40);
+    await player.getByRole("button", { name: "Back 15 seconds" }).click();
+    await expect.poll(() => readNarrationAudioTime(page)).toBe(25);
 
-  await player.getByRole("button", { name: "Back 15 seconds" }).click();
-  await player.getByRole("button", { name: "Back 15 seconds" }).click();
-  await expect.poll(() => readNarrationAudioTime(page)).toBe(0);
-});
+    await player.getByRole("button", { name: "Back 15 seconds" }).click();
+    await player.getByRole("button", { name: "Back 15 seconds" }).click();
+    await expect.poll(() => readNarrationAudioTime(page)).toBe(0);
+  },
+);
 
-test("pressing the mini player's cover opens the loaded audiobook's detail view, the rest of the pill does not", async ({
-  mount,
-  page,
-}) => {
-  const component = await mount("routes/_shell.recent/RecentsWithMiniPlayer");
-  const player = component.getByRole("region", { name: "Player" });
-  const cover = player.locator("img");
-  await expectCoversLoaded(page);
+test(
+  "pressing the mini player's cover opens the loaded audiobook's detail view, the rest of the pill does not",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    const component = await mount("routes/_shell.recent/RecentsWithMiniPlayer");
+    const player = component.getByRole("region", { name: "Player" });
+    const cover = player.locator("img");
+    await expectCoversLoaded(page);
 
-  // the gap between the link and the −15 s button
-  const linkBox = await player.getByRole("link").boundingBox();
-  expect(linkBox).not.toBeNull();
-  await page.mouse.click(linkBox!.x + linkBox!.width + 4, linkBox!.y + linkBox!.height / 2);
-  await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
-  await expect(player).toBeVisible();
+    // the gap between the link and the −15 s button
+    const linkBox = await player.getByRole("link").boundingBox();
+    expect(linkBox).not.toBeNull();
+    await page.mouse.click(linkBox!.x + linkBox!.width + 4, linkBox!.y + linkBox!.height / 2);
+    await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+    await expect(player).toBeVisible();
 
-  const coverBox = await cover.boundingBox();
-  expect(coverBox).not.toBeNull();
-  await page.mouse.click(coverBox!.x + coverBox!.width / 2, coverBox!.y + coverBox!.height / 2);
-  await expect(
-    component.getByRole("heading", { name: "Sure, let’s smoosh SpaceX and xAI together" }),
-  ).toBeVisible();
-  // the detail view shows the player sheet, not the mini player
-  await expect(component.getByRole("contentinfo", { name: "Player" })).toBeVisible();
-  await expect(component.getByRole("region", { name: "Player" })).toHaveCount(0);
-});
+    const coverBox = await cover.boundingBox();
+    expect(coverBox).not.toBeNull();
+    await page.mouse.click(coverBox!.x + coverBox!.width / 2, coverBox!.y + coverBox!.height / 2);
+    await expect(
+      component.getByRole("heading", { name: "Sure, let’s smoosh SpaceX and xAI together" }),
+    ).toBeVisible();
+    // the detail view shows the player sheet, not the mini player
+    await expect(component.getByRole("contentinfo", { name: "Player" })).toBeVisible();
+    await expect(component.getByRole("region", { name: "Player" })).toHaveCount(0);
+  },
+);
 
 test("the mini player stays behind the account dialog", async ({ mount, page }) => {
   const component = await mount("routes/_shell.recent/RecentsWithMiniPlayer");
@@ -362,7 +375,7 @@ test("does not poll settled empty recents", async ({ mount, page }) => {
   expect(requests).toBe(settledRequests);
 });
 
-test("renders the idle Add dialog over Recents", async ({ mount, page }) => {
+test("renders the idle Add dialog over Recents", { tag: "@visual" }, async ({ mount, page }) => {
   await mount("routes/_shell.recent/AddDialog");
   const dialog = page.getByRole("dialog", { name: "Add a track" });
   await expect(dialog).toBeVisible();
@@ -381,41 +394,50 @@ test("renders the idle Add dialog over Recents", async ({ mount, page }) => {
   await expect(page).toHaveScreenshot("add-dialog-idle.png");
 });
 
-test("the Add dialog is a sheet along the bottom edge, inside the app column's gutter", async ({
-  mount,
-  page,
-}) => {
-  await mount("routes/_shell.recent/AddDialog");
-  await waitForAddDialogAtRest(page);
-  const box = await page.getByRole("dialog", { name: "Add a track" }).boundingBox();
-  const viewport = page.viewportSize();
-  if (!box || !viewport) {
-    throw new Error("The Add dialog has no box, or the page no viewport size");
-  }
-  expect(box.y + box.height).toBe(viewport.height);
-  // The 800 px app column, less the 12 px gutter on each side.
-  const inset = Math.max(0, (viewport.width - 800) / 2) + 12;
-  expect(box.x).toBe(inset);
-  expect(box.x + box.width).toBe(viewport.width - inset);
-});
+test(
+  "the Add dialog is a sheet along the bottom edge, inside the app column's gutter",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    await mount("routes/_shell.recent/AddDialog");
+    await waitForAddDialogAtRest(page);
+    const box = await page.getByRole("dialog", { name: "Add a track" }).boundingBox();
+    const viewport = page.viewportSize();
+    if (!box || !viewport) {
+      throw new Error("The Add dialog has no box, or the page no viewport size");
+    }
+    expect(box.y + box.height).toBe(viewport.height);
+    // The 800 px app column, less the 12 px gutter on each side.
+    const inset = Math.max(0, (viewport.width - 800) / 2) + 12;
+    expect(box.x).toBe(inset);
+    expect(box.x + box.width).toBe(viewport.width - inset);
+  },
+);
 
-test("renders the Add dialog while the start is pending", async ({ mount, page }) => {
-  await mount("routes/_shell.recent/AddDialogPending");
-  const dialog = page.getByRole("dialog", { name: "Add a track" });
-  await expect(dialog.getByRole("button", { name: "Adding…" })).toBeDisabled();
-  await expect(dialog.getByRole("textbox", { name: "URL" })).toHaveValue(ADDED_SOURCE_URL);
-  await expect(page).toHaveScreenshot("add-dialog-pending.png");
-});
+test(
+  "renders the Add dialog while the start is pending",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    await mount("routes/_shell.recent/AddDialogPending");
+    const dialog = page.getByRole("dialog", { name: "Add a track" });
+    await expect(dialog.getByRole("button", { name: "Adding…" })).toBeDisabled();
+    await expect(dialog.getByRole("textbox", { name: "URL" })).toHaveValue(ADDED_SOURCE_URL);
+    await expect(page).toHaveScreenshot("add-dialog-pending.png");
+  },
+);
 
-test("renders a refused start inside the Add dialog", async ({ mount, page }) => {
-  await mount("routes/_shell.recent/AddDialogError");
-  const dialog = page.getByRole("dialog", { name: "Add a track" });
-  await expect(dialog.getByRole("alert")).toHaveText("This page cannot be converted.");
-  await expect(dialog.getByRole("button", { name: "Add" })).toBeEnabled();
-  // The submit button regains focus once re-enabled, with or without a focus ring; the field keeps it stable.
-  await dialog.getByRole("textbox", { name: "URL" }).focus();
-  await expect(page).toHaveScreenshot("add-dialog-error.png");
-});
+test(
+  "renders a refused start inside the Add dialog",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    await mount("routes/_shell.recent/AddDialogError");
+    const dialog = page.getByRole("dialog", { name: "Add a track" });
+    await expect(dialog.getByRole("alert")).toHaveText("This page cannot be converted.");
+    await expect(dialog.getByRole("button", { name: "Add" })).toBeEnabled();
+    // The submit button regains focus once re-enabled, with or without a focus ring; the field keeps it stable.
+    await dialog.getByRole("textbox", { name: "URL" }).focus();
+    await expect(page).toHaveScreenshot("add-dialog-error.png");
+  },
+);
 
 test("a refused start in the Add dialog leaves nothing for home or a reopened dialog", async ({
   mount,
@@ -464,111 +486,129 @@ for (const close of [
     run: async (page: Page) => dragAddDialogGrabber(page, await readAddDialogTop(page), 200),
   },
 ]) {
-  test(`${close.name} slides the Add dialog away and closes it, opened from Recents`, async ({
-    mount,
-    page,
-  }) => {
-    const component = await mount("routes/_shell.recent/EmptyRecents");
-    await component.getByRole("link", { name: "Add", exact: true }).click();
-    const restingTop = await waitForAddDialogAtRest(page);
+  test(
+    `${close.name} slides the Add dialog away and closes it, opened from Recents`,
+    { tag: "@visual" },
+    async ({ mount, page }) => {
+      const component = await mount("routes/_shell.recent/EmptyRecents");
+      await component.getByRole("link", { name: "Add", exact: true }).click();
+      const restingTop = await waitForAddDialogAtRest(page);
 
-    const closingTops = sampleAddDialogTops(page, "until-gone");
-    await close.run(page);
-    expectSlidAway(await closingTops, restingTop);
+      const closingTops = sampleAddDialogTops(page, "until-gone");
+      await close.run(page);
+      expectSlidAway(await closingTops, restingTop);
 
-    await expect(page.getByRole("dialog", { name: "Add a track" })).toHaveCount(0);
-    await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
-    // Opening again proves closing went back to the entry below, not forward to a new one.
-    await component.getByRole("link", { name: "Add", exact: true }).click();
-    await expect(page.getByRole("dialog", { name: "Add a track" })).toBeVisible();
-  });
+      await expect(page.getByRole("dialog", { name: "Add a track" })).toHaveCount(0);
+      await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
+      // Opening again proves closing went back to the entry below, not forward to a new one.
+      await component.getByRole("link", { name: "Add", exact: true }).click();
+      await expect(page.getByRole("dialog", { name: "Add a track" })).toBeVisible();
+    },
+  );
 }
 
-test("a short pull on the Add dialog's grabber lets it settle back", async ({ mount, page }) => {
-  await mount("routes/_shell.recent/AddDialog");
-  const dialog = page.getByRole("dialog", { name: "Add a track" });
-  const restingTop = await waitForAddDialogAtRest(page);
+test(
+  "a short pull on the Add dialog's grabber lets it settle back",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    await mount("routes/_shell.recent/AddDialog");
+    const dialog = page.getByRole("dialog", { name: "Add a track" });
+    const restingTop = await waitForAddDialogAtRest(page);
 
-  const tops = sampleAddDialogTops(page, "until-rest-after-moving");
-  await dragAddDialogGrabber(page, restingTop, 60);
+    const tops = sampleAddDialogTops(page, "until-rest-after-moving");
+    await dragAddDialogGrabber(page, restingTop, 60);
 
-  // It followed the pointer down, then came back up.
-  expect(Math.max(...(await tops))).toBeGreaterThan(restingTop + 30);
-  await expect(dialog).toBeVisible();
-  await expect.poll(() => readAddDialogTop(page)).toBe(restingTop);
-});
+    // It followed the pointer down, then came back up.
+    expect(Math.max(...(await tops))).toBeGreaterThan(restingTop + 30);
+    await expect(dialog).toBeVisible();
+    await expect.poll(() => readAddDialogTop(page)).toBe(restingTop);
+  },
+);
 
-test("renders the Add dialog held partway down by a pull", async ({ mount, page }) => {
-  await mount("routes/_shell.recent/AddDialog");
-  const restingTop = await waitForAddDialogAtRest(page);
-  const viewport = page.viewportSize();
-  if (!viewport) {
-    throw new Error("The page has no viewport size");
-  }
+test(
+  "renders the Add dialog held partway down by a pull",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    await mount("routes/_shell.recent/AddDialog");
+    const restingTop = await waitForAddDialogAtRest(page);
+    const viewport = page.viewportSize();
+    if (!viewport) {
+      throw new Error("The page has no viewport size");
+    }
 
-  const x = viewport.width / 2;
-  await page.mouse.move(x, restingTop + 8);
-  await page.mouse.down();
-  await page.mouse.move(x, restingTop + 108, { steps: 10 });
-  // The dialog follows the pointer once the pull passes Base UI's small start threshold.
-  await expect.poll(() => readAddDialogTop(page)).toBeGreaterThan(restingTop + 50);
+    const x = viewport.width / 2;
+    await page.mouse.move(x, restingTop + 8);
+    await page.mouse.down();
+    await page.mouse.move(x, restingTop + 108, { steps: 10 });
+    // The dialog follows the pointer once the pull passes Base UI's small start threshold.
+    await expect.poll(() => readAddDialogTop(page)).toBeGreaterThan(restingTop + 50);
 
-  // The backdrop has faded by as much as the pull has moved the dialog down.
-  await expect(page).toHaveScreenshot("add-dialog-mid-pull.png");
-  await page.mouse.up();
-});
+    // The backdrop has faded by as much as the pull has moved the dialog down.
+    await expect(page).toHaveScreenshot("add-dialog-mid-pull.png");
+    await page.mouse.up();
+  },
+);
 
-test("a mouse drag inside the Add dialog's form leaves it in place", async ({ mount, page }) => {
-  await mount("routes/_shell.recent/AddDialog");
-  const dialog = page.getByRole("dialog", { name: "Add a track" });
-  const restingTop = await waitForAddDialogAtRest(page);
-  const field = await dialog.getByRole("textbox", { name: "URL" }).boundingBox();
-  if (!field) {
-    throw new Error("The URL field has no box");
-  }
+test(
+  "a mouse drag inside the Add dialog's form leaves it in place",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    await mount("routes/_shell.recent/AddDialog");
+    const dialog = page.getByRole("dialog", { name: "Add a track" });
+    const restingTop = await waitForAddDialogAtRest(page);
+    const field = await dialog.getByRole("textbox", { name: "URL" }).boundingBox();
+    if (!field) {
+      throw new Error("The URL field has no box");
+    }
 
-  const start = { x: field.x + field.width / 2, y: field.y + field.height / 2 };
-  await page.mouse.move(start.x, start.y);
-  await page.mouse.down();
-  await page.mouse.move(start.x, start.y + 200, { steps: 10 });
-  expect(await readAddDialogTop(page)).toBe(restingTop);
-  await page.mouse.up();
+    const start = { x: field.x + field.width / 2, y: field.y + field.height / 2 };
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(start.x, start.y + 200, { steps: 10 });
+    expect(await readAddDialogTop(page)).toBe(restingTop);
+    await page.mouse.up();
 
-  await expect(dialog).toBeVisible();
-  expect(await readAddDialogTop(page)).toBe(restingTop);
-});
+    await expect(dialog).toBeVisible();
+    expect(await readAddDialogTop(page)).toBe(restingTop);
+  },
+);
 
-test("the Add dialog slides up from the bottom edge as it opens", async ({ mount, page }) => {
-  const component = await mount("routes/_shell.recent/EmptyRecents");
-  await component.getByRole("link", { name: "Add", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Add a track" })).toBeAttached();
+test(
+  "the Add dialog slides up from the bottom edge as it opens",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    const component = await mount("routes/_shell.recent/EmptyRecents");
+    await component.getByRole("link", { name: "Add", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "Add a track" })).toBeAttached();
 
-  const openingTops = await sampleAddDialogTops(page, "until-rest");
-  const restingTop = await readAddDialogTop(page);
-  expect(new Set(openingTops).size).toBeGreaterThan(2);
-  expect(openingTops[0]).toBeGreaterThan(restingTop);
-  expect(isOrdered(openingTops, "descending")).toBe(true);
-  expect(openingTops.at(-1)).toBe(restingTop);
-});
+    const openingTops = await sampleAddDialogTops(page, "until-rest");
+    const restingTop = await readAddDialogTop(page);
+    expect(new Set(openingTops).size).toBeGreaterThan(2);
+    expect(openingTops[0]).toBeGreaterThan(restingTop);
+    expect(isOrdered(openingTops, "descending")).toBe(true);
+    expect(openingTops.at(-1)).toBe(restingTop);
+  },
+);
 
-test("with reduced motion, the Add dialog appears and leaves without sliding", async ({
-  mount,
-  page,
-}) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  const component = await mount("routes/_shell.recent/EmptyRecents");
-  const dialog = page.getByRole("dialog", { name: "Add a track" });
-  await component.getByRole("link", { name: "Add", exact: true }).click();
-  await expect(dialog).toBeAttached();
+test(
+  "with reduced motion, the Add dialog appears and leaves without sliding",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const component = await mount("routes/_shell.recent/EmptyRecents");
+    const dialog = page.getByRole("dialog", { name: "Add a track" });
+    await component.getByRole("link", { name: "Add", exact: true }).click();
+    await expect(dialog).toBeAttached();
 
-  const restingTop = await readAddDialogTop(page);
-  expect(await sampleAddDialogTops(page, "until-rest")).toEqual([restingTop]);
+    const restingTop = await readAddDialogTop(page);
+    expect(await sampleAddDialogTops(page, "until-rest")).toEqual([restingTop]);
 
-  await page.keyboard.press("Escape");
-  // It may stay for a frame before it leaves, but it never moves across frames.
-  expect((await sampleAddDialogTops(page, "until-rest")).length).toBeLessThanOrEqual(1);
-  await expect(dialog).toHaveCount(0);
-});
+    await page.keyboard.press("Escape");
+    // It may stay for a frame before it leaves, but it never moves across frames.
+    expect((await sampleAddDialogTops(page, "until-rest")).length).toBeLessThanOrEqual(1);
+    await expect(dialog).toHaveCount(0);
+  },
+);
 
 test("a start that succeeds after Back closed the Add dialog leaves the listener where they went", async ({
   mount,
@@ -623,20 +663,24 @@ test("closing an Add dialog that was not opened from Recents shows Recents", asy
   await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
 });
 
-test("a successful start closes the Add dialog and lists the new item", async ({ mount, page }) => {
-  const component = await mount("routes/_shell.recent/AddDialogStarts");
-  await expect(component.getByRole("link", { name: "Add your first track" })).toBeVisible();
-  await component.getByRole("link", { name: "Add", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Add a track" });
-  await dialog.getByRole("textbox", { name: "URL" }).fill(ADDED_SOURCE_URL);
-  const restingTop = await waitForAddDialogAtRest(page);
-  const closingTops = sampleAddDialogTops(page, "until-gone");
-  await dialog.getByRole("button", { name: "Add" }).click();
-  expectSlidAway(await closingTops, restingTop);
-  await expect(dialog).toHaveCount(0);
-  await expect(cardsOf(component).getByRole("link")).toHaveAccessibleName("Preparing");
-  await expect(cardsOf(component).getByText("example.test", { exact: true })).toBeVisible();
-});
+test(
+  "a successful start closes the Add dialog and lists the new item",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    const component = await mount("routes/_shell.recent/AddDialogStarts");
+    await expect(component.getByRole("link", { name: "Add your first track" })).toBeVisible();
+    await component.getByRole("link", { name: "Add", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Add a track" });
+    await dialog.getByRole("textbox", { name: "URL" }).fill(ADDED_SOURCE_URL);
+    const restingTop = await waitForAddDialogAtRest(page);
+    const closingTops = sampleAddDialogTops(page, "until-gone");
+    await dialog.getByRole("button", { name: "Add" }).click();
+    expectSlidAway(await closingTops, restingTop);
+    await expect(dialog).toHaveCount(0);
+    await expect(cardsOf(component).getByRole("link")).toHaveAccessibleName("Preparing");
+    await expect(cardsOf(component).getByText("example.test", { exact: true })).toBeVisible();
+  },
+);
 
 /**
  * Keeps the player host's audio element reachable, which is never attached to the document (see
@@ -675,10 +719,15 @@ function readNarrationAudioTime(page: Page) {
   });
 }
 
-test("the tracks still loading are marked as a loading state", async ({ mount }) => {
+test("the tracks still loading are marked as a loading state, under the page title of Recent", async ({
+  mount,
+  page,
+}) => {
   const component = await mount("routes/_shell.recent/LoadingTracks");
 
+  await expect(component.getByText("Loading tracks…")).toBeVisible();
   await expect(component.getByText("Loading tracks…")).toHaveAttribute("data-loading-state", "");
+  await expect(page).toHaveTitle("Recent · Cup");
 });
 
 const REVISITED_READY_TITLE =
@@ -992,44 +1041,45 @@ test("a card in view preloads its track, so opening it shows no loading state", 
   expect(await readLoadingStatesSince(page, recordedBefore)).toEqual([]);
 });
 
-test("a preloaded track shows no progress bar while the browser captures its cover transition", async ({
-  mount,
-  page,
-}) => {
-  // WebKit in the E2E suite's Docker browser takes longer than the bar's delay to capture the old
-  // screen; delaying the transition's update stands in for that, in any browser.
-  await page.addInitScript(() => {
-    const startViewTransition = document.startViewTransition.bind(document);
-    document.startViewTransition = (options) => {
-      const update = typeof options === "function" ? options : options?.update;
-      const delayedUpdate = async () => {
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        await update?.();
+test(
+  "a preloaded track shows no progress bar while the browser captures its cover transition",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    // WebKit in the E2E suite's Docker browser takes longer than the bar's delay to capture the old
+    // screen; delaying the transition's update stands in for that, in any browser.
+    await page.addInitScript(() => {
+      const startViewTransition = document.startViewTransition.bind(document);
+      document.startViewTransition = (options) => {
+        const update = typeof options === "function" ? options : options?.update;
+        const delayedUpdate = async () => {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          await update?.();
+        };
+        return startViewTransition(
+          typeof options === "function" || options === undefined
+            ? delayedUpdate
+            : { ...options, update: delayedUpdate },
+        );
       };
-      return startViewTransition(
-        typeof options === "function" || options === undefined
-          ? delayedUpdate
-          : { ...options, update: delayedUpdate },
-      );
-    };
-  });
-  const requestedPaths = new Set<string>();
-  page.on("request", (request) => requestedPaths.add(new URL(request.url()).pathname));
-  await recordLoadingStates(page);
-  await recordViewTransitions(page);
-  const component = await mount("routes/_shell.recent/RevisitingScreens");
-  await expectCoversLoaded(page);
-  await expect.poll(() => requestedPaths.has(`/api/audiobooks/${REVISITED_READY_ID}`)).toBe(true);
+    });
+    const requestedPaths = new Set<string>();
+    page.on("request", (request) => requestedPaths.add(new URL(request.url()).pathname));
+    await recordLoadingStates(page);
+    await recordViewTransitions(page);
+    const component = await mount("routes/_shell.recent/RevisitingScreens");
+    await expectCoversLoaded(page);
+    await expect.poll(() => requestedPaths.has(`/api/audiobooks/${REVISITED_READY_ID}`)).toBe(true);
 
-  const recordedBefore = (await readLoadingStateRecord(page)).length;
-  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+    const recordedBefore = (await readLoadingStateRecord(page)).length;
+    await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
 
-  await expect(component.getByText("Two.", { exact: true })).toBeVisible();
-  await expect
-    .poll(async () => (await readViewTransitionRecord(page)).map(({ types }) => types))
-    .toEqual([["track-cover"]]);
-  expect(await readLoadingStatesSince(page, recordedBefore)).toEqual([]);
-});
+    await expect(component.getByText("Two.", { exact: true })).toBeVisible();
+    await expect
+      .poll(async () => (await readViewTransitionRecord(page)).map(({ types }) => types))
+      .toEqual([["track-cover"]]);
+    expect(await readLoadingStatesSince(page, recordedBefore)).toEqual([]);
+  },
+);
 
 test("leaving a track being prepared stops polling it, and reopening it polls again", async ({
   mount,
@@ -1058,177 +1108,183 @@ test("leaving a track being prepared stops polling it, and reopening it polls ag
   await expect.poll(() => audiobookRequestCount).toBeGreaterThan(requestCountOnLeaving + 1);
 });
 
-test("opening a track from Recents and going back runs the cover transition between the card and the detail view", async ({
-  mount,
-  page,
-}) => {
-  await recordViewTransitions(page);
-  const component = await mount("routes/_shell.recent/RevisitingScreens");
-  await expectCoversLoaded(page);
+test(
+  "opening a track from Recents and going back runs the cover transition between the card and the detail view",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    await recordViewTransitions(page);
+    const component = await mount("routes/_shell.recent/RevisitingScreens");
+    await expectCoversLoaded(page);
 
-  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
-  await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
-  await loadIntoPlayer(component);
-  await component.getByRole("link", { name: "Back", exact: true }).click();
-  await expect(cardsOf(component)).toHaveCount(2);
+    await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+    await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+    await loadIntoPlayer(component);
+    await component.getByRole("link", { name: "Back", exact: true }).click();
+    await expect(cardsOf(component)).toHaveCount(2);
 
-  await expect
-    .poll(() => readViewTransitionRecord(page))
-    .toEqual([
-      {
-        types: ["track-cover"],
-        oldCovers: ["card"],
-        newCovers: ["detail"],
+    await expect
+      .poll(() => readViewTransitionRecord(page))
+      .toEqual([
+        {
+          types: ["track-cover"],
+          oldCovers: ["card"],
+          newCovers: ["detail"],
+          bottomBarGap: 0,
+          isNamedBottomBarSticky: false,
+          isBottomBarAboveCover: true,
+          isBottomBarPair: true,
+          fadingScreens: ["detail-header", "detail-screen", "recents-screen"],
+          isDocumentCaptured: false,
+        },
+        {
+          types: ["track-cover"],
+          oldCovers: ["detail"],
+          newCovers: ["card"],
+          bottomBarGap: 0,
+          isNamedBottomBarSticky: false,
+          isBottomBarAboveCover: true,
+          isBottomBarPair: true,
+          fadingScreens: ["detail-header", "detail-screen", "recents-screen"],
+          isDocumentCaptured: false,
+        },
+      ]);
+  },
+);
+
+test(
+  "going back from a detail view scrolled past its cover only cross-fades",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    await recordViewTransitions(page);
+    const component = await mount("routes/_shell.recent/RevisitingScreens");
+    await expectCoversLoaded(page);
+    await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+    await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+    await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(1);
+    await page.evaluate(() => document.activeViewTransition?.finished);
+
+    await scrollCoverTo(page, "above-viewport");
+    await component.getByRole("link", { name: "Back", exact: true }).click();
+    await expect(cardsOf(component)).toHaveCount(2);
+
+    await expect
+      .poll(async () => (await readViewTransitionRecord(page)).at(-1))
+      .toMatchObject({ types: ["screen-fade"], oldCovers: [], newCovers: [] });
+  },
+);
+
+test(
+  "going back from a detail view with its cover partly in view moves the cover",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    await recordViewTransitions(page);
+    const component = await mount("routes/_shell.recent/RevisitingScreens");
+    await expectCoversLoaded(page);
+    await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+    await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+    await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(1);
+    await page.evaluate(() => document.activeViewTransition?.finished);
+
+    await scrollCoverTo(page, "partly-in-viewport");
+    await component.getByRole("link", { name: "Back", exact: true }).click();
+    await expect(cardsOf(component)).toHaveCount(2);
+
+    await expect
+      .poll(async () => (await readViewTransitionRecord(page)).at(-1))
+      .toMatchObject({ types: ["track-cover"], oldCovers: ["detail"], newCovers: ["card"] });
+  },
+);
+
+test(
+  "opening a track from Recents scrolled past its card only cross-fades",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    await recordViewTransitions(page);
+    const component = await mount("routes/_shell.recent/RevisitingScreens");
+    await expectCoversLoaded(page);
+    await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+    await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+    await component.getByRole("link", { name: "Back", exact: true }).click();
+    await expect(cardsOf(component)).toHaveCount(2);
+    await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(2);
+    await page.evaluate(() => document.activeViewTransition?.finished);
+
+    await scrollCoverTo(page, "above-viewport");
+    // Not a tap on the card, as that would scroll it into view: the way a browser Forward opens it.
+    await openPathInAccountStory(page, `/audiobooks/${REVISITED_READY_ID}`);
+    await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+
+    await expect
+      .poll(async () => (await readViewTransitionRecord(page)).at(-1))
+      .toMatchObject({ types: ["screen-fade"], oldCovers: [], newCovers: [] });
+    expect(await readViewTransitionRecord(page)).toHaveLength(3);
+  },
+);
+
+test(
+  "opening a track from the mini player and going back only cross-fade, even with its card in view",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    await recordViewTransitions(page);
+    const component = await mount("routes/_shell.recent/RevisitingScreens");
+    await expectCoversLoaded(page);
+    await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+    await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+    await loadIntoPlayer(component);
+    await component.getByRole("link", { name: "Back", exact: true }).click();
+    const player = component.getByRole("region", { name: "Player" });
+    await expect(player).toBeVisible();
+    await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(2);
+    await page.evaluate(() => document.activeViewTransition?.finished);
+
+    await player.getByRole("link").click();
+
+    await expect
+      .poll(async () => (await readViewTransitionRecord(page)).at(-1))
+      .toEqual({
+        types: ["screen-fade"],
+        oldCovers: [],
+        newCovers: [],
         bottomBarGap: 0,
         isNamedBottomBarSticky: false,
         isBottomBarAboveCover: true,
         isBottomBarPair: true,
         fadingScreens: ["detail-header", "detail-screen", "recents-screen"],
         isDocumentCaptured: false,
-      },
-      {
-        types: ["track-cover"],
-        oldCovers: ["detail"],
-        newCovers: ["card"],
-        bottomBarGap: 0,
-        isNamedBottomBarSticky: false,
-        isBottomBarAboveCover: true,
-        isBottomBarPair: true,
-        fadingScreens: ["detail-header", "detail-screen", "recents-screen"],
-        isDocumentCaptured: false,
-      },
-    ]);
-});
+      });
+    expect(await readViewTransitionRecord(page)).toHaveLength(3);
+    await page.evaluate(() => document.activeViewTransition?.finished);
 
-test("going back from a detail view scrolled past its cover only cross-fades", async ({
-  mount,
-  page,
-}) => {
-  await recordViewTransitions(page);
-  const component = await mount("routes/_shell.recent/RevisitingScreens");
-  await expectCoversLoaded(page);
-  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
-  await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
-  await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(1);
-  await page.evaluate(() => document.activeViewTransition?.finished);
+    // the detail view's cover is in view, and so is the card it would land on
+    await component.getByRole("link", { name: "Back", exact: true }).click();
 
-  await scrollCoverTo(page, "above-viewport");
-  await component.getByRole("link", { name: "Back", exact: true }).click();
-  await expect(cardsOf(component)).toHaveCount(2);
-
-  await expect
-    .poll(async () => (await readViewTransitionRecord(page)).at(-1))
-    .toMatchObject({ types: ["screen-fade"], oldCovers: [], newCovers: [] });
-});
-
-test("going back from a detail view with its cover partly in view moves the cover", async ({
-  mount,
-  page,
-}) => {
-  await recordViewTransitions(page);
-  const component = await mount("routes/_shell.recent/RevisitingScreens");
-  await expectCoversLoaded(page);
-  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
-  await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
-  await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(1);
-  await page.evaluate(() => document.activeViewTransition?.finished);
-
-  await scrollCoverTo(page, "partly-in-viewport");
-  await component.getByRole("link", { name: "Back", exact: true }).click();
-  await expect(cardsOf(component)).toHaveCount(2);
-
-  await expect
-    .poll(async () => (await readViewTransitionRecord(page)).at(-1))
-    .toMatchObject({ types: ["track-cover"], oldCovers: ["detail"], newCovers: ["card"] });
-});
-
-test("opening a track from Recents scrolled past its card only cross-fades", async ({
-  mount,
-  page,
-}) => {
-  await recordViewTransitions(page);
-  const component = await mount("routes/_shell.recent/RevisitingScreens");
-  await expectCoversLoaded(page);
-  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
-  await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
-  await component.getByRole("link", { name: "Back", exact: true }).click();
-  await expect(cardsOf(component)).toHaveCount(2);
-  await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(2);
-  await page.evaluate(() => document.activeViewTransition?.finished);
-
-  await scrollCoverTo(page, "above-viewport");
-  // Not a tap on the card, as that would scroll it into view: the way a browser Forward opens it.
-  await openPathInAccountStory(page, `/audiobooks/${REVISITED_READY_ID}`);
-  await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
-
-  await expect
-    .poll(async () => (await readViewTransitionRecord(page)).at(-1))
-    .toMatchObject({ types: ["screen-fade"], oldCovers: [], newCovers: [] });
-  expect(await readViewTransitionRecord(page)).toHaveLength(3);
-});
-
-test("opening a track from the mini player and going back only cross-fade, even with its card in view", async ({
-  mount,
-  page,
-}) => {
-  await recordViewTransitions(page);
-  const component = await mount("routes/_shell.recent/RevisitingScreens");
-  await expectCoversLoaded(page);
-  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
-  await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
-  await loadIntoPlayer(component);
-  await component.getByRole("link", { name: "Back", exact: true }).click();
-  const player = component.getByRole("region", { name: "Player" });
-  await expect(player).toBeVisible();
-  await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(2);
-  await page.evaluate(() => document.activeViewTransition?.finished);
-
-  await player.getByRole("link").click();
-
-  await expect
-    .poll(async () => (await readViewTransitionRecord(page)).at(-1))
-    .toEqual({
+    await expect(cardsOf(component)).toHaveCount(2);
+    await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(4);
+    expect((await readViewTransitionRecord(page)).at(-1)).toMatchObject({
       types: ["screen-fade"],
       oldCovers: [],
       newCovers: [],
-      bottomBarGap: 0,
-      isNamedBottomBarSticky: false,
-      isBottomBarAboveCover: true,
-      isBottomBarPair: true,
-      fadingScreens: ["detail-header", "detail-screen", "recents-screen"],
-      isDocumentCaptured: false,
     });
-  expect(await readViewTransitionRecord(page)).toHaveLength(3);
-  await page.evaluate(() => document.activeViewTransition?.finished);
+  },
+);
 
-  // the detail view's cover is in view, and so is the card it would land on
-  await component.getByRole("link", { name: "Back", exact: true }).click();
+test(
+  "with reduced motion, opening a track and going back start no view transition",
+  { tag: "@visual" },
+  async ({ mount, page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await recordViewTransitions(page);
+    const component = await mount("routes/_shell.recent/RevisitingScreens");
 
-  await expect(cardsOf(component)).toHaveCount(2);
-  await expect.poll(async () => (await readViewTransitionRecord(page)).length).toBe(4);
-  expect((await readViewTransitionRecord(page)).at(-1)).toMatchObject({
-    types: ["screen-fade"],
-    oldCovers: [],
-    newCovers: [],
-  });
-});
+    await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
+    await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
+    await component.getByRole("link", { name: "Back", exact: true }).click();
+    await expect(cardsOf(component)).toHaveCount(2);
 
-test("with reduced motion, opening a track and going back start no view transition", async ({
-  mount,
-  page,
-}) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await recordViewTransitions(page);
-  const component = await mount("routes/_shell.recent/RevisitingScreens");
-
-  await cardsOf(component).getByRole("link", { name: REVISITED_READY_TITLE }).click();
-  await expect(component.getByRole("heading", { name: REVISITED_READY_TITLE })).toBeVisible();
-  await component.getByRole("link", { name: "Back", exact: true }).click();
-  await expect(cardsOf(component)).toHaveCount(2);
-
-  await page.evaluate(() => document.activeViewTransition?.finished);
-  expect(await readViewTransitionRecord(page)).toEqual([]);
-});
+    await page.evaluate(() => document.activeViewTransition?.finished);
+    expect(await readViewTransitionRecord(page)).toEqual([]);
+  },
+);
 
 /** Waits until the Add dialog has slid in and stopped moving, and returns its top edge. */
 async function waitForAddDialogAtRest(page: Page): Promise<number> {
@@ -1422,12 +1478,6 @@ test("the page title names the account dialog while it is open", async ({ mount,
 
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page).toHaveTitle("Recent · Cup");
-});
-
-test("the page title names Recent while its tracks load", async ({ mount, page }) => {
-  const component = await mount("routes/_shell.recent/LoadingTracks");
-  await expect(component.getByText("Loading tracks…")).toBeVisible();
   await expect(page).toHaveTitle("Recent · Cup");
 });
 

@@ -28,5 +28,6 @@ ADRs preserve decisions, alternatives, rationale, and consequences. Read them al
 | [0022](0022-reserve-70-milliseconds-of-audio-per-narration-text-character.md)                                       | Reserve 70 milliseconds of audio per narration-text character                                          |
 | [0023](0023-time-stretch-narration-audio-after-synthesis-with-sonic.md)                                             | Time-stretch narration audio after synthesis with Sonic                                                |
 | [0024](0024-replay-e2e-suite-passes-from-the-turbo-cache-with-a-toolchain-key.md)                                   | Replay E2E suite passes from the Turbo cache with a toolchain key                                      |
+| [0025](0025-run-only-visual-component-tests-in-all-four-browser-projects.md)                                        | Run only visual component tests in all four browser projects                                           |
 
 Each decision's frontmatter records its status. For a substantive reversal, add a superseding ADR and link it from the previous decision while retaining the old rationale. The [wiki schema](../agents/domain.md#record-decisions-and-evidence) describes how decisions, implementation gaps, and research relate.
