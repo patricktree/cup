@@ -150,7 +150,7 @@ One Android test launches with the real plugin (`realGoogleSignIn: true`) on the
 
 **These tests depend on Safari's system UI** and its element labels and types, which Apple changes without notice. They are expected to fail when an iOS or Xcode update changes that UI: update the selectors in `IosAppDevice` rather than retrying the tests.
 
-[`test/android/back-button.test.ts`](test/android/back-button.test.ts) relaunches a signed-in Cup so Recents is the first screen. Back closes the Add dialog and leaves a track's page for Recents; on Recents, Back puts Cup in the background with its page kept, which the test checks by bringing Cup back to the foreground. The Add dialog focuses its URL field, which opens the on-screen keyboard, and Android's first Back closes an open keyboard instead of reaching Cup, so the test waits for the keyboard to show, leaves the field and waits until the keyboard has left the screen before pressing Back. The keyboard can show seconds after the field got focus, the first time after the emulator booted, and then closes only after the field was left; a Back press in between closed the keyboard.
+[`test/android/back-button.test.ts`](test/android/back-button.test.ts) relaunches a signed-in Cup so Recents is the first screen. Back closes the Add dialog and leaves a track's page for Recents; on Recents, Back puts Cup in the background with its page kept, which the test checks by bringing Cup back to the foreground. Android's first Back closes an open on-screen keyboard instead of reaching Cup. The Add dialog focuses itself, not its URL field, so no keyboard opens: the test checks that the dialog holds focus and that no keyboard is on screen before pressing Back.
 
 ## Native networking
 
