@@ -38,6 +38,12 @@ export function ShellContent({
             /* put above shell <main> */
             z-index: 1;
             grid-area: shell-header;
+            /*
+              reaches up into the shell's top safe-area padding (routes/_shell.tsx), so the stuck
+              header's background covers the status bar and nothing scrolls visibly beneath it
+            */
+            padding-block-start: env(safe-area-inset-top, 0);
+            margin-block-start: calc(-1 * env(safe-area-inset-top, 0px));
 
             font-size: var(--font-size-xxxl);
             background-color: var(--color-bg);

@@ -26,6 +26,13 @@ function ShellLayout() {
             "shell-footer";
           grid-template-rows: max-content 1fr auto;
           min-height: 100dvh;
+          /*
+            The page reaches under the status bar and the notch (viewport-fit=cover in
+            index.html), as the iOS app's WebView always does; keep the content out of them. The
+            sticky header in main.tsx pulls its background back up into the top inset.
+          */
+          padding-block-start: env(safe-area-inset-top, 0);
+          padding-inline: env(safe-area-inset-left, 0) env(safe-area-inset-right, 0);
 
           /* create stacking context for <header> and <main> of the shell */
           isolation: isolate;
