@@ -14,8 +14,11 @@ export const DSToastViewport: React.FC = () => {
       <Toast.Viewport
         className={css`
           position: fixed;
-          /* the player controls and the tab bar occupy the bottom of the screen */
-          top: var(--app-padding-block);
+          /*
+            the player controls and the tab bar occupy the bottom of the screen; below the status
+            bar, which the page reaches under (viewport-fit=cover in index.html)
+          */
+          top: calc(env(safe-area-inset-top, 0px) + var(--app-padding-block));
           left: 50%;
           /* above dialogs, whose portals mount after this one */
           z-index: 1;

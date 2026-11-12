@@ -44,7 +44,8 @@ function DelayedProgressBar(): React.ReactNode {
       data-pending-signal=""
       className={css`
         position: fixed;
-        inset: 0 0 auto;
+        /* below the status bar, which the page reaches under (viewport-fit=cover in index.html) */
+        inset: env(safe-area-inset-top, 0) 0 auto;
         z-index: 1000;
         display: block;
         width: 100%;

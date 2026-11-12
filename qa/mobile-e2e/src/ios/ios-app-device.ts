@@ -216,6 +216,30 @@ export class IosAppDevice implements AppDevice {
     return toAppiumAppState(state, shareApp);
   }
 
+  /**
+   * The status bar's height in screen points, which the WebView's safe area covers. Leaves the
+   * session in the native context, where element positions are in screen points too.
+   */
+  async statusBarHeight(): Promise<number> {
+    await this.driver.switchContext("NATIVE_APP");
+    const screenInfo: unknown = await this.driver.execute("mobile: deviceScreenInfo");
+    if (
+      typeof screenInfo !== "object" ||
+      screenInfo === null ||
+      !("statusBarSize" in screenInfo) ||
+      typeof screenInfo.statusBarSize !== "object" ||
+      screenInfo.statusBarSize === null ||
+      !("height" in screenInfo.statusBarSize) ||
+      typeof screenInfo.statusBarSize.height !== "number" ||
+      screenInfo.statusBarSize.height <= 0
+    ) {
+      throw new Error(
+        `Appium's mobile: deviceScreenInfo returned no status bar height: ${JSON.stringify(screenInfo)}`,
+      );
+    }
+    return screenInfo.statusBarSize.height;
+  }
+
   async continueGoogleSignIn(): Promise<void> {
     await this.driver.switchContext("NATIVE_APP");
     await this.tap(SIGN_IN_PROMPT_CONTINUE, "The prompt to sign in with localhost");
