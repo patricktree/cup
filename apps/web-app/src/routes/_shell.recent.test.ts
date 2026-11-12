@@ -372,7 +372,8 @@ test("renders the idle Add dialog over Recents", async ({ mount, page }) => {
   await expect(
     page.getByRole("heading", { name: "Recent", exact: true, includeHidden: true }),
   ).toBeAttached();
-  await expect(dialog.getByRole("textbox", { name: "URL" })).toBeFocused();
+  // The field stays unfocused, so opening the sheet does not raise the on-screen keyboard.
+  await expect(dialog).toBeFocused();
   await expect(dialog.getByRole("textbox", { name: "URL" })).toHaveAttribute(
     "placeholder",
     "Paste website link (https://...)",
@@ -619,7 +620,7 @@ test("closing an Add dialog that was not opened from Recents shows Recents", asy
   page,
 }) => {
   const component = await mount("routes/_shell.recent/AddDialog");
-  await expect(page.getByRole("textbox", { name: "URL" })).toBeFocused();
+  await expect(page.getByRole("dialog", { name: "Add a track" })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Add a track" })).toHaveCount(0);
   await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
