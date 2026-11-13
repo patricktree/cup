@@ -6,12 +6,7 @@ import { accountSnapshotSchema } from "@cup/listener-api.routes";
 import { VISUAL_TAG } from "#test-e2e/browser-project-tags.ts";
 import { expect, test } from "#test-e2e/fixtures.ts";
 import { readAccessToken, waitForAudiobook } from "#test-e2e/journey.ts";
-import {
-  countSynthesizedSegments,
-  readAudiobook,
-  readSpeechCalls,
-  waitForGeneratedAudio,
-} from "#test-e2e/synthesis.ts";
+import { readAudiobook, waitForGeneratedAudio } from "#test-e2e/synthesis.ts";
 
 const SOURCE_URL = "https://source.example.test/fixture";
 
@@ -632,7 +627,7 @@ test("account positions restore once and use last-write-wins across players", as
     page.locator(`[id="${document.narrationDocument.synchronizationUnits[2]!.id}"]`),
   ).toHaveAttribute("aria-current", "true");
   await expect
-    .poll(async () => countSynthesizedSegments(await readSpeechCalls(origin)))
+    .poll(async () => (await (await fetch(origin + "/__qa/speech-calls")).json()).length)
     .toBe(document.narrationDocument.synchronizationUnits.length);
   await second.close();
 });

@@ -82,9 +82,7 @@ const manifest = JSON.stringify({
   speechConfig: SPEECH_CONFIG,
   narrationDocument: {
     html: '<h1 id="synchronization-unit-1">A document</h1>',
-    synchronizationUnits: [
-      { id: "synchronization-unit-1", narrationText: "A document", continuesNarrationBlock: true },
-    ],
+    synchronizationUnits: [{ id: "synchronization-unit-1", narrationText: "A document" }],
   },
   coverImage: { contentType: "image/jpeg", byteLength: 3, alternativeText: "A lighthouse" },
 });
@@ -555,10 +553,6 @@ test("the audiobook carries only declared fields", async () => {
     playbackPosition: { synchronizationUnitId: "synchronization-unit-1", offsetMilliseconds: 500 },
     narrationTrack: { durationMilliseconds: 1_000, startMilliseconds: [0] },
   });
-  // The manifest unit continues its narration block; only segment synthesis reads that.
-  expect(
-    audiobook.status === "ready" && audiobook.narrationDocument.synchronizationUnits,
-  ).toStrictEqual([{ id: "synchronization-unit-1", narrationText: "A document" }]);
 });
 
 test("a refused retry carries only the declared durations", async () => {

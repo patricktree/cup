@@ -76,10 +76,6 @@ const config: KnipConfig = {
         "cloudflare",
       ],
     },
-    "libs/audiobook-production": {
-      /* Live evals use separate Vitest discovery, so Knip cannot infer these entry points */
-      entry: ["vitest.evals.config.ts", "test/evals/**/*.eval.ts"],
-    },
     "libs/narration-source-analysis": {
       /* Live evals use separate Vitest discovery, so Knip cannot infer these entry points */
       entry: ["vitest.evals.config.ts", "test/evals/**/*.eval.ts"],

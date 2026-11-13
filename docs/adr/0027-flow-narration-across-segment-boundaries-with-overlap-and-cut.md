@@ -1,8 +1,10 @@
 ---
-status: accepted
+status: superseded by ADR 0028
 ---
 
 # Flow narration across segment boundaries with overlap and cut
+
+[ADR 0028](0028-withdraw-overlap-and-cut.md) supersedes this decision: speech policy 7 was withdrawn on 2026-11-13, the day it was deployed, because the cut point found by deterministic alignment of speech recognition output is not reliable enough. The original decision and its rationale below are preserved as history.
 
 Each audio segment was synthesized from its narration chunk's text alone, so at almost every segment boundary the narration made a fresh start: the voice reset its intonation and energy, and sometimes sounded like a different take. The map [patricktree/cup#288](https://github.com/patricktree/cup/issues/288), answering Linear CUP-58, decided how narration carries on across segment boundaries in [#289](https://github.com/patricktree/cup/issues/289), [#290](https://github.com/patricktree/cup/issues/290), [#291](https://github.com/patricktree/cup/issues/291), [#316](https://github.com/patricktree/cup/issues/316), [#317](https://github.com/patricktree/cup/issues/317), [#318](https://github.com/patricktree/cup/issues/318) and [#319](https://github.com/patricktree/cup/issues/319), the spec [#330](https://github.com/patricktree/cup/issues/330) described it, and [#331](https://github.com/patricktree/cup/issues/331) to [#335](https://github.com/patricktree/cup/issues/335) implemented it as Gemini speech policy 7.
 

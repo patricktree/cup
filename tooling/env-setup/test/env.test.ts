@@ -10,7 +10,6 @@ import { runCli } from "#src/cli.ts";
 const FILES = [
   "apps/cloudflare-worker/.env.local",
   "libs/narration-source-analysis/.env.evals",
-  "libs/audiobook-production/.env.evals",
 ] as const;
 const LEGACY_EVALS_FILE = "libs/narration-content-selection/.env.evals";
 const CREDENTIALS = {
@@ -25,7 +24,6 @@ async function fixture(t: TestContext) {
     "tooling/env-setup/src",
     "apps/cloudflare-worker",
     "libs/narration-source-analysis",
-    "libs/audiobook-production",
   ]) {
     await fs.mkdir(path.join(root, directory), { recursive: true });
   }

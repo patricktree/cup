@@ -10,7 +10,7 @@ import { produceAudioSegment, type ProduceOptions } from "#src/produce-audio-seg
 import { createFakeSpeechSynthesisAi } from "#src/speech-synthesis-ai.fake.ts";
 import {
   ELEVENLABS_SPEECH_CONFIG,
-  LEGACY_GEMINI_V6_SPEECH_CONFIG,
+  GEMINI_SPEECH_CONFIG,
   LEGACY_GEMINI_V3_SPEECH_CONFIG,
 } from "#src/speech-synthesis-config.ts";
 import { PermanentNarrationSynthesisError, type SynthesisOptions } from "#src/speech-synthesis.ts";
@@ -124,11 +124,11 @@ test("stores ElevenLabs identity and refuses reuse under Gemini", async () => {
   expect(segment.speechConfig).toEqual(ELEVENLABS_SPEECH_CONFIG);
   await expect(produceAudioSegment(options)).resolves.toEqual(segment);
   await expect(
-    produceAudioSegment({ ...options, speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG }),
+    produceAudioSegment({ ...options, speechConfig: GEMINI_SPEECH_CONFIG }),
   ).rejects.toThrow("identity conflicts");
 });
 
-test.each([LEGACY_GEMINI_V3_SPEECH_CONFIG, LEGACY_GEMINI_V6_SPEECH_CONFIG])(
+test.each([LEGACY_GEMINI_V3_SPEECH_CONFIG, GEMINI_SPEECH_CONFIG])(
   "validates stored Gemini $model segments with legacy references",
   (speechConfig) => {
     const object = {

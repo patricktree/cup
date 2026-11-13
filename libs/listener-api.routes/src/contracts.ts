@@ -40,7 +40,8 @@ export type { GrantConversionSnapshot, GrantConversions, GrantState };
 
 const durationBalanceResponseSchema = z.object(durationBalanceSchema.shape);
 const accountDurationBalanceResponseSchema = z.object(accountDurationBalanceSchema.shape);
-// Segment synthesis alone reads whether a unit continues its narration block.
+// Units of manifests prepared under speech policy 7 may carry `continuesNarrationBlock`, which
+// listeners never need.
 const synchronizationUnitResponseSchema = z.object(
   SYNCHRONIZATION_UNIT_SCHEMA.pick({ id: true, narrationText: true }).shape,
 );
