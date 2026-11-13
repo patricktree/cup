@@ -16,7 +16,7 @@ afterEach(async () => {
   }
 });
 
-test("writes a different key on every run when the Playwright Server image cannot be read", async () => {
+test("writes the reason as the image ID, the same on every run, when the Playwright Server image cannot be read", async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "toolchain-key-"));
   directories.push(directory);
   const keyFile = path.join(directory, "nested", "playwright.json");
@@ -28,8 +28,8 @@ test("writes a different key on every run when the Playwright Server image canno
   await execFile(process.execPath, [CLI, "playwright", "--output", keyFile], { env });
   const secondKey = await fs.readFile(keyFile, "utf8");
 
-  expect(firstKey).not.toBe(secondKey);
-  expect(JSON.parse(firstKey)).toMatchObject({
+  expect(secondKey).toBe(firstKey);
+  expect(JSON.parse(firstKey)).toStrictEqual({
     baseImageTag: expect.stringMatching(/^mcr\.microsoft\.com\/playwright:v\d+\.\d+\.\d+-noble$/),
     serverImage: {
       tag: expect.stringMatching(

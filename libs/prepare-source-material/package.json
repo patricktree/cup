@@ -31,7 +31,7 @@
     "test:e2e:update": "pnpm run test:e2e --update-snapshots",
     "test:watch": "vitest",
     "turbo:build": "prepare-declaration-build --declaration-output-dir ./dist/types --build-info-file ./dist/tsconfig.build.tsbuildinfo --source-package-json ./src/package.json && tsc --build ./tsconfig.json",
-    "turbo:e2e": "pnpm run test:e2e",
+    "turbo:e2e": "toolchain-key check .toolchain/playwright.json --suite 'source-material E2E' && pnpm run test:e2e",
     "turbo:e2e:toolchain": "toolchain-key playwright --output .toolchain/playwright.json",
     "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
     "turbo:lint:fix": "pnpm run turbo:lint --fix",

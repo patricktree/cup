@@ -48,7 +48,7 @@ The toolchain key holds the host versions the platform runs on, which no file in
 - iOS: the Xcode version and build, the simulator runtime the preflight check picks (identifier, version and build), and the macOS version and build
 - Android: the revisions of Platform-Tools, the SDK platform that the mobile app's `compileSdkVersion` in `variables.gradle` names (36), the emulator (with its build ID) and the system image, the runtime version and vendor of the JDK Gradle uses, and the macOS version and build
 
-The key finds the toolchain as the preflight check does, through `ANDROID_HOME`, `ANDROID_SDK_ROOT`, `JAVA_HOME` and `DEVELOPER_DIR`. A version it cannot read is written as the reason plus a random value, so that platform misses the cache and its preflight check reports what is missing.
+The key finds the toolchain as the preflight check does, through `ANDROID_HOME`, `ANDROID_SDK_ROOT`, `JAVA_HOME` and `DEVELOPER_DIR`. A version it cannot read is written as its reason. Each platform task first checks its own key file and, when a version in it is unreadable, fails in about a second, before any device or Appium starts, listing every reason, such as `xcode: xcodebuild -version: …` ([toolchain key check](../../tooling/toolchain-key/README.md#checking-a-key-file)). The other platform's key is written all the same, so it still runs. The preflight check then reports anything else that is missing once the key is readable.
 
 ### Vitest arguments
 

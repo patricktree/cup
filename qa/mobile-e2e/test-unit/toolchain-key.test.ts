@@ -53,7 +53,7 @@ test("writes the same Android key on every run while the toolchain stays the sam
   });
 });
 
-test("writes a different key on every run when a platform's toolchain cannot be read", async () => {
+test("writes the reasons, the same on every run, when a platform's toolchain cannot be read", async () => {
   const directory = await makeTemporaryDirectory();
   const missing = path.join(directory, "missing");
   // No Android SDK, no Java and no Xcode, as on a Mac before Android Studio and Xcode are installed.
@@ -67,8 +67,8 @@ test("writes a different key on every run when a platform's toolchain cannot be 
   const firstKey = await runCli(path.join(directory, "first"), env);
   const secondKey = await runCli(path.join(directory, "second"), env);
 
-  expect(secondKey.android).not.toBe(firstKey.android);
-  expect(secondKey.ios).not.toBe(firstKey.ios);
+  expect(secondKey.android).toBe(firstKey.android);
+  expect(secondKey.ios).toBe(firstKey.ios);
   expect(JSON.parse(firstKey.android)).toMatchObject({
     emulator: { unreadable: expect.stringContaining("emulator/source.properties") },
     java: { unreadable: expect.stringContaining("java") },
@@ -95,7 +95,7 @@ test("keys the SDK platform that compileSdkVersion names", async () => {
   });
 });
 
-test("keys the SDK platform as unreadable, differently on every read, without a compileSdkVersion", async () => {
+test("keys the SDK platform as unreadable without a compileSdkVersion", async () => {
   const directory = await makeTemporaryDirectory();
   const sdkRoot = path.join(directory, "sdk");
   await writeSourceProperties(sdkRoot, "platforms/android-36", "Pkg.Revision=2");
@@ -103,18 +103,14 @@ test("keys the SDK platform as unreadable, differently on every read, without a 
   await fs.writeFile(variablesGradle, "ext {\n    compileSdkVersion = rootProject.ext.sdk\n}\n");
   const missingVariablesGradle = path.join(directory, "missing.gradle");
 
-  const firstPlatform = await readPlatformRevision(sdkRoot, variablesGradle);
-  const secondPlatform = await readPlatformRevision(sdkRoot, variablesGradle);
+  const platform = await readPlatformRevision(sdkRoot, variablesGradle);
   const missingFilePlatform = await readPlatformRevision(sdkRoot, missingVariablesGradle);
 
-  expect(firstPlatform).toEqual({
+  expect(platform).toEqual({
     unreadable: expect.stringContaining(`compileSdkVersion in ${variablesGradle}`),
-    nonce: expect.any(String),
   });
-  expect(secondPlatform).not.toEqual(firstPlatform);
   expect(missingFilePlatform).toEqual({
     unreadable: expect.stringContaining(`compileSdkVersion in ${missingVariablesGradle}`),
-    nonce: expect.any(String),
   });
 });
 

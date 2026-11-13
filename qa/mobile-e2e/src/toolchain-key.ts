@@ -1,7 +1,7 @@
 // Writes the toolchain keys that the cached `turbo:e2e:android` and `turbo:e2e:ios` tasks hash:
 // `android.json` and `ios.json` in the directory `--output-dir` names. A version that cannot be read
-// is written as the reason plus a random value, so that platform's task misses the cache and its
-// preflight reports the problem; see ADR 0026.
+// is written as its reason, and that platform's task fails on it before the suite starts, while the
+// other platform still runs; see ADR 0026.
 import path from "node:path";
 import util from "node:util";
 

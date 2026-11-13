@@ -83,8 +83,8 @@ function deriveImage(): ServerImage {
 /**
  * Builds a missing image before reading its ID, so the first run on a machine writes the same key
  * as the runs after it; the suite's global setup then finds the image and builds none. When Docker
- * is stopped or the build fails, the ID is unreadable, so the suite runs and its global setup
- * reports what is wrong.
+ * is stopped or the build fails, the ID is unreadable, so the suite's task fails before the suite
+ * starts and names the reason.
  */
 async function readImageId(image: ServerImage): Promise<string | Unreadable> {
   const inspectArgs = ["image", "inspect", "--format", "{{.Id}}", image.tag];
