@@ -41,6 +41,21 @@ test("joins the overlap sentence, the separator and the narration chunk into the
   });
 });
 
+test("loads a case whose overlap sentence ends with a citation marker, as production selects it", async () => {
+  const casesDirectory = await createCasesDirectory({
+    ...VALID_CASE,
+    narrationLanguage: "de",
+    overlapSentence: "am Anfang und als Schluss.[6]",
+    chunkStartWordIndex: 5,
+  });
+
+  const [speechRecognitionCase] = await loadSpeechRecognitionCases(casesDirectory);
+
+  expect(speechRecognitionCase?.synthesizedText).toBe(
+    "am Anfang und als Schluss.[6]\n\nThe chunk begins.",
+  );
+});
+
 test.each([
   {
     name: "a chunk start word index that does not count the overlap sentence's words",

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { analyzeMp3 } from "#src/audio-format.ts";
 import { countSynthesizedWords } from "#src/find-cut-point.ts";
 import { getSpeechRecognitionLanguage } from "#src/speech-recognition-language.ts";
+import { selectLastSentence } from "#src/synthesize-with-overlap-and-cut.ts";
 
 /** An overlap take of speech policy 7: the overlap sentence, the separator and the narration chunk. */
 export type SpeechRecognitionCase = {
@@ -72,7 +73,7 @@ const CASE_SCHEMA = z
   )
   .refine(
     ({ overlapSentence, narrationLanguage }) =>
-      countSentences(overlapSentence, narrationLanguage ?? undefined) === 1,
+      selectLastSentence(overlapSentence, narrationLanguage ?? undefined) === overlapSentence,
     {
       message: "Expected the overlap sentence to be one sentence, as production selects it",
       path: ["overlapSentence"],
@@ -150,10 +151,4 @@ async function readCaseFile(filePath: string): Promise<Buffer> {
   } catch (error) {
     throw new Error(`Expected ${filePath} to exist`, { cause: error });
   }
-}
-
-/** Counts sentences as `synthesizeWithOverlapAndCut` segments the previous chunk to select one. */
-function countSentences(text: string, narrationLanguage: string | undefined): number {
-  const segmenter = new Intl.Segmenter(narrationLanguage, { granularity: "sentence" });
-  return [...segmenter.segment(text)].filter(({ segment }) => segment.trim().length > 0).length;
 }

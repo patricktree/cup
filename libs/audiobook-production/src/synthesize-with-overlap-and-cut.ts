@@ -18,6 +18,9 @@ type OverlapAndCutFallbackReason = "no-cut-point" | "cut-check-failed" | "langua
 const BLOCK_CONTINUATION_SEPARATOR = " ";
 const PARAGRAPH_SEPARATOR = "\n\n";
 
+const LETTER_PATTERN = /\p{L}/u;
+const LINE_END_PATTERN = /\n\s*$/u;
+
 /**
  * Synthesizes a narration chunk with overlap and cut and returns its provider PCM: the previous
  * chunk's last whole sentence is spoken in front of the chunk, and everything before the cut point
@@ -99,18 +102,36 @@ async function synthesizeAlone(
  * Returns a text's last whole sentence, or the whole text when it is one sentence. Sentence
  * segmentation breaks after every line break, so the sentence never reaches back across a paragraph
  * break, such as the one between a heading and its narration block.
+ *
+ * Sentence segmentation also splits a trailing citation marker, footnote number, emoji or ellipsis
+ * off as its own segment, sometimes mid-marker ("Schluss.[" and "6]"). Trailing segments without a
+ * letter therefore stay attached to the sentence before them on the same line.
  */
-function selectLastSentence(text: string, narrationLanguage: string | undefined): string {
+export function selectLastSentence(text: string, narrationLanguage: string | undefined): string {
   const segmenter = new Intl.Segmenter(narrationLanguage, { granularity: "sentence" });
-  const lastSentence = [...segmenter.segment(text)]
-    .map(({ segment }) => segment.trim())
-    .findLast((sentence) => sentence.length > 0);
+  const segments = [...segmenter.segment(text)].map(({ segment }) => segment);
 
-  if (lastSentence === undefined) {
+  const sentenceSegments: string[] = [];
+  for (const segment of segments.toReversed()) {
+    const followingSegment = sentenceSegments[0];
+    if (followingSegment === undefined) {
+      if (segment.trim().length > 0) {
+        sentenceSegments.unshift(segment);
+      }
+      continue;
+    }
+
+    if (LETTER_PATTERN.test(followingSegment) || LINE_END_PATTERN.test(segment)) {
+      break;
+    }
+    sentenceSegments.unshift(segment);
+  }
+
+  if (sentenceSegments.length === 0) {
     throw new Error("Cannot overlap an empty previous narration chunk");
   }
 
-  return lastSentence;
+  return sentenceSegments.join("").trim();
 }
 
 /** Encodes provider PCM as the MP3 frames speech recognition hears, without the encoder's tags. */

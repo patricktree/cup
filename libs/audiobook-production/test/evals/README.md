@@ -10,7 +10,7 @@ Live evals call Whisper and can incur usage charges, well under a cent per run. 
 
 The root [environment setup](../../../../AGENTS.md#environment-setup) creates `.env.evals`, from which the evals read `CLOUDFLARE_ACCOUNT_ID`, the account whose Workers AI and AI Gateway they use. You can instead export it.
 
-The binding runs remotely even from Node.js: Wrangler's `getPlatformProxy` opens a remote proxy session, which uploads a preview Worker. The `CLOUDFLARE_API_KEY` of the environment files may not create Workers previews, so the evals do not pass it to Wrangler; Wrangler authenticates with its own login instead (`pnpm --filter @cup/audiobook-production exec wrangler login`), or with an exported `CLOUDFLARE_API_TOKEN` that may create Workers previews and run Workers AI.
+The binding runs remotely even from Node.js: Wrangler's `getPlatformProxy` opens a remote proxy session, which uploads a preview Worker. The `CLOUDFLARE_API_KEY` of the environment files may not create Workers previews, so the evals do not pass it to Wrangler; Wrangler authenticates with its own login instead (`pnpm --filter @cup/audiobook-production exec wrangler login`), or with an exported `CLOUDFLARE_API_TOKEN` that may create Workers previews and run Workers AI. Export it in the shell; the review gate does not read `.env.evals`, so a token there would fail its check. `pnpm --filter @cup/audiobook-production exec wrangler whoami` shows which applies; the review gate runs it before its first step whenever it will run these evals, and fails with these instructions when neither authenticates.
 
 ## Run the evals
 
@@ -44,7 +44,7 @@ Create a descriptive directory under `cases/` with this structure:
 ```
 
 - `narrationLanguage` is the manifest's narration language, which gives Whisper its language code, or `null` for a conversion without one, where Whisper detects the language.
-- `overlapSentence`, `separator` and `narrationChunk` make up the synthesized text as segment production joins them: the separator is `"\n\n"`, or `" "` when the chunk continues a split narration block. The overlap sentence must be one sentence as production's sentence segmentation finds it.
+- `overlapSentence`, `separator` and `narrationChunk` make up the synthesized text as segment production joins them: the separator is `"\n\n"`, or `" "` when the chunk continues a split narration block. The overlap sentence must be the whole text that production selects as the last sentence, a trailing citation marker such as `[6]` included.
 - `chunkStartWordIndex` counts the overlap sentence's words as `countSynthesizedWords` does.
 - `expectedPause` is the silent run (≤ −45 dBFS, in 10 ms frames of the decoded audio) between the overlap sentence and the chunk, where the cut point must lie.
 - `expectedRejection`, set to `"cut-check-failed"`, expects the cut check to reject the take, so that production synthesizes the chunk alone. The description says why.

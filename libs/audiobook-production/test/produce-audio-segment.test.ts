@@ -485,6 +485,49 @@ test.each([
   expect(synthesisTexts()).toEqual([`${previousText}\n\nThen the chunk begins.`]);
 });
 
+test.each([
+  ["a citation marker", "Er kam. Am Ende war Schluss.[6]", "Am Ende war Schluss.[6]"],
+  ["two citation markers", "It ended. That was the end.[12][13]", "That was the end.[12][13]"],
+  ["citation markers apart", "Er kam. Am Ende war Schluss.[6] [7]", "Am Ende war Schluss.[6] [7]"],
+  ["a bracketed citation marker", "It ended. That was the end. [6]", "That was the end. [6]"],
+  ["a parenthesized footnote number", "It ended. That was the end. (1)", "That was the end. (1)"],
+  ["a superscript footnote number", "It ended. That was the end.¹", "That was the end.¹"],
+  [
+    "a closing quotation mark",
+    "Er kam. Er sagte: „Das war das Ende.“",
+    "Er sagte: „Das war das Ende.“",
+  ],
+  ["an emoji", "It ended. That was the end. 🎉", "That was the end. 🎉"],
+  ["an ellipsis", "It ended. That was the end. …", "That was the end. …"],
+])(
+  "a previous chunk ending with %s overlaps its last sentence with what follows it",
+  async (_, previousText, overlapSentence) => {
+    const { ai, synthesisTexts } = createRecordingSpeechAi();
+
+    await produceAudioSegment({
+      ...createOverlapOptions(),
+      ai,
+      previousNarrationChunk: { text: previousText },
+      narrationChunk: { text: "Then the chunk begins." },
+    });
+
+    expect(synthesisTexts()).toEqual([`${overlapSentence}\n\nThen the chunk begins.`]);
+  },
+);
+
+test("a letterless last line of the previous chunk is overlapped alone, never with the paragraph above it", async () => {
+  const { ai, synthesisTexts } = createRecordingSpeechAi();
+
+  await produceAudioSegment({
+    ...createOverlapOptions(),
+    ai,
+    previousNarrationChunk: { text: "The first part ends here.\n\n[6]" },
+    narrationChunk: { text: "Then the chunk begins." },
+  });
+
+  expect(synthesisTexts()).toEqual(["[6]\n\nThen the chunk begins."]);
+});
+
 test("speech recognition hears the provider audio before the stretch, as MP3, with the gateway metadata", async () => {
   const { ai, recognitionCalls } = createRecordingSpeechAi();
 
