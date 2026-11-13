@@ -199,7 +199,7 @@ function DetailMenu({ originalUrl, retry, deletion }: DetailMenuProps) {
                 }}
                 className={destructiveMenuItemStyles}
               >
-                Delete track…
+                Delete track
               </Menu.Item>
             ) : null}
           </Menu.Popup>

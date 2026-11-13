@@ -474,7 +474,7 @@ test("a listener deletes a track from its detail view, and the duration it used 
   await expect(page).toHaveURL(detailUrl);
   await waitForAudiobook(page);
   await page.getByRole("button", { name: "More", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Delete track…" }).click();
+  await page.getByRole("menuitem", { name: "Delete track" }).click();
   await page
     .getByRole("alertdialog", { name: "Delete track?" })
     .getByRole("button", { name: "Delete", exact: true })
