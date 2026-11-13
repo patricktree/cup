@@ -1271,8 +1271,10 @@ function sampleAddDialogTops(
           const top = dialog.getBoundingClientRect().top;
           hasMoved ||= tops.length > 0 && top !== tops.at(-1);
           tops.push(top);
+          // A finished slide-in stays listed, holding the sheet in place with its fill.
           const isResting =
-            dialog.getAnimations().length === 0 && !dialog.hasAttribute("data-swiping");
+            dialog.getAnimations().every((animation) => animation.playState === "finished") &&
+            !dialog.hasAttribute("data-swiping");
           const isDone =
             (stopAt === "until-rest" && isResting) ||
             (stopAt === "until-rest-after-moving" && isResting && hasMoved);
