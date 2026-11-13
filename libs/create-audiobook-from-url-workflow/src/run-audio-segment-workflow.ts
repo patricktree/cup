@@ -49,6 +49,17 @@ export async function runAudioSegmentWorkflow({
   if (!unit) {
     throw new NonRetryableError("Synchronization unit does not exist");
   }
+  // Overlap and cut needs only the previous unit's text, which the loaded manifest holds, never the
+  // previous segment's audio or outcome, so segments still synthesize in parallel.
+  const previousUnit =
+    sequence === 0 ? undefined : audiobook.narrationDocument.synchronizationUnits[sequence - 1];
+  const previousNarrationChunk =
+    previousUnit === undefined
+      ? undefined
+      : {
+          text: previousUnit.narrationText,
+          isSameNarrationBlock: unit.continuesNarrationBlock === true,
+        };
 
   const synthesize = (rateLimitWaits: number) =>
     step.do(
@@ -57,7 +68,9 @@ export async function runAudioSegmentWorkflow({
         : `synthesize and settle audio segment after rate limit wait ${rateLimitWaits}`,
       {
         retries: { limit: 2, delay: "5 seconds", backoff: "exponential" },
-        timeout: "2 minutes",
+        // Overlap and cut runs up to two syntheses and one speech recognition, each bounded by its
+        // 90-second request timeout in @cup/audiobook-production, within one attempt.
+        timeout: "5 minutes",
       },
       async ({ attempt }) => {
         // The owner reserves the whole document or nothing; a lone segment never reserves itself.
@@ -75,6 +88,7 @@ export async function runAudioSegmentWorkflow({
             artifactPrefix: prefix,
             sequence,
             narrationChunk: { text: unit.narrationText },
+            previousNarrationChunk,
             speechConfig: audiobook.speechConfig,
             // Only the loaded manifest decides the language, so retries keep the stored one.
             narrationLanguage: audiobook.narrationLanguage,

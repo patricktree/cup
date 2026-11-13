@@ -476,27 +476,7 @@ test.each([
     await createOwnedConversion("trial");
   // Replace the stored manifest with one prepared before policy 5, keeping its narration language
   // to show that the request policy, not the missing language, keeps the request unchanged.
-  const step = createImmediateRetryStep();
-  const runStep = step.do.bind(step);
-  step.do = async (name: string, ...rest: unknown[]) => {
-    const result: unknown = await Reflect.apply(runStep, step, [name, ...rest]);
-    if (name !== "store audiobook") {
-      return result;
-    }
-    const key = `${artifactPrefix}audiobook.json`;
-    const stored = await environment.AUDIO_BUCKET.get(key);
-    const manifest = rewriteManifest(z.looseObject({}).parse(await stored?.json()));
-    const body = JSON.stringify(manifest);
-    const rewritten = await environment.AUDIO_BUCKET.put(key, body, {
-      httpMetadata: { contentType: "application/json" },
-    });
-    return {
-      key,
-      contentType: "application/json",
-      byteLength: rewritten.size,
-      etag: rewritten.etag,
-    };
-  };
+  const step = createManifestRewritingStep(artifactPrefix, rewriteManifest);
   await runConversion(grantId, conversionId, undefined, false, step, undefined, {
     declaredLanguage: { htmlLang: "de-AT" },
     detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: "de" }),
@@ -665,6 +645,130 @@ test("a rate-limited segment waits out the provider limit before failing", async
     "wait for speech provider rate limit 4",
   ]);
   expect((await grant.listAudioSegments(conversionId))[0]?.state).toBe("released");
+});
+
+test.each([
+  ["a paragraph break", false, "Failure test\n\nA short paragraph for narration."],
+  [
+    "a space when it continues its narration block",
+    true,
+    "Failure test A short paragraph for narration.",
+  ],
+] as const)(
+  "a policy 7 segment overlaps the previous unit of the manifest with %s",
+  async (_, continuesNarrationBlock, expectedOverlapTake) => {
+    const { grant, conversionId, segmentOwner } = await createPolicy7Conversion({
+      continuesNarrationBlock,
+    });
+    const { ai, synthesisTexts, recognitionCount } = createRecordingSpeechSynthesisAi();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      await runSegment(conversionId, segmentOwner, 0, ai);
+      await runSegment(conversionId, segmentOwner, 1, ai);
+    } finally {
+      warn.mockRestore();
+    }
+
+    // The take's audio is the fake's, so only the request shows the overlap; joined by a space, the
+    // heading leaves the fake no pause to cut in and the chunk is then synthesized alone.
+    expect(synthesisTexts().slice(0, 2)).toEqual(["Failure test", expectedOverlapTake]);
+    expect(recognitionCount()).toBe(1);
+    expect((await grant.listAudioSegments(conversionId)).map(({ state }) => state)).toEqual([
+      "settled",
+      "settled",
+    ]);
+  },
+);
+
+test("a transient speech recognition error is retried within the step, starting again with overlap", async () => {
+  const { grant, conversionId, segmentOwner } = await createPolicy7Conversion();
+  const { ai, synthesisTexts, recognitionCount } = createRecordingSpeechSynthesisAi([503]);
+
+  await runSegment(conversionId, segmentOwner, 1, ai);
+
+  const overlapTake = "Failure test\n\nA short paragraph for narration.";
+  expect(synthesisTexts()).toEqual([overlapTake, overlapTake]);
+  expect(recognitionCount()).toBe(2);
+  expect((await grant.listAudioSegments(conversionId))[1]?.state).toBe("settled");
+});
+
+test.each([
+  ["a permanent speech recognition error", [400], 1],
+  ["a transient speech recognition error on every attempt", [503, 503, 503], 3],
+] as const)(
+  "%s fails the segment, releases its reservation and stores its explanation",
+  async (_, recognitionFailureStatuses, expectedRecognitionCount) => {
+    const { grant, conversionId, segmentOwner } = await createPolicy7Conversion();
+    const { ai, synthesisTexts, recognitionCount } = createRecordingSpeechSynthesisAi(
+      recognitionFailureStatuses,
+    );
+
+    await expect(runSegment(conversionId, segmentOwner, 1, ai)).rejects.toThrow(
+      "Configured speech recognition failure",
+    );
+
+    // A recognition error never falls back to the chunk alone.
+    expect(synthesisTexts()).toEqual(
+      Array.from(
+        { length: expectedRecognitionCount },
+        () => "Failure test\n\nA short paragraph for narration.",
+      ),
+    );
+    expect(recognitionCount()).toBe(expectedRecognitionCount);
+    expect((await grant.listAudioSegments(conversionId)).map(({ state }) => state)).toEqual([
+      "reserved",
+      "released",
+    ]);
+    const failure = await environment.AUDIO_BUCKET.get(
+      `conversions/${conversionId}/segment-1-failure.json`,
+    );
+    expect(await failure?.json()).toEqual({
+      explanation: `Workers AI speech recognition failed with status ${recognitionFailureStatuses[0]}: Configured speech recognition failure`,
+    });
+  },
+);
+
+test("a rate-limited speech recognition waits out the limit before failing the segment", async () => {
+  const { grant, conversionId, segmentOwner } = await createPolicy7Conversion();
+  const sleep = vi.fn<WorkflowStep["sleep"]>().mockResolvedValue();
+  const step = createImmediateRetryStep();
+  step.sleep = sleep;
+  // One run before each of the four waits, then a final step's three attempts.
+  const { ai, recognitionCount } = createRecordingSpeechSynthesisAi(
+    Array.from({ length: 7 }, () => 429),
+  );
+
+  await expect(runSegment(conversionId, segmentOwner, 1, ai, 1, step)).rejects.toThrow(
+    "Workers AI speech recognition failed with status 429",
+  );
+
+  expect(sleep.mock.calls.map(([name]) => name)).toEqual([
+    "wait for speech provider rate limit 1",
+    "wait for speech provider rate limit 2",
+    "wait for speech provider rate limit 3",
+    "wait for speech provider rate limit 4",
+  ]);
+  expect(recognitionCount()).toBe(7);
+  expect((await grant.listAudioSegments(conversionId))[1]?.state).toBe("released");
+});
+
+test("the segment step's timeout covers two syntheses and one speech recognition at their 90-second request timeouts", async () => {
+  const { conversionId, segmentOwner } = await createPolicy7Conversion();
+  const step = createImmediateRetryStep();
+  const runStep = step.do.bind(step);
+  const configs = new Map<string, unknown>();
+  step.do = ((name: string, ...rest: unknown[]) => {
+    configs.set(name, typeof rest[0] === "function" ? undefined : rest[0]);
+    return Reflect.apply(runStep, step, [name, ...rest]);
+  }) as WorkflowStep["do"];
+
+  await runSegment(conversionId, segmentOwner, 1, createFakeSpeechSynthesisAi(), 1, step);
+
+  expect(configs.get("synthesize and settle audio segment")).toEqual({
+    retries: { limit: 2, delay: "5 seconds", backoff: "exponential" },
+    timeout: "5 minutes",
+  });
 });
 
 test("account segment retry preserves its ledger and earlier successful audio", async () => {
@@ -942,21 +1046,115 @@ const GEMINI_REQUEST_SCHEMA = z.object({
   }),
 });
 
-/** Wraps the fake speech AI to record the language-bearing fields of each Gemini request. */
-function createRecordingSpeechSynthesisAi() {
+/**
+ * Wraps the fake speech AI to record the language-bearing fields and the text of each Gemini
+ * request, and every speech recognition run. The recognition statuses, when given, answer the runs
+ * in order before the fake recognizes speech.
+ */
+function createRecordingSpeechSynthesisAi(recognitionFailureStatuses: readonly number[] = []) {
   const fakeAi = createFakeSpeechSynthesisAi();
   const fakeGateway = fakeAi.gateway("default");
   const run = vi.fn<ReturnType<SpeechSynthesisAi["gateway"]>["run"]>(
     fakeGateway.run.bind(fakeGateway),
   );
-  const ai: SpeechSynthesisAi = { gateway: () => ({ run }), run: fakeAi.run };
+  let recognitionRuns = 0;
+  const recognize = vi.fn<SpeechSynthesisAi["run"]>(async (...request) => {
+    const failureStatus = recognitionFailureStatuses[recognitionRuns];
+    recognitionRuns += 1;
+    if (failureStatus !== undefined) {
+      return Response.json(
+        { errors: [{ message: "Configured speech recognition failure" }] },
+        { status: failureStatus },
+      );
+    }
+    return fakeAi.run(...request);
+  });
+  const ai: SpeechSynthesisAi = { gateway: () => ({ run }), run: recognize };
   const speechRequests = () =>
     run.mock.calls.map(([request]) => {
       const { query } = GEMINI_REQUEST_SCHEMA.parse(request);
       return { content: query.input[0].content, generationConfig: query.generation_config };
     });
+  const synthesisTexts = () =>
+    speechRequests().map(
+      ({ content }) => z.tuple([z.object({ text: z.string() })]).parse(content)[0].text,
+    );
+  const recognitionCount = () => recognize.mock.calls.length;
 
-  return { ai, speechRequests };
+  return { ai, speechRequests, synthesisTexts, recognitionCount };
+}
+
+/**
+ * Creates a workflow step that rewrites the manifest the preparation workflow stores, as a manifest
+ * prepared by another release would differ, and hands the rewritten manifest's reference on.
+ */
+function createManifestRewritingStep(
+  artifactPrefix: string,
+  rewriteManifest: (manifest: Record<string, unknown>) => Record<string, unknown>,
+): WorkflowStep {
+  const step = createImmediateRetryStep();
+  const runStep = step.do.bind(step);
+  step.do = async (name: string, ...rest: unknown[]) => {
+    const result: unknown = await Reflect.apply(runStep, step, [name, ...rest]);
+    if (name !== "store audiobook") {
+      return result;
+    }
+    const key = `${artifactPrefix}audiobook.json`;
+    const stored = await environment.AUDIO_BUCKET.get(key);
+    const manifest = rewriteManifest(z.looseObject({}).parse(await stored?.json()));
+    const body = JSON.stringify(manifest);
+    const rewritten = await environment.AUDIO_BUCKET.put(key, body, {
+      httpMetadata: { contentType: "application/json" },
+    });
+    return {
+      key,
+      contentType: "application/json",
+      byteLength: rewritten.size,
+      etag: rewritten.etag,
+    };
+  };
+  return step;
+}
+
+/** Rewrites a manifest to speech policy 7, optionally marking its second unit as continuing. */
+function rewriteToPolicy7(
+  manifest: Record<string, unknown>,
+  { continuesNarrationBlock = false } = {},
+): Record<string, unknown> {
+  const { narrationDocument } = z
+    .object({
+      narrationDocument: z.looseObject({
+        synchronizationUnits: z.tuple([z.looseObject({}), z.looseObject({})]),
+      }),
+    })
+    .parse(manifest);
+  const [first, second] = narrationDocument.synchronizationUnits;
+  return {
+    ...manifest,
+    speechConfig: {
+      provider: "google-ai-studio",
+      model: "gemini-3.8-flash-lite-tts",
+      voice: "Charon",
+      policyVersion: "7",
+    },
+    narrationDocument: {
+      ...narrationDocument,
+      synchronizationUnits: [
+        first,
+        continuesNarrationBlock ? { ...second, continuesNarrationBlock: true } : second,
+      ],
+    },
+  };
+}
+
+/** Prepares a trial conversion whose manifest records speech policy 7. */
+async function createPolicy7Conversion({ continuesNarrationBlock = false } = {}) {
+  const { grant, grantId, conversionId } = await createConversion();
+  const step = createManifestRewritingStep(`conversions/${conversionId}/`, (manifest) =>
+    rewriteToPolicy7(manifest, { continuesNarrationBlock }),
+  );
+  await runConversion(grantId, conversionId, undefined, false, step);
+  return { grant, conversionId, segmentOwner: { kind: "trial" as const, grantId } };
 }
 
 /** Reads the synthesis-language metadata of the conversion's two audio segments. */

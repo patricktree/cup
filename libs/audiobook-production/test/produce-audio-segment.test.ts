@@ -663,38 +663,57 @@ test.each([
   [429, RateLimitedNarrationSynthesisError],
   [400, PermanentNarrationSynthesisError],
 ] as const)(
-  "a speech recognition failure with status %i raises the matching error",
+  "a speech recognition failure with status %i raises the matching error without a fallback",
   async (status, errorClass) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { ai, synthesisTexts } = createRecordingSpeechAi({
+      fake: createFakeSpeechSynthesisAi({ recognitionFailureStatus: status }),
+    });
+
     const error = await produceAudioSegment({
       ...createOverlapOptions(),
-      ai: createFakeSpeechSynthesisAi({ recognitionFailureStatus: status }),
+      ai,
       previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
       narrationChunk: { text: "Then the chunk begins." },
     }).catch((caughtError: unknown) => caughtError);
 
     expect(error).toBeInstanceOf(errorClass);
+    // A recognition error never falls back to the chunk alone.
+    expect(synthesisTexts()).toEqual(["The first part ends here.\n\nThen the chunk begins."]);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
     expect(error).toMatchObject({
       message: `Workers AI speech recognition failed with status ${status}: Configured deterministic speech recognition failure`,
     });
   },
 );
 
-test("a speech recognition server failure stays retryable", async () => {
-  const error = await produceAudioSegment({
-    ...createOverlapOptions(),
-    ai: createFakeSpeechSynthesisAi({ recognitionFailureStatus: 503 }),
-    previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
-    narrationChunk: { text: "Then the chunk begins." },
-  }).catch((caughtError: unknown) => caughtError);
+test.each([408, 500, 503])(
+  "a speech recognition timeout or server failure (%i) stays retryable without a fallback",
+  async (status) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { ai, synthesisTexts } = createRecordingSpeechAi({
+      fake: createFakeSpeechSynthesisAi({ recognitionFailureStatus: status }),
+    });
 
-  expect(error).toBeInstanceOf(Error);
-  expect(error).not.toBeInstanceOf(PermanentNarrationSynthesisError);
-  expect(error).not.toBeInstanceOf(RateLimitedNarrationSynthesisError);
-  expect(error).toMatchObject({
-    message:
-      "Workers AI speech recognition failed with status 503: Configured deterministic speech recognition failure",
-  });
-});
+    const error = await produceAudioSegment({
+      ...createOverlapOptions(),
+      ai,
+      previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+      narrationChunk: { text: "Then the chunk begins." },
+    }).catch((caughtError: unknown) => caughtError);
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toBeInstanceOf(PermanentNarrationSynthesisError);
+    expect(error).not.toBeInstanceOf(RateLimitedNarrationSynthesisError);
+    expect(error).toMatchObject({
+      message: `Workers AI speech recognition failed with status ${status}: Configured deterministic speech recognition failure`,
+    });
+    expect(synthesisTexts()).toEqual(["The first part ends here.\n\nThen the chunk begins."]);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  },
+);
 
 test("an invalid speech recognition response is permanent", async () => {
   const { ai } = createRecordingSpeechAi({
