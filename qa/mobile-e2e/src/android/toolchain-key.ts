@@ -14,6 +14,8 @@ import { readMacosVersion, type MacosVersion } from "#src/toolchain-version.ts";
 
 type SdkPackageRevision = { package: string; revision: string };
 
+type JavaVersion = { runtimeVersion: string; vendor: string };
+
 /** The host versions an Android run depends on beyond the repository's files. */
 export type AndroidToolchainKey = {
   platformTools: string | Unreadable;
@@ -22,7 +24,7 @@ export type AndroidToolchainKey = {
   emulator: { revision: string; buildId: string } | Unreadable;
   systemImage: SdkPackageRevision | Unreadable;
   /** The JDK Gradle builds with. */
-  java: { runtimeVersion: string; vendor: string } | Unreadable;
+  java: JavaVersion | Unreadable;
   macos: MacosVersion | Unreadable;
 };
 
@@ -60,7 +62,7 @@ async function readPackageRevision(
   }));
 }
 
-async function readJavaVersion(): Promise<AndroidToolchainKey["java"]> {
+async function readJavaVersion(): Promise<JavaVersion | Unreadable> {
   const java = javaExecutable(resolveJavaHome());
   return readVersion(`${java} -XshowSettings:properties -version`, async () => {
     // Both the settings and the version go to stderr.

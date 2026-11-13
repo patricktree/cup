@@ -28,7 +28,11 @@ export async function runCli(args: string[]): Promise<number> {
     if (error instanceof CommanderError) {
       return error.exitCode;
     }
-    console.error(error instanceof Error ? error.message : "Writing the toolchain key failed.");
+    console.error(
+      error instanceof Error
+        ? error.message
+        : `Writing the toolchain key failed with a thrown non-error value: ${String(error)}`,
+    );
     return 1;
   }
 }
