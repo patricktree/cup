@@ -1,6 +1,7 @@
-import { expect, type Page, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 import type { signInWithGoogle } from "#src/platform/account-auth.android.ts";
+import { expect, test } from "#src/test-utils/component-test.ts";
 
 /** A rejection of the Google sign-in plugin, as the Android bridge reports it. */
 type PluginFailure = { code: string | undefined; message: string };

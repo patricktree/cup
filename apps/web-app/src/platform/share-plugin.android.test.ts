@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-
+import { expect, test } from "#src/test-utils/component-test.ts";
 import { recordConversionStarts } from "#src/test-utils/conversion-starts.ts";
 import { holdResponses, releaseResponses } from "#src/test-utils/held-responses.ts";
 

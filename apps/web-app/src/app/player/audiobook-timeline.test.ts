@@ -1,6 +1,5 @@
-import { expect, test } from "@playwright/test";
-
 import { clampToTimeline, findUnitIndexAt } from "#src/app/player/audiobook-timeline.ts";
+import { expect, test } from "#src/test-utils/component-test.ts";
 
 const TIMELINE = { startMilliseconds: [0, 20_000, 30_000], durationMilliseconds: 35_000 };
 

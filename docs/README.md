@@ -43,6 +43,7 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 | [Terraform infrastructure](../terraform/README.md)                                   | Manage infrastructure state, provider configuration, and manual prerequisites                                          |
 | [Declaration builds](declaration-builds.md)                                          | Understand source and declaration package scopes, compiler settings, and build caching                                 |
 | [Validation gates](../tooling/validation-gates/README.md)                            | How the gate runner composes gates, runs them and prints the summary; the gates themselves are in AGENTS.md            |
+| [Toolchain key](../tooling/toolchain-key/README.md)                                  | Write the host toolchain versions an E2E suite runs on, for its cached Turbo task to hash                              |
 | [Brand assets](../tooling/brand-assets/README.md)                                    | Maintain generated application branding                                                                                |
 | [Workspace checks](../qa/workspace-checks/README.md)                                 | Tests for invariants across all packages, such as the package export check                                             |
 | [Loading state recorder](../qa/loading-state-recorder/README.md)                     | Fail a Playwright test on a loading flash, however briefly it shows                                                    |

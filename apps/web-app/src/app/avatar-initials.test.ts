@@ -1,6 +1,5 @@
-import { expect, test } from "@playwright/test";
-
 import { toAvatarInitials } from "#src/app/avatar-initials.ts";
+import { expect, test } from "#src/test-utils/component-test.ts";
 
 const INITIALS = [
   ["Verena Handler-Kunze", "VH"],

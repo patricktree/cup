@@ -1,6 +1,5 @@
-import { expect, test } from "@playwright/test";
-
 import type { publishMediaMetadata } from "#src/platform/media-session.ts";
+import { expect, test } from "#src/test-utils/component-test.ts";
 
 test("only the media session's metadata is set, and clearing removes it", async ({
   mount,

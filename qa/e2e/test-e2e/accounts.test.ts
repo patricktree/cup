@@ -1,126 +1,128 @@
 import type { Page, Response } from "@playwright/test";
+import { Temporal } from "temporal-polyfill";
 
 import { accountSnapshotSchema } from "@cup/listener-api.routes";
 
+import { VISUAL_TAG } from "#test-e2e/browser-project-tags.ts";
 import { expect, test } from "#test-e2e/fixtures.ts";
 import { readAccessToken, waitForAudiobook } from "#test-e2e/journey.ts";
 import { readAudiobook, waitForGeneratedAudio } from "#test-e2e/synthesis.ts";
 
 const SOURCE_URL = "https://source.example.test/fixture";
 
-test("Google PKCE signup resumes conversion, protects Recents and media, and supports deletion recovery", async ({
-  expectConsoleError,
-  page,
-  workerEnvironment,
-}) => {
-  // Five sign-ins and two conversions take longer than the default 30 seconds in WebKit.
-  test.setTimeout(60_000);
-  const { origin, authProvider } = workerEnvironment;
-  await page.goto(`${origin}/app/`);
-  await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
-  await page.getByRole("button", { name: "Listen" }).click();
-  const signup = page.getByRole("dialog", { name: "Sign in", exact: true });
-  await expect(signup).toBeVisible();
-  await expect(page).toHaveScreenshot("signup-prompt.png");
-  await signup.getByRole("button", { name: "Continue with Google" }).click();
-  await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
-  expect(authProvider.exchanges()).toBe(1);
-  // Without a sign-out on this device, Cup lets Google skip its account chooser.
-  expect(authProvider.authorizationRequests().at(-1)).not.toHaveProperty("prompt");
-  const conversionId = new URL(page.url()).pathname.split("/").at(-1);
-  await waitForAudiobook(page);
-  if (!conversionId) {
-    throw new Error("Conversion missing");
-  }
-  await waitForGeneratedAudio(page, conversionId, await readAccessToken(page));
-  const audiobook = await readAudiobook(page, conversionId, await readAccessToken(page));
-  if (audiobook.status !== "ready" || !audiobook.narrationTrack) {
-    throw new Error("Expected a narration track once every segment has audio.");
-  }
-  // The signed media URL the player plays, issued to the signed-in account.
-  const trackUrl = audiobook.narrationTrack.url;
-  const remainingAllowance = (await readAccount(page, origin)).balance.available;
-  expect(remainingAllowance).toBeLessThan(30 * 60 * 1_000);
-  await page.reload();
-  await waitForAudiobook(page);
-  await expect
-    .poll(() => page.evaluate(async (url) => (await fetch(url)).status, trackUrl))
-    .toBe(200);
-  // Media accepts only the signed media URL: neither the owner's nor another account's bearer token.
-  const trackPath = new URL(trackUrl).pathname;
-  for (const token of [await readAccessToken(page), authProvider.otherToken()]) {
-    expect(
-      (
-        await page.request.get(origin + trackPath, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-      ).status(),
-    ).toBe(401);
-  }
-  await page.goto(`${origin}/app/recent`);
-  await expect(page.getByRole("list", { name: "Tracks" }).getByRole("link")).toHaveCount(1);
-  await expect(page.locator("main")).toHaveScreenshot("private-recents.png");
-  await page.goto(`${origin}/app/recent/account`);
-  await page.getByRole("button", { name: "Delete account…" }).click();
-  await expect(page.getByRole("button", { name: "Schedule deletion" })).toBeVisible();
-  await expect.poll(() => authProvider.exchanges()).toBe(2);
-  // The fresh sign-in before deletion authenticates again and keeps the account chooser.
-  expect(authProvider.authorizationRequests().at(-1)).toMatchObject({
-    prompt: "select_account",
-    max_age: "0",
-  });
-  await scheduleDeletion(page);
-  // Scheduling deletion signs the browser out, and signed out, Recents and its dialogs lead home.
-  await expect(page).toHaveURL(`${origin}/app/`);
-  // The unexpired signed URL is refused like a bearer request of an account scheduled for deletion.
-  await expect.poll(async () => (await page.request.get(trackUrl)).status()).toBe(403);
-  expectConsoleError(/^Failed to load resource: the server responded with a status of 403/);
-  await page.goto(`${origin}/app/`);
-  await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
-  await page.getByRole("button", { name: "Listen" }).click();
-  await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
-  await expect.poll(() => authProvider.exchanges()).toBe(3);
-  // Deletion signed the browser out, so the next sign-in lets the listener switch accounts.
-  expect(authProvider.authorizationRequests().at(-1)).toMatchObject({ prompt: "select_account" });
-  expect(authProvider.authorizationRequests().at(-1)).not.toHaveProperty("max_age");
-  await expect(page.getByRole("alert")).toBeVisible();
-  // A session that ends without a sign-out, here by dropping the stored copy, keeps the next
-  // sign-in free of the chooser: the successful sign-in above cleared the request for it.
-  await page.evaluate(() => localStorage.removeItem("cup_supabase_session"));
-  // The scheduled-deletion email links the account recovery page.
-  await page.goto(`${origin}/app/account-recovery`);
-  await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
-  await expect.poll(() => authProvider.exchanges()).toBe(4);
-  expect(authProvider.authorizationRequests().at(-1)).not.toHaveProperty("prompt");
-  await expect(page.getByRole("heading", { name: "Deletion scheduled" })).toBeVisible();
-  await page.getByRole("button", { name: "Restore account…" }).click();
-  await expect.poll(() => authProvider.exchanges()).toBe(5);
-  await page.getByRole("button", { name: "Confirm recovery" }).click();
-  await expect(
-    page.getByText(
-      "Your account is restored. Your existing minutes and conversions are available again.",
-    ),
-  ).toBeVisible();
-  // The restored account is active again; the confirmation replaces the page's notice for that.
-  await expect(page.getByText("This account is not scheduled for deletion.")).toHaveCount(0);
-  expect((await readAccount(page, origin)).balance.available).toBe(remainingAllowance);
-  await page.goto(`${origin}/app/recent`);
-  await expect(page.getByRole("list", { name: "Tracks" }).getByRole("link")).toHaveCount(1);
-  let resumedRequests = 0;
-  page.on("request", (request) => {
-    if (
-      request.method() === "POST" &&
-      new URL(request.url()).pathname === "/api/account/conversions"
-    ) {
-      resumedRequests += 1;
+test(
+  "Google PKCE signup resumes conversion, protects Recents and media, and supports deletion recovery",
+  { tag: VISUAL_TAG },
+  async ({ expectConsoleError, page, workerEnvironment }) => {
+    // Five sign-ins and two conversions take longer than the default 30 seconds in WebKit.
+    test.setTimeout(60_000);
+    const { origin, authProvider } = workerEnvironment;
+    await page.goto(`${origin}/app/`);
+    await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
+    await page.getByRole("button", { name: "Listen" }).click();
+    const signup = page.getByRole("dialog", { name: "Sign in", exact: true });
+    await expect(signup).toBeVisible();
+    await expect(page).toHaveScreenshot("signup-prompt.png");
+    await signup.getByRole("button", { name: "Continue with Google" }).click();
+    await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
+    expect(authProvider.exchanges()).toBe(1);
+    // Without a sign-out on this device, Cup lets Google skip its account chooser.
+    expect(authProvider.authorizationRequests().at(-1)).not.toHaveProperty("prompt");
+    const conversionId = new URL(page.url()).pathname.split("/").at(-1);
+    await waitForAudiobook(page);
+    if (!conversionId) {
+      throw new Error("Conversion missing");
     }
-  });
-  await page.goto(`${origin}/app/`);
-  await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
-  expect(resumedRequests).toBe(1);
-  await page.goto(`${origin}/app/recent`);
-  await expect(page.getByRole("list", { name: "Tracks" }).getByRole("link")).toHaveCount(2);
-});
+    await waitForGeneratedAudio(page, conversionId, await readAccessToken(page));
+    const audiobook = await readAudiobook(page, conversionId, await readAccessToken(page));
+    if (audiobook.status !== "ready" || !audiobook.narrationTrack) {
+      throw new Error("Expected a narration track once every segment has audio.");
+    }
+    // The signed media URL the player plays, issued to the signed-in account.
+    const trackUrl = audiobook.narrationTrack.url;
+    const remainingAllowance = (await readAccount(page, origin)).balance.available;
+    expect(remainingAllowance).toBeLessThan(30 * 60 * 1_000);
+    await page.reload();
+    await waitForAudiobook(page);
+    await expect
+      .poll(() => page.evaluate(async (url) => (await fetch(url)).status, trackUrl))
+      .toBe(200);
+    // Media accepts only the signed media URL: neither the owner's nor another account's bearer token.
+    const trackPath = new URL(trackUrl).pathname;
+    for (const token of [await readAccessToken(page), authProvider.otherToken()]) {
+      expect(
+        (
+          await page.request.get(origin + trackPath, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        ).status(),
+      ).toBe(401);
+    }
+    await page.goto(`${origin}/app/recent`);
+    await expect(page.getByRole("list", { name: "Tracks" }).getByRole("link")).toHaveCount(1);
+    await expect(page.locator("main")).toHaveScreenshot("private-recents.png");
+    await page.goto(`${origin}/app/recent/account`);
+    await page.getByRole("button", { name: "Delete account…" }).click();
+    await expect(page.getByRole("button", { name: "Schedule deletion" })).toBeVisible();
+    await expect.poll(() => authProvider.exchanges()).toBe(2);
+    // The fresh sign-in before deletion authenticates again and keeps the account chooser.
+    expect(authProvider.authorizationRequests().at(-1)).toMatchObject({
+      prompt: "select_account",
+      max_age: "0",
+    });
+    await scheduleDeletion(page);
+    // Scheduling deletion signs the browser out, and signed out, Recents and its dialogs lead home.
+    await expect(page).toHaveURL(`${origin}/app/`);
+    // The unexpired signed URL is refused like a bearer request of an account scheduled for deletion.
+    await expect.poll(async () => (await page.request.get(trackUrl)).status()).toBe(403);
+    expectConsoleError(/^Failed to load resource: the server responded with a status of 403/);
+    await page.goto(`${origin}/app/`);
+    await page.getByRole("textbox", { name: "URL", exact: true }).fill(SOURCE_URL);
+    await page.getByRole("button", { name: "Listen" }).click();
+    await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
+    await expect.poll(() => authProvider.exchanges()).toBe(3);
+    // Deletion signed the browser out, so the next sign-in lets the listener switch accounts.
+    expect(authProvider.authorizationRequests().at(-1)).toMatchObject({ prompt: "select_account" });
+    expect(authProvider.authorizationRequests().at(-1)).not.toHaveProperty("max_age");
+    await expect(page.getByRole("alert")).toBeVisible();
+    // A session that ends without a sign-out, here by dropping the stored copy, keeps the next
+    // sign-in free of the chooser: the successful sign-in above cleared the request for it.
+    await page.evaluate(() => localStorage.removeItem("cup_supabase_session"));
+    // The scheduled-deletion email links the account recovery page.
+    await page.goto(`${origin}/app/account-recovery`);
+    await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
+    await expect.poll(() => authProvider.exchanges()).toBe(4);
+    expect(authProvider.authorizationRequests().at(-1)).not.toHaveProperty("prompt");
+    await expect(page.getByRole("heading", { name: "Deletion scheduled" })).toBeVisible();
+    await page.getByRole("button", { name: "Restore account…" }).click();
+    await expect.poll(() => authProvider.exchanges()).toBe(5);
+    await page.getByRole("button", { name: "Confirm recovery" }).click();
+    await expect(
+      page.getByText(
+        "Your account is restored. Your existing minutes and conversions are available again.",
+      ),
+    ).toBeVisible();
+    // The restored account is active again; the confirmation replaces the page's notice for that.
+    await expect(page.getByText("This account is not scheduled for deletion.")).toHaveCount(0);
+    expect((await readAccount(page, origin)).balance.available).toBe(remainingAllowance);
+    await page.goto(`${origin}/app/recent`);
+    await expect(page.getByRole("list", { name: "Tracks" }).getByRole("link")).toHaveCount(1);
+    let resumedRequests = 0;
+    page.on("request", (request) => {
+      if (
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === "/api/account/conversions"
+      ) {
+        resumedRequests += 1;
+      }
+    });
+    await page.goto(`${origin}/app/`);
+    await expect(page).toHaveURL(/\/app\/audiobooks\//, { timeout: 60_000 });
+    expect(resumedRequests).toBe(1);
+    await page.goto(`${origin}/app/recent`);
+    await expect(page.getByRole("list", { name: "Tracks" }).getByRole("link")).toHaveCount(2);
+  },
+);
 
 test("signup keeps trial conversions separate from the new account and its Recents", async ({
   page,
@@ -332,7 +334,7 @@ test("a signed-in session refreshes its expired access token and keeps working, 
   const detailUrl = page.url();
   const signInToken = await readAccessToken(page);
 
-  await waitPastAccessTokenLifetime();
+  await waitPastExpiry(signInToken);
   const expired = await page.request.get(`${origin}/api/account`, {
     headers: { Authorization: `Bearer ${signInToken}` },
   });
@@ -340,28 +342,61 @@ test("a signed-in session refreshes its expired access token and keeps working, 
 
   await page.goto(`${origin}/app/recent`);
   await expect(page.getByRole("list", { name: "Tracks" }).getByRole("listitem")).toHaveCount(1);
-  await waitPastAccessTokenLifetime();
+  // Each step below starts once the token the app holds has expired, so it has to refresh again.
+  const tokenBeforeOpening = await readAccessToken(page);
+  await waitPastExpiry(tokenBeforeOpening);
   const afterOpening = waitForAuthenticatedApiResponse(page, origin);
   await page.getByRole("list", { name: "Tracks" }).getByRole("link").click();
   await expect(page).toHaveURL(detailUrl);
   await waitForAudiobook(page);
-  await expectRefreshedBearerToken(await afterOpening, signInToken);
+  await expectRefreshedBearerToken(await afterOpening, [signInToken, tokenBeforeOpening]);
 
   // The reloaded app restores the session the last refresh stored; its refresh token is single-use.
-  await waitPastAccessTokenLifetime();
+  const tokenBeforeReload = await readAccessToken(page);
+  await waitPastExpiry(tokenBeforeReload);
   const afterReload = waitForAuthenticatedApiResponse(page, origin);
   await page.reload();
   await waitForAudiobook(page);
-  await expectRefreshedBearerToken(await afterReload, signInToken);
+  await expectRefreshedBearerToken(await afterReload, [signInToken, tokenBeforeReload]);
   expect(authProvider.refreshes()).toBeGreaterThanOrEqual(2);
   expect(authProvider.exchanges()).toBe(1);
 });
 
-/** Short enough that a session outlives several access tokens within one test. */
-const ACCESS_TOKEN_LIFETIME_SECONDS = 5;
+/**
+ * Short enough that a session outlives several access tokens within one test. supabase-js refreshes
+ * before every request once a token expires within 90 seconds, so any lifetime below that behaves
+ * alike. One second is too short: `exp` counts whole seconds, so a token issued late in a second
+ * could expire before the Worker checks it.
+ */
+const ACCESS_TOKEN_LIFETIME_SECONDS = 2;
+/** Covers the Worker's clock, which advances only between requests, trailing the test's clock. */
+const EXPIRY_MARGIN_MILLISECONDS = 250;
 
-async function waitPastAccessTokenLifetime() {
-  await new Promise((resolve) => setTimeout(resolve, (ACCESS_TOKEN_LIFETIME_SECONDS + 1) * 1_000));
+/** Waits until the Worker rejects the token, which `jose` treats as expired from its `exp` second. */
+async function waitPastExpiry(accessToken: string) {
+  const expiresAtMilliseconds = readExpiry(accessToken) * 1_000;
+  const waitMilliseconds =
+    Math.max(0, expiresAtMilliseconds - Temporal.Now.instant().epochMilliseconds) +
+    EXPIRY_MARGIN_MILLISECONDS;
+  await new Promise((resolve) => setTimeout(resolve, waitMilliseconds));
+}
+
+function readExpiry(accessToken: string): number {
+  const payload = accessToken.split(".")[1];
+  if (payload === undefined) {
+    throw new Error("Expected a JWT access token");
+  }
+
+  const claims: unknown = JSON.parse(Buffer.from(payload, "base64url").toString());
+  if (
+    !claims ||
+    typeof claims !== "object" ||
+    !("exp" in claims) ||
+    typeof claims.exp !== "number"
+  ) {
+    throw new Error("Expected an access token with a numeric exp claim");
+  }
+  return claims.exp;
 }
 
 function waitForAuthenticatedApiResponse(page: Page, origin: string) {
@@ -372,10 +407,13 @@ function waitForAuthenticatedApiResponse(page: Page, origin: string) {
   );
 }
 
-/** The Worker accepted a bearer token that a refresh issued after the sign-in's token expired. */
-async function expectRefreshedBearerToken(response: Response, signInToken: string) {
+/** The Worker accepted a bearer token that a refresh issued after the given tokens expired. */
+async function expectRefreshedBearerToken(response: Response, expiredTokens: string[]) {
   expect(response.ok()).toBe(true);
-  expect(response.request().headers()["authorization"]).not.toBe(`Bearer ${signInToken}`);
+  const authorization = response.request().headers()["authorization"];
+  for (const expiredToken of expiredTokens) {
+    expect(authorization).not.toBe(`Bearer ${expiredToken}`);
+  }
 }
 
 test("failed sign-in leaves anonymous trial access available", async ({

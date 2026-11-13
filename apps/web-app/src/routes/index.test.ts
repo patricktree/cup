@@ -1,8 +1,7 @@
-import { expect, test } from "@playwright/test";
-
+import { expect, test, VISUAL_TAG } from "#src/test-utils/component-test.ts";
 import { holdResponses } from "#src/test-utils/held-responses.ts";
 
-test("renders landing", async ({ mount }) => {
+test("renders landing", { tag: VISUAL_TAG }, async ({ mount }) => {
   const component = await mount("routes/index/LandingPage");
   await expect(component.getByRole("heading", { name: "Just listen." })).toBeVisible();
   await expect(component.getByText("No reading lists,")).toBeVisible();
@@ -49,16 +48,20 @@ test("renders landing when served from the iOS app's capacitor:// origin", async
   await expect(component.getByRole("heading", { name: "Just listen." })).toBeVisible();
 });
 
-test("the focused URL input shows only its wavy rule, without a focus ring", async ({ mount }) => {
-  const component = await mount("routes/index/LandingPage");
-  const input = component.getByRole("textbox", { name: "URL" });
-  await input.focus();
-  await expect(input).toBeFocused();
-  await expect(input).toHaveCSS("outline-style", "none");
-  await expect(component).toHaveScreenshot("landing-url-input-focused.png");
-});
+test(
+  "the focused URL input shows only its wavy rule, without a focus ring",
+  { tag: VISUAL_TAG },
+  async ({ mount }) => {
+    const component = await mount("routes/index/LandingPage");
+    const input = component.getByRole("textbox", { name: "URL" });
+    await input.focus();
+    await expect(input).toBeFocused();
+    await expect(input).toHaveCSS("outline-style", "none");
+    await expect(component).toHaveScreenshot("landing-url-input-focused.png");
+  },
+);
 
-test("renders sign-in dialog", async ({ mount, page }) => {
+test("renders sign-in dialog", { tag: VISUAL_TAG }, async ({ mount, page }) => {
   await mount("routes/index/SignIn");
   await expect(
     page.getByRole("heading", { name: "Just listen.", includeHidden: true }),
@@ -81,35 +84,36 @@ test("offers only the sign-in methods the auth configuration advertises", async 
   await expect(dialog.getByRole("button", { name: "Continue with Google" })).toHaveCount(0);
 });
 
-test("anonymous submission asks for sign-in and cancellation preserves the URL", async ({
-  mount,
-  page,
-}) => {
-  const component = await mount("routes/index/LandingPage");
-  const input = component.getByRole("textbox", { name: "URL" });
-  await input.fill("https://example.com/article");
-  await component.getByRole("button", { name: "Listen" }).click();
-  await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Continue with Google" })).toBeFocused();
-  await page.keyboard.press("Shift+Tab");
-  await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Continue with Google" })).toBeFocused();
-  await expect(page).toHaveScreenshot("signup-dialog.png");
-  await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(component.getByRole("button", { name: "Listen" })).toBeFocused();
-  await expect(input).toHaveValue("https://example.com/article");
-  await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).not.toBeVisible();
-  await page.reload();
-  await mount("routes/index/LandingPage");
-  await expect(input).toHaveValue("https://example.com/article");
-  await expect(component.getByRole("button", { name: "Listen" })).toBeEnabled();
-  await component.getByRole("button", { name: "Listen" }).click();
-  await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).not.toBeVisible();
-  await expect(input).toHaveValue("https://example.com/article");
-});
+test(
+  "anonymous submission asks for sign-in and cancellation preserves the URL",
+  { tag: VISUAL_TAG },
+  async ({ mount, page }) => {
+    const component = await mount("routes/index/LandingPage");
+    const input = component.getByRole("textbox", { name: "URL" });
+    await input.fill("https://example.com/article");
+    await component.getByRole("button", { name: "Listen" }).click();
+    await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continue with Google" })).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Continue with Google" })).toBeFocused();
+    await expect(page).toHaveScreenshot("signup-dialog.png");
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(component.getByRole("button", { name: "Listen" })).toBeFocused();
+    await expect(input).toHaveValue("https://example.com/article");
+    await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).not.toBeVisible();
+    await page.reload();
+    await mount("routes/index/LandingPage");
+    await expect(input).toHaveValue("https://example.com/article");
+    await expect(component.getByRole("button", { name: "Listen" })).toBeEnabled();
+    await component.getByRole("button", { name: "Listen" }).click();
+    await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).not.toBeVisible();
+    await expect(input).toHaveValue("https://example.com/article");
+  },
+);
 
 test("invalid account URL shows a field error and becomes submittable after correction", async ({
   mount,
@@ -132,17 +136,18 @@ test("invalid account URL shows a field error and becomes submittable after corr
   await expect(page.getByRole("dialog", { name: "Sign in", exact: true })).toBeVisible();
 });
 
-test("the sign-in link opens the dialog with the returning listener's copy", async ({
-  mount,
-  page,
-}) => {
-  await mount("routes/index/SignInFromLink");
-  const dialog = page.getByRole("dialog", { name: "Sign in", exact: true });
-  await expect(dialog).toHaveAccessibleDescription("Sign in to get back to your tracks.");
-  await expect(dialog.getByText("New accounts get 30 free minutes.")).toHaveCount(0);
-  await expect(dialog.getByRole("button", { name: "Continue with Google" })).toBeFocused();
-  await expect(page).toHaveScreenshot("sign-in-dialog-from-link.png");
-});
+test(
+  "the sign-in link opens the dialog with the returning listener's copy",
+  { tag: VISUAL_TAG },
+  async ({ mount, page }) => {
+    await mount("routes/index/SignInFromLink");
+    const dialog = page.getByRole("dialog", { name: "Sign in", exact: true });
+    await expect(dialog).toHaveAccessibleDescription("Sign in to get back to your tracks.");
+    await expect(dialog.getByText("New accounts get 30 free minutes.")).toHaveCount(0);
+    await expect(dialog.getByRole("button", { name: "Continue with Google" })).toBeFocused();
+    await expect(page).toHaveScreenshot("sign-in-dialog-from-link.png");
+  },
+);
 
 test("a submission's dialog keeps the new account copy", async ({ mount, page }) => {
   await mount("routes/index/SignIn");

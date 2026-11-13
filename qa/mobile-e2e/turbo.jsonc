@@ -1,4 +1,58 @@
 {
   "$schema": "../../node_modules/turbo/schema.json",
   "extends": ["//", "@patricktree-stack/config-turbo-typescript"],
+  "tasks": {
+    /* Writes the toolchain keys that `turbo:e2e:android` and `turbo:e2e:ios` hash; never cached, so it reads the machine on every run. */
+    "turbo:e2e:toolchain": {
+      "cache": false,
+      /* Locate the toolchain whose versions the keys hold, so the keys hash the versions, not these paths. */
+      "passThroughEnv": ["ANDROID_HOME", "ANDROID_SDK_ROOT", "DEVELOPER_DIR", "JAVA_HOME"],
+    },
+    /* The Android run of the suite; a cached pass is replayed, see ADR 0026. */
+    "turbo:e2e:android": {
+      "cache": true,
+      /* `^turbo:build` builds and hashes the mobile app (native projects, Capacitor config and plugins), the web app it ships, and the test Worker. */
+      "dependsOn": ["^turbo:build", "turbo:e2e:toolchain"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!*.md",
+        "!test/ios/**",
+        /* Git-ignored, so not a default input of `@cup/mobile-app`, but Gradle reads `sdk.dir` from it. */
+        "$TURBO_ROOT$/apps/mobile-app/android/local.properties",
+        /* Git-ignored, so not a default input of `@cup/test-worker`, but Wrangler loads it into the test Worker. */
+        "$TURBO_ROOT$/qa/test-worker/.env.local",
+        /* Written by `turbo:e2e:toolchain` after Turbo starts, so it is hashed just before the task runs. */
+        { "mode": "jit", "globs": [".toolchain/android.json"] },
+      ],
+      /* Only the log is replayed: failure artifacts hold absolute paths of the checkout that ran them. */
+      "outputs": [],
+      /* The toolchain key hashes what these variables point to. */
+      "passThroughEnv": [
+        "ANDROID_HOME",
+        "ANDROID_SDK_ROOT",
+        "JAVA_HOME",
+        "E2E_RETAIN_STATE",
+        "E2E_STREAM_WRANGLER",
+      ],
+    },
+    /* The iOS run of the suite; a cached pass is replayed, see ADR 0026. */
+    "turbo:e2e:ios": {
+      "cache": true,
+      /* `^turbo:build` builds and hashes the mobile app (native projects, Capacitor config and plugins), the web app it ships, and the test Worker. */
+      "dependsOn": ["^turbo:build", "turbo:e2e:toolchain"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!*.md",
+        "!test/android/**",
+        /* Git-ignored, so not a default input of `@cup/test-worker`, but Wrangler loads it into the test Worker. */
+        "$TURBO_ROOT$/qa/test-worker/.env.local",
+        /* Written by `turbo:e2e:toolchain` after Turbo starts, so it is hashed just before the task runs. */
+        { "mode": "jit", "globs": [".toolchain/ios.json"] },
+      ],
+      /* Only the log is replayed: failure artifacts hold absolute paths of the checkout that ran them. */
+      "outputs": [],
+      /* The toolchain key hashes the Xcode that `DEVELOPER_DIR` selects. */
+      "passThroughEnv": ["DEVELOPER_DIR", "E2E_RETAIN_STATE", "E2E_STREAM_WRANGLER"],
+    },
+  },
 }

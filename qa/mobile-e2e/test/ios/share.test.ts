@@ -5,16 +5,17 @@ import { asIosAppDevice, type IosAppDevice } from "#src/ios/ios-app-device.ts";
 import { signInFromLandingPage, waitForLandingPage, waitForRecents } from "#src/journeys.ts";
 import {
   conversionStartsSince,
-  expectShareIgnored,
   expectSignInForStartFormUrl,
   waitForSharedConversions,
 } from "#src/share-assertions.ts";
 
 /**
  * Share intake through `audio.cup.app://share?url=…` links, as the Share Extension hands a share to
- * Cup. Signed out, each test opens the link in a Cup that is running or started by the link, checks
- * that the landing page's start form took the URL and asked to sign in, and that the share started
- * no conversion; signed in, that the share started a conversion of the URL, which Recents lists.
+ * Cup, one test per app state. The component tests of `incoming-urls.ios.ts` cover what the web app
+ * does with the link, such as repeat shares, Cup links and links without an HTTP(S) URL. Signed
+ * out, each test opens the link in a Cup that is running or started by the link, checks that the
+ * landing page's start form took the URL and asked to sign in, and that the share started no
+ * conversion; signed in, that the share started a conversion of the URL, which Recents lists.
  */
 const app = useMobileApp();
 
@@ -39,53 +40,6 @@ test("a share that starts Cup fills the landing page's start form and asks to si
   expect(app.worker.requests()).toContainEqual(
     expect.objectContaining({ method: "GET", path: "/api/auth/config" }),
   );
-  expect(conversionStartsSince(app.worker, 0)).toEqual([]);
-});
-
-test("a second share replaces the first one's URL", async () => {
-  const device = await launchToLandingPage();
-  const secondUrl = "https://source.example.test/second";
-
-  await device.openUrl(shareLink(SHARED_URL));
-  await expectSignInForStartFormUrl(await device.webView(), SHARED_URL);
-  await device.openUrl(shareLink(secondUrl));
-
-  await expectSignInForStartFormUrl(await device.webView(), secondUrl);
-  expect(conversionStartsSince(app.worker, 0)).toEqual([]);
-});
-
-test("a shared cup.audio link is ignored", async () => {
-  const device = await launchToLandingPage();
-
-  // Trial links stay out of the mobile apps (ADR 0017), and so does any other Cup link.
-  await device.openUrl(shareLink("https://cup.audio/trials/fixture-grant"));
-
-  await expectShareIgnored(await device.webView(), "landing page");
-  expect(conversionStartsSince(app.worker, 0)).toEqual([]);
-});
-
-test("a shared cup.audio link that starts Cup is ignored", async () => {
-  const device = await prepareColdStart();
-
-  await device.openUrl(shareLink("https://cup.audio/trials/fixture-grant"));
-
-  await expectShareIgnored(await device.webView(), "landing page");
-  expect(conversionStartsSince(app.worker, 0)).toEqual([]);
-});
-
-test.each([
-  { problem: "no url", link: "audio.cup.app://share" },
-  { problem: "a url that is no URL", link: "audio.cup.app://share?url=not%20a%20link" },
-  {
-    problem: "a url that is not HTTP(S)",
-    link: "audio.cup.app://share?url=ftp%3A%2F%2Fexample.test",
-  },
-])("a share link with $problem is ignored", async ({ link }) => {
-  const device = await launchToLandingPage();
-
-  await device.openUrl(link);
-
-  await expectShareIgnored(await device.webView(), "landing page");
   expect(conversionStartsSince(app.worker, 0)).toEqual([]);
 });
 

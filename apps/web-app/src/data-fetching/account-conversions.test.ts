@@ -1,7 +1,6 @@
-import { expect, test } from "@playwright/test";
-
 import { ACCOUNT_SESSION_STORAGE_KEY } from "#src/auth/account-session-storage.ts";
 import { PENDING_CONVERSION_KEY } from "#src/data-fetching/account-conversion-storage.ts";
+import { expect, test } from "#src/test-utils/component-test.ts";
 
 test.use({ serviceWorkers: "block" });
 

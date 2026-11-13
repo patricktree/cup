@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, VISUAL_TAG } from "#src/test-utils/component-test.ts";
 
 for (const state of [
   { story: "routes/account-recovery/SignedOut", text: "Continue with Google", name: "signed-out" },
@@ -13,9 +13,10 @@ for (const state of [
     name: "confirm-recovery",
   },
 ]) {
-  test(`renders ${state.name}`, async ({ mount, page }) => {
+  test(`renders ${state.name}`, { tag: VISUAL_TAG }, async ({ mount, page }) => {
     const component = await mount(state.story);
     await expect(component.getByText(state.text, { exact: true })).toBeVisible();
+    await expect(page).toHaveTitle("Account recovery · Cup");
     await expect(page).toHaveScreenshot(`${state.name}.png`);
   });
 }
@@ -48,18 +49,12 @@ test("a deletion left unconfirmed in the account dialog is not offered for confi
 
 test("the account still loading shows the page skeleton, marked as a loading state", async ({
   mount,
+  page,
 }) => {
   const component = await mount("routes/account-recovery/LoadingAccount");
+  await expect(page).toHaveTitle("Account recovery · Cup");
 
   const skeleton = component.getByRole("main", { name: "Loading account", exact: true });
   await expect(skeleton).toHaveAttribute("data-loading-state", "");
   await expect(skeleton).toHaveAttribute("aria-busy", "true");
 });
-
-for (const story of ["SignedOut", "DeletionScheduled", "LoadingAccount"] as const) {
-  test(`the page title of ${story} names account recovery`, async ({ mount, page }) => {
-    await mount(`routes/account-recovery/${story}`);
-
-    await expect(page).toHaveTitle("Account recovery · Cup");
-  });
-}

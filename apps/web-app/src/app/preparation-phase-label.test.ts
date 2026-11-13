@@ -1,8 +1,7 @@
-import { expect, test } from "@playwright/test";
-
 import { audiobookSchema } from "@cup/listener-api.routes";
 
 import { toPreparationPhaseLabel } from "#src/app/preparation-phase-label.ts";
+import { expect, test } from "#src/test-utils/component-test.ts";
 
 const LABELS = [
   ["starting", "Starting"],

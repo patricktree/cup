@@ -1,4 +1,3 @@
-import { expect, test } from "@playwright/test";
 import { AuthError, type AuthChangeEvent, type Session } from "@supabase/supabase-js";
 import { createActor, fromCallback, fromPromise, waitFor, type EventFromLogic } from "xstate";
 
@@ -10,6 +9,7 @@ import {
   type Reply,
 } from "#src/auth/account-session-machine.ts";
 import { ACCOUNT_SESSION_STORAGE_KEY } from "#src/auth/account-session-storage.ts";
+import { expect, test } from "#src/test-utils/component-test.ts";
 
 test.use({ serviceWorkers: "block" });
 

@@ -1694,6 +1694,9 @@ importers:
       '@cup/prepare-declaration-build':
         specifier: workspace:*
         version: link:../../tooling/prepare-declaration-build
+      '@cup/toolchain-key':
+        specifier: workspace:*
+        version: link:../../tooling/toolchain-key
       '@patricktree-stack/config-playwright':
         specifier: workspace:*
         version: link:../../.patricktree-stack/tooling/config-playwright
@@ -1901,6 +1904,9 @@ importers:
       '@cup/loading-state-recorder':
         specifier: workspace:*
         version: link:../loading-state-recorder
+      '@cup/toolchain-key':
+        specifier: workspace:*
+        version: link:../../tooling/toolchain-key
       '@patricktree-stack/config-playwright':
         specifier: workspace:*
         version: link:../../.patricktree-stack/tooling/config-playwright
@@ -1925,6 +1931,9 @@ importers:
       oxlint-tsgolint:
         specifier: 'catalog:'
         version: 7.0.2004
+      temporal-polyfill:
+        specifier: ^1.0.5
+        version: 1.0.5
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
@@ -2013,6 +2022,9 @@ importers:
       '@cup/test-worker':
         specifier: workspace:*
         version: link:../test-worker
+      '@cup/toolchain-key':
+        specifier: workspace:*
+        version: link:../../tooling/toolchain-key
       appium:
         specifier: 3.9.0
         version: 3.9.0(@types/node@26.6.5)
@@ -2026,6 +2038,9 @@ importers:
       '@cup/config-oxlint':
         specifier: workspace:*
         version: link:../../tooling/config-oxlint
+      '@cup/mobile-app':
+        specifier: workspace:*
+        version: link:../../apps/mobile-app
       '@patricktree-stack/config-typescript':
         specifier: workspace:*
         version: link:../../.patricktree-stack/tooling/config-typescript
@@ -2383,6 +2398,55 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.11(@types/node@26.6.5)(@vitest/coverage-v8@4.1.11)(vite@8.3.4(@types/node@26.6.5))
+
+  tooling/toolchain-key:
+    dependencies:
+      '@commander-js/extra-typings':
+        specifier: ^15.0.0
+        version: 15.0.0(commander@15.0.0)
+      '@patricktree-stack/config-playwright':
+        specifier: workspace:*
+        version: link:../../.patricktree-stack/tooling/config-playwright
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.65.0
+      commander:
+        specifier: ^15.0.0
+        version: 15.0.0
+    devDependencies:
+      '@cup/config-oxlint':
+        specifier: workspace:*
+        version: link:../config-oxlint
+      '@cup/prepare-declaration-build':
+        specifier: workspace:*
+        version: link:../prepare-declaration-build
+      '@patricktree-stack/config-typescript':
+        specifier: workspace:*
+        version: link:../../.patricktree-stack/tooling/config-typescript
+      '@patricktree-stack/config-vitest':
+        specifier: workspace:*
+        version: link:../../.patricktree-stack/tooling/config-vitest
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.5
+      '@typescript/native':
+        specifier: 'catalog:'
+        version: typescript@7.0.2
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.87.0(oxlint-tsgolint@7.0.2004)
+      oxlint-tsgolint:
+        specifier: 'catalog:'
+        version: 7.0.2004
+      typescript:
+        specifier: 'catalog:'
+        version: '@typescript/typescript6@6.0.2'
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.4(@types/node@26.6.5)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5))
 
   tooling/validation-gates:
     dependencies:

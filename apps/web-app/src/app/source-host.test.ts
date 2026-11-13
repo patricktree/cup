@@ -1,6 +1,5 @@
-import { expect, test } from "@playwright/test";
-
 import { toSourceHost } from "#src/app/source-host.ts";
+import { expect, test } from "#src/test-utils/component-test.ts";
 
 for (const [sourceUrl, host] of [
   ["https://www.derstandard.at/story/3000000", "derstandard.at"],

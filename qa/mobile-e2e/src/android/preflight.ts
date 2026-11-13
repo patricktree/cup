@@ -28,8 +28,7 @@ const ANDROID_STUDIO_JAVA_HOME = "/Applications/Android Studio.app/Contents/jbr/
 export async function checkAndroidHost(): Promise<AndroidHost> {
   const problems: string[] = [];
 
-  const sdkRoot =
-    process.env["ANDROID_HOME"] ?? process.env["ANDROID_SDK_ROOT"] ?? DEFAULT_SDK_ROOT;
+  const sdkRoot = resolveAndroidSdkRoot();
   const adb = path.join(sdkRoot, "platform-tools", "adb");
   const emulator = path.join(sdkRoot, "emulator", "emulator");
   const avdManager = path.join(sdkRoot, "cmdline-tools", "latest", "bin", "avdmanager");
@@ -63,7 +62,7 @@ export async function checkAndroidHost(): Promise<AndroidHost> {
     }
   }
 
-  const javaHome = process.env["JAVA_HOME"];
+  const javaHome = resolveJavaHome();
   const javaVersionProblem = await checkJava21(javaHome);
   if (javaVersionProblem !== undefined) {
     problems.push(
@@ -79,8 +78,23 @@ export async function checkAndroidHost(): Promise<AndroidHost> {
   return { sdkRoot, adb, emulator, avdManager, javaHome };
 }
 
+/** The SDK the run uses: `ANDROID_HOME`, then `ANDROID_SDK_ROOT`, then Android Studio's default. */
+export function resolveAndroidSdkRoot(): string {
+  return process.env["ANDROID_HOME"] ?? process.env["ANDROID_SDK_ROOT"] ?? DEFAULT_SDK_ROOT;
+}
+
+/** The Java home Gradle and Appium get, or undefined when `java` comes from `PATH`. */
+export function resolveJavaHome(): string | undefined {
+  return process.env["JAVA_HOME"];
+}
+
+/** The `java` executable Gradle runs with `javaHome`. */
+export function javaExecutable(javaHome: string | undefined): string {
+  return javaHome === undefined ? "java" : path.join(javaHome, "bin", "java");
+}
+
 async function checkJava21(javaHome: string | undefined): Promise<string | undefined> {
-  const java = javaHome === undefined ? "java" : path.join(javaHome, "bin", "java");
+  const java = javaExecutable(javaHome);
   let output: string;
   try {
     // `java -version` writes to stderr.

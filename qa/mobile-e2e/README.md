@@ -30,31 +30,58 @@ From the repository root:
 pnpm run test:e2e:mobile
 ```
 
-This builds the workspace once, then [`src/run-e2e.ts`](src/run-e2e.ts) starts the Android and iOS Vitest projects as two Vitest processes at the same time. Each platform syncs the production web bundle into its native project, builds the debug app (the APK with Gradle, the simulator app with `xcodebuild`), starts its device and Appium, installs the app and runs its specs one after another. Every line of output starts with `[android]` or `[ios]`, so the interleaved logs stay readable; the run waits for both processes, names the platforms that failed, and exits non-zero unless both passed. The suite runs in the [deploy gate](../../AGENTS.md#validation-gates), after the web E2E suites, for now one platform after the other with `--project`, until five consecutive warm parallel runs have passed.
+This runs this package's Turbo tasks `turbo:e2e:android` and `turbo:e2e:ios` at the same time, each one Vitest project, after Turbo has built what they need: the mobile app, the web app it ships and the test Worker. Each platform syncs the production web bundle into its native project, builds the debug app (the APK with Gradle, the simulator app with `xcodebuild`), starts its device and Appium, installs the app and runs its specs one after another. Turbo prefixes every line of output with the task name, so the interleaved logs stay readable, lets one platform finish when the other fails, and exits non-zero unless both passed. The suite runs in the [deploy gate](../../AGENTS.md#validation-gates) as one step, both platforms in parallel, as five consecutive warm parallel runs allowed ([#301](https://github.com/patricktree/cup/issues/301)).
 
-The two platforms run in separate processes because one Vitest process cannot run them at the same time: it awaits each project's global setup in turn, and `fileParallelism: false` puts the specs of both projects into one sequential group. [Isolation](#isolation) lists what the two processes keep apart.
-
-To run one platform, name its Vitest project; the runner then starts a single Vitest process with its output unprefixed:
+To run one platform:
 
 ```sh
-pnpm run test:e2e:mobile --project android
-pnpm run test:e2e:mobile --project ios
+pnpm run test:e2e:mobile:android
+pnpm run test:e2e:mobile:ios
 ```
 
-Other arguments, such as a spec file filter, go to each Vitest process unchanged.
+### Cached passes
+
+Each platform's task is cached ([ADR 0026](../../docs/adr/0026-replay-mobile-e2e-passes-per-platform-and-run-both-platforms-in-parallel.md)): a run whose inputs are unchanged replays the platform's last pass, from any checkout or worktree on the Mac, with `cache hit` in its output. Its hash covers this package's files (without the other platform's `test/<platform>/` folder), the mobile app's tracked native projects, Capacitor configuration and plugin versions, the web app, the test Worker, the Git-ignored `apps/mobile-app/android/local.properties` (Android only) and `qa/test-worker/.env.local`, and the platform's toolchain key. A failed run is not cached. Add `--force` to run fresh anyway, for example with `E2E_RETAIN_STATE`.
+
+The toolchain key holds the host versions the platform runs on, which no file in the repository records. Before the platform tasks, the uncached task `turbo:e2e:toolchain` runs [`src/toolchain-key.ts`](src/toolchain-key.ts), which writes them to the Git-ignored `.toolchain/android.json` and `.toolchain/ios.json` in about 0.2 seconds, and each platform task hashes its own file just before it runs:
+
+- iOS: the Xcode version and build, the simulator runtime the preflight check picks (identifier, version and build), and the macOS version and build
+- Android: the revisions of Platform-Tools, the SDK platform that the mobile app's `compileSdkVersion` in `variables.gradle` names (36), the emulator (with its build ID) and the system image, the runtime version and vendor of the JDK Gradle uses, and the macOS version and build
+
+The key finds the toolchain as the preflight check does, through `ANDROID_HOME`, `ANDROID_SDK_ROOT`, `JAVA_HOME` and `DEVELOPER_DIR`. A version it cannot read is written as its reason. Each platform task first checks its own key file and, when a version in it is unreadable, fails in about a second, before any device or Appium starts, listing every reason, such as `xcode: xcodebuild -version: …` ([toolchain key check](../../tooling/toolchain-key/README.md#checking-a-key-file)). The other platform's key is written all the same, so it still runs. The preflight check then reports anything else that is missing once the key is readable.
+
+### Vitest arguments
+
+To pass Vitest arguments, such as a spec file filter, run the package's runner [`src/run-e2e.ts`](src/run-e2e.ts). It starts the Android and iOS projects as two Vitest processes, every line prefixed with `[android]` or `[ios]`, or one process for a named `--project`, and passes other arguments to each unchanged. It neither builds nor uses the cache, so build first:
+
+```sh
+pnpm run build && pnpm --filter @cup/mobile-e2e test:e2e --project ios test/sign-in.test.ts
+```
+
+The two platforms run in separate processes, in Turbo as in the runner, because one Vitest process cannot run them at the same time: it awaits each project's global setup in turn, and `fileParallelism: false` puts the specs of both projects into one sequential group. [Isolation](#isolation) lists what the two processes keep apart.
 
 ## Runtime
 
-The suite's budget is about 10 minutes for both platforms on a warm Mac, one with the drivers installed, WebDriverAgent built and the emulator's snapshot saved. Measured on 2026-11-10 on an Apple Silicon Mac with Xcode 27.2 and the iOS 27.2 runtime, one platform at a time, with the workspace build cached:
+The suite's budget is about 5 minutes for both platforms in parallel on a warm Mac, one with the drivers installed, WebDriverAgent built and the emulator's snapshot saved. Every test pays a fixed cost before its first step, about 7 seconds on iOS and 3 on Android: resetting Cup, starting its own test Worker and fake auth provider, and a cold launch. So the suite keeps one test per native channel and app state, and leaves what the web app does with a share or a sign-in to the component tests, which drive the same code with a faked Capacitor bridge.
 
-| Run                              | Android (16 tests) | iOS (10 tests) | Both       |
-| -------------------------------- | ------------------ | -------------- | ---------- |
-| Warm                             | 1 min 59 s         | 2 min 51 s     | 4 min 50 s |
-| New checkout, drivers to install | 2 min 18 s         | 3 min 10 s     | 5 min 28 s |
+Measured on 2026-11-12 on an Apple M4 Max with Xcode 27.2 and the iOS 27.2 runtime, nothing else running, with the workspace build cached:
 
-Vitest reported 116 s for Android and 166 s for iOS, of which the tests took 112 s and 142 s, and 303 s for both platforms in one `pnpm run test:e2e:mobile` that the since-retired `pnpm validate` ran; the rest is the cached workspace and app builds, the preflight check, and starting the device and Appium. The iOS share tests through Safari's Share Sheet take 12 to 20 seconds each. A Mac's first run, which also creates the emulator's snapshot and builds WebDriverAgent, takes several minutes longer.
+| Run                                         | Android         | iOS                   | Both, in parallel       |
+| ------------------------------------------- | --------------- | --------------------- | ----------------------- |
+| Before the cuts below, one platform at once | 18 tests, 133 s | 21 of 22 tests, 333 s | not run                 |
+| After, iOS alone                            | 10 tests        | 11 tests, 217 s       | not run                 |
+| After, three consecutive parallel runs      | 151 to 170 s    | 245 to 260 s          | 4 min 9 s to 4 min 24 s |
 
-Later on 2026-11-10, after iOS gained its signed-in tests ([CUP-60](https://linear.app/cup-audio/issue/CUP-60)), three consecutive warm iOS runs of 18 tests took 4 min 40 s to 4 min 46 s, while other checkouts loaded the Mac; Vitest reported 276 to 282 s, of which the tests took 253 to 255 s. With Android unchanged, both platforms take about 7 minutes warm, within the budget; Android was not measured again.
+The durations are Vitest's; the parallel rows' last column is the whole `pnpm run test:e2e:mobile`. Vitest reported 191 s of test time for iOS alone after the cuts, down from 291 s before, when the launch test, about 7 s, did not run. Android's "before" is the [uncached deploy gate baseline](https://github.com/patricktree/cup/issues/296) of the same day. The iOS share test through Safari's Share Sheet takes about 19 seconds. A Mac's first run, which also creates the emulator's snapshot and builds WebDriverAgent, takes several minutes longer.
+
+[patricktree/cup#310](https://github.com/patricktree/cup/issues/310) cut 11 tests on iOS and 8 on Android and merged 2 pairs, each with a named test that keeps covering it ([redundant tests research](https://github.com/patricktree/cup/issues/300), candidate 4): the launch test and the plain and stays-signed-in sign-in tests, which other tests run as their first steps; the share parsing and filtering cases, which the component tests of [`share-plugin.android.ts`](../../apps/web-app/src/platform/share-plugin.android.test.ts) and [`incoming-urls.ios.ts`](../../apps/web-app/src/platform/incoming-urls.ios.test.ts) cover; and the Share Sheet share into a running Cup. Android's `&`, `+` and fragment URL and its URL inside text moved into the stopped and the running share, and iOS's two safe-area tests into one.
+
+### Resetting Cup on iOS
+
+Before each test, `IosAppDevice.clearAppData()` removes Cup, resets the simulator's Keychain and installs Cup again. Emptying Cup's data container, deleting its defaults and resetting the Keychain instead was tried on 2026-11-12 and rejected:
+
+- It saves nothing. The reinstall took 0.38 to 0.69 seconds per test across 21 tests, and 0.40 to 1.01 seconds across 11; emptying the container took 0.31 to 0.79 seconds across 11, since it still needs `simctl` for the defaults and the Keychain. The iOS fixed cost is elsewhere: the test Worker, the cold launch and attaching to the WebView.
+- It is not a fresh install. A test that signed in, cleared Cup and compared the container with a fresh install's found the fresh one holding launch screen snapshots, which the system writes into `Library/SplashBoard` after installing, so a cleared container would need its own exceptions. Such a test signs in, which takes 10 to 17 seconds per run on iOS, more than the cleared container could save.
 
 ## Debug a test
 
@@ -71,7 +98,7 @@ An artifact the suite could not capture, such as the WebView's DOM when Cup show
 To keep a failed test's Worker persistence directory for inspection, run:
 
 ```sh
-E2E_RETAIN_STATE=1 pnpm run test:e2e:mobile
+E2E_RETAIN_STATE=1 pnpm run test:e2e:mobile --force
 ```
 
 The test's folder then holds `worker-persistence-directory.txt` with the retained directory's path.
@@ -134,23 +161,23 @@ One Android test launches with the real plugin (`realGoogleSignIn: true`) on the
 
 ## Safe area (iOS)
 
-[`test/ios/safe-area.test.ts`](test/ios/safe-area.test.ts) checks that Cup's content stays clear of the status bar, which its WebView reaches under ([safe area](../../apps/mobile-app/README.md#safe-area)). After signing in, the audiobook page's Back link, in the sticky header at the top of the page, must start below the status bar, both at rest and once the page has scrolled: `IosAppDevice.statusBarHeight()` reads the status bar's height from Appium's `mobile: deviceScreenInfo`, and the link's native position is in the same screen points. The test scrolls only within the page's height, because WebKit bounces a page scrolled past its end back, header included, and a position read during the bounce is off by the overshoot. On Recents, which has no sticky header, the status bar backdrop must span the top safe area in the WebView; WebKit hit-tests nothing under the status bar, so the test checks the backdrop's position and size rather than what `elementFromPoint` finds there.
+[`test/ios/safe-area.test.ts`](test/ios/safe-area.test.ts) checks in one test that Cup's content stays clear of the status bar, which its WebView reaches under ([safe area](../../apps/mobile-app/README.md#safe-area)). After signing in, the audiobook page's Back link, in the sticky header at the top of the page, must start below the status bar, both at rest and once the page has scrolled: `IosAppDevice.statusBarHeight()` reads the status bar's height from Appium's `mobile: deviceScreenInfo`, and the link's native position is in the same screen points. The test scrolls only within the page's height, because WebKit bounces a page scrolled past its end back, header included, and a position read during the bounce is off by the overshoot. Back on Recents, which has no sticky header, the status bar backdrop must span the top safe area in the WebView; WebKit hit-tests nothing under the status bar, so the test checks the backdrop's position and size rather than what `elementFromPoint` finds there.
 
 ## Share intake and the back button (Android)
 
-[`test/android/share.test.ts`](test/android/share.test.ts) shares text to Cup the way another app's Sharesheet does: `AndroidAppDevice.share()` sends an explicit `ACTION_SEND` intent of type `text/plain` with `adb` to Cup's main activity, with the text in `android.intent.extra.TEXT` and the launch arguments as extras, so a share that starts Cup reaches the test Worker too. No real Sharesheet is driven. Signed in, a share starts a conversion of the shared URL, and Recents lists it once the Add dialog has closed, whether Cup was stopped or running; a second share starts a second conversion, `&`, `+` and a `#fragment` arrive unchanged, and a URL is picked out of surrounding text. Text without a URL and a `cup.audio` link are ignored, which passes when Cup stays on Recents with no form open for a few seconds, and start no conversion. Signed out, a share fills the landing page's start form and asks to sign in, and starts no conversion.
+[`test/android/share.test.ts`](test/android/share.test.ts) shares text to Cup the way another app's Sharesheet does: `AndroidAppDevice.share()` sends an explicit `ACTION_SEND` intent of type `text/plain` with `adb` to Cup's main activity, with the text in `android.intent.extra.TEXT` and the launch arguments as extras, so a share that starts Cup reaches the test Worker too. No real Sharesheet is driven. The spec keeps one test per app state: what the web app does with the shared text, such as repeat shares, text without a URL and `cup.audio` links, is the [component tests'](../../apps/web-app/src/platform/share-plugin.android.test.ts) to cover. Signed in, a share starts a conversion of the shared URL, and Recents lists it once the Add dialog has closed, whether Cup was stopped, with `&`, `+` and a `#fragment` in the URL arriving unchanged through `adb`, or running, with the URL picked out of surrounding text. Signed out, a share that starts Cup reaches the test Worker, fills the landing page's start form and asks to sign in, and starts no conversion.
 
 ## Share intake (iOS)
 
-[`test/ios/share.test.ts`](test/ios/share.test.ts) opens `audio.cup.app://share?url=…` links in Cup with Appium's `mobile: deepLink`, as the Share Extension hands a share to Cup; neither Safari nor the extension takes part. `IosAppDevice.openUrl()` sends the link to a running Cup, or starts Cup when it is not running. A link that starts Cup carries no launch arguments, so those cases first store the test Worker's origin with `IosAppDevice.storeApiOrigin()`. Signed in, a share starts a conversion of the shared URL, which Recents lists, whether it starts Cup or reaches a running one. Signed out, on the landing page, a share fills the start form and asks to sign in whether it starts Cup or reaches a running one, and a share that starts Cup reached the test Worker; a second share replaces the first; and a `cup.audio` link, also one that starts Cup, and a share link without a `url` or with one that is no HTTP(S) URL are ignored, which passes when the landing page stays with an empty start form for a few seconds. The Android and iOS share specs use the same assertions from [`src/share-assertions.ts`](src/share-assertions.ts), which read the source URLs of the conversion starts the test Worker logged: signed in, the share started a conversion of the shared URL exactly; signed out, the start form's URL field equals the shared URL exactly, the sign-in dialog is open and the Worker received no request starting a conversion; and an ignored share leaves Cup on its screen with no form filled and starts no conversion.
+[`test/ios/share.test.ts`](test/ios/share.test.ts) opens `audio.cup.app://share?url=…` links in Cup with Appium's `mobile: deepLink`, as the Share Extension hands a share to Cup; neither Safari nor the extension takes part. `IosAppDevice.openUrl()` sends the link to a running Cup, or starts Cup when it is not running. A link that starts Cup carries no launch arguments, so those cases first store the test Worker's origin with `IosAppDevice.storeApiOrigin()`. The spec keeps one test per app state: what the web app does with the link, such as repeat shares, `cup.audio` links and share links without an HTTP(S) `url`, is the [component tests'](../../apps/web-app/src/platform/incoming-urls.ios.test.ts) to cover. Signed in, a share starts a conversion of the shared URL, which Recents lists, whether it starts Cup or reaches a running one. Signed out, on the landing page, a share fills the start form and asks to sign in whether it starts Cup or reaches a running one, and a share that starts Cup reached the test Worker. The Android and iOS share specs use the same assertions from [`src/share-assertions.ts`](src/share-assertions.ts), which read the source URLs of the conversion starts the test Worker logged: signed in, the share started a conversion of the shared URL exactly; signed out, the start form's URL field equals the shared URL exactly, the sign-in dialog is open and the Worker received no request starting a conversion.
 
 ## Sharing from Safari (iOS)
 
-[`test/ios/share-sheet.test.ts`](test/ios/share-sheet.test.ts) shares a page through Safari's real Share Sheet and the `CupShare` extension, which catches an iOS update that breaks the extension's handoff to Cup. `IosAppDevice.shareFromSafari()` opens the page in Safari, taps More, Share, **Cup** in the Share Sheet's app row, then **Open in Cup** or **Cancel** in the extension's sheet. The page comes from a server the test starts on `127.0.0.1`, so Safari needs no internet. Signed out, a share fills the landing page's start form with the URL exactly and asks to sign in, both when it starts Cup, with `&`, `+` and a `#fragment` in the URL, and when Cup already runs, and the Worker received no request starting a conversion. After a cancelled share, Safari stays in front and Cup does not start for a few seconds.
+[`test/ios/share-sheet.test.ts`](test/ios/share-sheet.test.ts) shares a page through Safari's real Share Sheet and the `CupShare` extension, which catches an iOS update that breaks the extension's handoff to Cup. `IosAppDevice.shareFromSafari()` opens the page in Safari, taps More, Share, **Cup** in the Share Sheet's app row, then **Open in Cup** or **Cancel** in the extension's sheet. The page comes from a server the test starts on `127.0.0.1`, so Safari needs no internet. Signed out, a share that starts Cup, with `&`, `+` and a `#fragment` in the URL, fills the landing page's start form with the URL exactly and asks to sign in, and the Worker received no request starting a conversion. A share that reaches a running Cup takes the same handoff, so the [share links](#share-intake-ios) cover the running Cup without the Share Sheet's 12 to 20 seconds. After a cancelled share, Safari stays in front and Cup does not start for a few seconds.
 
 **These tests depend on Safari's system UI** and its element labels and types, which Apple changes without notice. They are expected to fail when an iOS or Xcode update changes that UI: update the selectors in `IosAppDevice` rather than retrying the tests.
 
-[`test/android/back-button.test.ts`](test/android/back-button.test.ts) relaunches a signed-in Cup so Recents is the first screen. Back closes the Add dialog and leaves a track's page for Recents; on Recents, Back puts Cup in the background with its page kept, which the test checks by bringing Cup back to the foreground. Android's first Back closes an open on-screen keyboard instead of reaching Cup. The Add dialog focuses itself, not its URL field, so no keyboard opens: the test checks that the dialog holds focus and that no keyboard is on screen before pressing Back.
+[`test/android/back-button.test.ts`](test/android/back-button.test.ts) relaunches a signed-in Cup so Recents is the first screen, which also covers the session in Secure Storage across a relaunch; on iOS, the signed-in share that starts Cup covers it. Back closes the Add dialog and leaves a track's page for Recents; on Recents, Back puts Cup in the background with its page kept, which the test checks by bringing Cup back to the foreground. Android's first Back closes an open on-screen keyboard instead of reaching Cup. The Add dialog focuses itself, not its URL field, so no keyboard opens: the test checks that the dialog holds focus and that no keyboard is on screen before pressing Back.
 
 ## Native networking
 
@@ -158,7 +185,8 @@ One Android test launches with the real plugin (`realGoogleSignIn: true`) on the
 
 ## Layout
 
-- [`src/run-e2e.ts`](src/run-e2e.ts): the runner behind `test:e2e`, which starts one Vitest process per platform, or one for a named project.
+- [`src/run-e2e.ts`](src/run-e2e.ts): the runner behind the package's `test:e2e`, which starts one Vitest process per platform, or one for a named project.
+- [`src/toolchain-key.ts`](src/toolchain-key.ts): writes each platform's [toolchain key](#cached-passes) with the readers in `src/<platform>/toolchain-key.ts`.
 - [`src/app-device.ts`](src/app-device.ts): the device-control interface every spec uses. Platform-only steps live on the platform's class, such as [`AndroidAppDevice`](src/android/android-app-device.ts).
 - [`src/fixtures.ts`](src/fixtures.ts): `useMobileApp()` opens the spec file's session, gives each test its own Worker and keeps a failed test's artifacts.
 - [`src/failure-artifacts.ts`](src/failure-artifacts.ts): the output folder and the artifacts captured through the Appium session.

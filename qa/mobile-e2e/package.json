@@ -13,18 +13,23 @@
     "test": "vitest run --config vitest.unit.config.ts",
     "test:e2e": "node src/run-e2e.ts",
     "turbo:build": "tsc --build ./tsconfig.json",
+    "turbo:e2e:android": "toolchain-key check .toolchain/android.json --suite 'Android mobile E2E' && vitest run --project android",
+    "turbo:e2e:ios": "toolchain-key check .toolchain/ios.json --suite 'iOS mobile E2E' && vitest run --project ios",
+    "turbo:e2e:toolchain": "node src/toolchain-key.ts --output-dir .toolchain",
     "turbo:lint": "oxlint --type-aware --max-warnings 0 .",
     "turbo:lint:fix": "pnpm run turbo:lint --fix",
     "turbo:test": "pnpm run test"
   },
   "dependencies": {
     "@cup/test-worker": "workspace:*",
+    "@cup/toolchain-key": "workspace:*",
     "appium": "3.9.0",
     "temporal-polyfill": "^1.0.5",
     "webdriverio": "10.1.0"
   },
   "devDependencies": {
     "@cup/config-oxlint": "workspace:*",
+    "@cup/mobile-app": "workspace:*",
     "@patricktree-stack/config-typescript": "workspace:*",
     "@patricktree-stack/config-vitest": "workspace:*",
     "@types/node": "catalog:",

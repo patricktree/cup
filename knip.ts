@@ -33,7 +33,6 @@ const config: KnipConfig = {
     "apps/web-app": {
       /* Playwright and Vite load these component-testing modules indirectly. */
       entry: [
-        "ui-gallery/main.tsx",
         "src/**/*.story.tsx",
         /* fidelity-check/cli.ts starts Playwright with this config, which runs run.ts. */
         "playwright.fidelity-check.config.ts",
@@ -64,6 +63,10 @@ const config: KnipConfig = {
     "qa/e2e": {
       /* The global setup signs the suite's local HTTPS certificate with the system's openssl */
       ignoreBinaries: ["openssl"],
+    },
+    "qa/mobile-e2e": {
+      /* The suite builds the native apps from this package's projects, so its cached E2E tasks must hash them. */
+      ignoreDependencies: ["@cup/mobile-app"],
     },
     "qa/test-worker": {
       /* These dependencies express the built-app test dependency graph. */

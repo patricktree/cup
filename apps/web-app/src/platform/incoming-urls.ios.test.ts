@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-
+import { expect, test } from "#src/test-utils/component-test.ts";
 import { recordConversionStarts } from "#src/test-utils/conversion-starts.ts";
 
 test("submits share URLs through the form", async ({ page, mount }) => {
@@ -66,7 +65,10 @@ test("submits share URLs through the form", async ({ page, mount }) => {
     .toEqual(["https://example.com/first?a=1&b=2#section", "https://example.com/second"]);
 });
 
-test("ignores shared Cup links and URLs other than share handoffs", async ({ page, mount }) => {
+test("ignores shared Cup links, share links without an HTTP(S) URL and URLs other than share handoffs", async ({
+  page,
+  mount,
+}) => {
   await page.addInitScript(() => {
     Object.assign(window, {
       webkit: { messageHandlers: { bridge: {} } },
@@ -111,6 +113,9 @@ test("ignores shared Cup links and URLs other than share handoffs", async ({ pag
       "audio.cup.app://share?url=" +
         encodeURIComponent("https://cup.audio/app/trials/example#credential=v1.test"),
       "audio.cup.app://share?url=" + encodeURIComponent("https://cup-audio.com/trials/example"),
+      "audio.cup.app://share",
+      "audio.cup.app://share?url=" + encodeURIComponent("not a link"),
+      "audio.cup.app://share?url=" + encodeURIComponent("ftp://example.test"),
       "https://example.com/article",
       "audio.cup.app://other?url=" + encodeURIComponent("https://example.com/"),
       "not a URL",

@@ -120,8 +120,11 @@ const REVIEW_GATE: Gate = {
     { name: "Knip", command: ["pnpm", "run", "declutter"] },
     { name: "Brand-assets check", command: ["pnpm", "run", "brand-assets:check"] },
     { name: "Zizmor", command: ["pnpm", "run", "zizmor"] },
+    // A cached Turbo task whose hash includes the Playwright Server image, so a pass on unchanged
+    // inputs is replayed (ADR 0024).
     { name: "Source-material E2E", command: ["pnpm", "run", "test:e2e:source-material"] },
     {
+      // Outside Turbo, so the paid evals always run fresh.
       name: "Narration evals",
       command: ["pnpm", "run", "evals"],
       findSkipReason: async () =>
@@ -138,7 +141,7 @@ const MERGE_GATE: Gate = {
   prerequisites: [...REVIEW_GATE.prerequisites],
   steps: [
     ...REVIEW_GATE.steps,
-    // Outside turbo, so the suite always runs fresh.
+    // A cached Turbo task like source-material E2E, so a pass on unchanged inputs is replayed.
     { name: "App E2E", command: ["pnpm", "run", "test:e2e:app"] },
   ],
 };
@@ -149,12 +152,9 @@ const DEPLOY_GATE: Gate = {
   prerequisites: [CHECKOUT_DEPLOYABLE, ...MERGE_GATE.prerequisites, MOBILE_TOOLCHAINS_READY],
   steps: [
     ...MERGE_GATE.steps,
-    // One platform after the other until the parallel mobile runner has proven itself.
-    {
-      name: "Mobile E2E (Android)",
-      command: ["pnpm", "run", "test:e2e:mobile", "--project", "android"],
-    },
-    { name: "Mobile E2E (iOS)", command: ["pnpm", "run", "test:e2e:mobile", "--project", "ios"] },
+    // Turbo runs the cached Android and iOS tasks at the same time, which five consecutive warm
+    // runs passed (#301); a platform whose inputs and toolchain are unchanged is replayed (ADR 0026).
+    { name: "Mobile E2E", command: ["pnpm", "run", "test:e2e:mobile"] },
   ],
 };
 

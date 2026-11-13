@@ -2,6 +2,12 @@ import { defineConfig } from "oxlint";
 
 import { config as repoConfig, restrictImports } from "@cup/config-oxlint/oxlint-base.js";
 
+const API_CLIENT_RESTRICTION = {
+  group: ["#src/api-client.js"],
+  message:
+    "Send API requests through `requestApi` in `src/data-fetching/api-request.ts`, which attaches the account token each call asks for.",
+};
+
 export default defineConfig({
   extends: [repoConfig],
   rules: {
@@ -23,10 +29,17 @@ export default defineConfig({
     {
       files: ["**"],
       rules: {
-        "no-restricted-imports": restrictImports({
-          group: ["#src/api-client.js"],
+        "no-restricted-imports": restrictImports(API_CLIENT_RESTRICTION),
+      },
+    },
+    {
+      files: ["src/**/*.test.ts"],
+      rules: {
+        "no-restricted-imports": restrictImports(API_CLIENT_RESTRICTION, {
+          group: ["@playwright/test"],
+          allowTypeImports: true,
           message:
-            "Send API requests through `requestApi` in `src/data-fetching/api-request.ts`, which attaches the account token each call asks for.",
+            "Import `test` and `expect` from `#src/test-utils/component-test.ts`, whose `toHaveScreenshot` requires the `@visual` tag that runs a test in all four browser projects.",
         }),
       },
     },
