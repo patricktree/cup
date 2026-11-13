@@ -1931,6 +1931,9 @@ importers:
       oxlint-tsgolint:
         specifier: 'catalog:'
         version: 7.0.2004
+      temporal-polyfill:
+        specifier: ^1.0.5
+        version: 1.0.5
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'

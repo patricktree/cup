@@ -1,4 +1,5 @@
 import type { Page, Response } from "@playwright/test";
+import { Temporal } from "temporal-polyfill";
 
 import { accountSnapshotSchema } from "@cup/listener-api.routes";
 
@@ -333,7 +334,7 @@ test("a signed-in session refreshes its expired access token and keeps working, 
   const detailUrl = page.url();
   const signInToken = await readAccessToken(page);
 
-  await waitPastAccessTokenLifetime();
+  await waitPastExpiry(signInToken);
   const expired = await page.request.get(`${origin}/api/account`, {
     headers: { Authorization: `Bearer ${signInToken}` },
   });
@@ -341,28 +342,61 @@ test("a signed-in session refreshes its expired access token and keeps working, 
 
   await page.goto(`${origin}/app/recent`);
   await expect(page.getByRole("list", { name: "Tracks" }).getByRole("listitem")).toHaveCount(1);
-  await waitPastAccessTokenLifetime();
+  // Each step below starts once the token the app holds has expired, so it has to refresh again.
+  const tokenBeforeOpening = await readAccessToken(page);
+  await waitPastExpiry(tokenBeforeOpening);
   const afterOpening = waitForAuthenticatedApiResponse(page, origin);
   await page.getByRole("list", { name: "Tracks" }).getByRole("link").click();
   await expect(page).toHaveURL(detailUrl);
   await waitForAudiobook(page);
-  await expectRefreshedBearerToken(await afterOpening, signInToken);
+  await expectRefreshedBearerToken(await afterOpening, [signInToken, tokenBeforeOpening]);
 
   // The reloaded app restores the session the last refresh stored; its refresh token is single-use.
-  await waitPastAccessTokenLifetime();
+  const tokenBeforeReload = await readAccessToken(page);
+  await waitPastExpiry(tokenBeforeReload);
   const afterReload = waitForAuthenticatedApiResponse(page, origin);
   await page.reload();
   await waitForAudiobook(page);
-  await expectRefreshedBearerToken(await afterReload, signInToken);
+  await expectRefreshedBearerToken(await afterReload, [signInToken, tokenBeforeReload]);
   expect(authProvider.refreshes()).toBeGreaterThanOrEqual(2);
   expect(authProvider.exchanges()).toBe(1);
 });
 
-/** Short enough that a session outlives several access tokens within one test. */
-const ACCESS_TOKEN_LIFETIME_SECONDS = 5;
+/**
+ * Short enough that a session outlives several access tokens within one test. supabase-js refreshes
+ * before every request once a token expires within 90 seconds, so any lifetime below that behaves
+ * alike. One second is too short: `exp` counts whole seconds, so a token issued late in a second
+ * could expire before the Worker checks it.
+ */
+const ACCESS_TOKEN_LIFETIME_SECONDS = 2;
+/** Covers the Worker's clock, which advances only between requests, trailing the test's clock. */
+const EXPIRY_MARGIN_MILLISECONDS = 250;
 
-async function waitPastAccessTokenLifetime() {
-  await new Promise((resolve) => setTimeout(resolve, (ACCESS_TOKEN_LIFETIME_SECONDS + 1) * 1_000));
+/** Waits until the Worker rejects the token, which `jose` treats as expired from its `exp` second. */
+async function waitPastExpiry(accessToken: string) {
+  const expiresAtMilliseconds = readExpiry(accessToken) * 1_000;
+  const waitMilliseconds =
+    Math.max(0, expiresAtMilliseconds - Temporal.Now.instant().epochMilliseconds) +
+    EXPIRY_MARGIN_MILLISECONDS;
+  await new Promise((resolve) => setTimeout(resolve, waitMilliseconds));
+}
+
+function readExpiry(accessToken: string): number {
+  const payload = accessToken.split(".")[1];
+  if (payload === undefined) {
+    throw new Error("Expected a JWT access token");
+  }
+
+  const claims: unknown = JSON.parse(Buffer.from(payload, "base64url").toString());
+  if (
+    !claims ||
+    typeof claims !== "object" ||
+    !("exp" in claims) ||
+    typeof claims.exp !== "number"
+  ) {
+    throw new Error("Expected an access token with a numeric exp claim");
+  }
+  return claims.exp;
 }
 
 function waitForAuthenticatedApiResponse(page: Page, origin: string) {
@@ -373,10 +407,13 @@ function waitForAuthenticatedApiResponse(page: Page, origin: string) {
   );
 }
 
-/** The Worker accepted a bearer token that a refresh issued after the sign-in's token expired. */
-async function expectRefreshedBearerToken(response: Response, signInToken: string) {
+/** The Worker accepted a bearer token that a refresh issued after the given tokens expired. */
+async function expectRefreshedBearerToken(response: Response, expiredTokens: string[]) {
   expect(response.ok()).toBe(true);
-  expect(response.request().headers()["authorization"]).not.toBe(`Bearer ${signInToken}`);
+  const authorization = response.request().headers()["authorization"];
+  for (const expiredToken of expiredTokens) {
+    expect(authorization).not.toBe(`Bearer ${expiredToken}`);
+  }
 }
 
 test("failed sign-in leaves anonymous trial access available", async ({

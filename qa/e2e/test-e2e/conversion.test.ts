@@ -233,6 +233,9 @@ test.describe("segment failure and recovery", () => {
     });
     await waitForAudiobook(page);
     await expect(page.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
+    // The failure arrives at once, so the detail view's Back link may still be preloading its route;
+    // a restart would refuse that chunk.
+    await page.waitForLoadState("networkidle");
     await workerEnvironment.restart("success");
     await page.getByRole("button", { name: "Retry", exact: true }).click();
     await expect(page.getByRole("button", { name: "Play", exact: true })).toBeEnabled({

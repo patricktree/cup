@@ -11,7 +11,10 @@ const SPEECH_RELEASE_KEY = "qa/speech-released";
 export function createTrackedSpeechProvider(bucket: R2Bucket, scenario: string): SpeechSynthesisAi {
   const provider = createFakeSpeechSynthesisAi(
     scenario === "tts-failure"
-      ? { failureStatus: 503 }
+      ? // A 400 the provider does not mark as retryable is permanent, so the segment Workflow fails
+        // at once instead of waiting out its retry backoff; the Workflow's library tests cover
+        // retried 503s with the production retry count.
+        { failureStatus: 400 }
       : scenario === "speech-gated"
         ? { durationMilliseconds: 8_000 }
         : { durationMilliseconds: 5_000 },

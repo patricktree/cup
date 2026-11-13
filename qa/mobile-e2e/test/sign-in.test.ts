@@ -82,8 +82,13 @@ test("refreshes the session when Cup comes back from the background after its ac
   expect(app.worker.logs.filter((line) => line.includes("401 Unauthorized"))).toEqual([]);
 });
 
-/** Short enough that a test outlives an access token. */
-const ACCESS_TOKEN_LIFETIME_SECONDS = 5;
+/**
+ * Short enough that a test outlives an access token. supabase-js refreshes before every request
+ * once a token expires within 90 seconds, so any lifetime below that behaves alike. One second is
+ * too short: `exp` counts whole seconds, so a token issued late in a second could expire before the
+ * Worker checks it.
+ */
+const ACCESS_TOKEN_LIFETIME_SECONDS = 2;
 
 /** The bearer token of the latest request for Recents' tracks the Worker received. */
 function lastConversionsAuthorization(): string | undefined {
