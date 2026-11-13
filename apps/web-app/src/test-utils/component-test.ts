@@ -1,4 +1,10 @@
-import { expect as baseExpect, test, type Locator, type Page } from "@playwright/test";
+import {
+  expect as baseExpect,
+  test,
+  type Locator,
+  type Page,
+  type PageAssertionsToHaveScreenshotOptions,
+} from "@playwright/test";
 
 /**
  * Runs a component test in all four browser projects instead of only desktop Chromium and mobile
@@ -14,7 +20,11 @@ export { test };
  * screenshot cannot silently lose the two browser projects that run only visual tests.
  */
 export const expect = baseExpect.extend({
-  async toHaveScreenshot(receiver: Locator | Page, name: string) {
+  async toHaveScreenshot(
+    receiver: Locator | Page,
+    nameOrOptions?: ScreenshotName | ScreenshotOptions,
+    options?: ScreenshotOptions,
+  ) {
     if (!test.info().tags.includes(VISUAL_TAG)) {
       return {
         name: "toHaveScreenshot",
@@ -24,13 +34,30 @@ export const expect = baseExpect.extend({
       };
     }
 
-    await (isPage(receiver)
-      ? baseExpect(receiver).toHaveScreenshot(name)
-      : baseExpect(receiver).toHaveScreenshot(name));
+    const assertions: ScreenshotAssertions = baseExpect(receiver);
+    await (isScreenshotName(nameOrOptions)
+      ? assertions.toHaveScreenshot(nameOrOptions, options)
+      : assertions.toHaveScreenshot(nameOrOptions));
     return { name: "toHaveScreenshot", pass: true, message: () => "" };
   },
 });
 
-function isPage(receiver: Locator | Page): receiver is Page {
-  return "goto" in receiver;
+type ScreenshotName = string | ReadonlyArray<string>;
+
+type ScreenshotOptions = PageAssertionsToHaveScreenshotOptions;
+
+/**
+ * Playwright's two `toHaveScreenshot` overloads, for a page or a locator. `expect` of a `Locator |
+ * Page` is a union of page and locator assertions, whose overloaded methods TypeScript cannot call;
+ * both are assignable to this type, whose options are the page's, a superset of the locator's.
+ */
+type ScreenshotAssertions = {
+  toHaveScreenshot(name: ScreenshotName, options?: ScreenshotOptions): Promise<void>;
+  toHaveScreenshot(options?: ScreenshotOptions): Promise<void>;
+};
+
+function isScreenshotName(
+  nameOrOptions: ScreenshotName | ScreenshotOptions | undefined,
+): nameOrOptions is ScreenshotName {
+  return typeof nameOrOptions === "string" || Array.isArray(nameOrOptions);
 }
