@@ -23,6 +23,11 @@ type Step = {
    * shown in the summary.
    */
   findSkipReason?: () => Promise<string | undefined>;
+  /**
+   * The step runs cached E2E suite tasks whose replay the summary marks: when Turbo reports every
+   * one of them as a cache hit, the step's result reads "passed (replayed)" (#302).
+   */
+  isReplayMarked?: boolean;
 };
 
 /**
@@ -122,7 +127,11 @@ const REVIEW_GATE: Gate = {
     { name: "Zizmor", command: ["pnpm", "run", "zizmor"] },
     // A cached Turbo task whose hash includes the Playwright Server image, so a pass on unchanged
     // inputs is replayed (ADR 0024).
-    { name: "Source-material E2E", command: ["pnpm", "run", "test:e2e:source-material"] },
+    {
+      name: "Source-material E2E",
+      command: ["pnpm", "run", "test:e2e:source-material"],
+      isReplayMarked: true,
+    },
     {
       // Outside Turbo, so the paid evals always run fresh.
       name: "Narration evals",
@@ -142,7 +151,7 @@ const MERGE_GATE: Gate = {
   steps: [
     ...REVIEW_GATE.steps,
     // A cached Turbo task like source-material E2E, so a pass on unchanged inputs is replayed.
-    { name: "App E2E", command: ["pnpm", "run", "test:e2e:app"] },
+    { name: "App E2E", command: ["pnpm", "run", "test:e2e:app"], isReplayMarked: true },
   ],
 };
 
@@ -154,7 +163,7 @@ const DEPLOY_GATE: Gate = {
     ...MERGE_GATE.steps,
     // Turbo runs the cached Android and iOS tasks at the same time, which five consecutive warm
     // runs passed (#301); a platform whose inputs and toolchain are unchanged is replayed (ADR 0026).
-    { name: "Mobile E2E", command: ["pnpm", "run", "test:e2e:mobile"] },
+    { name: "Mobile E2E", command: ["pnpm", "run", "test:e2e:mobile"], isReplayMarked: true },
   ],
 };
 

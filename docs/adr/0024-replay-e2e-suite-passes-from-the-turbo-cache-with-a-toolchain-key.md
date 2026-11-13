@@ -22,7 +22,7 @@ status: accepted
 
 ## Consequences
 
-- A replayed step shows `cache hit` in its output and a duration of seconds in the gate summary; how a gate should present it as evidence waits for [#302](https://github.com/patricktree/cup/issues/302).
+- A replayed step shows `cache hit` in its output and `passed (replayed)` with a duration of seconds in the gate summary. A replayed pass counts as evidence, the deploy gate's mobile step included, and no gate forces a fresh run ([#302](https://github.com/patricktree/cup/issues/302)).
 - A file a suite reads outside its package and its declared dependencies can replay a stale pass. New reads across packages must be added to the task's `inputs` or reach it through a declared dependency.
 - `turbo run turbo:e2e --only` skips the reader and hashes whatever key file the last full run left; the gates never pass `--only`.
 - The reader derives and builds the Playwright Server image the same way the shared Playwright configuration does. If that derivation changes, the reader builds and keys an image the suite does not use, so a change to the suite's image no longer misses until the reader follows; a change to the shared configuration's global setup must be checked against the reader.

@@ -1,3 +1,5 @@
+import process from "node:process";
+
 import type { Gate } from "#src/gates.ts";
 import { findTrackedChanges, runGit } from "#src/git.ts";
 import { runCommand } from "#src/run-command.ts";
@@ -5,7 +7,8 @@ import { runCommand } from "#src/run-command.ts";
 type Step = Gate["steps"][number];
 
 type StepOutcome =
-  | { status: "passed" | "failed"; durationMs: number }
+  | { status: "passed"; durationMs: number; isReplayed: boolean }
+  | { status: "failed"; durationMs: number }
   | { status: "skipped"; reason: string }
   | { status: "not run" };
 
@@ -83,15 +86,36 @@ async function runStep(result: StepResult): Promise<string | undefined> {
 
   log(`${step.name}: ${step.command.join(" ")}`);
   const stepStartedAt = performance.now();
-  const { exitCode } = await runCommand(step.command, { isOutputCaptured: false });
+  // A teed step's output goes through a pipe, so Turbo is told to keep its colors.
+  const { exitCode, output } = step.isReplayMarked
+    ? await runCommand(step.command, { output: "teed", env: { ...process.env, FORCE_COLOR: "1" } })
+    : await runCommand(step.command, { output: "streamed" });
   const durationMs = performance.now() - stepStartedAt;
 
   if (exitCode !== 0) {
     result.outcome = { status: "failed", durationMs };
     return `Stopped at step "${step.name}", which failed with exit code ${exitCode}.`;
   }
-  result.outcome = { status: "passed", durationMs };
+  result.outcome = {
+    status: "passed",
+    durationMs,
+    isReplayed: step.isReplayMarked === true && isEveryE2eTaskReplayed(output),
+  };
   return undefined;
+}
+
+/**
+ * Whether every E2E suite task in `output` was replayed: Turbo prints `<package>:turbo:e2e: cache
+ * hit` (or `turbo:e2e:android`, `turbo:e2e:ios`) for a replayed task and `cache miss` for one it
+ * runs. The uncached toolchain-key task and the builds the suite depends on do not count.
+ */
+function isEveryE2eTaskReplayed(output: string): boolean {
+  // oxlint-disable-next-line no-control-regex -- strips the ANSI color codes Turbo prints.
+  const plain = output.replaceAll(/\u001B\[[0-9;]*m/g, "");
+  const outcomes = [
+    ...plain.matchAll(/^\S+:turbo:e2e(?::android|:ios)?: (cache hit|cache miss)/gm),
+  ];
+  return outcomes.length > 0 && outcomes.every(([, outcome]) => outcome === "cache hit");
 }
 
 function finish({
@@ -109,8 +133,12 @@ function finish({
   failure: string | undefined;
 }): { isPassed: boolean; summary: string } {
   const rows = results.map(({ step, outcome }) => {
-    if (outcome.status === "passed" || outcome.status === "failed") {
-      return `| ${step.name} | ${outcome.status} | ${formatDuration(outcome.durationMs)} |`;
+    if (outcome.status === "passed") {
+      const result = outcome.isReplayed ? "passed (replayed)" : "passed";
+      return `| ${step.name} | ${result} | ${formatDuration(outcome.durationMs)} |`;
+    }
+    if (outcome.status === "failed") {
+      return `| ${step.name} | failed | ${formatDuration(outcome.durationMs)} |`;
     }
     if (outcome.status === "skipped") {
       return `| ${step.name} | skipped: ${outcome.reason} | - |`;

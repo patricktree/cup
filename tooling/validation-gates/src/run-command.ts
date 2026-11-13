@@ -12,16 +12,17 @@ export type CommandResult = {
 const REPOSITORY_ROOT = path.resolve(import.meta.dirname, "../../..");
 
 /**
- * Runs a command from the repository root without a shell. With `isOutputCaptured`, its output is
- * collected; otherwise it goes straight to this process's terminal. A command that cannot start,
- * such as a missing binary, resolves with exit code 127 instead of throwing.
+ * Runs a command from the repository root without a shell. Its output is either `captured`
+ * (collected only), `streamed` straight to this process's terminal, or `teed` (streamed and
+ * collected). A command that cannot start, such as a missing binary, resolves with exit code 127
+ * instead of throwing.
  */
 export function runCommand(
   command: [string, ...string[]],
   {
     env = process.env,
-    isOutputCaptured = true,
-  }: { env?: NodeJS.ProcessEnv; isOutputCaptured?: boolean } = {},
+    output: outputMode = "captured",
+  }: { env?: NodeJS.ProcessEnv; output?: "captured" | "streamed" | "teed" } = {},
 ): Promise<CommandResult> {
   const [executable, ...args] = command;
 
@@ -31,15 +32,21 @@ export function runCommand(
     const child = childProcess.spawn(executable, args, {
       cwd: REPOSITORY_ROOT,
       env,
-      stdio: isOutputCaptured ? ["ignore", "pipe", "pipe"] : "inherit",
+      stdio: outputMode === "streamed" ? "inherit" : ["ignore", "pipe", "pipe"],
     });
 
     child.stdout?.on("data", (chunk: Buffer) => {
       stdout += chunk.toString();
       output += chunk.toString();
+      if (outputMode === "teed") {
+        process.stdout.write(chunk);
+      }
     });
     child.stderr?.on("data", (chunk: Buffer) => {
       output += chunk.toString();
+      if (outputMode === "teed") {
+        process.stderr.write(chunk);
+      }
     });
 
     child.on("error", (error) => {
