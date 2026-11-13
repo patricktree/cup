@@ -1,10 +1,20 @@
 #import <UIKit/UIKit.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
+/**
+ * The `CupShare` sheet. Choosing Cup in a Share Sheet is the whole share: the sheet reads the first
+ * HTTP(S) URL from the shared items and hands it to Cup as an `audio.cup.app://share` link on its
+ * own, once it is on screen. Its button opens Cup again, after a failed handoff or back in the
+ * sharing app.
+ */
 @interface ShareViewController : UIViewController
 @property(nonatomic, strong) UILabel *message;
 @property(nonatomic, strong) UIButton *openButton;
 @property(nonatomic, strong) NSURL *sharedURL;
+/** Whether the sheet is on screen, where the responder chain reaches the object that opens URLs. */
+@property(nonatomic) BOOL hasAppeared;
+/** Whether the sheet has handed the shared URL to Cup on its own, which it does once. */
+@property(nonatomic) BOOL hasOpenedCup;
 @end
 
 @implementation ShareViewController
@@ -45,44 +55,95 @@
     for (NSExtensionItem *item in self.extensionContext.inputItems) {
         [providers addObjectsFromArray:item.attachments ?: @[]];
     }
-    [self loadURLFromProviders:providers index:0];
+    [self loadURLFromProviders:providers index:0 typeIndex:0];
 }
 
-- (void)loadURLFromProviders:(NSArray<NSItemProvider *> *)providers index:(NSUInteger)index {
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    self.hasAppeared = YES;
+    [self openInCupOnce];
+}
+
+/** The types a shared item is read as, in order: a URL, then text that may contain one. */
++ (NSArray<NSString *> *)readableTypes {
+    return @[UTTypeURL.identifier, UTTypePlainText.identifier];
+}
+
+- (void)loadURLFromProviders:(NSArray<NSItemProvider *> *)providers index:(NSUInteger)index typeIndex:(NSUInteger)typeIndex {
+    NSArray<NSString *> *types = ShareViewController.readableTypes;
     if (index >= providers.count) {
         self.message.text = @"Share a web page or text containing an HTTP or HTTPS URL.";
         return;
     }
+    if (typeIndex >= types.count) {
+        [self loadURLFromProviders:providers index:index + 1 typeIndex:0];
+        return;
+    }
     NSItemProvider *provider = providers[index];
-    NSString *type = [provider hasItemConformingToTypeIdentifier:UTTypeURL.identifier] ? UTTypeURL.identifier : UTTypePlainText.identifier;
+    NSString *type = types[typeIndex];
     if (![provider hasItemConformingToTypeIdentifier:type]) {
-        [self loadURLFromProviders:providers index:index + 1];
+        [self loadURLFromProviders:providers index:index typeIndex:typeIndex + 1];
         return;
     }
     [provider loadItemForTypeIdentifier:type options:nil completionHandler:^(id<NSSecureCoding> item, NSError *error) {
-        NSURL *url = [(id)item isKindOfClass:NSURL.class] ? (NSURL *)item : nil;
-        if ([(id)item isKindOfClass:NSString.class]) {
-            NSString *text = (NSString *)item;
-            NSDataDetector *detector = [NSDataDetector dataDetectorWithTypes:NSTextCheckingTypeLink error:nil];
-            for (NSTextCheckingResult *match in [detector matchesInString:text options:0 range:NSMakeRange(0, text.length)]) {
-                if ([@[@"http", @"https"] containsObject:match.URL.scheme.lowercaseString]) {
-                    url = match.URL;
-                    break;
-                }
-            }
+        if (error) {
+            NSLog(@"CupShare could not read a shared item as %@: %@", type, error);
         }
-        BOOL valid = url.host.length > 0 && [@[@"http", @"https"] containsObject:url.scheme.lowercaseString] && !url.user.length && !url.password.length;
+        NSURL *url = error ? nil : [ShareViewController webURLFromItem:(id)item];
         dispatch_async(dispatch_get_main_queue(), ^{
-            if (valid && !error) {
+            if (url) {
                 self.sharedURL = url;
                 // Credentials in trial-link fragments must not appear in the preview.
-                self.message.text = url.host;
-                self.openButton.enabled = YES;
+                self.message.text = [NSString stringWithFormat:@"Opening %@ in Cup…", url.host];
+                [self openInCupOnce];
             } else {
-                [self loadURLFromProviders:providers index:index + 1];
+                [self loadURLFromProviders:providers index:index typeIndex:typeIndex + 1];
             }
         });
     }];
+}
+
+/**
+ * The HTTP(S) URL a shared item holds. Apps hand over a URL as an `NSURL`, as the data of one, or
+ * as text, and text may hold the URL among other words, such as a page title.
+ */
++ (NSURL *)webURLFromItem:(id)item {
+    if ([item isKindOfClass:NSURL.class]) {
+        return [self isWebURL:item] ? item : nil;
+    }
+    if ([item isKindOfClass:NSData.class]) {
+        NSURL *url = [NSURL URLWithDataRepresentation:item relativeToURL:nil];
+        if ([self isWebURL:url]) {
+            return url;
+        }
+        NSString *text = [[NSString alloc] initWithData:item encoding:NSUTF8StringEncoding];
+        return text ? [self webURLFromText:text] : nil;
+    }
+    if ([item isKindOfClass:NSString.class]) {
+        return [self webURLFromText:item];
+    }
+    return nil;
+}
+
++ (NSURL *)webURLFromText:(NSString *)text {
+    NSDataDetector *detector = [NSDataDetector dataDetectorWithTypes:NSTextCheckingTypeLink error:nil];
+    for (NSTextCheckingResult *match in [detector matchesInString:text options:0 range:NSMakeRange(0, text.length)]) {
+        if ([self isWebURL:match.URL]) {
+            return match.URL;
+        }
+    }
+    return nil;
+}
+
++ (BOOL)isWebURL:(NSURL *)url {
+    return url.host.length > 0 && [@[@"http", @"https"] containsObject:url.scheme.lowercaseString] && !url.user.length && !url.password.length;
+}
+
+/** Hands the shared URL to Cup once both it is read and the sheet is on screen. */
+- (void)openInCupOnce {
+    if (!self.hasAppeared || !self.sharedURL || self.hasOpenedCup) return;
+    self.hasOpenedCup = YES;
+    [self openInCup];
 }
 
 - (void)openInCup {
@@ -110,7 +171,8 @@
             void (^completion)(BOOL) = ^(BOOL success) {
                 dispatch_async(dispatch_get_main_queue(), ^{
                     if (success) {
-                        // Let iOS finish the foreground transition before dismissing this extension.
+                        // The sheet stays open, since dismissing it here could cut off iOS's
+                        // foreground transition; back in the sharing app, the button opens Cup again.
                         self.openButton.enabled = YES;
                     } else {
                         [self showOpenFailure];
@@ -130,7 +192,7 @@
 }
 
 - (void)showOpenFailure {
-    self.message.text = @"Cup could not open. Cancel and try sharing again.";
+    self.message.text = @"Cup could not open. Tap Open in Cup to try again.";
     self.openButton.enabled = YES;
 }
 
