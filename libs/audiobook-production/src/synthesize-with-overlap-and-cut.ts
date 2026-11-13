@@ -113,7 +113,8 @@ function selectLastSentence(text: string, narrationLanguage: string | undefined)
   return lastSentence;
 }
 
-async function encodeMp3Frames(pcm: Uint8Array): Promise<Uint8Array> {
+/** Encodes provider PCM as the MP3 frames speech recognition hears, without the encoder's tags. */
+export async function encodeMp3Frames(pcm: Uint8Array): Promise<Uint8Array> {
   const encodedAudio = await encodePcmAsMp3(pcm, {
     bitrateKilobitsPerSecond: AUDIO_FORMAT.bitrateKilobitsPerSecond,
     sampleRate: AUDIO_FORMAT.sampleRate,

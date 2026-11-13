@@ -1,0 +1,14 @@
+{
+  "description": "A German chunk that opens with a 25-word English Kennedy quote. Whisper with language de leaves the quote out and stretches the next German word over it, so the first aligned chunk word lies 25 words from the chunk start and the cut check rejects the take, as the research found. From research segment wikipedia-de-u7, trimmed after the chunk's first German sentence (18.340 s). The research text ends the overlap sentence with the citation marker [6], which the take does not speak; it is left out because production's sentence segmentation would select only \"6]\" as the overlap sentence.",
+  "tags": ["mixed-language", "citation-marker"],
+  "narrationLanguage": "de",
+  "overlapSentence": "am Anfang und als Schluss.",
+  "separator": "\n\n",
+  "narrationChunk": "“Two thousand years ago the proudest boast was ‘Civis romanus sum’. Today, in the world of freedom, the proudest boast is ‘Ich bin ein Berliner’.”\n„Vor zweitausend Jahren war der stolzeste Satz ‚Ich bin ein Bürger Roms‘.",
+  "chunkStartWordIndex": 5,
+  "expectedPause": {
+    "startSeconds": 2.13,
+    "endSeconds": 2.8
+  },
+  "expectedRejection": "cut-check-failed"
+}

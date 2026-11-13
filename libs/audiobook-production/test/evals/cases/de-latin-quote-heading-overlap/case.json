@@ -1,0 +1,13 @@
+{
+  "description": "A quoted heading (\"„Lasst sie nach Berlin kommen“\") is the overlap sentence before a Latin quote with its German translation in parentheses. From research segment wikipedia-de-u11, cut at its verified chunk end (7.540 s).",
+  "tags": ["heading-overlap", "mixed-language", "quote"],
+  "narrationLanguage": "de",
+  "overlapSentence": "„Lasst sie nach Berlin kommen“",
+  "separator": "\n\n",
+  "narrationChunk": "„Civis Romanus sum“ (deutsch„Ich bin römischer Bürger“)",
+  "chunkStartWordIndex": 5,
+  "expectedPause": {
+    "startSeconds": 1.94,
+    "endSeconds": 2.62
+  }
+}

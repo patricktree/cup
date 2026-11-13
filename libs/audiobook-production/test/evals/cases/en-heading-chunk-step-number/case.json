@@ -1,0 +1,13 @@
+{
+  "description": "A narration chunk of two headings, the second with a step number (\"Step 0. Start early\"), where cutting on silence alone failed. From research segment anthropic-demystifying-u93, cut at its verified chunk end (11.780 s).",
+  "tags": ["heading-chunk", "number"],
+  "narrationLanguage": "en",
+  "overlapSentence": "define success early, measure it clearly, and iterate continuously.",
+  "separator": "\n\n",
+  "narrationChunk": "Collect tasks for the initial eval dataset\n\nStep 0. Start early",
+  "chunkStartWordIndex": 9,
+  "expectedPause": {
+    "startSeconds": 5.1,
+    "endSeconds": 6.12
+  }
+}

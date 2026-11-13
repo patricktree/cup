@@ -61,7 +61,8 @@ export function countSynthesizedWords(text: string): number {
  * on it.
  *
  * Aligns the synthesized text with the recognized words and cuts in the middle of the longest
- * silent run between the aligned words on either side of the chunk start. The cut check accepts the
+ * silent run between the aligned words on either side of the chunk start, leaving out silence that
+ * precedes the overlap's last aligned word, such as the take's lead-in. The cut check accepts the
  * cut point only when it lies between the last aligned word of the overlap sentence and the first
  * aligned word of the chunk, an aligned word lies at most two words from the chunk start on each
  * side, and the silent run lasts at least 150 ms. Exact edge words and chunk coverage are not
@@ -101,10 +102,17 @@ export function findCutPoint({
     ? recognizedWords[firstPairOfChunk.recognizedIndex]!.startSeconds
     : frameLevels.length / FRAMES_PER_SECOND;
 
+  const spanEndFrame = Math.min(frameLevels.length, Math.ceil(spanEndSeconds * FRAMES_PER_SECOND));
+  // Whisper also starts a word early, such as at the take's start before its lead-in silence, so
+  // silence at the start of the span lies before the overlap's last word and is skipped.
   const silentRun = findLongestSilentRun(
     frameLevels,
-    Math.floor(spanStartSeconds * FRAMES_PER_SECOND),
-    Math.min(frameLevels.length, Math.ceil(spanEndSeconds * FRAMES_PER_SECOND)),
+    findFirstVoicedFrame(
+      frameLevels,
+      Math.floor(spanStartSeconds * FRAMES_PER_SECOND),
+      spanEndFrame,
+    ),
+    spanEndFrame,
   );
   const cutPointSeconds = silentRun
     ? (silentRun.startFrame + silentRun.endFrame) / 2 / FRAMES_PER_SECOND
@@ -216,6 +224,20 @@ function measureFrameLevels(pcm: Uint8Array): Float64Array {
   }
 
   return frameLevels;
+}
+
+/** Returns the first frame from `fromFrame` that is louder than silence, or `toFrame` when none is. */
+function findFirstVoicedFrame(
+  frameLevels: Float64Array,
+  fromFrame: number,
+  toFrame: number,
+): number {
+  let frame = fromFrame;
+  while (frame < toFrame && frameLevels[frame]! <= SILENCE_THRESHOLD_DBFS) {
+    frame++;
+  }
+
+  return frame;
 }
 
 type SilentRun = { startFrame: number; endFrame: number };

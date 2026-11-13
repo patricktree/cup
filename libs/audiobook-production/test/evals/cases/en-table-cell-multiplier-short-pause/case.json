@@ -1,0 +1,13 @@
+{
+  "description": "A table cell with a multiplier (\"4.7× less than Chromium\") after a size in MiB, separated by a pause of under 300 ms. From research segment cloudflare-kitesurf-u76, cut at its verified chunk end (6.015 s).",
+  "tags": ["number", "unit", "table-cell", "short-pause"],
+  "narrationLanguage": "en",
+  "overlapSentence": "271.0 MiB",
+  "separator": "\n\n",
+  "narrationChunk": "4.7× less than Chromium",
+  "chunkStartWordIndex": 2,
+  "expectedPause": {
+    "startSeconds": 2.92,
+    "endSeconds": 3.45
+  }
+}

@@ -41,6 +41,7 @@ export type Gate = {
 };
 
 const NARRATION_SOURCE_ANALYSIS = "@cup/narration-source-analysis";
+const AUDIOBOOK_PRODUCTION = "@cup/audiobook-production";
 /**
  * The ref the evals rule compares against, as last fetched, so that commits on a stale local `main`
  * do not count as the branch's changes.
@@ -132,14 +133,16 @@ const REVIEW_GATE: Gate = {
       command: ["pnpm", "run", "test:e2e:source-material"],
       isReplayMarked: true,
     },
+    // Outside Turbo, so the paid evals always run fresh.
     {
-      // Outside Turbo, so the paid evals always run fresh.
       name: "Narration evals",
       command: ["pnpm", "run", "evals"],
-      findSkipReason: async () =>
-        (await findAffectedPackages()).includes(NARRATION_SOURCE_ANALYSIS)
-          ? undefined
-          : `\`${NARRATION_SOURCE_ANALYSIS}\` and its dependencies are not affected relative to \`${AFFECTED_BASE}\``,
+      findSkipReason: () => findUnaffectedReason(NARRATION_SOURCE_ANALYSIS),
+    },
+    {
+      name: "Speech recognition evals",
+      command: ["pnpm", "run", "evals:speech-recognition"],
+      findSkipReason: () => findUnaffectedReason(AUDIOBOOK_PRODUCTION),
     },
   ],
 };
@@ -201,6 +204,13 @@ function commandPrerequisite(
 
 function turboRun(task: string): [string, ...string[]] {
   return ["pnpm", "exec", "turbo", "run", task, "--output-logs=errors-only"];
+}
+
+/** Skips an eval step unless its library is affected; the reason names the library. */
+async function findUnaffectedReason(packageName: string): Promise<string | undefined> {
+  return (await findAffectedPackages()).includes(packageName)
+    ? undefined
+    : `\`${packageName}\` and its dependencies are not affected relative to \`${AFFECTED_BASE}\``;
 }
 
 /**

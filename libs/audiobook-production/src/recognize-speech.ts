@@ -21,6 +21,7 @@ export type RecognizeSpeechOptions = {
 
 const RECOGNITION_GATEWAY_ID = "default";
 const RECOGNITION_REQUEST_TIMEOUT_MILLISECONDS = 90_000;
+const WORD_PIECE_PATTERN = /^[^\s\p{L}\p{N}]/u;
 
 const WHISPER_WORD_SCHEMA = z
   .object({ word: z.string(), start: z.number(), end: z.number() })
@@ -106,7 +107,33 @@ export async function recognizeSpeech({
     );
   }
 
-  return (output.data.segments ?? []).flatMap(({ words }) => words);
+  return joinWordPieces((output.data.segments ?? []).flatMap(({ words }) => words));
+}
+
+/**
+ * Whisper splits some words into pieces, such as "1,173" into " 1" and ",173" or "EU-Agrarpolitik"
+ * into " EU" and "-Agrarpolitik". A piece without leading whitespace that opens with punctuation
+ * continues the word before it, so it is joined to that word, which then aligns with the
+ * synthesized word.
+ */
+function joinWordPieces(words: readonly RecognizedWord[]): RecognizedWord[] {
+  const joinedWords: RecognizedWord[] = [];
+
+  for (const word of words) {
+    const previousWord = joinedWords.at(-1);
+
+    if (previousWord !== undefined && WORD_PIECE_PATTERN.test(word.word)) {
+      joinedWords[joinedWords.length - 1] = {
+        word: `${previousWord.word}${word.word}`,
+        startSeconds: previousWord.startSeconds,
+        endSeconds: word.endSeconds,
+      };
+    } else {
+      joinedWords.push(word);
+    }
+  }
+
+  return joinedWords;
 }
 
 const ERROR_BODY_SCHEMA = z.union([

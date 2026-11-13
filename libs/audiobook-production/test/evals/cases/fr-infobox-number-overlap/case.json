@@ -1,0 +1,14 @@
+{
+  "description": "Infobox cells: a year (\"1854\") is the overlap sentence before a one-word chunk (\"Origine\"), where cutting on silence alone left nothing. Whisper ends \"1854\" and starts \"Origine\" at the start of the pause, so the search span, which ends where the chunk's first word starts, holds no pause and the cut check rejects the take. Before the search skipped the take's lead-in silence, the cut check accepted a cut in that silence, which would have repeated \"1854\". From research segment wikipedia-fr-u6, cut at its verified chunk end (3.535 s).",
+  "tags": ["number", "table-cell", "short-chunk"],
+  "narrationLanguage": "fr",
+  "overlapSentence": "1854",
+  "separator": "\n\n",
+  "narrationChunk": "Origine",
+  "chunkStartWordIndex": 1,
+  "expectedPause": {
+    "startSeconds": 1.77,
+    "endSeconds": 2.62
+  },
+  "expectedRejection": "cut-check-failed"
+}

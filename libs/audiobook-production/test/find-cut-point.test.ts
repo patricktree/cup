@@ -153,6 +153,28 @@ test("cuts after a one-word heading spoken as the overlap", () => {
   expect(result).toMatchObject({ isAccepted: true, cutPointSeconds: 1 });
 });
 
+test("cuts after a one-word overlap rather than in the silence before it when Whisper starts the word at the take's start", () => {
+  // Real Whisper output for a French bibliography item after "roman": the take opens with 400 ms of
+  // silence, longer than the part of the pause before "Les" starts, which Whisper places early.
+  const spokenWords = [
+    word("roman", 0.4, 0.82),
+    word("Les", 1.44, 2.1),
+    word("aventures", 2.1, 2.7),
+  ];
+  const recognizedWords = spokenWords
+    .with(0, word("Roman.", 0, 0.82))
+    .with(1, word("Les", 1.2, 2.1));
+
+  const result = findCutPoint({
+    synthesizedText: "roman\n\nLes aventures",
+    chunkStartWordIndex: countSynthesizedWords("roman"),
+    recognizedWords,
+    providerPcm: createSpeechPcm(spokenWords, 3),
+  });
+
+  expect(result).toMatchObject({ isAccepted: true, cutPointSeconds: 1.01 });
+});
+
 test("cuts before a one-word heading that opens the narration chunk when Whisper stretches the heading over the pause after it", () => {
   const overlapSentence = "The first part ends here.";
   const spokenWords = [

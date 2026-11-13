@@ -1,0 +1,13 @@
+{
+  "description": "A byline (\"András Szigetvari\") is the overlap sentence; Gemini 3.5 Transcribe left it out. From research segment derstandard-source-u3, trimmed after the chunk's first sentence (6.545 s).",
+  "tags": ["name", "byline-overlap"],
+  "narrationLanguage": "de",
+  "overlapSentence": "András Szigetvari",
+  "separator": "\n\n",
+  "narrationChunk": "Was haben Porsche, Glock und Esterhazy gemeinsam?",
+  "chunkStartWordIndex": 2,
+  "expectedPause": {
+    "startSeconds": 1.76,
+    "endSeconds": 2.66
+  }
+}

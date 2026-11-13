@@ -1,0 +1,13 @@
+{
+  "description": "A table cell with a number and a unit (\"1,173 ms\") after another (\"380 ms\"). From research segment cloudflare-kitesurf-u67, cut at its verified chunk end (6.425 s).",
+  "tags": ["number", "unit", "table-cell"],
+  "narrationLanguage": "en",
+  "overlapSentence": "380 ms",
+  "separator": "\n\n",
+  "narrationChunk": "1,173 ms",
+  "chunkStartWordIndex": 2,
+  "expectedPause": {
+    "startSeconds": 2.27,
+    "endSeconds": 3.21
+  }
+}

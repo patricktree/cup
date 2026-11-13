@@ -1,0 +1,10 @@
+// The Workers AI binding of apps/cloudflare-worker/wrangler.jsonc alone, which the speech recognition
+// evals open through Wrangler's getPlatformProxy.
+{
+  "$schema": "../../../../node_modules/wrangler/config-schema.json",
+  "name": "cup-speech-recognition-evals",
+  "compatibility_date": "2026-08-18",
+  "ai": {
+    "binding": "AI",
+  },
+}

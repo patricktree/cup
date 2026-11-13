@@ -30,6 +30,7 @@ Start with the [glossary](GLOSSARY.md) for Cup's vocabulary and the [system over
 | [Test Worker](../qa/test-worker/README.md)                                           | The test-only Worker with deterministic fakes, its Wrangler harness, the fake auth provider, and the E2E cost boundary |
 | [Recorded source pages](../libs/prepare-source-material/test-e2e/fixtures/README.md) | Replay source-page fixtures in source-material E2E tests                                                               |
 | [Narration evals](../libs/narration-source-analysis/test/evals/README.md)            | Run the paid narration content selection and narration language detection evals                                        |
+| [Speech recognition evals](../libs/audiobook-production/test/evals/README.md)        | Run the paid evals of real Whisper speech recognition and the cut check on recorded overlap takes                      |
 | [Production configuration](production-configuration.md)                              | Supply Worker secrets and provider settings, and deploy                                                                |
 | [Mobile development](../apps/mobile-app/README.md)                                   | Build native shells, configure platform links and sharing, and see which checks stay manual                            |
 | [Account migrations](../libs/accounts/README.md#database-migrations)                 | Change account Drizzle schemas and validate account storage                                                            |
