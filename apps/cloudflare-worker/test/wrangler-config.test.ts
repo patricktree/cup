@@ -184,9 +184,12 @@ test("the production secrets are required, and the integration tests supply each
   expect(Object.keys(TEST_SECRETS)).toStrictEqual(expectedSecrets);
 });
 
-test("observability records every invocation's logs and traces", ({ expect }) => {
+test("observability records every invocation's logs and traces without query strings", ({
+  expect,
+}) => {
   expect(readProductionConfig().observability).toStrictEqual({
     enabled: true,
+    redact_query_string: true,
     logs: { enabled: true, invocation_logs: true },
     traces: { enabled: true, head_sampling_rate: 1 },
   });

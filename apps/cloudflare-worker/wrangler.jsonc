@@ -37,6 +37,9 @@
   },
   "observability": {
     "enabled": true,
+    // Signed media URLs carry their credential in the `token` query parameter; keep query strings
+    // out of the request URLs that invocation logs and traces record.
+    "redact_query_string": true,
     "logs": {
       "enabled": true,
       "invocation_logs": true,
