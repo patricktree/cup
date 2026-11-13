@@ -3,6 +3,7 @@ import type { DefaultTreeAdapterMap } from "parse5";
 import { z } from "zod";
 
 import { createNarrationChunks } from "#src/narration-chunking.ts";
+import type { NarrationChunk } from "#src/narration-chunking.ts";
 
 const EXCLUDED_TAG_NAMES = new Set([
   "audio",
@@ -73,6 +74,8 @@ export const SYNCHRONIZATION_UNIT_SCHEMA = z
   .object({
     id: z.string().min(1),
     narrationText: z.string().min(1),
+    // Optional so manifests prepared before the field existed load as not continuing.
+    continuesNarrationBlock: z.literal(true).optional(),
   })
   .strict();
 
@@ -137,13 +140,17 @@ export function createNarrationDocument({
   let hasSkippedEquivalentSourceHeading = false;
 
   function addSynchronizationUnit(
-    narrationText: string,
+    { text: narrationText, continuesNarrationBlock }: NarrationChunk,
     html: string,
     wrappers: readonly SafeElement[] = [],
   ): void {
     const id = createSynchronizationUnitId(synchronizationUnits.length);
 
-    synchronizationUnits.push({ id, narrationText });
+    synchronizationUnits.push(
+      continuesNarrationBlock
+        ? { id, narrationText, continuesNarrationBlock }
+        : { id, narrationText },
+    );
     renderedUnits.push({
       html: html.replace("{{SYNCHRONIZATION_UNIT_ID}}", id),
       wrappers,
@@ -154,13 +161,13 @@ export function createNarrationDocument({
     const normalizedElement = normalizeSafeElement(element);
     const blockHtml = serializeSafeNode(normalizedElement);
     const headingsHtml = pendingHeadings.map(serializeSafeNode).join("");
-    const chunkTexts = createNarrationChunks(`${headingsHtml}${blockHtml}`).map(({ text }) => text);
+    const narrationChunks = createNarrationChunks(`${headingsHtml}${blockHtml}`);
 
-    if (chunkTexts.length === 0) {
+    if (narrationChunks.length === 0) {
       return;
     }
 
-    if (chunkTexts.length === 1) {
+    if (narrationChunks.length === 1) {
       const html =
         pendingHeadings.length === 0
           ? serializeSafeElement(normalizedElement, [
@@ -168,7 +175,7 @@ export function createNarrationDocument({
             ])
           : `<section id="{{SYNCHRONIZATION_UNIT_ID}}">${headingsHtml}${blockHtml}</section>`;
 
-      addSynchronizationUnit(chunkTexts[0]!, html, wrappers);
+      addSynchronizationUnit(narrationChunks[0]!, html, wrappers);
       pendingHeadings.length = 0;
       return;
     }
@@ -182,7 +189,8 @@ export function createNarrationDocument({
 
     pendingHeadings.length = 0;
 
-    for (const chunkText of chunkTexts) {
+    for (const narrationChunk of narrationChunks) {
+      const chunkText = narrationChunk.text;
       const chunkStart = combinedNarrationText.indexOf(chunkText, chunkSearchStart);
 
       if (chunkStart < 0) {
@@ -203,7 +211,7 @@ export function createNarrationDocument({
             ])
           : `<section id="{{SYNCHRONIZATION_UNIT_ID}}">${elementSlices.map((elementSlice) => serializeSafeElement(elementSlice)).join("")}</section>`;
 
-      addSynchronizationUnit(chunkText, html, wrappers);
+      addSynchronizationUnit(narrationChunk, html, wrappers);
       chunkSearchStart = chunkEnd;
     }
   }
@@ -283,7 +291,7 @@ export function createNarrationDocument({
     normalizedSourceSubtitle === undefined ? [] : [SOURCE_HEADING_GROUP];
 
   addSynchronizationUnit(
-    normalizedSourceTitle,
+    { text: normalizedSourceTitle },
     `<h1 id="{{SYNCHRONIZATION_UNIT_ID}}">${serializeNarrationText(normalizedSourceTitle)}</h1>`,
     openingWrappers,
   );
@@ -291,7 +299,7 @@ export function createNarrationDocument({
   if (normalizedSourceSubtitle !== undefined) {
     // Added before any body block, so the source subtitle never absorbs a pending heading.
     addSynchronizationUnit(
-      normalizedSourceSubtitle,
+      { text: normalizedSourceSubtitle },
       `<p id="{{SYNCHRONIZATION_UNIT_ID}}">${serializeNarrationText(normalizedSourceSubtitle)}</p>`,
       openingWrappers,
     );
@@ -301,9 +309,9 @@ export function createNarrationDocument({
 
   if (pendingHeadings.length > 0) {
     const headingsHtml = pendingHeadings.map(serializeSafeNode).join("");
-    const chunkTexts = createNarrationChunks(headingsHtml).map(({ text }) => text);
+    const narrationChunks = createNarrationChunks(headingsHtml);
 
-    if (chunkTexts.length === 1) {
+    if (narrationChunks.length === 1) {
       const html =
         pendingHeadings.length === 1
           ? serializeSafeElement(pendingHeadings[0]!, [
@@ -311,13 +319,13 @@ export function createNarrationDocument({
             ])
           : `<section id="{{SYNCHRONIZATION_UNIT_ID}}">${headingsHtml}</section>`;
 
-      addSynchronizationUnit(chunkTexts[0]!, html);
+      addSynchronizationUnit(narrationChunks[0]!, html);
       pendingHeadings.length = 0;
     } else {
-      for (const chunkText of chunkTexts) {
+      for (const narrationChunk of narrationChunks) {
         addSynchronizationUnit(
-          chunkText,
-          `<p id="{{SYNCHRONIZATION_UNIT_ID}}">${serializeNarrationText(chunkText)}</p>`,
+          narrationChunk,
+          `<p id="{{SYNCHRONIZATION_UNIT_ID}}">${serializeNarrationText(narrationChunk.text)}</p>`,
         );
       }
     }

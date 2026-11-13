@@ -75,13 +75,28 @@ test("splits only a paragraph that exceeds the narration chunk limit", () => {
   ).toBe(paragraphText);
 });
 
+test("marks every chunk after the first of a split narration block as continuing it", () => {
+  const paragraphText = Array.from({ length: 600 }, (_, index) => `word${index + 1}`).join(" ");
+  const chunks = createNarrationChunks(
+    `<p>A short paragraph.</p><p>${paragraphText}</p><p>Another short paragraph.</p>`,
+  );
+
+  expect(chunks).toStrictEqual([
+    { text: "A short paragraph." },
+    { text: expect.any(String) },
+    { text: expect.any(String), continuesNarrationBlock: true },
+    { text: expect.any(String), continuesNarrationBlock: true },
+    { text: "Another short paragraph." },
+  ]);
+});
+
 test("splits oversized narration blocks at sentence boundaries", () => {
   const firstSentence = `${"a".repeat(1_198)}.`;
   const secondSentence = `${"b".repeat(898)}.`;
 
   expect(createNarrationChunks(`<p>${firstSentence} ${secondSentence}</p>`)).toEqual([
     { text: firstSentence },
-    { text: secondSentence },
+    { text: secondSentence, continuesNarrationBlock: true },
   ]);
 });
 
@@ -91,7 +106,7 @@ test("splits oversized narration blocks between Japanese sentences without white
 
   expect(createNarrationChunks(`<p>${firstSentence}${secondSentence}</p>`)).toEqual([
     { text: firstSentence },
-    { text: secondSentence },
+    { text: secondSentence, continuesNarrationBlock: true },
   ]);
 });
 
@@ -101,7 +116,10 @@ test("does not add whitespace between adjacent Japanese sentences", () => {
   const thirdSentence = `${"丙".repeat(1_199)}。`;
 
   expect(createNarrationChunks(`<p>${firstSentence}${secondSentence}${thirdSentence}</p>`)).toEqual(
-    [{ text: `${firstSentence}${secondSentence}` }, { text: thirdSentence }],
+    [
+      { text: `${firstSentence}${secondSentence}` },
+      { text: thirdSentence, continuesNarrationBlock: true },
+    ],
   );
 });
 
@@ -116,7 +134,7 @@ test("recognizes question and exclamation marks as sentence boundaries", () => {
 
     expect(
       createNarrationChunks(`<p>${firstSentence}${sentenceSeparator}${secondSentence}</p>`),
-    ).toEqual([{ text: firstSentence }, { text: secondSentence }]);
+    ).toEqual([{ text: firstSentence }, { text: secondSentence, continuesNarrationBlock: true }]);
   }
 });
 
@@ -138,7 +156,7 @@ test("splits unbroken narration text without separating an emoji surrogate pair"
 
   expect(createNarrationChunks(`<p>${firstChunkText}😀</p>`)).toEqual([
     { text: firstChunkText },
-    { text: "😀" },
+    { text: "😀", continuesNarrationBlock: true },
   ]);
 });
 
@@ -147,8 +165,8 @@ test("retains words surrounding oversized unbroken narration text", () => {
 
   expect(createNarrationChunks(`<p>Before ${oversizedWord} after.</p>`)).toEqual([
     { text: "Before" },
-    { text: "a".repeat(MAX_CHUNK_CHARACTERS) },
-    { text: "a after." },
+    { text: "a".repeat(MAX_CHUNK_CHARACTERS), continuesNarrationBlock: true },
+    { text: "a after.", continuesNarrationBlock: true },
   ]);
 });
 

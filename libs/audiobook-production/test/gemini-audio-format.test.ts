@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { GEMINI_SPEECH_CONFIG } from "#src/speech-synthesis-config.ts";
+import { LEGACY_GEMINI_V6_SPEECH_CONFIG } from "#src/speech-synthesis-config.ts";
 import { PermanentNarrationSynthesisError, type SynthesisOptions } from "#src/speech-synthesis.ts";
 import { synthesizeGeminiAudio } from "#src/synthesize-gemini-audio.ts";
 
@@ -66,6 +66,6 @@ function createOptions(
     sequence: 0,
     synthesisAttempt: 1,
     synthesisResponseMode,
-    speechConfig: GEMINI_SPEECH_CONFIG,
+    speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG,
   };
 }

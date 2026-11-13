@@ -1,0 +1,13 @@
+{
+  "description": "A bibliography list item with a year (\"Les Aventures de Sherlock Holmes, 1892: recueil de nouvelles\") after a one-word overlap sentence (\"roman\"). From research segment wikipedia-fr-u20, cut at its verified chunk end (6.725 s).",
+  "tags": ["number", "list-item", "short-overlap"],
+  "narrationLanguage": "fr",
+  "overlapSentence": "roman",
+  "separator": "\n\n",
+  "narrationChunk": "Les Aventures de Sherlock Holmes, 1892: recueil de nouvelles",
+  "chunkStartWordIndex": 1,
+  "expectedPause": {
+    "startSeconds": 0.82,
+    "endSeconds": 1.44
+  }
+}

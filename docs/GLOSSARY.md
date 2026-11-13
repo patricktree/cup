@@ -252,6 +252,42 @@ An audiobook's single audio file: its audio segments, unchanged and joined in do
 
 _Avoid_: audio file, full track, playback track
 
+## segment boundary
+
+The point in the narration track where one audio segment ends and the next begins. Speech that restarts there in a different intonation, energy or voice, instead of carrying on as one reading, is a fresh start.
+
+_Avoid_: seam, join (as a noun)
+
+## overlap and cut
+
+Producing an audio segment so that its narration carries on across the segment boundary before it: the previous narration chunk's last whole sentence is spoken in front of the segment's own narration chunk, as one reading, and everything before the cut point is cut away. The first audio segment of a conversion has nothing to overlap.
+
+_Avoid_: overlap synthesis, context priming, crossfade
+
+## overlap take
+
+The provider audio of one synthesis under overlap and cut, holding the overlapped sentence followed by the segment's narration chunk. Only the part from its cut point on becomes the audio segment.
+
+_Avoid_: overlap audio, primed take
+
+## speech recognition
+
+Transcribing provider audio into the words heard in it, each with its timing, to find the cut point of an overlap take. The recognized words are a measurement of the audio, never stored, and are not spoken text.
+
+_Avoid_: transcription, speech-to-text, recognized text (as spoken text)
+
+## cut point
+
+The moment in an overlap take where the segment's narration chunk starts, in the pause between the overlapped sentence and the chunk.
+
+_Avoid_: split point, cut position
+
+## cut check
+
+The test that decides whether a cut point is trusted: it lies between the last recognized word of the overlapped sentence and the first recognized word of the narration chunk, a recognized word lies close to the chunk's start on each side, and the pause it lies in is long enough. When the check rejects the cut point, or none is found, the narration chunk is synthesized alone, without overlap.
+
+_Avoid_: cut validation, alignment check
+
 ## generated audio duration
 
 The duration of successfully produced narration audio made available to the user, which is the basis for consuming their trial or paid allowance regardless of whether they play it. It excludes failed synthesis attempts and measures audio duration rather than listening time.
@@ -262,11 +298,11 @@ _Avoid_: listening time, playback time
 
 The exact wording that a narration provider reports it spoke when producing narration audio. It exists only when supplied directly by the provider and is never inferred from the audio.
 
-_Avoid_: transcript, transcription
+_Avoid_: transcript, transcription, recognized text
 
 ## synchronization unit
 
-The smallest independently navigable portion of a narration document associated with one continuous interval of narration audio. Each unit has its own audio segment and starts in the narration track at the sum of the durations of the preceding segments; a position in the track is that start plus the offset within the unit's audio.
+The smallest independently navigable portion of a narration document associated with one continuous interval of narration audio. Each unit has its own audio segment and starts in the narration track at the sum of the durations of the preceding segments; a position in the track is that start plus the offset within the unit's audio. A unit made from a narration chunk after the first one of a divided narration block records that it continues that block.
 
 _Avoid_: sentence, paragraph, narration chunk, synchronization cue
 

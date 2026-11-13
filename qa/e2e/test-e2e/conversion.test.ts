@@ -7,7 +7,12 @@ import {
   waitForAudiobook,
 } from "#test-e2e/journey.ts";
 import { captureNarrationAudio, readNarrationAudio } from "#test-e2e/narration-audio.ts";
-import { readAudiobook, waitForGeneratedAudio } from "#test-e2e/synthesis.ts";
+import {
+  countSynthesizedSegments,
+  readAudiobook,
+  readSpeechCalls,
+  waitForGeneratedAudio,
+} from "#test-e2e/synthesis.ts";
 
 // The source title and source subtitle of the controlled source page, `src/fixtures/source.html`.
 const SOURCE_TITLE = "A deterministic document about careful testing";
@@ -24,8 +29,11 @@ test("generates audio for the whole document, then plays its narration track", a
   const id = new URL(page.url()).pathname.split("/").at(-1)!;
   const segments = await waitForGeneratedAudio(page, id);
   expect(segments.length).toBeGreaterThan(1);
-  const calls = await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json();
-  expect(calls).toHaveLength(segments.length);
+  const calls = await readSpeechCalls(workerEnvironment.origin);
+  expect(countSynthesizedSegments(calls)).toBe(segments.length);
+  // The first segment has nothing to overlap; every later one sends its overlap take, finds no cut
+  // point in the fake tone, and falls back to its narration chunk alone.
+  expect(calls).toHaveLength(2 * segments.length - 1);
 
   const audiobook = await readAudiobook(page, id);
   if (audiobook.status !== "ready" || !audiobook.narrationTrack) {
@@ -123,9 +131,7 @@ test("generates audio for the whole document, then plays its narration track", a
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   // Play resumed at the saved position, not further along: the track played for a moment only.
   expect((await readNarrationAudio(page)).currentTime).toBeLessThan(pausedAt + 5);
-  expect(await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json()).toEqual(
-    calls,
-  );
+  expect(await readSpeechCalls(workerEnvironment.origin)).toEqual(calls);
 });
 
 test("trial article links require the owning grant session for reading, and media its signed URL", async ({
@@ -148,9 +154,7 @@ test("trial article links require the owning grant session for reading, and medi
     origin: workerEnvironment.origin,
     page,
   });
-  const beforeAnonymous = await (
-    await fetch(workerEnvironment.origin + "/__qa/speech-calls")
-  ).json();
+  const beforeAnonymous = await readSpeechCalls(workerEnvironment.origin);
   const anonymous = await page.context().browser()!.newContext();
   const reader = await anonymous.newPage();
   await reader.goto(page.url());
@@ -200,9 +204,7 @@ test("trial article links require the owning grant session for reading, and medi
     ).status(),
   ).toBe(404);
   expect((await anonymous.request.get(trackUrl)).status()).toBe(200);
-  expect(await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json()).toEqual(
-    beforeAnonymous,
-  );
+  expect(await readSpeechCalls(workerEnvironment.origin)).toEqual(beforeAnonymous);
 
   // Revoking the trial blocks its unexpired track URL, as it blocks the trial's other requests.
   const revocation = await fetch(
@@ -268,8 +270,8 @@ test.describe("preparation recovery", () => {
     await expect(page.getByRole("button", { name: "Play", exact: true })).toBeEnabled({
       timeout: 30_000,
     });
-    expect(
-      await (await fetch(workerEnvironment.origin + "/__qa/speech-calls")).json(),
-    ).toHaveLength(segments.length);
+    expect(countSynthesizedSegments(await readSpeechCalls(workerEnvironment.origin))).toBe(
+      segments.length,
+    );
   });
 });

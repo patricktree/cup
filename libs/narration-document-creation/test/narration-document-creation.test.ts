@@ -1,6 +1,9 @@
 import { expect, test } from "vitest";
 
-import { createNarrationDocument } from "#src/narration-document-creation.ts";
+import {
+  createNarrationDocument,
+  SYNCHRONIZATION_UNIT_SCHEMA,
+} from "#src/narration-document-creation.ts";
 
 test("creates deterministic synchronization units from document-style HTML", () => {
   const options = {
@@ -115,6 +118,68 @@ test("retains structural wrappers when an oversized paragraph becomes multiple u
     `<blockquote>${paragraphUnits.map(({ id, narrationText }) => `<p id="${id}">${narrationText}</p>`).join("")}</blockquote>`,
   );
   expect(narrationDocument.html).not.toContain("data-source-id");
+});
+
+test("marks only units after the first of a split narration block as continuing it", () => {
+  const paragraphText = Array.from({ length: 600 }, (_, index) => `word${index + 1}`).join(" ");
+  const narrationDocument = createNarrationDocument({
+    sourceTitle: "A long document",
+    sourceSubtitle: "A subtitle",
+    sourceMaterialHtml: `<p>A short paragraph.</p><h2>A long section</h2><p>${paragraphText}</p><p>Another short paragraph.</p>`,
+  });
+
+  expect(narrationDocument.synchronizationUnits).toStrictEqual([
+    { id: "narration-unit-0001", narrationText: "A long document" },
+    { id: "narration-unit-0002", narrationText: "A subtitle" },
+    { id: "narration-unit-0003", narrationText: "A short paragraph." },
+    { id: "narration-unit-0004", narrationText: expect.stringMatching(/^A long section\n\n/u) },
+    {
+      id: "narration-unit-0005",
+      narrationText: expect.any(String),
+      continuesNarrationBlock: true,
+    },
+    {
+      id: "narration-unit-0006",
+      narrationText: expect.any(String),
+      continuesNarrationBlock: true,
+    },
+    { id: "narration-unit-0007", narrationText: "Another short paragraph." },
+  ]);
+});
+
+test("marks units after the first of split trailing headings as continuing them", () => {
+  const headingText = Array.from({ length: 200 }, (_, index) => `word${index + 1}`).join(" ");
+  const narrationDocument = createNarrationDocument({
+    sourceTitle: "Trailing headings",
+    sourceMaterialHtml: `<p>A paragraph.</p><h2>${headingText}</h2><h3>${headingText}</h3>`,
+  });
+
+  expect(narrationDocument.synchronizationUnits.slice(1)).toStrictEqual([
+    { id: "narration-unit-0002", narrationText: "A paragraph." },
+    { id: "narration-unit-0003", narrationText: expect.any(String) },
+    {
+      id: "narration-unit-0004",
+      narrationText: expect.any(String),
+      continuesNarrationBlock: true,
+    },
+  ]);
+});
+
+test("accepts a synchronization unit without a continuation record", () => {
+  expect(
+    SYNCHRONIZATION_UNIT_SCHEMA.parse({ id: "narration-unit-0001", narrationText: "Text." }),
+  ).toStrictEqual({ id: "narration-unit-0001", narrationText: "Text." });
+  expect(
+    SYNCHRONIZATION_UNIT_SCHEMA.parse({
+      id: "narration-unit-0002",
+      narrationText: "Text.",
+      continuesNarrationBlock: true,
+    }),
+  ).toStrictEqual({
+    id: "narration-unit-0002",
+    narrationText: "Text.",
+    continuesNarrationBlock: true,
+  });
 });
 
 test("keeps a final heading as structured text and excludes non-content subtrees", () => {

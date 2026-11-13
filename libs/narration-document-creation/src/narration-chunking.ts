@@ -43,6 +43,8 @@ const MAX_CHUNK_CHARACTERS = 2_000;
 /** One normalized text input that fits the narration synthesis limit. */
 export type NarrationChunk = {
   text: string;
+  /** Set on every chunk after the first one of an oversized narration block that was split. */
+  continuesNarrationBlock?: true;
 };
 
 /** Converts selected HTML into ordered narration inputs, joining headings to following text. */
@@ -62,10 +64,7 @@ export function createNarrationChunks(html: string): NarrationChunk[] {
       const chunkText = [...pendingHeadings, normalizedText].join("\n\n");
 
       pendingHeadings.length = 0;
-
-      for (const chunkPartText of splitNarrationBlock(chunkText)) {
-        narrationChunks.push({ text: chunkPartText });
-      }
+      narrationChunks.push(...createBlockChunks(chunkText));
     },
     addPendingHeading(text) {
       const normalizedText = normalizeNarrationText(text);
@@ -77,9 +76,7 @@ export function createNarrationChunks(html: string): NarrationChunk[] {
   });
 
   if (pendingHeadings.length > 0) {
-    for (const text of splitNarrationBlock(pendingHeadings.join("\n\n"))) {
-      narrationChunks.push({ text });
-    }
+    narrationChunks.push(...createBlockChunks(pendingHeadings.join("\n\n")));
   }
 
   return narrationChunks;
@@ -179,6 +176,12 @@ function normalizeNarrationText(text: string): string {
     .replace(/ *\n */gu, "\n")
     .replace(/\n+/gu, "\n")
     .trim();
+}
+
+function createBlockChunks(blockText: string): NarrationChunk[] {
+  return splitNarrationBlock(blockText).map((text, chunkIndex) =>
+    chunkIndex === 0 ? { text } : { text, continuesNarrationBlock: true },
+  );
 }
 
 /** Splits oversized narration at sentences, falling back to word boundaries when necessary. */

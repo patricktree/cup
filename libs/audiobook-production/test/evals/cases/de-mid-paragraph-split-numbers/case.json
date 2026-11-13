@@ -1,0 +1,13 @@
+{
+  "description": "An oversized narration block split mid-paragraph, joined by a space, with numbers (\"90 Prozent der über 100.000 Landwirte\") at the chunk start. From research segment derstandard-source-u13b, trimmed after the chunk's first sentence (10.085 s).",
+  "tags": ["mid-paragraph", "number"],
+  "narrationLanguage": "de",
+  "overlapSentence": "Daraus wird dann abgeleitet, wie viel Steuern bezahlt werden müssen.",
+  "separator": " ",
+  "narrationChunk": "Rund 90 Prozent der über 100.000 Landwirte nutzen dieses System der Steuer-Pauschalierung.",
+  "chunkStartWordIndex": 10,
+  "expectedPause": {
+    "startSeconds": 3.66,
+    "endSeconds": 4.23
+  }
+}

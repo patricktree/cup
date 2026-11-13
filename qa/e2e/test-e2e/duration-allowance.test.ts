@@ -7,7 +7,9 @@ import { grantSnapshotSchema, startConversionResponseSchema } from "@cup/listene
 import { expect, test, type WorkerEnvironment } from "#test-e2e/fixtures.ts";
 import { openNewTrial, startConversion, waitForAudiobook } from "#test-e2e/journey.ts";
 import {
+  countSynthesizedSegments,
   readAudiobook,
+  readSpeechCalls,
   waitForGeneratedAudio,
   waitForPreparedAudiobook,
 } from "#test-e2e/synthesis.ts";
@@ -36,14 +38,14 @@ test("charges every segment by encoded duration and reuses audio across reloads 
     reservedMilliseconds: 0,
     spentMilliseconds: actual,
   });
-  const calls = await readSpeechCalls(workerEnvironment);
-  expect(calls).toHaveLength(segments.length);
+  const calls = await readSpeechCalls(workerEnvironment.origin);
+  expect(countSynthesizedSegments(calls)).toBe(segments.length);
   await page.reload();
   await waitForAudiobook(page);
   const retries = await Promise.all([retrySynthesis(page, id), retrySynthesis(page, id)]);
   expect(retries.map((retry) => retry.status())).toEqual([200, 200]);
   expect((await readGrant(page, grantId)).duration).toEqual(before.duration);
-  expect(await readSpeechCalls(workerEnvironment)).toEqual(calls);
+  expect(await readSpeechCalls(workerEnvironment.origin)).toEqual(calls);
 });
 
 test("a document exceeding the allowance stays readable, reserves nothing, and can be retried", async ({
@@ -59,7 +61,7 @@ test("a document exceeding the allowance stays readable, reserves nothing, and c
   });
   await expect(page.getByText(/and 1 s is available\./)).toBeVisible();
   await expect(page.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
-  expect(await readSpeechCalls(workerEnvironment)).toEqual([]);
+  expect(await readSpeechCalls(workerEnvironment.origin)).toEqual([]);
   expect((await readGrant(page, grantId)).duration).toEqual({
     availableMilliseconds: 1_000,
     reservedMilliseconds: 0,
@@ -71,7 +73,7 @@ test("a document exceeding the allowance stays readable, reserves nothing, and c
   await expect(page.getByRole("button", { name: "Play", exact: true })).toBeEnabled({
     timeout: 60_000,
   });
-  expect((await readSpeechCalls(workerEnvironment)).length).toBeGreaterThan(0);
+  expect((await readSpeechCalls(workerEnvironment.origin)).length).toBeGreaterThan(0);
 });
 
 test.describe("in-flight reservations", () => {
@@ -90,7 +92,7 @@ test.describe("in-flight reservations", () => {
     expect(unitCount).toBeGreaterThan(1);
     // Every segment reaches the provider without waiting for another to finish.
     await expect
-      .poll(async () => (await readSpeechCalls(workerEnvironment)).length)
+      .poll(async () => countSynthesizedSegments(await readSpeechCalls(workerEnvironment.origin)))
       .toBe(unitCount);
     await expect(
       page.getByText(`Generating audio, 0 of ${unitCount} segments ready`),
@@ -114,7 +116,9 @@ test.describe("in-flight reservations", () => {
     await expect
       .poll(async () => (await readGrant(page, grantId)).duration.reservedMilliseconds)
       .toBe(0);
-    expect(await readSpeechCalls(workerEnvironment)).toHaveLength(unitCount);
+    expect(countSynthesizedSegments(await readSpeechCalls(workerEnvironment.origin))).toBe(
+      unitCount,
+    );
     await expect(page.getByRole("button", { name: "Play", exact: true })).toBeEnabled({
       timeout: 30_000,
     });
@@ -167,7 +171,9 @@ test.describe("in-flight reservations", () => {
       reservedMilliseconds: 0,
       spentMilliseconds: spent,
     });
-    expect(await readSpeechCalls(workerEnvironment)).toHaveLength(segments.length);
+    expect(countSynthesizedSegments(await readSpeechCalls(workerEnvironment.origin))).toBe(
+      segments.length,
+    );
     // Preparation stays available without duration.
     await start();
   });
@@ -200,31 +206,6 @@ async function setAllowance(
     body: JSON.stringify({ allowanceMilliseconds }),
   });
   expect(response.status).toBe(200);
-}
-
-type SpeechCall = { conversionId: string; characters: number };
-
-async function readSpeechCalls(worker: WorkerEnvironment): Promise<SpeechCall[]> {
-  const response = await fetch(`${worker.origin}/__qa/speech-calls`);
-  expect(response.status).toBe(200);
-  const value: unknown = await response.json();
-  if (!Array.isArray(value) || !value.every(isSpeechCall)) {
-    throw new Error("Invalid QA speech call report");
-  }
-  return value;
-}
-
-function isSpeechCall(value: unknown): value is SpeechCall {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "conversionId" in value &&
-    typeof value.conversionId === "string" &&
-    "characters" in value &&
-    typeof value.characters === "number" &&
-    Number.isSafeInteger(value.characters) &&
-    value.characters > 0
-  );
 }
 
 async function browserPost(

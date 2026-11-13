@@ -41,6 +41,7 @@ export type Gate = {
 };
 
 const NARRATION_SOURCE_ANALYSIS = "@cup/narration-source-analysis";
+const AUDIOBOOK_PRODUCTION = "@cup/audiobook-production";
 /**
  * The ref the evals rule compares against, as last fetched, so that commits on a stale local `main`
  * do not count as the branch's changes.
@@ -66,6 +67,36 @@ const GH_AUTHENTICATED = commandPrerequisite(
   ["gh", "auth", "status"],
   "GitHub CLI is not authenticated (`gh auth status` failed); zizmor needs its token. Run `gh auth login`.",
 );
+
+/**
+ * The speech recognition evals open a remote Workers AI binding through Wrangler, which
+ * authenticates with its own login or an exported `CLOUDFLARE_API_TOKEN`; the env files'
+ * `CLOUDFLARE_API_KEY` cannot open that session. `wrangler whoami --json` exits non-zero when
+ * neither authenticates, and makes no paid call. Checked only when the evals step will run.
+ */
+const WRANGLER_AUTHENTICATED: Prerequisite = {
+  name: "Wrangler authenticated",
+  findProblem: async () => {
+    if ((await findUnaffectedReason(AUDIOBOOK_PRODUCTION)) !== undefined) {
+      return undefined;
+    }
+
+    const result = await runCommand([
+      "pnpm",
+      "--silent",
+      "--filter",
+      AUDIOBOOK_PRODUCTION,
+      "exec",
+      "wrangler",
+      "whoami",
+      "--json",
+    ]);
+    if (result.exitCode === 0) {
+      return undefined;
+    }
+    return `Wrangler is not authenticated (\`wrangler whoami\` failed), and the speech recognition evals open their Workers AI binding with it. Run \`pnpm --filter ${AUDIOBOOK_PRODUCTION} exec wrangler login\`, or export a \`CLOUDFLARE_API_TOKEN\` that may create Workers previews and run Workers AI.`;
+  },
+};
 
 /**
  * The deploy gate runs on exactly the commit being deployed: a clean `main` equal to a freshly
@@ -110,7 +141,7 @@ const MOBILE_TOOLCHAINS_READY = commandPrerequisite(
 /** Runs before the operator reviews a pull request; see the validation section of AGENTS.md. */
 const REVIEW_GATE: Gate = {
   name: "review",
-  prerequisites: [DOCKER_RUNNING, UVX_INSTALLED, GH_AUTHENTICATED],
+  prerequisites: [DOCKER_RUNNING, UVX_INSTALLED, GH_AUTHENTICATED, WRANGLER_AUTHENTICATED],
   steps: [
     { name: "Env check", command: ["pnpm", "run", "env:check"] },
     { name: "Submodule check", command: ["pnpm", "run", "submodule:check"] },
@@ -132,14 +163,16 @@ const REVIEW_GATE: Gate = {
       command: ["pnpm", "run", "test:e2e:source-material"],
       isReplayMarked: true,
     },
+    // Outside Turbo, so the paid evals always run fresh.
     {
-      // Outside Turbo, so the paid evals always run fresh.
       name: "Narration evals",
       command: ["pnpm", "run", "evals"],
-      findSkipReason: async () =>
-        (await findAffectedPackages()).includes(NARRATION_SOURCE_ANALYSIS)
-          ? undefined
-          : `\`${NARRATION_SOURCE_ANALYSIS}\` and its dependencies are not affected relative to \`${AFFECTED_BASE}\``,
+      findSkipReason: () => findUnaffectedReason(NARRATION_SOURCE_ANALYSIS),
+    },
+    {
+      name: "Speech recognition evals",
+      command: ["pnpm", "run", "evals:speech-recognition"],
+      findSkipReason: () => findUnaffectedReason(AUDIOBOOK_PRODUCTION),
     },
   ],
 };
@@ -201,6 +234,13 @@ function commandPrerequisite(
 
 function turboRun(task: string): [string, ...string[]] {
   return ["pnpm", "exec", "turbo", "run", task, "--output-logs=errors-only"];
+}
+
+/** Skips an eval step unless its library is affected; the reason names the library. */
+async function findUnaffectedReason(packageName: string): Promise<string | undefined> {
+  return (await findAffectedPackages()).includes(packageName)
+    ? undefined
+    : `\`${packageName}\` and its dependencies are not affected relative to \`${AFFECTED_BASE}\``;
 }
 
 /**

@@ -1,0 +1,13 @@
+{
+  "description": "An infobox cell (\"Masculin\") is the overlap sentence before the article's lead sentence with names and a year. From research segment wikipedia-fr-u10, cut at its verified chunk end (12.245 s).",
+  "tags": ["name", "number", "table-cell"],
+  "narrationLanguage": "fr",
+  "overlapSentence": "Masculin",
+  "separator": "\n\n",
+  "narrationChunk": "Sherlock Holmes est un personnage de fiction britannique créé par Sir Arthur Conan Doyle dans le roman policier Une étude en rouge en 1887.",
+  "chunkStartWordIndex": 1,
+  "expectedPause": {
+    "startSeconds": 0.88,
+    "endSeconds": 1.92
+  }
+}

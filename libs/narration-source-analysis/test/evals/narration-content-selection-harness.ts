@@ -22,9 +22,17 @@ export type NarrationContentSelectionEvalInput = {
   metadata?: CaseMetadata;
 };
 
+/**
+ * A synchronization unit as plain JSON: harness output must be a JSON value, which an optional
+ * property is not under `exactOptionalPropertyTypes`.
+ */
+type EvalSynchronizationUnit =
+  | { id: string; narrationText: string }
+  | { id: string; narrationText: string; continuesNarrationBlock: true };
+
 export type NarrationContentSelectionEvalOutput = {
   selectedElementIds: string[];
-  synchronizationUnits: SynchronizationUnit[];
+  synchronizationUnits: EvalSynchronizationUnit[];
 };
 
 export function createNarrationContentSelectionHarness(
@@ -57,7 +65,7 @@ export function createNarrationContentSelectionHarness(
       });
       const output = {
         selectedElementIds: [...selection.selectedElementIds],
-        synchronizationUnits: narrationDocument.synchronizationUnits.map((unit) => ({ ...unit })),
+        synchronizationUnits: narrationDocument.synchronizationUnits.map(toEvalSynchronizationUnit),
       };
       const firstResponse = selection.responses[0];
 
@@ -177,4 +185,14 @@ export function asJsonRecord(value: unknown): Record<string, JsonValue> {
   }
 
   return jsonValue;
+}
+
+function toEvalSynchronizationUnit({
+  id,
+  narrationText,
+  continuesNarrationBlock,
+}: SynchronizationUnit): EvalSynchronizationUnit {
+  return continuesNarrationBlock
+    ? { id, narrationText, continuesNarrationBlock }
+    : { id, narrationText };
 }
