@@ -69,6 +69,36 @@ const GH_AUTHENTICATED = commandPrerequisite(
 );
 
 /**
+ * The speech recognition evals open a remote Workers AI binding through Wrangler, which
+ * authenticates with its own login or an exported `CLOUDFLARE_API_TOKEN`; the env files'
+ * `CLOUDFLARE_API_KEY` cannot open that session. `wrangler whoami --json` exits non-zero when
+ * neither authenticates, and makes no paid call. Checked only when the evals step will run.
+ */
+const WRANGLER_AUTHENTICATED: Prerequisite = {
+  name: "Wrangler authenticated",
+  findProblem: async () => {
+    if ((await findUnaffectedReason(AUDIOBOOK_PRODUCTION)) !== undefined) {
+      return undefined;
+    }
+
+    const result = await runCommand([
+      "pnpm",
+      "--silent",
+      "--filter",
+      AUDIOBOOK_PRODUCTION,
+      "exec",
+      "wrangler",
+      "whoami",
+      "--json",
+    ]);
+    if (result.exitCode === 0) {
+      return undefined;
+    }
+    return `Wrangler is not authenticated (\`wrangler whoami\` failed), and the speech recognition evals open their Workers AI binding with it. Run \`pnpm --filter ${AUDIOBOOK_PRODUCTION} exec wrangler login\`, or export a \`CLOUDFLARE_API_TOKEN\` that may create Workers previews and run Workers AI.`;
+  },
+};
+
+/**
  * The deploy gate runs on exactly the commit being deployed: a clean `main` equal to a freshly
  * fetched `origin/main`.
  */
@@ -111,7 +141,7 @@ const MOBILE_TOOLCHAINS_READY = commandPrerequisite(
 /** Runs before the operator reviews a pull request; see the validation section of AGENTS.md. */
 const REVIEW_GATE: Gate = {
   name: "review",
-  prerequisites: [DOCKER_RUNNING, UVX_INSTALLED, GH_AUTHENTICATED],
+  prerequisites: [DOCKER_RUNNING, UVX_INSTALLED, GH_AUTHENTICATED, WRANGLER_AUTHENTICATED],
   steps: [
     { name: "Env check", command: ["pnpm", "run", "env:check"] },
     { name: "Submodule check", command: ["pnpm", "run", "submodule:check"] },
