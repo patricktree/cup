@@ -22,7 +22,7 @@ test(
 );
 
 test(
-  "the top bar's menu offers the original page, Retry and Delete track…",
+  "the top bar's menu offers the original page, Retry and Delete track",
   { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("app/components/detail-top-bar/Plain");
@@ -30,7 +30,7 @@ test(
 
     await expect(page.getByRole("menuitem", { name: "Open original page" })).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Retry", exact: true })).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: "Delete track…" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Delete track" })).toBeVisible();
     await expect(page).toHaveScreenshot("detail-top-bar-menu-open.png");
   },
 );
