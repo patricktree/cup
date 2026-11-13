@@ -12,8 +12,8 @@ import {
 import { createFakeSpeechSynthesisAi } from "#src/speech-synthesis-ai.fake.ts";
 import {
   ELEVENLABS_SPEECH_CONFIG,
+  LEGACY_GEMINI_V6_SPEECH_CONFIG,
   GEMINI_SPEECH_CONFIG,
-  GEMINI_V7_SPEECH_CONFIG,
   LEGACY_GEMINI_V3_SPEECH_CONFIG,
   LEGACY_GEMINI_V4_SPEECH_CONFIG,
   LEGACY_GEMINI_V5_SPEECH_CONFIG,
@@ -43,6 +43,8 @@ test("configures a bounded observable non-streaming synthesis attempt", async ()
 
   await produceAudioSegment({
     ai: createSpeechSynthesisAi(run),
+    // Policy 6 sends the chunk alone; the overlap take policy 7 sends is covered further down.
+    speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG,
     bucket: createAudioSegmentBucket(),
     conversionId: CONVERSION_ID,
     sequence: 7,
@@ -95,7 +97,7 @@ test.each(["streaming", "non-streaming"] as const)(
     };
 
     await produceAudioSegment({
-      speechConfig: GEMINI_SPEECH_CONFIG,
+      speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG,
       ai: createSpeechSynthesisAi(run),
       bucket: createAudioSegmentBucket(),
       conversionId: CONVERSION_ID,
@@ -162,7 +164,7 @@ test("reports sanitized interaction diagnostics when a stream contains no audio"
 
   await expect(
     produceAudioSegment({
-      speechConfig: GEMINI_SPEECH_CONFIG,
+      speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG,
       ai: createSpeechSynthesisAi(run),
       bucket: createAudioSegmentBucket(),
       conversionId: CONVERSION_ID,
@@ -188,7 +190,7 @@ test("marks a confirmed provider safety refusal as permanent", async () => {
   const run: SpeechSynthesisRun = async () => createEventStreamResponse(events);
 
   const error = await produceAudioSegment({
-    speechConfig: GEMINI_SPEECH_CONFIG,
+    speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG,
     ai: createSpeechSynthesisAi(run),
     bucket: createAudioSegmentBucket(),
     conversionId: CONVERSION_ID,
@@ -208,7 +210,7 @@ test("keeps timeouts, rate limits, and server failures retryable", async () => {
     const run: SpeechSynthesisRun = async () =>
       Response.json({ error: { message: "Try again later." } }, { status });
     const error = await produceAudioSegment({
-      speechConfig: GEMINI_SPEECH_CONFIG,
+      speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG,
       ai: createSpeechSynthesisAi(run),
       bucket: createAudioSegmentBucket(),
       conversionId: CONVERSION_ID,
@@ -226,7 +228,7 @@ test("keeps timeouts, rate limits, and server failures retryable", async () => {
 
 test("keeps transient input policy blocks retryable", async () => {
   const error = await produceAudioSegment({
-    speechConfig: GEMINI_SPEECH_CONFIG,
+    speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG,
     ai: createSpeechSynthesisAi(createTransientInputPolicyBlockResponse),
     bucket: createAudioSegmentBucket(),
     conversionId: CONVERSION_ID,
@@ -243,7 +245,7 @@ test("keeps transient input policy blocks retryable", async () => {
 
 test("marks invalid requests and unsupported audio formats as permanent", async () => {
   const invalidRequestError = await produceAudioSegment({
-    speechConfig: GEMINI_SPEECH_CONFIG,
+    speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG,
     ai: createSpeechSynthesisAi(createInvalidRequestResponse),
     bucket: createAudioSegmentBucket(),
     conversionId: CONVERSION_ID,
@@ -254,7 +256,7 @@ test("marks invalid requests and unsupported audio formats as permanent", async 
   expect(invalidRequestError).toBeInstanceOf(PermanentNarrationSynthesisError);
 
   const unsupportedFormatError = await produceAudioSegment({
-    speechConfig: GEMINI_SPEECH_CONFIG,
+    speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG,
     ai: createSpeechSynthesisAi(createUnsupportedFormatResponse),
     bucket: createAudioSegmentBucket(),
     conversionId: CONVERSION_ID,
@@ -278,7 +280,7 @@ test.each([
     const put = vi.spyOn(bucket, "put");
 
     await produceAudioSegment({
-      speechConfig: GEMINI_SPEECH_CONFIG,
+      speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG,
       ai: createSpeechSynthesisAi(async () => createAudioResponse()),
       bucket,
       conversionId: CONVERSION_ID,
@@ -299,7 +301,7 @@ test.each([
   "does not reuse a stored segment synthesized in %s for the narration language %s",
   async (storedLanguage, narrationLanguage) => {
     const options = {
-      speechConfig: GEMINI_SPEECH_CONFIG,
+      speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG,
       ai: createSpeechSynthesisAi(async () => createAudioResponse()),
       bucket: createAudioSegmentBucket(),
       conversionId: CONVERSION_ID,
@@ -323,7 +325,7 @@ test.each([
 test("reuses a stored segment synthesized in the same narration language", async () => {
   const run = vi.fn<SpeechSynthesisRun>(async () => createAudioResponse());
   const options = {
-    speechConfig: GEMINI_SPEECH_CONFIG,
+    speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG,
     ai: createSpeechSynthesisAi(run),
     bucket: createAudioSegmentBucket(),
     conversionId: CONVERSION_ID,
@@ -342,7 +344,7 @@ test("a policy 6 segment stores the provider PCM stretched by 1.05 and records p
   const put = vi.spyOn(bucket, "put");
 
   const segment = await produceAudioSegment({
-    speechConfig: GEMINI_SPEECH_CONFIG,
+    speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG,
     ai: createFakeSpeechSynthesisAi({ durationMilliseconds: PROVIDER_PCM_DURATION_MILLISECONDS }),
     bucket,
     conversionId: CONVERSION_ID,
@@ -377,10 +379,10 @@ test("a segment of a manifest prepared under policy 5 keeps the provider PCM's d
 });
 
 test.each([
-  ["policy 5", "policy 6", LEGACY_GEMINI_V5_SPEECH_CONFIG, GEMINI_SPEECH_CONFIG],
-  ["policy 6", "policy 5", GEMINI_SPEECH_CONFIG, LEGACY_GEMINI_V5_SPEECH_CONFIG],
-  ["policy 6", "policy 7", GEMINI_SPEECH_CONFIG, GEMINI_V7_SPEECH_CONFIG],
-  ["policy 7", "policy 6", GEMINI_V7_SPEECH_CONFIG, GEMINI_SPEECH_CONFIG],
+  ["policy 5", "policy 6", LEGACY_GEMINI_V5_SPEECH_CONFIG, LEGACY_GEMINI_V6_SPEECH_CONFIG],
+  ["policy 6", "policy 5", LEGACY_GEMINI_V6_SPEECH_CONFIG, LEGACY_GEMINI_V5_SPEECH_CONFIG],
+  ["policy 6", "policy 7", LEGACY_GEMINI_V6_SPEECH_CONFIG, GEMINI_SPEECH_CONFIG],
+  ["policy 7", "policy 6", GEMINI_SPEECH_CONFIG, LEGACY_GEMINI_V6_SPEECH_CONFIG],
 ] as const)(
   "does not reuse a stored %s segment for a %s conversion",
   async (_storedPolicy, _conversionPolicy, storedSpeechConfig, speechConfig) => {
@@ -402,8 +404,8 @@ test.each([
 
 test.each([
   ["policy 5", LEGACY_GEMINI_V5_SPEECH_CONFIG],
-  ["policy 6", GEMINI_SPEECH_CONFIG],
-  ["policy 7", GEMINI_V7_SPEECH_CONFIG],
+  ["policy 6", LEGACY_GEMINI_V6_SPEECH_CONFIG],
+  ["policy 7", GEMINI_SPEECH_CONFIG],
 ] as const)(
   "reuses a stored %s segment for a conversion of the same policy",
   async (_, speechConfig) => {
@@ -731,7 +733,7 @@ test("an invalid speech recognition response is permanent", async () => {
 });
 
 test.each([
-  ["Gemini policy 6", GEMINI_SPEECH_CONFIG],
+  ["Gemini policy 6", LEGACY_GEMINI_V6_SPEECH_CONFIG],
   ["Gemini policy 5", LEGACY_GEMINI_V5_SPEECH_CONFIG],
   ["Gemini policy 4", LEGACY_GEMINI_V4_SPEECH_CONFIG],
   ["Gemini policy 3", LEGACY_GEMINI_V3_SPEECH_CONFIG],
@@ -814,7 +816,7 @@ function decodeBase64(value: string): Uint8Array {
 /** Options for a later policy 7 segment, each call with its own bucket. */
 function createOverlapOptions() {
   return {
-    speechConfig: GEMINI_V7_SPEECH_CONFIG,
+    speechConfig: GEMINI_SPEECH_CONFIG,
     narrationLanguage: "en-US",
     ai: createFakeSpeechSynthesisAi(),
     bucket: createAudioSegmentBucket(),

@@ -69,3 +69,43 @@ export async function waitForGeneratedAudio(page: Page, conversionId: string, to
     durationMilliseconds: (startMilliseconds[sequence + 1] ?? durationMilliseconds) - start,
   }));
 }
+
+/** One synthesis request the QA Worker's tracked speech provider received. */
+export type SpeechCall = { conversionId: string; sequence: number; characters: number };
+
+/** Reads every synthesis request the QA Worker's tracked speech provider received. */
+export async function readSpeechCalls(origin: string): Promise<SpeechCall[]> {
+  const response = await fetch(`${origin}/__qa/speech-calls`);
+  expect(response.status).toBe(200);
+  const value: unknown = await response.json();
+  if (!Array.isArray(value) || !value.every(isSpeechCall)) {
+    throw new Error("Invalid QA speech call report");
+  }
+  return value;
+}
+
+/**
+ * Counts the audio segments that reached the speech provider. Under speech policy 7 every segment
+ * after the first sends an overlap take and then, since the QA Worker's fake tone has no pause to
+ * cut in, its narration chunk alone, so one segment makes up to two requests.
+ */
+export function countSynthesizedSegments(calls: readonly SpeechCall[]): number {
+  return new Set(calls.map(({ conversionId, sequence }) => `${conversionId}/${sequence}`)).size;
+}
+
+function isSpeechCall(value: unknown): value is SpeechCall {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "conversionId" in value &&
+    typeof value.conversionId === "string" &&
+    "sequence" in value &&
+    typeof value.sequence === "number" &&
+    Number.isSafeInteger(value.sequence) &&
+    value.sequence >= 0 &&
+    "characters" in value &&
+    typeof value.characters === "number" &&
+    Number.isSafeInteger(value.characters) &&
+    value.characters > 0
+  );
+}

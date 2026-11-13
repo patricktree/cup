@@ -6,7 +6,9 @@ const SPEECH_RELEASE_KEY = "qa/speech-released";
 
 /**
  * Records local provider requests and optionally holds responses to exercise concurrent
- * reservations.
+ * reservations. Its fake synthesis is one continuous tone, which speech recognition hears no words
+ * in, so under speech policy 7 every audio segment after the first finds no cut point and makes a
+ * second synthesis request, for its narration chunk alone.
  */
 export function createTrackedSpeechProvider(bucket: R2Bucket, scenario: string): SpeechSynthesisAi {
   const provider = createFakeSpeechSynthesisAi(
@@ -24,13 +26,18 @@ export function createTrackedSpeechProvider(bucket: R2Bucket, scenario: string):
     gateway: (gatewayId) => ({
       run: async (request, options) => {
         const conversionId = options?.gateway?.metadata?.["conversionId"];
+        const sequence = options?.gateway?.metadata?.["narrationSegmentSequence"];
         const query: unknown = Array.isArray(request) ? undefined : request.query;
-        if (typeof conversionId !== "string") {
+        if (typeof conversionId !== "string" || typeof sequence !== "number") {
           throw new Error("Narration request identity missing");
         }
         const characters = narrationTextFromRequest(query).length;
         await bucket.put(`${SPEECH_CALLS_PREFIX}${crypto.randomUUID()}`, "", {
-          customMetadata: { conversionId, characters: String(characters) },
+          customMetadata: {
+            conversionId,
+            sequence: String(sequence),
+            characters: String(characters),
+          },
         });
         if (scenario === "speech-gated") {
           const deadline = performance.now() + 30_000;
@@ -94,6 +101,7 @@ export async function handleSpeechControl(
     return Response.json(
       calls.objects.map((object) => ({
         conversionId: object.customMetadata?.["conversionId"],
+        sequence: Number(object.customMetadata?.["sequence"]),
         characters: Number(object.customMetadata?.["characters"]),
       })),
     );

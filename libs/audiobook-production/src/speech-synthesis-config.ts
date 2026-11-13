@@ -6,33 +6,31 @@ export type SpeechConfig = {
 };
 
 /**
- * Speech policy 6 sends the same request as policy 5 and time-stretches the provider audio to its
- * narration pace, `POLICY_6_SPEED_FACTOR`, before encoding (see `getSpeedFactor`).
- */
-export const GEMINI_SPEECH_CONFIG = {
-  provider: "google-ai-studio",
-  model: "gemini-3.8-flash-lite-tts",
-  voice: "Charon",
-  policyVersion: "6",
-} as const satisfies SpeechConfig;
-
-/**
  * Speech policy 7 sends policy 6's request, except that every audio segment after the first speaks
  * the previous narration chunk's last whole sentence in front of its own narration chunk, and cuts
  * that overlap away at the cut point speech recognition finds (overlap and cut, see
- * `produceAudioSegment`). It keeps policy 6's narration pace.
+ * `produceAudioSegment`). It keeps policy 6's narration pace, `POLICY_6_SPEED_FACTOR` (see
+ * `getSpeedFactor`).
  */
-export const GEMINI_V7_SPEECH_CONFIG = {
+export const GEMINI_SPEECH_CONFIG = {
   provider: "google-ai-studio",
   model: "gemini-3.8-flash-lite-tts",
   voice: "Charon",
   policyVersion: "7",
 } as const satisfies SpeechConfig;
 
-// Resumed conversions retain the model, speech policy and narration pace they started with: policy 5 sends
-// the narration language, when the model can speak it, and stores the provider audio unstretched;
-// policy 4 sends no narration language, and policy 3 also wraps the text in a transcript
-// instruction.
+// Resumed conversions retain the model, speech policy and narration pace they started with, so their
+// retried segments sound like the rest. Policy 6 sends policy 7's request without overlap and cut,
+// at the same narration pace; policy 5 sends the narration language, when the model can speak it,
+// and stores the provider audio unstretched; policy 4 sends no narration language, and policy 3
+// also wraps the text in a transcript instruction.
+export const LEGACY_GEMINI_V6_SPEECH_CONFIG = {
+  provider: "google-ai-studio",
+  model: "gemini-3.8-flash-lite-tts",
+  voice: "Charon",
+  policyVersion: "6",
+} as const satisfies SpeechConfig;
+
 export const LEGACY_GEMINI_V5_SPEECH_CONFIG = {
   provider: "google-ai-studio",
   model: "gemini-3.8-flash-lite-tts",
@@ -65,7 +63,7 @@ export const ELEVENLABS_SPEECH_CONFIG = {
 /** Every speech configuration a stored audiobook manifest or audio segment may record. */
 export const KNOWN_SPEECH_CONFIGS = [
   GEMINI_SPEECH_CONFIG,
-  GEMINI_V7_SPEECH_CONFIG,
+  LEGACY_GEMINI_V6_SPEECH_CONFIG,
   LEGACY_GEMINI_V5_SPEECH_CONFIG,
   LEGACY_GEMINI_V4_SPEECH_CONFIG,
   LEGACY_GEMINI_V3_SPEECH_CONFIG,
@@ -109,5 +107,9 @@ export function getSpeedFactor(speechConfig: SpeechConfig): number {
   return isGeminiPolicyAtPolicy6Pace ? POLICY_6_SPEED_FACTOR : 1;
 }
 
-/** Change this assignment and redeploy to switch the backend provider. */
+/**
+ * Change this assignment and redeploy to switch the backend provider or speech policy, such as back
+ * to `LEGACY_GEMINI_V6_SPEECH_CONFIG`. Conversions keep the speech configuration they were prepared
+ * with.
+ */
 export const SPEECH_CONFIG: SpeechConfig = { ...GEMINI_SPEECH_CONFIG };

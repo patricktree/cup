@@ -10,6 +10,8 @@ import {
   SPEECH_CONFIG,
 } from "#src/speech-synthesis-config.ts";
 
+// Both spelled out rather than taken from the module, whose names move on to the next policy when it
+// becomes the deployment configuration, while stored manifests must keep their policy and pace.
 const GEMINI_POLICY_7_SPEECH_CONFIG = {
   provider: "google-ai-studio",
   model: "gemini-3.8-flash-lite-tts",
@@ -17,8 +19,6 @@ const GEMINI_POLICY_7_SPEECH_CONFIG = {
   policyVersion: "7",
 } as const;
 
-// Spelled out rather than taken from GEMINI_SPEECH_CONFIG, which a later policy replaces while
-// policy 6 manifests must keep their pace.
 const GEMINI_POLICY_6_SPEECH_CONFIG = {
   provider: "google-ai-studio",
   model: "gemini-3.8-flash-lite-tts",
@@ -26,8 +26,16 @@ const GEMINI_POLICY_6_SPEECH_CONFIG = {
   policyVersion: "6",
 } as const;
 
-test("a Gemini policy 6 configuration speeds up by 1.05", () => {
-  expect(getSpeedFactor(GEMINI_POLICY_6_SPEECH_CONFIG)).toBe(1.05);
+test("the deployment speech configuration is Gemini policy 7", () => {
+  expect(SPEECH_CONFIG).toEqual(GEMINI_POLICY_7_SPEECH_CONFIG);
+});
+
+test.each([
+  ["Gemini policy 7", GEMINI_POLICY_7_SPEECH_CONFIG],
+  ["Gemini policy 6", GEMINI_POLICY_6_SPEECH_CONFIG],
+] as const)("%s is a known speech configuration that speeds up by 1.05", (_, speechConfig) => {
+  expect(KNOWN_SPEECH_CONFIGS).toContainEqual(speechConfig);
+  expect(getSpeedFactor(speechConfig)).toBe(1.05);
 });
 
 test.each([
@@ -37,13 +45,4 @@ test.each([
   ["ElevenLabs policy 1", ELEVENLABS_SPEECH_CONFIG],
 ] as const)("a %s configuration keeps the provider audio unstretched", (_, speechConfig) => {
   expect(getSpeedFactor(speechConfig)).toBe(1);
-});
-
-test("Gemini policy 7 is a known speech configuration that speeds up by 1.05", () => {
-  expect(KNOWN_SPEECH_CONFIGS).toContainEqual(GEMINI_POLICY_7_SPEECH_CONFIG);
-  expect(getSpeedFactor(GEMINI_POLICY_7_SPEECH_CONFIG)).toBe(1.05);
-});
-
-test("the deployment speech configuration is still Gemini policy 6", () => {
-  expect(SPEECH_CONFIG).toEqual(GEMINI_POLICY_6_SPEECH_CONFIG);
 });

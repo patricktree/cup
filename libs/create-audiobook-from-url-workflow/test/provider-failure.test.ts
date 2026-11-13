@@ -58,12 +58,17 @@ const COVER_IMAGE_DECLARATION = {
   alternativeText: "A lighthouse at dusk",
 };
 const COVER_IMAGE_BYTES = Uint8Array.of(0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10);
-// The language fields of a Gemini request from before policy 5, as recorded by
-// createRecordingSpeechSynthesisAi.
-const TODAYS_SPEECH_REQUEST = {
+// The language fields of a Gemini request without a narration language, or from before policy 5,
+// as recorded by createRecordingSpeechSynthesisAi.
+const REQUEST_WITHOUT_LANGUAGE = {
   content: [{ type: "text", text: expect.any(String) }],
   generationConfig: { speech_config: [{ voice: "Charon" }] },
 };
+// The fixture document's two narration chunks: the source title, then one paragraph.
+const FIRST_CHUNK_TEXT = "Failure test";
+const SECOND_CHUNK_TEXT = "A short paragraph for narration.";
+// Under speech policy 7 the second segment speaks the first chunk in front of its own.
+const SECOND_CHUNK_OVERLAP_TAKE = `${FIRST_CHUNK_TEXT}\n\n${SECOND_CHUNK_TEXT}`;
 const harness = createTestHarness({
   root: path.resolve(import.meta.dirname, ".."),
   workers: [{ configPath: "./wrangler.test.jsonc" }],
@@ -351,7 +356,7 @@ test("a conversion of a page declaring no language that the detector reads as en
   ]);
 });
 
-test("a conversion without a narration language sends today's requests and records no synthesis language", async () => {
+test("a conversion without a narration language sends no language, overlaps its second segment and records no synthesis language", async () => {
   const { owner, grantId, conversionId, artifactPrefix, segmentOwner } =
     await createOwnedConversion("trial");
   const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -364,15 +369,19 @@ test("a conversion without a narration language sends today's requests and recor
   } finally {
     warn.mockRestore();
   }
-  const { ai, speechRequests } = createRecordingSpeechSynthesisAi();
+  const { ai, speechRequests, synthesisTexts, recognitionCount } =
+    createRecordingSpeechSynthesisAi();
 
   await runAllSegments(owner, conversionId, segmentOwner, ai);
 
-  expect(speechRequests()).toEqual([TODAYS_SPEECH_REQUEST, TODAYS_SPEECH_REQUEST]);
+  expect(speechRequests()).toEqual([REQUEST_WITHOUT_LANGUAGE, REQUEST_WITHOUT_LANGUAGE]);
+  // Speech recognition detects the language itself, so the cut still holds.
+  expect(synthesisTexts()).toEqual([FIRST_CHUNK_TEXT, SECOND_CHUNK_OVERLAP_TAKE]);
+  expect(recognitionCount()).toBe(1);
   expect(await storedSynthesisLanguages(artifactPrefix)).toEqual([undefined, undefined]);
 });
 
-test("a valid but unspeakable narration language is stored, left out of requests and logged as unspeakable", async () => {
+test("a valid but unspeakable narration language is stored, left out of requests, logged as unspeakable and gets no overlap", async () => {
   const { owner, grantId, accountId, conversionId, artifactPrefix, segmentOwner } =
     await createOwnedConversion("account");
   const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -398,11 +407,24 @@ test("a valid but unspeakable narration language is stored, left out of requests
   } finally {
     warn.mockRestore();
   }
-  const { ai, speechRequests } = createRecordingSpeechSynthesisAi();
+  const { ai, speechRequests, synthesisTexts, recognitionCount } =
+    createRecordingSpeechSynthesisAi();
+  const segmentWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-  await runAllSegments(owner, conversionId, segmentOwner, ai);
+  try {
+    await runAllSegments(owner, conversionId, segmentOwner, ai);
 
-  expect(speechRequests()).toEqual([TODAYS_SPEECH_REQUEST, TODAYS_SPEECH_REQUEST]);
+    // Speech recognition does not list Swedish either, so no segment gets overlap.
+    expect(loggedWarnings(segmentWarn, "overlap-and-cut-fallback")).toMatchObject([
+      { conversionId, sequence: 1, reason: "language-unrecognized" },
+    ]);
+  } finally {
+    segmentWarn.mockRestore();
+  }
+
+  expect(speechRequests()).toEqual([REQUEST_WITHOUT_LANGUAGE, REQUEST_WITHOUT_LANGUAGE]);
+  expect(synthesisTexts()).toEqual([FIRST_CHUNK_TEXT, SECOND_CHUNK_TEXT]);
+  expect(recognitionCount()).toBe(0);
   expect(await storedSynthesisLanguages(artifactPrefix)).toEqual(["sv-SE", "sv-SE"]);
 });
 
@@ -471,23 +493,66 @@ test.each([
     "a manifest without speechConfig",
     ({ speechConfig: _, ...manifest }: Record<string, unknown>) => manifest,
   ],
-] as const)("%s is synthesized with today's requests", async (_, rewriteManifest) => {
-  const { owner, grantId, conversionId, artifactPrefix, segmentOwner } =
-    await createOwnedConversion("trial");
-  // Replace the stored manifest with one prepared before policy 5, keeping its narration language
-  // to show that the request policy, not the missing language, keeps the request unchanged.
-  const step = createManifestRewritingStep(artifactPrefix, rewriteManifest);
-  await runConversion(grantId, conversionId, undefined, false, step, undefined, {
-    declaredLanguage: { htmlLang: "de-AT" },
-    detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: "de" }),
-  });
-  const { ai, speechRequests } = createRecordingSpeechSynthesisAi();
+] as const)(
+  "%s is synthesized with its own requests, without overlap",
+  async (_, rewriteManifest) => {
+    const { owner, grantId, conversionId, artifactPrefix, segmentOwner } =
+      await createOwnedConversion("trial");
+    // Replace the stored manifest with one prepared before policy 5, keeping its narration language
+    // to show that the request policy, not the missing language, keeps the request unchanged.
+    const step = createManifestRewritingStep(artifactPrefix, rewriteManifest);
+    await runConversion(grantId, conversionId, undefined, false, step, undefined, {
+      declaredLanguage: { htmlLang: "de-AT" },
+      detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: "de" }),
+    });
+    const { ai, speechRequests, synthesisTexts, recognitionCount } =
+      createRecordingSpeechSynthesisAi();
 
-  await runAllSegments(owner, conversionId, segmentOwner, ai);
+    await runAllSegments(owner, conversionId, segmentOwner, ai);
 
-  expect(speechRequests()).toEqual([TODAYS_SPEECH_REQUEST, TODAYS_SPEECH_REQUEST]);
-  const metadata = await environment.AUDIO_BUCKET.head(`${artifactPrefix}audio-segments/0.mp3`);
-  expect(metadata?.customMetadata?.["synthesis-policy-version"]).toBe("4");
+    expect(speechRequests()).toEqual([REQUEST_WITHOUT_LANGUAGE, REQUEST_WITHOUT_LANGUAGE]);
+    expect(synthesisTexts()).toEqual([FIRST_CHUNK_TEXT, SECOND_CHUNK_TEXT]);
+    expect(recognitionCount()).toBe(0);
+    const metadata = await environment.AUDIO_BUCKET.head(`${artifactPrefix}audio-segments/0.mp3`);
+    expect(metadata?.customMetadata?.["synthesis-policy-version"]).toBe("4");
+  },
+);
+
+test("a conversion prepared under policy 6 keeps policy 6 for a retried segment", async () => {
+  const { grant, grantId, conversionId } = await createConversion();
+  const step = createManifestRewritingStep(`conversions/${conversionId}/`, (manifest) => ({
+    ...manifest,
+    speechConfig: {
+      provider: "google-ai-studio",
+      model: "gemini-3.8-flash-lite-tts",
+      voice: "Charon",
+      policyVersion: "6",
+    },
+  }));
+  await runConversion(grantId, conversionId, undefined, false, step);
+  await expect(
+    runSegment(
+      conversionId,
+      { kind: "trial", grantId },
+      1,
+      createFakeSpeechSynthesisAi({ failureStatus: 400 }),
+    ),
+  ).rejects.toThrow("Configured deterministic speech failure");
+  const segments = await grant.listAudioSegments(conversionId);
+  await grant.startSynthesis(
+    conversionId,
+    segments.map((segment) => segment.narrationTextCharacters),
+  );
+  const { ai, synthesisTexts, recognitionCount } = createRecordingSpeechSynthesisAi();
+
+  await runSegment(conversionId, { kind: "trial", grantId }, 1, ai);
+
+  expect(synthesisTexts()).toEqual([SECOND_CHUNK_TEXT]);
+  expect(recognitionCount()).toBe(0);
+  const metadata = await environment.AUDIO_BUCKET.head(
+    `conversions/${conversionId}/audio-segments/1.mp3`,
+  );
+  expect(metadata?.customMetadata?.["synthesis-policy-version"]).toBe("6");
 });
 
 test("a stored segment whose synthesis language differs from the manifest is not reused", async () => {
@@ -648,7 +713,7 @@ test("a rate-limited segment waits out the provider limit before failing", async
 });
 
 test.each([
-  ["a paragraph break", false, "Failure test\n\nA short paragraph for narration."],
+  ["a paragraph break", false, SECOND_CHUNK_OVERLAP_TAKE],
   [
     "a space when it continues its narration block",
     true,
@@ -687,7 +752,7 @@ test("a transient speech recognition error is retried within the step, starting 
 
   await runSegment(conversionId, segmentOwner, 1, ai);
 
-  const overlapTake = "Failure test\n\nA short paragraph for narration.";
+  const overlapTake = SECOND_CHUNK_OVERLAP_TAKE;
   expect(synthesisTexts()).toEqual([overlapTake, overlapTake]);
   expect(recognitionCount()).toBe(2);
   expect((await grant.listAudioSegments(conversionId))[1]?.state).toBe("settled");
@@ -710,10 +775,7 @@ test.each([
 
     // A recognition error never falls back to the chunk alone.
     expect(synthesisTexts()).toEqual(
-      Array.from(
-        { length: expectedRecognitionCount },
-        () => "Failure test\n\nA short paragraph for narration.",
-      ),
+      Array.from({ length: expectedRecognitionCount }, () => SECOND_CHUNK_OVERLAP_TAKE),
     );
     expect(recognitionCount()).toBe(expectedRecognitionCount);
     expect((await grant.listAudioSegments(conversionId)).map(({ state }) => state)).toEqual([
