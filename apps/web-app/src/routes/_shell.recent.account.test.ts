@@ -1,5 +1,5 @@
 import { ACCOUNT_CONFIRMATION_STORAGE_KEY } from "#src/data-fetching/account-confirmation-storage.ts";
-import { expect, test } from "#src/test-utils/component-test.ts";
+import { expect, test, VISUAL_TAG } from "#src/test-utils/component-test.ts";
 
 for (const state of [
   {
@@ -33,7 +33,7 @@ for (const state of [
     name: "final-deletion",
   },
 ]) {
-  test(`renders ${state.name}`, { tag: "@visual" }, async ({ mount, page }) => {
+  test(`renders ${state.name}`, { tag: VISUAL_TAG }, async ({ mount, page }) => {
     await mount(state.story);
     const dialog = page.getByRole("dialog", { name: "Account settings" });
     await expect(dialog.getByText(state.text, { exact: true })).toBeVisible();

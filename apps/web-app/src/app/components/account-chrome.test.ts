@@ -1,8 +1,8 @@
-import { expect, test } from "#src/test-utils/component-test.ts";
+import { expect, test, VISUAL_TAG } from "#src/test-utils/component-test.ts";
 
 test(
   "the tab bar on Recents marks Recent as the current tab",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount }) => {
     const component = await mount("routes/_shell.recent/EmptyRecents");
     const tabs = component.getByRole("navigation", { name: "Tabs" });
@@ -48,7 +48,7 @@ for (const story of [
 
 test(
   "the avatar shows the account holder's initials and opens the account dialog",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("routes/_shell.recent/EmptyRecents");
     const avatar = component.getByRole("link", { name: "Account" });
@@ -66,7 +66,7 @@ test(
 
 test(
   "the avatar shows a glyph when the session carries no name",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount }) => {
     const component = await mount("routes/_shell.recent/RecentsWithoutName");
     const avatar = component.getByRole("link", { name: "Account" });

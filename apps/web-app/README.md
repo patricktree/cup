@@ -79,7 +79,7 @@ The component tests run in four Playwright projects, but not every test runs in 
 - **Desktop Chromium and mobile WebKit run every test**, so each behaviour meets both engines and both viewports.
 - **Mobile Chromium and desktop WebKit run only tests tagged `@visual`** (`grep` in [`playwright.config.ts`](playwright.config.ts)).
 
-Tag a test with `test(title, { tag: "@visual" }, body)` when it asserts a screenshot, or when its behaviour depends on the engine or the viewport:
+Tag a test with `test(title, { tag: VISUAL_TAG }, body)`, importing `VISUAL_TAG` from [`src/test-utils/component-test.ts`](src/test-utils/component-test.ts), when it asserts a screenshot, or when its behaviour depends on the engine or the viewport:
 
 - view transitions, such as the cover transition between Recents and the detail view;
 - pointer and touch input, such as pulling the Add dialog's grabber or pressing a point of the mini player;

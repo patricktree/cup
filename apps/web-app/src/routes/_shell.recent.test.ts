@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { readLoadingStateRecord, recordLoadingStates } from "@cup/loading-state-recorder";
 
-import { expect, test } from "#src/test-utils/component-test.ts";
+import { expect, test, VISUAL_TAG } from "#src/test-utils/component-test.ts";
 import { recordConversionStarts } from "#src/test-utils/conversion-starts.ts";
 import { failResponses, holdResponses, releaseResponses } from "#src/test-utils/held-responses.ts";
 import { recordReactUseWarnings } from "#src/test-utils/react-use-warnings.ts";
@@ -22,7 +22,7 @@ for (const state of [
   { story: "RecentsWithPendingAndFailed", name: "recents-pending-and-failed", cards: 5 },
   { story: "RecentsWithMiniPlayer", name: "recents-with-mini-player", cards: 1 },
 ]) {
-  test(`renders ${state.name}`, { tag: "@visual" }, async ({ mount, page }) => {
+  test(`renders ${state.name}`, { tag: VISUAL_TAG }, async ({ mount, page }) => {
     const component = await mount(`routes/_shell.recent/${state.story}`);
     await expect(component.getByRole("heading", { name: "Recent", exact: true })).toBeVisible();
     if (state.cards === 0) {
@@ -98,7 +98,7 @@ test("pending and failed cards show a muted line in the title slot and no cover"
 
 test(
   "the masonry keeps newest-first order left to right, top down",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("routes/_shell.recent/Recents");
     await expect(cardsOf(component)).toHaveCount(FIRST_PAGE_SIZE);
@@ -124,7 +124,7 @@ test(
 
 test(
   "scrolling to the end loads the next page without moving existing cards",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     let nextPageRequests = 0;
     page.on("request", (request) => {
@@ -150,7 +150,7 @@ test(
 
 test(
   "Back from a track opened on a scrolled Recents returns to the same card",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("routes/_shell.recent/Recents");
     await expect(cardsOf(component)).toHaveCount(FIRST_PAGE_SIZE);
@@ -176,7 +176,7 @@ for (const state of [
 ]) {
   test(
     `renders the ${state.name}, paused and playing`,
-    { tag: "@visual" },
+    { tag: VISUAL_TAG },
     async ({ mount, page }) => {
       const component = await mount(`routes/_shell.recent/${state.story}`);
       const player = component.getByRole("region", { name: "Player" });
@@ -206,7 +206,7 @@ test("the mini player names the loaded audiobook and its host", async ({ mount }
 
 test(
   "the mini player's −15 s skips the narration track back 15 seconds",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await captureNarrationAudio(page);
     const component = await mount("routes/_shell.recent/RecentsWithMiniPlayer");
@@ -224,7 +224,7 @@ test(
 
 test(
   "pressing the mini player's cover opens the loaded audiobook's detail view, the rest of the pill does not",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("routes/_shell.recent/RecentsWithMiniPlayer");
     const player = component.getByRole("region", { name: "Player" });
@@ -375,7 +375,7 @@ test("does not poll settled empty recents", async ({ mount, page }) => {
   expect(requests).toBe(settledRequests);
 });
 
-test("renders the idle Add dialog over Recents", { tag: "@visual" }, async ({ mount, page }) => {
+test("renders the idle Add dialog over Recents", { tag: VISUAL_TAG }, async ({ mount, page }) => {
   await mount("routes/_shell.recent/AddDialog");
   const dialog = page.getByRole("dialog", { name: "Add a track" });
   await expect(dialog).toBeVisible();
@@ -396,7 +396,7 @@ test("renders the idle Add dialog over Recents", { tag: "@visual" }, async ({ mo
 
 test(
   "the Add dialog is a sheet along the bottom edge, inside the app column's gutter",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await mount("routes/_shell.recent/AddDialog");
     await waitForAddDialogAtRest(page);
@@ -415,7 +415,7 @@ test(
 
 test(
   "renders the Add dialog while the start is pending",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await mount("routes/_shell.recent/AddDialogPending");
     const dialog = page.getByRole("dialog", { name: "Add a track" });
@@ -427,7 +427,7 @@ test(
 
 test(
   "renders a refused start inside the Add dialog",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await mount("routes/_shell.recent/AddDialogError");
     const dialog = page.getByRole("dialog", { name: "Add a track" });
@@ -488,7 +488,7 @@ for (const close of [
 ]) {
   test(
     `${close.name} slides the Add dialog away and closes it, opened from Recents`,
-    { tag: "@visual" },
+    { tag: VISUAL_TAG },
     async ({ mount, page }) => {
       const component = await mount("routes/_shell.recent/EmptyRecents");
       await component.getByRole("link", { name: "Add", exact: true }).click();
@@ -509,7 +509,7 @@ for (const close of [
 
 test(
   "a short pull on the Add dialog's grabber lets it settle back",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await mount("routes/_shell.recent/AddDialog");
     const dialog = page.getByRole("dialog", { name: "Add a track" });
@@ -527,7 +527,7 @@ test(
 
 test(
   "renders the Add dialog held partway down by a pull",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await mount("routes/_shell.recent/AddDialog");
     const restingTop = await waitForAddDialogAtRest(page);
@@ -551,7 +551,7 @@ test(
 
 test(
   "a mouse drag inside the Add dialog's form leaves it in place",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await mount("routes/_shell.recent/AddDialog");
     const dialog = page.getByRole("dialog", { name: "Add a track" });
@@ -575,7 +575,7 @@ test(
 
 test(
   "the Add dialog slides up from the bottom edge as it opens",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("routes/_shell.recent/EmptyRecents");
     await component.getByRole("link", { name: "Add", exact: true }).click();
@@ -592,7 +592,7 @@ test(
 
 test(
   "with reduced motion, the Add dialog appears and leaves without sliding",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     const component = await mount("routes/_shell.recent/EmptyRecents");
@@ -665,7 +665,7 @@ test("closing an Add dialog that was not opened from Recents shows Recents", asy
 
 test(
   "a successful start closes the Add dialog and lists the new item",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("routes/_shell.recent/AddDialogStarts");
     await expect(component.getByRole("link", { name: "Add your first track" })).toBeVisible();
@@ -1043,7 +1043,7 @@ test("a card in view preloads its track, so opening it shows no loading state", 
 
 test(
   "a preloaded track shows no progress bar while the browser captures its cover transition",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     // WebKit in the E2E suite's Docker browser takes longer than the bar's delay to capture the old
     // screen; delaying the transition's update stands in for that, in any browser.
@@ -1110,7 +1110,7 @@ test("leaving a track being prepared stops polling it, and reopening it polls ag
 
 test(
   "opening a track from Recents and going back runs the cover transition between the card and the detail view",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await recordViewTransitions(page);
     const component = await mount("routes/_shell.recent/RevisitingScreens");
@@ -1153,7 +1153,7 @@ test(
 
 test(
   "going back from a detail view scrolled past its cover only cross-fades",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await recordViewTransitions(page);
     const component = await mount("routes/_shell.recent/RevisitingScreens");
@@ -1175,7 +1175,7 @@ test(
 
 test(
   "going back from a detail view with its cover partly in view moves the cover",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await recordViewTransitions(page);
     const component = await mount("routes/_shell.recent/RevisitingScreens");
@@ -1197,7 +1197,7 @@ test(
 
 test(
   "opening a track from Recents scrolled past its card only cross-fades",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await recordViewTransitions(page);
     const component = await mount("routes/_shell.recent/RevisitingScreens");
@@ -1223,7 +1223,7 @@ test(
 
 test(
   "opening a track from the mini player and going back only cross-fade, even with its card in view",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await recordViewTransitions(page);
     const component = await mount("routes/_shell.recent/RevisitingScreens");
@@ -1270,7 +1270,7 @@ test(
 
 test(
   "with reduced motion, opening a track and going back start no view transition",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await recordViewTransitions(page);

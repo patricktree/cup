@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { readLoadingStateRecord, recordLoadingStates } from "@cup/loading-state-recorder";
 
-import { expect, test } from "#src/test-utils/component-test.ts";
+import { expect, test, VISUAL_TAG } from "#src/test-utils/component-test.ts";
 import { holdResponses, releaseResponses } from "#src/test-utils/held-responses.ts";
 import { recordReactUseWarnings } from "#src/test-utils/react-use-warnings.ts";
 
@@ -68,7 +68,7 @@ async function expectPlayingFrom(page: Page, startSeconds: number) {
 
 test(
   "tapping narration seeks the narration track to that unit, including nested text",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await captureNarrationAudio(page);
 
@@ -133,7 +133,7 @@ test("without a source subtitle the host follows the title directly", async ({ m
   await expect(component.locator("hgroup")).toHaveCount(0);
 });
 
-test("the position bar seeks the narration track", { tag: "@visual" }, async ({ mount, page }) => {
+test("the position bar seeks the narration track", { tag: VISUAL_TAG }, async ({ mount, page }) => {
   await captureNarrationAudio(page);
 
   const component = await mount("routes/_shell.audiobooks.$conversionId/ReadyAudiobook");
@@ -149,7 +149,7 @@ test("the position bar seeks the narration track", { tag: "@visual" }, async ({ 
 
 test(
   "playback continues across pages until the player sheet plays another audiobook",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await captureNarrationAudio(page);
 
@@ -195,7 +195,7 @@ test(
 
 test(
   "the player sheet skips 15 seconds back and forward, within the track",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await captureNarrationAudio(page);
 
@@ -221,7 +221,7 @@ test(
 
 test(
   "before an audiobook is loaded, the detail view shows and skips from its listening position",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await captureNarrationAudio(page);
 
@@ -255,7 +255,7 @@ test(
 
 test(
   "the player sheet shows the start of an audiobook with a narration track",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount }) => {
     const enabled = await mount("routes/_shell.audiobooks.$conversionId/ReadyAudiobook");
     const enabledSheet = enabled.getByRole("contentinfo", { name: "Player" });
@@ -268,7 +268,7 @@ test(
 
 test(
   "the player sheet is disabled until the audiobook has a narration track",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount }) => {
     const disabled = await mount("routes/_shell.audiobooks.$conversionId/SynthesizingAudiobook");
     const disabledSheet = disabled.getByRole("contentinfo", { name: "Player" });
@@ -286,7 +286,7 @@ test(
 
 test(
   "a trial audiobook renders without a loading state and leads back home",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await recordLoadingStates(page);
 
@@ -333,7 +333,7 @@ test("Back after a deep link opens Recents as a new entry above the track", asyn
 
 test(
   "an account audiobook opens with its cover, title and host below a plain top bar",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("routes/_shell.audiobooks.$conversionId/AccountAudiobook");
     const title = "The turbulent AI era is here. The choices we make now are critical.";
@@ -362,7 +362,7 @@ test(
 
 test(
   "once the title scrolls away the top bar shows it, and the playing segment is highlighted",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await captureNarrationAudio(page);
 
@@ -397,7 +397,7 @@ test(
   },
 );
 
-test("the top bar's menu opens the original page", { tag: "@visual" }, async ({ mount, page }) => {
+test("the top bar's menu opens the original page", { tag: VISUAL_TAG }, async ({ mount, page }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/AccountAudiobook");
   await expect(
     component.getByRole("heading", {
@@ -548,7 +548,7 @@ test("the top bar's menu offers Delete track… for a track on a later page of t
 
 test(
   "Delete track… asks first, starts on Cancel, and Escape keeps the track",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("routes/_shell.audiobooks.$conversionId/DeleteTrack");
     const more = component.getByRole("button", { name: "More", exact: true });
@@ -812,7 +812,7 @@ test("a track found gone when its audio is requested again is unloaded and repor
 
 test(
   "shows generation progress and keeps Play disabled while audio is generated",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("routes/_shell.audiobooks.$conversionId/SynthesizingAudiobook");
     await expect(
@@ -829,7 +829,7 @@ test(
 
 test(
   "explains the needed and available duration when the document does not fit",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("routes/_shell.audiobooks.$conversionId/InsufficientDuration");
     await expect(
@@ -845,7 +845,7 @@ test(
 
 test(
   "a failed segment is marked and playback waits for a successful Retry",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount(
       "routes/_shell.audiobooks.$conversionId/AudiobookWithFailedSegment",
@@ -874,7 +874,7 @@ test(
 
 test(
   "an audiobook whose generation waits for freed duration asks for a Retry",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount(
       "routes/_shell.audiobooks.$conversionId/AudiobookNotYetGenerated",
@@ -890,7 +890,7 @@ test(
 
 test(
   "an audiobook whose every segment failed offers only Retry",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("routes/_shell.audiobooks.$conversionId/AudiobookWithoutAudio");
     await expect(
@@ -904,7 +904,7 @@ test(
   },
 );
 
-test("renders audiobook-not-found", { tag: "@visual" }, async ({ mount, page }) => {
+test("renders audiobook-not-found", { tag: VISUAL_TAG }, async ({ mount, page }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/AudiobookNotFound");
   await expect(
     component.getByRole("heading", { name: "The track could not be loaded." }),
@@ -916,7 +916,7 @@ test("renders audiobook-not-found", { tag: "@visual" }, async ({ mount, page }) 
   await expect(page).toHaveScreenshot("audiobook-not-found.png");
 });
 
-test("renders audiobook-load-error", { tag: "@visual" }, async ({ mount, page }) => {
+test("renders audiobook-load-error", { tag: VISUAL_TAG }, async ({ mount, page }) => {
   const component = await mount("routes/_shell.audiobooks.$conversionId/AudiobookLoadError");
   await expect(
     component.getByRole("heading", { name: "The track could not be loaded." }),
@@ -931,7 +931,7 @@ test("renders audiobook-load-error", { tag: "@visual" }, async ({ mount, page })
 
 test(
   "shows loading skeletons with an unknown preparation phase, without horizontal overflow",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("routes/_shell.audiobooks.$conversionId/LoadingAudiobook");
     const skeleton = component.getByLabel("Loading track");
@@ -950,7 +950,7 @@ test(
 
 test(
   "shows preparation skeletons with a disabled player sheet, without horizontal overflow",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("routes/_shell.audiobooks.$conversionId/PendingConversion");
     const skeleton = component.getByLabel("Preparing track");
@@ -994,7 +994,7 @@ for (const [story, label] of [
 
 test(
   "preparation failure replaces skeletons with Retry",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("routes/_shell.audiobooks.$conversionId/FailedConversion");
     await expect(
@@ -1014,7 +1014,7 @@ test(
 
 test(
   "a refused retry is reported with a toast and leaves the reader in place",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("routes/_shell.audiobooks.$conversionId/RetryRefused");
     await component.getByRole("button", { name: "Retry", exact: true }).click();

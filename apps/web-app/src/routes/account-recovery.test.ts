@@ -1,4 +1,4 @@
-import { expect, test } from "#src/test-utils/component-test.ts";
+import { expect, test, VISUAL_TAG } from "#src/test-utils/component-test.ts";
 
 for (const state of [
   { story: "routes/account-recovery/SignedOut", text: "Continue with Google", name: "signed-out" },
@@ -13,7 +13,7 @@ for (const state of [
     name: "confirm-recovery",
   },
 ]) {
-  test(`renders ${state.name}`, { tag: "@visual" }, async ({ mount, page }) => {
+  test(`renders ${state.name}`, { tag: VISUAL_TAG }, async ({ mount, page }) => {
     const component = await mount(state.story);
     await expect(component.getByText(state.text, { exact: true })).toBeVisible();
     await expect(page).toHaveTitle("Account recovery · Cup");

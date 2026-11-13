@@ -1,10 +1,10 @@
 import type { Page } from "@playwright/test";
 
-import { expect, test } from "#src/test-utils/component-test.ts";
+import { expect, test, VISUAL_TAG } from "#src/test-utils/component-test.ts";
 
 const GRANT_ID = "b4ad28a8-bbd7-46af-a17c-59527becd745";
 
-test("renders an open Trial", { tag: "@visual" }, async ({ mount, page }) => {
+test("renders an open Trial", { tag: VISUAL_TAG }, async ({ mount, page }) => {
   const component = await mount("routes/trials.$grantId/OpenGrant");
   await expect(page).toHaveTitle("Free trial · Cup");
 
@@ -14,7 +14,7 @@ test("renders an open Trial", { tag: "@visual" }, async ({ mount, page }) => {
   await expect(component).toHaveScreenshot("open-trial.png");
 });
 
-test("rejects a malformed Trial credential", { tag: "@visual" }, async ({ mount, page }) => {
+test("rejects a malformed Trial credential", { tag: VISUAL_TAG }, async ({ mount, page }) => {
   const component = await mount("routes/trials.$grantId/MalformedCredential");
   await expect(page).toHaveTitle("Free trial · Cup");
 
@@ -31,7 +31,7 @@ test("rejects a Trial credential that the server finds invalid", async ({ mount 
   ).toBeVisible();
 });
 
-test("renders revoked-trial-link", { tag: "@visual" }, async ({ mount }) => {
+test("renders revoked-trial-link", { tag: VISUAL_TAG }, async ({ mount }) => {
   const component = await mount("routes/trials.$grantId/RevokedCredential");
   await expect(
     component.getByRole("heading", { name: "This trial link was revoked." }),
@@ -39,7 +39,7 @@ test("renders revoked-trial-link", { tag: "@visual" }, async ({ mount }) => {
   await expect(component).toHaveScreenshot("revoked-trial-link.png");
 });
 
-test("renders credential-exchange-error", { tag: "@visual" }, async ({ mount, page }) => {
+test("renders credential-exchange-error", { tag: VISUAL_TAG }, async ({ mount, page }) => {
   const component = await mount("routes/trials.$grantId/CredentialExchangeError");
   await expect(
     component.getByRole("heading", { name: "The trial link could not be opened." }),
@@ -51,7 +51,7 @@ test("renders credential-exchange-error", { tag: "@visual" }, async ({ mount, pa
   });
 });
 
-test("renders grant-load-error", { tag: "@visual" }, async ({ mount, page }) => {
+test("renders grant-load-error", { tag: VISUAL_TAG }, async ({ mount, page }) => {
   const component = await mount("routes/trials.$grantId/GrantLoadError");
   await expect(page).toHaveTitle("Free trial · Cup");
   await expect(
@@ -64,7 +64,7 @@ test("renders grant-load-error", { tag: "@visual" }, async ({ mount, page }) => 
   });
 });
 
-test("renders grant-session-invalid", { tag: "@visual" }, async ({ mount }) => {
+test("renders grant-session-invalid", { tag: VISUAL_TAG }, async ({ mount }) => {
   const component = await mount("routes/trials.$grantId/GrantSessionInvalid");
   await expect(
     component.getByRole("heading", { name: "This browser no longer has access." }),
@@ -80,7 +80,7 @@ test("explains a missing grant session as lost access", async ({ mount }) => {
   ).toBeVisible();
 });
 
-test("renders an invalid source URL", { tag: "@visual" }, async ({ mount }) => {
+test("renders an invalid source URL", { tag: VISUAL_TAG }, async ({ mount }) => {
   const component = await mount("routes/trials.$grantId/OpenGrant");
   await component.getByRole("textbox", { name: /^URL/ }).fill("not a URL");
   await component.getByRole("textbox", { name: /^URL/ }).blur();
@@ -97,7 +97,7 @@ test("renders an invalid source URL", { tag: "@visual" }, async ({ mount }) => {
   await expect(component.getByRole("button", { name: "Listen" })).toBeEnabled();
 });
 
-test("renders a pending conversion start", { tag: "@visual" }, async ({ mount }) => {
+test("renders a pending conversion start", { tag: VISUAL_TAG }, async ({ mount }) => {
   const component = await mount("routes/trials.$grantId/StartPending");
   await component
     .getByRole("textbox", { name: /^URL/ })

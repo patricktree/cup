@@ -1,7 +1,7 @@
-import { expect, test } from "#src/test-utils/component-test.ts";
+import { expect, test, VISUAL_TAG } from "#src/test-utils/component-test.ts";
 import { holdResponses } from "#src/test-utils/held-responses.ts";
 
-test("renders landing", { tag: "@visual" }, async ({ mount }) => {
+test("renders landing", { tag: VISUAL_TAG }, async ({ mount }) => {
   const component = await mount("routes/index/LandingPage");
   await expect(component.getByRole("heading", { name: "Just listen." })).toBeVisible();
   await expect(component.getByText("No reading lists,")).toBeVisible();
@@ -50,7 +50,7 @@ test("renders landing when served from the iOS app's capacitor:// origin", async
 
 test(
   "the focused URL input shows only its wavy rule, without a focus ring",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount }) => {
     const component = await mount("routes/index/LandingPage");
     const input = component.getByRole("textbox", { name: "URL" });
@@ -61,7 +61,7 @@ test(
   },
 );
 
-test("renders sign-in dialog", { tag: "@visual" }, async ({ mount, page }) => {
+test("renders sign-in dialog", { tag: VISUAL_TAG }, async ({ mount, page }) => {
   await mount("routes/index/SignIn");
   await expect(
     page.getByRole("heading", { name: "Just listen.", includeHidden: true }),
@@ -86,7 +86,7 @@ test("offers only the sign-in methods the auth configuration advertises", async 
 
 test(
   "anonymous submission asks for sign-in and cancellation preserves the URL",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("routes/index/LandingPage");
     const input = component.getByRole("textbox", { name: "URL" });
@@ -138,7 +138,7 @@ test("invalid account URL shows a field error and becomes submittable after corr
 
 test(
   "the sign-in link opens the dialog with the returning listener's copy",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     await mount("routes/index/SignInFromLink");
     const dialog = page.getByRole("dialog", { name: "Sign in", exact: true });

@@ -1,6 +1,6 @@
-import { expect, test } from "#src/test-utils/component-test.ts";
+import { expect, test, VISUAL_TAG } from "#src/test-utils/component-test.ts";
 
-test("the plain top bar shows back and the menu", { tag: "@visual" }, async ({ mount }) => {
+test("the plain top bar shows back and the menu", { tag: VISUAL_TAG }, async ({ mount }) => {
   const component = await mount("app/components/detail-top-bar/Plain");
   const topBar = component.getByRole("banner");
 
@@ -11,7 +11,7 @@ test("the plain top bar shows back and the menu", { tag: "@visual" }, async ({ m
 
 test(
   "the compact top bar shows the title and host, cut off when too long",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount }) => {
     const component = await mount("app/components/detail-top-bar/Compact");
     const topBar = component.getByRole("banner");
@@ -23,7 +23,7 @@ test(
 
 test(
   "the top bar's menu offers the original page, Retry and Delete track…",
-  { tag: "@visual" },
+  { tag: VISUAL_TAG },
   async ({ mount, page }) => {
     const component = await mount("app/components/detail-top-bar/Plain");
     await component.getByRole("button", { name: "More", exact: true }).click();
