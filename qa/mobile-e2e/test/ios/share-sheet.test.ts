@@ -3,19 +3,21 @@ import { afterEach, beforeEach, expect, test } from "vitest";
 import { useMobileApp } from "#src/fixtures.ts";
 import { asIosAppDevice } from "#src/ios/ios-app-device.ts";
 import { startSharedPage, type SharedPage } from "#src/ios/shared-page.ts";
-import { conversionStartsSince, expectSignInForStartFormUrl } from "#src/share-assertions.ts";
+import { signInFromLandingPage, waitForRecents } from "#src/journeys.ts";
+import {
+  conversionStartsSince,
+  expectSignInForStartFormUrl,
+  waitForSharedConversions,
+} from "#src/share-assertions.ts";
 
 /**
- * Sharing a page from Safari through the real Share Sheet: **Cup** in the app row, then **Open in
- * Cup** or **Cancel** in the `CupShare` extension, which hands the URL to Cup as an
- * `audio.cup.app://share` link. These tests depend on Safari's system UI and fail when an iOS
- * update changes it. Cup runs signed out, so a share fills the landing page's start form and asks
- * to sign in. A share that reaches a running Cup is covered by the link alone, in `share.test.ts`.
+ * Sharing a page from Safari through the real Share Sheet: **Cup** in the app row, and nothing
+ * more. The `CupShare` extension reads the page's URL and hands it to Cup as an
+ * `audio.cup.app://share` link on its own. These tests depend on Safari's system UI and fail when
+ * an iOS update changes it. Each share starts Cup; a share that reaches a running Cup takes the
+ * same handoff, which the link alone covers in `share.test.ts`.
  */
 const app = useMobileApp();
-
-/** How long a cancelled share is watched for Cup opening anyway. */
-const CANCEL_OBSERVATION_MS = 3000;
 
 let page: SharedPage;
 
@@ -27,14 +29,38 @@ afterEach(async () => {
   await page.close();
 });
 
-test("a share from Safari starts Cup, fills the landing page's start form and asks to sign in", async () => {
+test("a signed-in share from Safari starts Cup and the conversion of the page", async () => {
+  const device = asIosAppDevice(app.device);
+  await device.launch({ apiOrigin: app.apiOrigin });
+  const webView = await device.webView();
+  await signInFromLandingPage(device, webView);
+  await webView.$('a[aria-label="Back"]').click();
+  await waitForRecents(webView, 1);
+  // A share that starts Cup passes no launch arguments.
+  await device.storeApiOrigin(app.apiOrigin);
+  await device.terminate();
+  const sharedUrl = page.url("/signed-in");
+  const requestCount = app.worker.requests().length;
+
+  await device.shareFromSafari(sharedUrl);
+
+  expect(
+    await waitForSharedConversions(await device.webView(), app.worker, {
+      requestCount,
+      starts: 1,
+      tracks: 2,
+    }),
+  ).toEqual([sharedUrl]);
+});
+
+test("a signed-out share from Safari starts Cup, fills the landing page's start form and asks to sign in", async () => {
   const device = asIosAppDevice(app.device);
   // `&`, `+` and the fragment must arrive unchanged.
   const sharedUrl = page.url("/article?a=1&b=2+3#fragment");
   // A share that starts Cup passes no launch arguments.
   await device.storeApiOrigin(app.apiOrigin);
 
-  await device.shareFromSafari(sharedUrl, "open in cup");
+  await device.shareFromSafari(sharedUrl);
 
   await expectSignInForStartFormUrl(await device.webView(), sharedUrl);
   // The web app asks for the auth configuration at startup, here from the test Worker.
@@ -42,21 +68,4 @@ test("a share from Safari starts Cup, fills the landing page's start form and as
     expect.objectContaining({ method: "GET", path: "/api/auth/config" }),
   );
   expect(conversionStartsSince(app.worker, 0)).toEqual([]);
-});
-
-test("cancelling the share leaves Safari in front and Cup closed", async () => {
-  const device = asIosAppDevice(app.device);
-  await device.storeApiOrigin(app.apiOrigin);
-  const requestCount = app.worker.requests().length;
-
-  await device.shareFromSafari(page.url("/cancelled"), "cancel");
-
-  // A Cup that opens does so within a second of the tap; watch for a while.
-  const deadline = performance.now() + CANCEL_OBSERVATION_MS;
-  while (performance.now() < deadline) {
-    expect(await device.appState("safari")).toBe("foreground");
-    expect(await device.appState("cup")).toBe("not running");
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-  expect(app.worker.requests().slice(requestCount)).toEqual([]);
 });

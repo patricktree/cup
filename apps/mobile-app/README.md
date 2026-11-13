@@ -117,13 +117,13 @@ Capacitor's native HTTP response headers can expose Set-Cookie to JavaScript, so
 
 ## iOS Share Extension
 
-The iOS app bundles `CupShare.appex`, displayed as **Cup** in Safari and Chrome's Share Sheets. Share a web URL or text containing an HTTP(S) URL, then tap **Open in Cup** to open the main app and start converting the URL.
+The iOS app bundles `CupShare.appex`, displayed as **Cup** in Safari and Chrome's Share Sheets. Share a web page, a web URL or text containing an HTTP(S) URL and choose **Cup**: the extension reads the first HTTP(S) URL from the share, whether the sharing app hands it over as a URL, as a URL's data or as text, and opens the main app with it on its own, which starts converting the URL. Sharing takes no tap after **Cup**.
 
 The handoff uses `audio.cup.app://share?url=<encoded-url>`, the app's only URL scheme. The URL fills and submits a conversion form as on [Android](#links-and-sharing), and Cup links are ignored there too; a URL still pending in memory is discarded when the app closes.
 
 The app uses the UIScene lifecycle, which iOS 27 requires: an app built with the iOS 27 SDK that keeps the app-delegate lifecycle stops at launch. [`SceneDelegate`](ios/App/App/SceneDelegate.swift) receives incoming URLs, both at a cold start and while Cup runs, and hands them to Capacitor's `SceneDelegateProxy`, which passes them on to the App plugin's `appUrlOpen` event and launch URL.
 
-The extension uses the same responder-chain URL-opening approach as Chromium, calling `openURL:options:completionHandler:` dynamically. Apple does not support this handoff from Share Extensions; test it after iOS updates. A failed handoff stays in the extension with an error and retry button. The extension does not start conversions or access session cookies.
+The extension uses the same responder-chain URL-opening approach as Chromium, calling `openURL:options:completionHandler:` dynamically. Apple does not support this handoff from Share Extensions; test it after iOS updates. A failed handoff stays in the extension with an error, and its **Open in Cup** button retries it; **Cancel** closes the sheet, such as after a share that held no HTTP(S) URL. The extension does not start conversions or access session cookies.
 
 The [mobile E2E tests](../../qa/mobile-e2e/README.md#share-intake-ios) cover what the app does with a share link once it arrives, and a share from Safari through the real Share Sheet and this extension on a simulator; sharing from Chrome and the handoff on a physical iPhone stay [manual](#automated-and-manual-checks).
 
@@ -136,7 +136,7 @@ The [mobile E2E tests](../../qa/mobile-e2e/README.md) run the debug build of eac
 - **Both platforms**: a cold start against the test Worker, signing in from the landing page and from the home page's sign-in link and seeing Recents loaded from the test Worker ([`test/sign-in.test.ts`](../../qa/mobile-e2e/test/sign-in.test.ts)).
 - **Both platforms, signed in**: the session in Secure Storage across a relaunch after signing in and after signing out, its refresh after a return from the background, and native networking: bearer-token requests and an Origin-less mutation through `CapacitorHttp`.
 - **Android**: sign-in through the native adapter with a fake of the Google sign-in plugin, cancelling Google's real add-account screen, share intake through `ACTION_SEND` intents (signed in with Cup stopped or running, `&`, `+` and fragments, a URL inside text, and signed out), and the back button.
-- **iOS**: sign-in through the real `ASWebAuthenticationSession` against the fake auth provider, share links starting a conversion when signed in and filling the landing page's start form and asking to sign in when signed out, each with Cup started by the link or running, sharing from Safari through the Share Sheet and `CupShare` that starts Cup and a cancelled share, and the audiobook page's sticky header staying below the status bar, at rest and scrolled, and the status bar backdrop on Recents ([`test/ios/safe-area.test.ts`](../../qa/mobile-e2e/test/ios/safe-area.test.ts)).
+- **iOS**: sign-in through the real `ASWebAuthenticationSession` against the fake auth provider, share links starting a conversion when signed in and filling the landing page's start form and asking to sign in when signed out, each with Cup started by the link or running, sharing from Safari through the Share Sheet and `CupShare`, which starts Cup and, signed in, the conversion with no tap after **Cup**, and the audiobook page's sticky header staying below the status bar, at rest and scrolled, and the status bar backdrop on Recents ([`test/ios/safe-area.test.ts`](../../qa/mobile-e2e/test/ios/safe-area.test.ts)).
 
 What the web app does with a share, such as repeat shares, `cup.audio` links and malformed links or text, the component tests of the share plugins cover with a faked Capacitor bridge; the mobile tests keep one test per native channel and app state.
 
@@ -145,7 +145,7 @@ The rest stays manual on physical devices with release-signed builds, listed in 
 1. Playback through a locked device, lock-screen, notification and headset controls, audio focus, and the narration track's signed URL from the shells' origins.
 2. Release-signed builds: install and run, reach `https://cup.audio` through `CapacitorHttp`, and carry no debug override, cleartext exception or sign-in fake.
 3. Real Google sign-in: the Android account picker with a real account, switching accounts after signing out, and on iOS Google's page in the sign-in sheet, which the tests replace with the fake auth provider's redirect.
-4. Sharing from real apps: Cup in the Android Sharesheet, sharing from Chrome on iOS, and the `CupShare` handoff on a physical iPhone after each iOS update, each starting the conversion signed in without a further tap.
+4. Sharing from real apps: Cup in the Android Sharesheet, sharing from Safari and from Chrome on iOS, and the `CupShare` handoff on a physical iPhone after each iOS update, each starting the conversion signed in without a further tap, with Cup started by the share and running.
 5. App shell: icons and splash screen, and a tapped `cup.audio` link opening the browser, not the app.
 6. Navigation without loading flashes.
 

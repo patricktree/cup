@@ -36,9 +36,6 @@ const CUP_PAGE_ORIGIN = "capacitor://localhost";
 /** The apps a share from Safari involves. */
 export type ShareApp = "cup" | "safari";
 
-/** What the listener taps in the `CupShare` extension's sheet. */
-export type ShareChoice = "open in cup" | "cancel";
-
 /** The predicates of Safari's system UI that a share from Safari taps through. */
 const SHARE_SHEET = {
   // Safari's compact toolbar has no Share button; Share sits in its More menu.
@@ -46,8 +43,6 @@ const SHARE_SHEET = {
   // In the More menu, the Share button's icon image is labelled "Share" too.
   share: 'type == "XCUIElementTypeButton" AND label == "Share"',
   cup: 'type == "XCUIElementTypeCell" AND label == "Cup"',
-  openInCup: 'type == "XCUIElementTypeButton" AND label == "Open in Cup"',
-  cancel: 'type == "XCUIElementTypeButton" AND label == "Cancel"',
 } as const;
 
 /**
@@ -176,10 +171,10 @@ export class IosAppDevice implements AppDevice {
 
   /**
    * Opens `url` in Safari and shares it through the real Share Sheet: More, Share, Cup in the app
-   * row, then `choice` in the `CupShare` extension's sheet. Fails when Safari's system UI has
-   * changed. Ends right after the tap, without waiting for Cup.
+   * row, and nothing more: the `CupShare` extension hands the URL to Cup on its own. Fails when
+   * Safari's system UI has changed, and ends once Cup is in the foreground.
    */
-  async shareFromSafari(url: string, choice: ShareChoice): Promise<void> {
+  async shareFromSafari(url: string): Promise<void> {
     await this.driver.switchContext("NATIVE_APP");
     await this.driver.execute("mobile: deepLink", { url, bundleId: SAFARI_BUNDLE_ID });
     await this.driver
@@ -190,22 +185,12 @@ export class IosAppDevice implements AppDevice {
     await this.tap(SHARE_SHEET.more, "Safari's More button");
     await this.tap(SHARE_SHEET.share, "Share in Safari's More menu");
     await this.tap(SHARE_SHEET.cup, "Cup in the Share Sheet's app row");
-    if (choice === "open in cup") {
-      const openInCup = this.driver.$(`-ios predicate string:${SHARE_SHEET.openInCup}`);
-      // The extension enables the button once it has read a valid URL from the share.
-      await openInCup.waitForEnabled({
-        timeout: 10_000,
-        timeoutMsg: "Open in Cup stayed disabled.",
-      });
-      await openInCup.click();
-    } else {
-      await this.tap(SHARE_SHEET.cancel, "Cancel in the CupShare sheet");
-      await this.driver.$(`-ios predicate string:${SHARE_SHEET.openInCup}`).waitForExist({
-        reverse: true,
-        timeout: 10_000,
-        timeoutMsg: "The CupShare sheet stayed open.",
-      });
-    }
+    // The `CupShare` extension opens Cup on its own once it has read the page's URL.
+    await waitFor(
+      "Cup in the foreground after the share",
+      async () => ((await this.appState("cup")) === "foreground" ? true : undefined),
+      20_000,
+    );
   }
 
   /** Whether `shareApp` runs, and whether in the foreground. */
