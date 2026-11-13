@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 import { Command, CommanderError } from "@commander-js/extra-typings";
-import fs from "node:fs/promises";
-import path from "node:path";
 
+import { writeKeyFile } from "#src/key-file.ts";
 import { readPlaywrightToolchainKey } from "#src/playwright.ts";
 
 export async function runCli(args: string[]): Promise<number> {
@@ -32,11 +31,6 @@ export async function runCli(args: string[]): Promise<number> {
     console.error(error instanceof Error ? error.message : "Writing the toolchain key failed.");
     return 1;
   }
-}
-
-async function writeKeyFile(file: string, key: unknown): Promise<void> {
-  await fs.mkdir(path.dirname(file), { recursive: true });
-  await fs.writeFile(file, `${JSON.stringify(key, undefined, 2)}\n`);
 }
 
 if (import.meta.main) {

@@ -2022,6 +2022,9 @@ importers:
       '@cup/test-worker':
         specifier: workspace:*
         version: link:../test-worker
+      '@cup/toolchain-key':
+        specifier: workspace:*
+        version: link:../../tooling/toolchain-key
       appium:
         specifier: 3.9.0
         version: 3.9.0(@types/node@26.6.5)

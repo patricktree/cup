@@ -1,10 +1,7 @@
+import { readVersion, type Unreadable } from "@cup/toolchain-key/key-file";
+
 import { findIosRuntime, readXcodeVersion } from "#src/ios/preflight.ts";
-import {
-  readMacosVersion,
-  readVersion,
-  type MacosVersion,
-  type Unreadable,
-} from "#src/toolchain-version.ts";
+import { readMacosVersion, type MacosVersion } from "#src/toolchain-version.ts";
 
 /** The host versions an iOS run depends on beyond the repository's files. */
 export type IosToolchainKey = {

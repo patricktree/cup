@@ -6,8 +6,7 @@ import path from "node:path";
 import url from "node:url";
 import util from "node:util";
 
-/** A version that could not be read, made unique so that a task hashing it never hits the cache. */
-type Unreadable = { unreadable: string; nonce: string };
+import { readVersion, type Unreadable } from "#src/key-file.ts";
 
 export type PlaywrightToolchainKey = {
   /** The tag the Playwright Server image is built from; a new Playwright version changes it. */
@@ -75,22 +74,14 @@ function deriveImageTags(): { playwrightVersion: string; serverImageTag: string 
 
 async function readImageId(imageTag: string): Promise<string | Unreadable> {
   const args = ["image", "inspect", "--format", "{{.Id}}", imageTag];
-  const command = ["docker", ...args];
-  try {
+  // The image is built by the suite's first run, so it is absent before that; Docker may also be
+  // stopped. Either way the suite has to run, and its global setup reports what is wrong.
+  return readVersion(`\`docker ${args.join(" ")}\``, async () => {
     const { stdout } = await execFile("docker", args, { timeout: DOCKER_COMMAND_TIMEOUT_MS });
     const id = stdout.trim();
     if (id === "") {
-      return unreadable(`\`${command.join(" ")}\` printed no image ID`);
+      throw new Error("printed no image ID");
     }
     return id;
-  } catch (error) {
-    // The image is built by the suite's first run, so it is absent before that; Docker may also be
-    // stopped. Either way the suite has to run, and its global setup reports what is wrong.
-    const reason = error instanceof Error ? error.message : String(error);
-    return unreadable(`\`${command.join(" ")}\` failed: ${reason}`);
-  }
-}
-
-function unreadable(reason: string): Unreadable {
-  return { unreadable: reason, nonce: crypto.randomUUID() };
+  });
 }

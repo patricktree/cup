@@ -1,6 +1,6 @@
 # Toolchain key
 
-This CLI writes the versions of the host toolchain an E2E suite runs on to a key file. Each cached E2E Turbo task hashes its key file, so a pass recorded on one toolchain is never replayed on another; [ADR 0024](../../docs/adr/0024-replay-e2e-suite-passes-from-the-turbo-cache-with-a-toolchain-key.md) records the design. The mobile E2E suite writes its Android and iOS keys with its own reader, which reuses the suite's preflight lookups ([mobile E2E tests](../../qa/mobile-e2e/README.md#cached-passes)).
+This CLI writes the versions of the host toolchain an E2E suite runs on to a key file. Each cached E2E Turbo task hashes its key file, so a pass recorded on one toolchain is never replayed on another; [ADR 0024](../../docs/adr/0024-replay-e2e-suite-passes-from-the-turbo-cache-with-a-toolchain-key.md) records the design. The mobile E2E suite writes its Android and iOS keys with its own reader, which reuses the suite's preflight lookups ([mobile E2E tests](../../qa/mobile-e2e/README.md#cached-passes)) and this package's [`key-file`](src/key-file.ts) export for unreadable versions and writing key files.
 
 ## Usage
 

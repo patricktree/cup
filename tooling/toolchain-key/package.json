@@ -12,7 +12,11 @@
     "#src/*": "./src/*"
   },
   "exports": {
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./key-file": {
+      "types": "./dist/types/key-file.d.ts",
+      "default": "./src/key-file.ts"
+    }
   },
   "scripts": {
     "build": "turbo run turbo:build",

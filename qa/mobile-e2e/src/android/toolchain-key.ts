@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { readVersion, type Unreadable } from "@cup/toolchain-key/key-file";
+
 import {
   javaExecutable,
   resolveAndroidSdkRoot,
@@ -8,12 +10,7 @@ import {
   SYSTEM_IMAGE_PACKAGE,
 } from "#src/android/preflight.ts";
 import { run } from "#src/host.ts";
-import {
-  readMacosVersion,
-  readVersion,
-  type MacosVersion,
-  type Unreadable,
-} from "#src/toolchain-version.ts";
+import { readMacosVersion, type MacosVersion } from "#src/toolchain-version.ts";
 
 type SdkPackageRevision = { package: string; revision: string };
 
