@@ -448,7 +448,6 @@ test("a later segment under policy 7 speaks the previous chunk's last sentence, 
     ai,
     previousNarrationChunk: {
       text: "A heading\n\nSome words come first. The first part ends here.",
-      isSameNarrationBlock: false,
     },
     narrationChunk: { text: "Then the chunk begins." },
   });
@@ -463,11 +462,8 @@ test("a segment continuing its narration block joins the overlap with a space", 
   await produceAudioSegment({
     ...createOverlapOptions(),
     ai,
-    previousNarrationChunk: {
-      text: "Some words come first. The first part ends here.",
-      isSameNarrationBlock: true,
-    },
-    narrationChunk: { text: "Then the chunk begins." },
+    previousNarrationChunk: { text: "Some words come first. The first part ends here." },
+    narrationChunk: { text: "Then the chunk begins.", continuesNarrationBlock: true },
   });
 
   expect(synthesisTexts()).toEqual(["The first part ends here. Then the chunk begins."]);
@@ -482,7 +478,7 @@ test.each([
   await produceAudioSegment({
     ...createOverlapOptions(),
     ai,
-    previousNarrationChunk: { text: previousText, isSameNarrationBlock: false },
+    previousNarrationChunk: { text: previousText },
     narrationChunk: { text: "Then the chunk begins." },
   });
 
@@ -498,7 +494,7 @@ test("speech recognition hears the provider audio before the stretch, as MP3, wi
     sequence: 5,
     synthesisAttempt: 2,
     narrationLanguage: "de-AT",
-    previousNarrationChunk: { text: "Der erste Teil endet hier.", isSameNarrationBlock: false },
+    previousNarrationChunk: { text: "Der erste Teil endet hier." },
     narrationChunk: { text: "Dann beginnt der Abschnitt." },
   });
 
@@ -536,7 +532,7 @@ test("speech recognition gets no language when the conversion has no narration l
     ...createOverlapOptions(),
     ai,
     narrationLanguage: undefined,
-    previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+    previousNarrationChunk: { text: "The first part ends here." },
     narrationChunk: { text: "Then the chunk begins." },
   });
 
@@ -550,7 +546,7 @@ test("a policy 7 segment stores the audio from the cut point onward, stretched b
   const segment = await produceAudioSegment({
     ...createOverlapOptions(),
     bucket,
-    previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+    previousNarrationChunk: { text: "The first part ends here." },
     narrationChunk: { text: "Then the chunk begins." },
   });
 
@@ -573,7 +569,7 @@ test("a policy 7 segment whose take has no cut point synthesizes its chunk alone
     ai,
     sequence: 4,
     synthesisAttempt: 3,
-    previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+    previousNarrationChunk: { text: "The first part ends here." },
     narrationChunk: { text: "Then the chunk begins." },
   });
 
@@ -621,7 +617,7 @@ test("a policy 7 segment whose cut check fails synthesizes its chunk alone and l
   await produceAudioSegment({
     ...createOverlapOptions(),
     ai,
-    previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+    previousNarrationChunk: { text: "The first part ends here." },
     narrationChunk: { text: "Then the chunk begins." },
   });
 
@@ -643,7 +639,7 @@ test("a policy 7 segment in a narration language speech recognition does not sup
     ...createOverlapOptions(),
     ai,
     narrationLanguage: "rw",
-    previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+    previousNarrationChunk: { text: "The first part ends here." },
     narrationChunk: { text: "Then the chunk begins." },
   });
 
@@ -675,7 +671,7 @@ test.each([
     const error = await produceAudioSegment({
       ...createOverlapOptions(),
       ai,
-      previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+      previousNarrationChunk: { text: "The first part ends here." },
       narrationChunk: { text: "Then the chunk begins." },
     }).catch((caughtError: unknown) => caughtError);
 
@@ -701,7 +697,7 @@ test.each([408, 500, 503])(
     const error = await produceAudioSegment({
       ...createOverlapOptions(),
       ai,
-      previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+      previousNarrationChunk: { text: "The first part ends here." },
       narrationChunk: { text: "Then the chunk begins." },
     }).catch((caughtError: unknown) => caughtError);
 
@@ -717,6 +713,42 @@ test.each([408, 500, 503])(
   },
 );
 
+test("a policy 7 segment cuts at the cut point when speech recognition returns words without a text or timing", async () => {
+  const fake = createFakeSpeechSynthesisAi();
+  const { ai, synthesisTexts } = createRecordingSpeechAi({
+    fake,
+    recognize: async (model, inputs, options) => {
+      const response = await fake.run(model, inputs, options);
+      const { text, segments } = z
+        .object({
+          text: z.string(),
+          segments: z.tuple([z.object({ words: z.array(z.record(z.string(), z.unknown())) })]),
+        })
+        .parse(await response.json());
+      const words = segments[0].words;
+      // Words far from the chunk start lack a field each; one is not an object at all.
+      const incompleteWords = [
+        { start: words[0]?.["start"], end: words[0]?.["end"] },
+        { ...words[1], start: undefined },
+        { ...words[2], end: null },
+        null,
+        ...words.slice(3),
+      ];
+
+      return Response.json({ text, segments: [{ words: incompleteWords }] });
+    },
+  });
+
+  await produceAudioSegment({
+    ...createOverlapOptions(),
+    ai,
+    previousNarrationChunk: { text: "The first part ends here." },
+    narrationChunk: { text: "Then the chunk begins." },
+  });
+
+  expect(synthesisTexts()).toEqual(["The first part ends here.\n\nThen the chunk begins."]);
+});
+
 test("an invalid speech recognition response is permanent", async () => {
   const { ai } = createRecordingSpeechAi({
     recognize: async () => Response.json({ unexpected: true }),
@@ -726,7 +758,7 @@ test("an invalid speech recognition response is permanent", async () => {
     produceAudioSegment({
       ...createOverlapOptions(),
       ai,
-      previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+      previousNarrationChunk: { text: "The first part ends here." },
       narrationChunk: { text: "Then the chunk begins." },
     }),
   ).rejects.toBeInstanceOf(PermanentNarrationSynthesisError);
@@ -747,7 +779,7 @@ test.each([
       ...createOverlapOptions(),
       ai,
       speechConfig,
-      previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+      previousNarrationChunk: { text: "The first part ends here." },
       narrationChunk: { text: "Then the chunk begins." },
     });
 

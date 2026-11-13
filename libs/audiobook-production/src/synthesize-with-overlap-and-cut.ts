@@ -5,26 +5,17 @@ import { countSynthesizedWords, findCutPoint } from "#src/find-cut-point.ts";
 import { recognizeSpeech } from "#src/recognize-speech.ts";
 import { getSpeechRecognitionLanguage } from "#src/speech-recognition-language.ts";
 import type {
+  NarrationChunk,
   SpeechSynthesisAi,
   SpeechSynthesizer,
   SynthesisOptions,
 } from "#src/speech-synthesis.ts";
 
-/** The narration chunk before the one an audio segment speaks. */
-export type PreviousNarrationChunk = {
-  text: string;
-  /**
-   * Whether the segment's narration chunk continues the narration block this chunk belongs to, as
-   * the chunks of an oversized narration block do.
-   */
-  isSameNarrationBlock: boolean;
-};
-
 type OverlapAndCutFallbackReason = "no-cut-point" | "cut-check-failed" | "language-unrecognized";
 
-// A split narration block reads on mid-paragraph; other narration chunks meet at the narration
-// element separator narration chunks already use.
-const SAME_BLOCK_SEPARATOR = " ";
+// A chunk that continues its narration block reads on mid-paragraph; other narration chunks meet
+// at the narration element separator narration chunks already use.
+const BLOCK_CONTINUATION_SEPARATOR = " ";
 const PARAGRAPH_SEPARATOR = "\n\n";
 
 /**
@@ -38,10 +29,18 @@ export async function synthesizeWithOverlapAndCut(
   options: SynthesisOptions & {
     ai: SpeechSynthesisAi;
     synthesize: SpeechSynthesizer;
-    previousNarrationChunk: PreviousNarrationChunk;
+    previousNarrationChunk: NarrationChunk;
+    /** Whether the narration chunk continues the previous chunk's narration block. */
+    continuesNarrationBlock: boolean;
   },
 ): Promise<Uint8Array> {
-  const { synthesize, previousNarrationChunk, narrationText, narrationLanguage } = options;
+  const {
+    synthesize,
+    previousNarrationChunk,
+    continuesNarrationBlock,
+    narrationText,
+    narrationLanguage,
+  } = options;
 
   const recognitionLanguage =
     narrationLanguage === undefined ? undefined : getSpeechRecognitionLanguage(narrationLanguage);
@@ -50,9 +49,7 @@ export async function synthesizeWithOverlapAndCut(
   }
 
   const overlapSentence = selectLastSentence(previousNarrationChunk.text, narrationLanguage);
-  const separator = previousNarrationChunk.isSameNarrationBlock
-    ? SAME_BLOCK_SEPARATOR
-    : PARAGRAPH_SEPARATOR;
+  const separator = continuesNarrationBlock ? BLOCK_CONTINUATION_SEPARATOR : PARAGRAPH_SEPARATOR;
   const synthesizedText = `${overlapSentence}${separator}${narrationText}`;
 
   const providerPcm = await synthesize({ ...options, narrationText: synthesizedText });

@@ -153,6 +153,31 @@ test("cuts after a one-word heading spoken as the overlap", () => {
   expect(result).toMatchObject({ isAccepted: true, cutPointSeconds: 1 });
 });
 
+test("cuts before a one-word heading that opens the narration chunk when Whisper stretches the heading over the pause after it", () => {
+  const overlapSentence = "The first part ends here.";
+  const spokenWords = [
+    word("The", 0, 0.2),
+    word("first", 0.3, 0.6),
+    word("part", 0.7, 0.9),
+    word("ends", 1, 1.2),
+    word("here.", 1.3, 1.6),
+    word("Results", 1.9, 2.4),
+    word("The", 3.2, 3.4),
+    word("text", 3.5, 3.8),
+    word("begins.", 3.9, 4.4),
+  ];
+  const recognizedWords = spokenWords.with(5, word("Results", 1.9, 3.15));
+
+  const result = findCutPoint({
+    synthesizedText: `${overlapSentence}\n\nResults\n\nThe text begins.`,
+    chunkStartWordIndex: countSynthesizedWords(overlapSentence),
+    recognizedWords,
+    providerPcm: createSpeechPcm(spokenWords, 4.5),
+  });
+
+  expect(result).toMatchObject({ isAccepted: true, cutPointSeconds: 1.75 });
+});
+
 test("fails with no-cut-point when no recognized word aligns with the synthesized text", () => {
   const overlapSentence = "The first part ends here.";
   const recognizedWords = [word("Something", 0, 0.5), word("else", 1.5, 2)];
@@ -279,7 +304,7 @@ test("fails the cut check when the overlap runs into the chunk without any silen
     isAccepted: false,
     reason: "cut-check-failed",
     evidence: {
-      cutPointSeconds: 0.6,
+      cutPointSeconds: 0.3,
       silentRunMilliseconds: 0,
       overlapWordDistance: 0,
       chunkWordDistance: 0,

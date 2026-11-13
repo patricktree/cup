@@ -22,14 +22,30 @@ export type RecognizeSpeechOptions = {
 const RECOGNITION_GATEWAY_ID = "default";
 const RECOGNITION_REQUEST_TIMEOUT_MILLISECONDS = 90_000;
 
+const WHISPER_WORD_SCHEMA = z
+  .object({ word: z.string(), start: z.number(), end: z.number() })
+  .transform(({ word, start, end }): RecognizedWord => ({
+    word,
+    startSeconds: start,
+    endSeconds: end,
+  }));
+
 const WHISPER_OUTPUT_SCHEMA = z.object({
   text: z.string(),
   segments: z
     .array(
       z.object({
+        // A word without its text or timing is dropped, so alignment and the cut check decide
+        // whether the remaining words place a cut point.
         words: z
-          .array(z.object({ word: z.string(), start: z.number(), end: z.number() }))
-          .optional(),
+          .array(z.unknown())
+          .optional()
+          .transform((words = []) =>
+            words.flatMap((word) => {
+              const recognizedWord = WHISPER_WORD_SCHEMA.safeParse(word);
+              return recognizedWord.success ? [recognizedWord.data] : [];
+            }),
+          ),
       }),
     )
     .optional(),
@@ -37,9 +53,10 @@ const WHISPER_OUTPUT_SCHEMA = z.object({
 
 /**
  * Runs speech recognition on the provider audio of an overlap take and returns the words it heard,
- * with their timings. Errors are classified as synthesis provider errors are: a rate limit raises
- * `RateLimitedNarrationSynthesisError`, a timeout or server error a plain retryable error, and
- * every other failure, an invalid response included, `PermanentNarrationSynthesisError`.
+ * with their timings, leaving out every word that lacks its text or timing. Errors are classified
+ * as synthesis provider errors are: a rate limit raises `RateLimitedNarrationSynthesisError`, a
+ * timeout or server error a plain retryable error, and every other failure, a response that does
+ * not parse included, `PermanentNarrationSynthesisError`.
  */
 export async function recognizeSpeech({
   ai,
@@ -89,9 +106,7 @@ export async function recognizeSpeech({
     );
   }
 
-  return (output.data.segments ?? []).flatMap(({ words = [] }) =>
-    words.map(({ word, start, end }) => ({ word, startSeconds: start, endSeconds: end })),
-  );
+  return (output.data.segments ?? []).flatMap(({ words }) => words);
 }
 
 const ERROR_BODY_SCHEMA = z.union([

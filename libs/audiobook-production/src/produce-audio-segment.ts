@@ -12,8 +12,7 @@ import {
 } from "#src/audio-segment-storage.ts";
 import { calculateCrc32 } from "#src/crc32.ts";
 import {
-  getSpeedFactor,
-  isOverlapAndCutSpeechConfig,
+  getSpeechPolicyTraits,
   SPEECH_CONFIG,
   type SpeechConfig,
 } from "#src/speech-synthesis-config.ts";
@@ -25,11 +24,7 @@ import type {
 } from "#src/speech-synthesis.ts";
 import { synthesizeElevenLabsAudio } from "#src/synthesize-elevenlabs-audio.ts";
 import { synthesizeGeminiAudio } from "#src/synthesize-gemini-audio.ts";
-import {
-  synthesizeWithOverlapAndCut,
-  type PreviousNarrationChunk,
-} from "#src/synthesize-with-overlap-and-cut.ts";
-export type { PreviousNarrationChunk } from "#src/synthesize-with-overlap-and-cut.ts";
+import { synthesizeWithOverlapAndCut } from "#src/synthesize-with-overlap-and-cut.ts";
 export {
   PermanentNarrationSynthesisError,
   RateLimitedNarrationSynthesisError,
@@ -74,7 +69,7 @@ export type ProduceOptions = {
    * The narration chunk before this one, which speech policy 7 overlaps; absent for the first audio
    * segment, and required for every later one under speech policy 7.
    */
-  previousNarrationChunk?: PreviousNarrationChunk | undefined;
+  previousNarrationChunk?: NarrationChunk | undefined;
   synthesisAttempt?: number;
   synthesisResponseMode?: NarrationSynthesisResponseMode;
 };
@@ -129,22 +124,26 @@ export async function produceAudioSegment({
     synthesisAttempt,
     synthesisResponseMode,
   };
+  const { narrationPace, isOverlapAndCut } = getSpeechPolicyTraits(speechConfig);
   // The first audio segment has nothing to overlap, so it starts as policy 6 does.
   const providerAudio =
-    isOverlapAndCutSpeechConfig(speechConfig) && sequence > 0
+    isOverlapAndCut && sequence > 0
       ? await synthesizeWithOverlapAndCut({
           ...synthesisOptions,
           synthesize,
           previousNarrationChunk: requirePreviousNarrationChunk(previousNarrationChunk, sequence),
+          continuesNarrationBlock: narrationChunk.continuesNarrationBlock === true,
         })
       : await synthesize(synthesisOptions);
-  const speedFactor = getSpeedFactor(speechConfig);
   // The stretch runs before encoding, so the stored audio and every duration measured from it,
   // such as generated audio duration and synchronization unit offsets, carry the speech policy's narration pace.
   const pcmAtPolicyPace =
-    speedFactor === 1
+    narrationPace === 1
       ? providerAudio
-      : await stretchPcm(providerAudio, { sampleRate: AUDIO_FORMAT.sampleRate, speedFactor });
+      : await stretchPcm(providerAudio, {
+          sampleRate: AUDIO_FORMAT.sampleRate,
+          speedFactor: narrationPace,
+        });
   const encodedAudio = await encodePcmAsMp3(pcmAtPolicyPace, {
     bitrateKilobitsPerSecond: AUDIO_FORMAT.bitrateKilobitsPerSecond,
     sampleRate: AUDIO_FORMAT.sampleRate,
@@ -200,9 +199,9 @@ function assertAudioSegmentIdentity(conversionId: string, sequence: number): voi
 }
 
 function requirePreviousNarrationChunk(
-  previousNarrationChunk: PreviousNarrationChunk | undefined,
+  previousNarrationChunk: NarrationChunk | undefined,
   sequence: number,
-): PreviousNarrationChunk {
+): NarrationChunk {
   if (previousNarrationChunk === undefined) {
     throw new Error(
       `Speech policy 7 needs the previous narration chunk of audio segment ${sequence}`,

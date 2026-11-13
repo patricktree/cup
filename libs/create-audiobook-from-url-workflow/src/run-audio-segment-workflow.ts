@@ -54,12 +54,7 @@ export async function runAudioSegmentWorkflow({
   const previousUnit =
     sequence === 0 ? undefined : audiobook.narrationDocument.synchronizationUnits[sequence - 1];
   const previousNarrationChunk =
-    previousUnit === undefined
-      ? undefined
-      : {
-          text: previousUnit.narrationText,
-          isSameNarrationBlock: unit.continuesNarrationBlock === true,
-        };
+    previousUnit === undefined ? undefined : { text: previousUnit.narrationText };
 
   const synthesize = (rateLimitWaits: number) =>
     step.do(
@@ -87,7 +82,10 @@ export async function runAudioSegmentWorkflow({
             conversionId,
             artifactPrefix: prefix,
             sequence,
-            narrationChunk: { text: unit.narrationText },
+            narrationChunk: {
+              text: unit.narrationText,
+              continuesNarrationBlock: unit.continuesNarrationBlock,
+            },
             previousNarrationChunk,
             speechConfig: audiobook.speechConfig,
             // Only the loaded manifest decides the language, so retries keep the stored one.

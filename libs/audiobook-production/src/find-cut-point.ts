@@ -62,9 +62,10 @@ export function countSynthesizedWords(text: string): number {
  *
  * Aligns the synthesized text with the recognized words and cuts in the middle of the longest
  * silent run between the aligned words on either side of the chunk start. The cut check accepts the
- * cut point only when an aligned word lies at most two words from the chunk start on each side and
- * the silent run lasts at least 150 ms. Exact edge words and chunk coverage are not gated, since
- * number, unit and name spellings would raise false alarms.
+ * cut point only when it lies between the last aligned word of the overlap sentence and the first
+ * aligned word of the chunk, an aligned word lies at most two words from the chunk start on each
+ * side, and the silent run lasts at least 150 ms. Exact edge words and chunk coverage are not
+ * gated, since number, unit and name spellings would raise false alarms.
  */
 export function findCutPoint({
   synthesizedText,
@@ -90,12 +91,14 @@ export function findCutPoint({
   );
 
   const frameLevels = measureFrameLevels(providerPcm);
-  // Whisper stretches word ends over pauses, so the search spans both edge words whole.
+  // Whisper stretches word ends over pauses, so the search starts where the overlap's last aligned
+  // word starts, and it ends where the chunk's first aligned word starts: a cut after that word
+  // would drop it, such as a one-word heading that opens the chunk.
   const spanStartSeconds = lastPairBeforeChunk
     ? recognizedWords[lastPairBeforeChunk.recognizedIndex]!.startSeconds
     : 0;
   const spanEndSeconds = firstPairOfChunk
-    ? recognizedWords[firstPairOfChunk.recognizedIndex]!.endSeconds
+    ? recognizedWords[firstPairOfChunk.recognizedIndex]!.startSeconds
     : frameLevels.length / FRAMES_PER_SECOND;
 
   const silentRun = findLongestSilentRun(
@@ -120,8 +123,11 @@ export function findCutPoint({
       : undefined,
   };
 
-  // With an aligned word on each side, the cut point lies between them by construction of the span.
+  // Out-of-order word timings can leave the span empty, so the cut check tests that the cut point
+  // lies between the edge words rather than assuming it.
+  const isBetweenEdgeWords = spanStartSeconds < cutPointSeconds && cutPointSeconds < spanEndSeconds;
   const isAccepted =
+    isBetweenEdgeWords &&
     evidence.overlapWordDistance !== undefined &&
     evidence.overlapWordDistance <= MAX_ALIGNED_WORD_DISTANCE &&
     evidence.chunkWordDistance !== undefined &&

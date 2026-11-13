@@ -9,8 +9,8 @@ export type SpeechConfig = {
  * Speech policy 7 sends policy 6's request, except that every audio segment after the first speaks
  * the previous narration chunk's last whole sentence in front of its own narration chunk, and cuts
  * that overlap away at the cut point speech recognition finds (overlap and cut, see
- * `produceAudioSegment`). It keeps policy 6's narration pace, `POLICY_6_SPEED_FACTOR` (see
- * `getSpeedFactor`).
+ * `produceAudioSegment`). It keeps policy 6's narration pace, `POLICY_6_NARRATION_PACE` (see
+ * `getSpeechPolicyTraits`).
  */
 export const GEMINI_SPEECH_CONFIG = {
   provider: "google-ai-studio",
@@ -83,28 +83,45 @@ export function isSameSpeechConfig(left: SpeechConfig, right: SpeechConfig): boo
   );
 }
 
-/** Tells whether a speech configuration produces its audio segments with overlap and cut. */
-export function isOverlapAndCutSpeechConfig(speechConfig: SpeechConfig): boolean {
-  return speechConfig.provider === "google-ai-studio" && speechConfig.policyVersion === "7";
-}
+/** What a speech policy does to the provider audio, beyond the request it sends. */
+type SpeechPolicyTraits = {
+  /** The factor by which the provider audio is sped up before encoding; 1 keeps it unstretched. */
+  narrationPace: number;
+  /** Whether every audio segment after the first is produced with overlap and cut. */
+  isOverlapAndCut: boolean;
+};
 
 // Picked by ear from Sonic renders between 1.05 and 1.20 (patricktree/cup#266).
-const POLICY_6_SPEED_FACTOR = 1.05;
+const POLICY_6_NARRATION_PACE = 1.05;
+
+const PROVIDER_AUDIO_AS_IS = {
+  narrationPace: 1,
+  isOverlapAndCut: false,
+} as const satisfies SpeechPolicyTraits;
 
 /**
- * Returns the factor by which a speech configuration speeds up the provider audio before encoding.
- * The factor follows from the provider and policy version rather than a configuration field, so a
- * stored manifest or segment needs no further metadata to tell its narration pace: Gemini speech
- * policies 6 and 7 speed up by `POLICY_6_SPEED_FACTOR`, every other policy keeps the provider audio
- * unstretched. It is keyed by the policy rather than by `GEMINI_SPEECH_CONFIG`, so manifests keep
- * their pace after a later policy becomes the deployment configuration.
+ * Speech policy traits by provider and policy version; a policy not listed keeps the provider audio
+ * as it is. They follow from the policy rather than a configuration field, so a stored manifest or
+ * segment needs no further metadata to tell its narration pace, and they are keyed by the policy
+ * rather than by `GEMINI_SPEECH_CONFIG`, so manifests keep their traits after a later policy
+ * becomes the deployment configuration.
  */
-export function getSpeedFactor(speechConfig: SpeechConfig): number {
-  const isGeminiPolicyAtPolicy6Pace =
-    speechConfig.provider === "google-ai-studio" &&
-    (speechConfig.policyVersion === "6" || speechConfig.policyVersion === "7");
+const SPEECH_POLICY_TRAITS_BY_PROVIDER = {
+  "google-ai-studio": {
+    "6": { narrationPace: POLICY_6_NARRATION_PACE, isOverlapAndCut: false },
+    "7": { narrationPace: POLICY_6_NARRATION_PACE, isOverlapAndCut: true },
+  },
+  elevenlabs: {},
+} as const satisfies {
+  [provider in SpeechConfig["provider"]]: Readonly<Record<string, SpeechPolicyTraits>>;
+};
 
-  return isGeminiPolicyAtPolicy6Pace ? POLICY_6_SPEED_FACTOR : 1;
+/** Returns the traits of a speech configuration's speech policy. */
+export function getSpeechPolicyTraits(speechConfig: SpeechConfig): SpeechPolicyTraits {
+  const traitsByPolicyVersion: Readonly<Partial<Record<string, SpeechPolicyTraits>>> =
+    SPEECH_POLICY_TRAITS_BY_PROVIDER[speechConfig.provider];
+
+  return traitsByPolicyVersion[speechConfig.policyVersion] ?? PROVIDER_AUDIO_AS_IS;
 }
 
 /**

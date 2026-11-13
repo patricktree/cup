@@ -4,7 +4,6 @@ export {
   produceAudioSegment,
   type NarrationChunk,
   type NarrationSynthesisResponseMode,
-  type PreviousNarrationChunk,
   type ProduceOptions,
   type SpeechSynthesisAi,
 } from "#src/produce-audio-segment.ts";

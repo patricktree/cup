@@ -22,6 +22,11 @@ export type SpeechSynthesizer = (options: SynthesisOptions) => Promise<Uint8Arra
 /** One normalized text input for narration synthesis. */
 export type NarrationChunk = {
   text: string;
+  /**
+   * Whether this chunk continues the narration block the chunk before it belongs to, as the later
+   * chunks of an oversized narration block do; the manifest's synchronization unit records it.
+   */
+  continuesNarrationBlock?: boolean | undefined;
 };
 
 /** Identifies a provider failure that cannot succeed when repeated unchanged. */
