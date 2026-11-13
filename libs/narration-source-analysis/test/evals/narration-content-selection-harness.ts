@@ -26,7 +26,7 @@ export type NarrationContentSelectionEvalInput = {
  * A synchronization unit as plain JSON: harness output must be a JSON value, which an optional
  * property is not under `exactOptionalPropertyTypes`.
  */
-export type EvalSynchronizationUnit =
+type EvalSynchronizationUnit =
   | { id: string; narrationText: string }
   | { id: string; narrationText: string; continuesNarrationBlock: true };
 
