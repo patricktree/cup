@@ -266,7 +266,7 @@ _Avoid_: transcript, transcription
 
 ## synchronization unit
 
-The smallest independently navigable portion of a narration document associated with one continuous interval of narration audio. Each unit has its own audio segment and starts in the narration track at the sum of the durations of the preceding segments; a position in the track is that start plus the offset within the unit's audio.
+The smallest independently navigable portion of a narration document associated with one continuous interval of narration audio. Each unit has its own audio segment and starts in the narration track at the sum of the durations of the preceding segments; a position in the track is that start plus the offset within the unit's audio. A unit made from a narration chunk after the first one of a divided narration block records that it continues that block.
 
 _Avoid_: sentence, paragraph, narration chunk, synchronization cue
 

@@ -40,7 +40,10 @@ export type { GrantConversionSnapshot, GrantConversions, GrantState };
 
 const durationBalanceResponseSchema = z.object(durationBalanceSchema.shape);
 const accountDurationBalanceResponseSchema = z.object(accountDurationBalanceSchema.shape);
-const synchronizationUnitResponseSchema = z.object(SYNCHRONIZATION_UNIT_SCHEMA.shape);
+// Segment synthesis alone reads whether a unit continues its narration block.
+const synchronizationUnitResponseSchema = z.object(
+  SYNCHRONIZATION_UNIT_SCHEMA.pick({ id: true, narrationText: true }).shape,
+);
 /** The saved-position request body and the position in audiobook responses. */
 export const playbackPositionSchema = z.object(sharedPlaybackPositionSchema.shape);
 
