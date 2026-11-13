@@ -35,10 +35,10 @@ const OFFSCREEN_TRANSFORM = "translateY(calc(100% + 24px))";
  * with a close button beside it, then the content. It slides up when it opens and back down when it
  * closes. Pulling it down closes it: by touch anywhere on the sheet, by mouse anywhere outside the
  * content (the grabber, the title row and the blank space around them), so text in the content
- * stays selectable. Escape and a press outside close it too. Base UI marks no starting style on a
- * sheet mounted open, so `@starting-style` slides that one in as well. Opening focuses the sheet
- * itself, not a control in it: a focused field would raise the on-screen keyboard over the sheet,
- * and a focused button would show its focus ring.
+ * stays selectable. Escape and a press outside close it too. The slide in is an animation that runs
+ * on mount, so a sheet mounted open slides in as well. Opening focuses the sheet itself, not a
+ * control in it: a focused field would raise the on-screen keyboard over the sheet, and a focused
+ * button would show its focus ring.
  */
 export const DSSheet: React.FC<DSSheetProps> = ({
   open,
@@ -74,18 +74,11 @@ export const DSSheet: React.FC<DSSheetProps> = ({
             /* the backdrop fades as the sheet is pulled down */
             opacity: calc(1 - var(--drawer-swipe-progress));
 
-            &[data-starting-style],
-            &[data-ending-style],
-            &[data-closed] {
-              opacity: 0;
-            }
-
-            @starting-style {
-              opacity: 0;
-            }
-
             @media (prefers-reduced-motion: no-preference) {
+              /* fades back in after a pull too short to close the sheet */
               transition: opacity ${SLIDE_DURATION} ${SLIDE_EASING};
+              /* animations with a fill, not transitions, for the reason on the popup's */
+              animation: sheet-backdrop-fade-in ${SLIDE_DURATION} ${SLIDE_EASING} both;
 
               &[data-swiping] {
                 transition-duration: 0ms;
@@ -93,7 +86,20 @@ export const DSSheet: React.FC<DSSheetProps> = ({
 
               &[data-ending-style],
               &[data-closed] {
-                transition-duration: ${CLOSE_DURATION};
+                animation: sheet-backdrop-fade-out ${CLOSE_DURATION} ${SLIDE_EASING} forwards;
+              }
+            }
+
+            /* the missing keyframe stands for the faded value above, so a pull still fades it */
+            @keyframes sheet-backdrop-fade-in {
+              from {
+                opacity: 0;
+              }
+            }
+
+            @keyframes sheet-backdrop-fade-out {
+              to {
+                opacity: 0;
               }
             }
           `}
@@ -142,26 +148,37 @@ export const DSSheet: React.FC<DSSheetProps> = ({
                 user-select: none;
               }
 
-              &[data-starting-style],
-              &[data-ending-style],
-              &[data-closed] {
-                transform: ${OFFSCREEN_TRANSFORM};
-              }
-
-              @starting-style {
-                transform: ${OFFSCREEN_TRANSFORM};
-              }
-
               @media (prefers-reduced-motion: no-preference) {
+                /* settles back after a pull too short to close the sheet */
                 transition: transform ${SLIDE_DURATION} ${SLIDE_EASING};
-
                 /*
-                 * still once closed: Base UI drops the ending style on the last frame, and WebKit
-                 * restarts a transition whose duration changes, so the sheet flashed back for a frame
+                 * Sliding in and away are animations that hold their end with a fill, not
+                 * transitions: in WebKit, a transform transition or unfilled animation sampled in
+                 * its last millisecond showed the value from about a frame after its start, so the
+                 * sheet flashed back toward where it started for a frame.
                  */
+                animation: sheet-slide-in ${SLIDE_DURATION} ${SLIDE_EASING} both;
+
+                /* still once closed: Base UI drops the ending style on the last frame */
                 &[data-ending-style],
                 &[data-closed] {
-                  transition-duration: ${CLOSE_DURATION};
+                  animation: sheet-slide-out ${CLOSE_DURATION} ${SLIDE_EASING} forwards;
+                }
+              }
+
+              /*
+               * The missing keyframe stands for the transform above, so a pull still moves the
+               * opened sheet, and a pull that closes it slides it away from where it was let go.
+               */
+              @keyframes sheet-slide-in {
+                from {
+                  transform: ${OFFSCREEN_TRANSFORM};
+                }
+              }
+
+              @keyframes sheet-slide-out {
+                to {
+                  transform: ${OFFSCREEN_TRANSFORM};
                 }
               }
             `}
