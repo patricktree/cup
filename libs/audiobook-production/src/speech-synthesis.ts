@@ -1,8 +1,18 @@
 import type { SpeechConfig } from "#src/speech-synthesis-config.ts";
 
-/** Minimal AI gateway operations required for speech synthesis. */
+export const SPEECH_RECOGNITION_MODEL = "@cf/openai/whisper-large-v3-turbo";
+
+/**
+ * Minimal AI operations required for audio segment production: speech synthesis through the AI
+ * gateway, and speech recognition as a Workers AI model run.
+ */
 export type SpeechSynthesisAi = {
   gateway(gatewayId: string): Pick<AiGateway, "run">;
+  run: (
+    model: typeof SPEECH_RECOGNITION_MODEL,
+    inputs: Ai_Cf_Openai_Whisper_Large_V3_Turbo_Input,
+    options: AiOptions & { returnRawResponse: true },
+  ) => Promise<Response>;
 };
 
 export type NarrationSynthesisResponseMode = "streaming" | "non-streaming";
@@ -31,7 +41,7 @@ export class RateLimitedNarrationSynthesisError extends Error {
 }
 
 export type SynthesisOptions = {
-  ai: SpeechSynthesisAi;
+  ai: Pick<SpeechSynthesisAi, "gateway">;
   conversionId: string;
   narrationText: string;
   sequence: number;

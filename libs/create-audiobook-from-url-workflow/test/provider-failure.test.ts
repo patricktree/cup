@@ -944,11 +944,12 @@ const GEMINI_REQUEST_SCHEMA = z.object({
 
 /** Wraps the fake speech AI to record the language-bearing fields of each Gemini request. */
 function createRecordingSpeechSynthesisAi() {
-  const fakeGateway = createFakeSpeechSynthesisAi().gateway("default");
+  const fakeAi = createFakeSpeechSynthesisAi();
+  const fakeGateway = fakeAi.gateway("default");
   const run = vi.fn<ReturnType<SpeechSynthesisAi["gateway"]>["run"]>(
     fakeGateway.run.bind(fakeGateway),
   );
-  const ai: SpeechSynthesisAi = { gateway: () => ({ run }) };
+  const ai: SpeechSynthesisAi = { gateway: () => ({ run }), run: fakeAi.run };
   const speechRequests = () =>
     run.mock.calls.map(([request]) => {
       const { query } = GEMINI_REQUEST_SCHEMA.parse(request);

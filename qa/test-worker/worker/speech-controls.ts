@@ -20,6 +20,7 @@ export function createTrackedSpeechProvider(bucket: R2Bucket, scenario: string):
         : { durationMilliseconds: 5_000 },
   );
   return {
+    run: provider.run,
     gateway: (gatewayId) => ({
       run: async (request, options) => {
         const conversionId = options?.gateway?.metadata?.["conversionId"];

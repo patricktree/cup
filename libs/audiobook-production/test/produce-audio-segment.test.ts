@@ -1,15 +1,21 @@
 import { expect, test, vi } from "vitest";
+import { z } from "zod";
 
+import { analyzeMp3 } from "#src/audio-format.ts";
 import {
   PermanentNarrationSynthesisError,
   produceAudioSegment,
+  RateLimitedNarrationSynthesisError,
   type ProduceOptions,
   type SpeechSynthesisAi,
 } from "#src/produce-audio-segment.ts";
 import { createFakeSpeechSynthesisAi } from "#src/speech-synthesis-ai.fake.ts";
 import {
+  ELEVENLABS_SPEECH_CONFIG,
   GEMINI_SPEECH_CONFIG,
+  GEMINI_V7_SPEECH_CONFIG,
   LEGACY_GEMINI_V3_SPEECH_CONFIG,
+  LEGACY_GEMINI_V4_SPEECH_CONFIG,
   LEGACY_GEMINI_V5_SPEECH_CONFIG,
 } from "#src/speech-synthesis-config.ts";
 
@@ -373,6 +379,8 @@ test("a segment of a manifest prepared under policy 5 keeps the provider PCM's d
 test.each([
   ["policy 5", "policy 6", LEGACY_GEMINI_V5_SPEECH_CONFIG, GEMINI_SPEECH_CONFIG],
   ["policy 6", "policy 5", GEMINI_SPEECH_CONFIG, LEGACY_GEMINI_V5_SPEECH_CONFIG],
+  ["policy 6", "policy 7", GEMINI_SPEECH_CONFIG, GEMINI_V7_SPEECH_CONFIG],
+  ["policy 7", "policy 6", GEMINI_V7_SPEECH_CONFIG, GEMINI_SPEECH_CONFIG],
 ] as const)(
   "does not reuse a stored %s segment for a %s conversion",
   async (_storedPolicy, _conversionPolicy, storedSpeechConfig, speechConfig) => {
@@ -395,6 +403,7 @@ test.each([
 test.each([
   ["policy 5", LEGACY_GEMINI_V5_SPEECH_CONFIG],
   ["policy 6", GEMINI_SPEECH_CONFIG],
+  ["policy 7", GEMINI_V7_SPEECH_CONFIG],
 ] as const)(
   "reuses a stored %s segment for a conversion of the same policy",
   async (_, speechConfig) => {
@@ -415,9 +424,390 @@ test.each([
   },
 );
 
+test("the first segment under policy 7 sends its narration chunk alone and calls no speech recognition", async () => {
+  const { ai, synthesisTexts, recognitionCalls } = createRecordingSpeechAi();
+
+  await produceAudioSegment({
+    ...createOverlapOptions(),
+    ai,
+    sequence: 0,
+    narrationChunk: { text: "The article starts here." },
+  });
+
+  expect(synthesisTexts()).toEqual(["The article starts here."]);
+  expect(recognitionCalls).toHaveLength(0);
+});
+
+test("a later segment under policy 7 speaks the previous chunk's last sentence, a paragraph break and its chunk", async () => {
+  const { ai, synthesisTexts, recognitionCalls } = createRecordingSpeechAi();
+
+  await produceAudioSegment({
+    ...createOverlapOptions(),
+    ai,
+    previousNarrationChunk: {
+      text: "A heading\n\nSome words come first. The first part ends here.",
+      isSameNarrationBlock: false,
+    },
+    narrationChunk: { text: "Then the chunk begins." },
+  });
+
+  expect(synthesisTexts()).toEqual(["The first part ends here.\n\nThen the chunk begins."]);
+  expect(recognitionCalls).toHaveLength(1);
+});
+
+test("a segment continuing its narration block joins the overlap with a space", async () => {
+  const { ai, synthesisTexts } = createRecordingSpeechAi();
+
+  await produceAudioSegment({
+    ...createOverlapOptions(),
+    ai,
+    previousNarrationChunk: {
+      text: "Some words come first. The first part ends here.",
+      isSameNarrationBlock: true,
+    },
+    narrationChunk: { text: "Then the chunk begins." },
+  });
+
+  expect(synthesisTexts()).toEqual(["The first part ends here. Then the chunk begins."]);
+});
+
+test.each([
+  ["a single sentence", "The first part ends here."],
+  ["a single line without a sentence end", "Step 2: Write unambiguous tasks"],
+])("a previous chunk of %s is overlapped whole", async (_, previousText) => {
+  const { ai, synthesisTexts } = createRecordingSpeechAi();
+
+  await produceAudioSegment({
+    ...createOverlapOptions(),
+    ai,
+    previousNarrationChunk: { text: previousText, isSameNarrationBlock: false },
+    narrationChunk: { text: "Then the chunk begins." },
+  });
+
+  expect(synthesisTexts()).toEqual([`${previousText}\n\nThen the chunk begins.`]);
+});
+
+test("speech recognition hears the provider audio before the stretch, as MP3, with the gateway metadata", async () => {
+  const { ai, recognitionCalls } = createRecordingSpeechAi();
+
+  await produceAudioSegment({
+    ...createOverlapOptions(),
+    ai,
+    sequence: 5,
+    synthesisAttempt: 2,
+    narrationLanguage: "de-AT",
+    previousNarrationChunk: { text: "Der erste Teil endet hier.", isSameNarrationBlock: false },
+    narrationChunk: { text: "Dann beginnt der Abschnitt." },
+  });
+
+  const [{ inputs, options }] = z
+    .tuple([z.object({ inputs: z.unknown(), options: z.unknown() })])
+    .parse(recognitionCalls);
+  const { audio } = z.object({ audio: z.string() }).parse(inputs);
+  // 9 words of 200 ms, 7 gaps of 50 ms and a pause of 400 ms after the overlap sentence:
+  // 2,550 ms of provider audio, plus two MP3 frames of encoder overhead.
+  expect(
+    Math.abs(
+      analyzeMp3(decodeBase64(audio)).durationMilliseconds -
+        (2_550 + ENCODER_OVERHEAD_MILLISECONDS),
+    ),
+  ).toBeLessThanOrEqual(MP3_FRAME_DURATION_MILLISECONDS);
+  expect(inputs).toMatchObject({ language: "de" });
+  expect(options).toMatchObject({
+    gateway: {
+      collectLog: true,
+      id: "default",
+      metadata: {
+        conversionId: CONVERSION_ID,
+        narrationSegmentSequence: 5,
+        synthesisAttempt: 2,
+      },
+    },
+    returnRawResponse: true,
+  });
+});
+
+test("speech recognition gets no language when the conversion has no narration language", async () => {
+  const { ai, recognitionCalls } = createRecordingSpeechAi();
+
+  await produceAudioSegment({
+    ...createOverlapOptions(),
+    ai,
+    narrationLanguage: undefined,
+    previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+    narrationChunk: { text: "Then the chunk begins." },
+  });
+
+  expect(recognitionCalls[0]?.inputs).not.toHaveProperty("language");
+});
+
+test("a policy 7 segment stores the audio from the cut point onward, stretched by 1.05", async () => {
+  const bucket = createAudioSegmentBucket();
+  const put = vi.spyOn(bucket, "put");
+
+  const segment = await produceAudioSegment({
+    ...createOverlapOptions(),
+    bucket,
+    previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+    narrationChunk: { text: "Then the chunk begins." },
+  });
+
+  // The cut lies in the middle of the 400 ms pause, so 200 ms of pause and the chunk's 4 words of
+  // 200 ms with 3 gaps of 50 ms remain: 1,150 ms, which 1.05 stretches to about 1,095 ms.
+  expect(
+    Math.abs(segment.durationMilliseconds - (1_095 + ENCODER_OVERHEAD_MILLISECONDS)),
+  ).toBeLessThanOrEqual(MP3_FRAME_DURATION_MILLISECONDS);
+  expect(put.mock.calls[0]?.[2].customMetadata["synthesis-policy-version"]).toBe("7");
+});
+
+test("a policy 7 segment whose take has no cut point synthesizes its chunk alone and logs the reason", async () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  const { ai, synthesisTexts } = createRecordingSpeechAi({
+    recognize: async () => Response.json({ text: "", segments: [] }),
+  });
+
+  const segment = await produceAudioSegment({
+    ...createOverlapOptions(),
+    ai,
+    sequence: 4,
+    synthesisAttempt: 3,
+    previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+    narrationChunk: { text: "Then the chunk begins." },
+  });
+
+  expect(synthesisTexts()).toEqual([
+    "The first part ends here.\n\nThen the chunk begins.",
+    "Then the chunk begins.",
+  ]);
+  // The chunk alone: 4 words of 200 ms with 3 gaps of 50 ms, 950 ms stretched to about 905 ms.
+  expect(
+    Math.abs(segment.durationMilliseconds - (905 + ENCODER_OVERHEAD_MILLISECONDS)),
+  ).toBeLessThanOrEqual(MP3_FRAME_DURATION_MILLISECONDS);
+  expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)) as unknown)).toEqual([
+    {
+      event: "overlap-and-cut-fallback",
+      conversionId: CONVERSION_ID,
+      sequence: 4,
+      synthesisAttempt: 3,
+      reason: "no-cut-point",
+    },
+  ]);
+  warn.mockRestore();
+});
+
+test("a policy 7 segment whose cut check fails synthesizes its chunk alone and logs the reason", async () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  // The words align, but the continuous tone has no pause to cut in.
+  const words = ["The", "first", "part", "ends", "here.", "Then", "the", "chunk", "begins."];
+  const { ai, synthesisTexts } = createRecordingSpeechAi({
+    fake: createFakeSpeechSynthesisAi({ durationMilliseconds: 2_000 }),
+    recognize: async () =>
+      Response.json({
+        text: words.join(" "),
+        segments: [
+          {
+            words: words.map((word, index) => ({
+              word,
+              start: index * 0.2,
+              end: index * 0.2 + 0.2,
+            })),
+          },
+        ],
+      }),
+  });
+
+  await produceAudioSegment({
+    ...createOverlapOptions(),
+    ai,
+    previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+    narrationChunk: { text: "Then the chunk begins." },
+  });
+
+  expect(synthesisTexts()).toEqual([
+    "The first part ends here.\n\nThen the chunk begins.",
+    "Then the chunk begins.",
+  ]);
+  expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)) as unknown)).toEqual([
+    expect.objectContaining({ event: "overlap-and-cut-fallback", reason: "cut-check-failed" }),
+  ]);
+  warn.mockRestore();
+});
+
+test("a policy 7 segment in a narration language speech recognition does not support skips overlap and logs the reason", async () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  const { ai, synthesisTexts, recognitionCalls } = createRecordingSpeechAi();
+
+  await produceAudioSegment({
+    ...createOverlapOptions(),
+    ai,
+    narrationLanguage: "rw",
+    previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+    narrationChunk: { text: "Then the chunk begins." },
+  });
+
+  expect(synthesisTexts()).toEqual(["Then the chunk begins."]);
+  expect(recognitionCalls).toHaveLength(0);
+  expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)) as unknown)).toEqual([
+    {
+      event: "overlap-and-cut-fallback",
+      conversionId: CONVERSION_ID,
+      sequence: 1,
+      synthesisAttempt: 1,
+      reason: "language-unrecognized",
+    },
+  ]);
+  warn.mockRestore();
+});
+
+test.each([
+  [429, RateLimitedNarrationSynthesisError],
+  [400, PermanentNarrationSynthesisError],
+] as const)(
+  "a speech recognition failure with status %i raises the matching error",
+  async (status, errorClass) => {
+    const error = await produceAudioSegment({
+      ...createOverlapOptions(),
+      ai: createFakeSpeechSynthesisAi({ recognitionFailureStatus: status }),
+      previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+      narrationChunk: { text: "Then the chunk begins." },
+    }).catch((caughtError: unknown) => caughtError);
+
+    expect(error).toBeInstanceOf(errorClass);
+    expect(error).toMatchObject({
+      message: `Workers AI speech recognition failed with status ${status}: Configured deterministic speech recognition failure`,
+    });
+  },
+);
+
+test("a speech recognition server failure stays retryable", async () => {
+  const error = await produceAudioSegment({
+    ...createOverlapOptions(),
+    ai: createFakeSpeechSynthesisAi({ recognitionFailureStatus: 503 }),
+    previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+    narrationChunk: { text: "Then the chunk begins." },
+  }).catch((caughtError: unknown) => caughtError);
+
+  expect(error).toBeInstanceOf(Error);
+  expect(error).not.toBeInstanceOf(PermanentNarrationSynthesisError);
+  expect(error).not.toBeInstanceOf(RateLimitedNarrationSynthesisError);
+  expect(error).toMatchObject({
+    message:
+      "Workers AI speech recognition failed with status 503: Configured deterministic speech recognition failure",
+  });
+});
+
+test("an invalid speech recognition response is permanent", async () => {
+  const { ai } = createRecordingSpeechAi({
+    recognize: async () => Response.json({ unexpected: true }),
+  });
+
+  await expect(
+    produceAudioSegment({
+      ...createOverlapOptions(),
+      ai,
+      previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+      narrationChunk: { text: "Then the chunk begins." },
+    }),
+  ).rejects.toBeInstanceOf(PermanentNarrationSynthesisError);
+});
+
+test.each([
+  ["Gemini policy 6", GEMINI_SPEECH_CONFIG],
+  ["Gemini policy 5", LEGACY_GEMINI_V5_SPEECH_CONFIG],
+  ["Gemini policy 4", LEGACY_GEMINI_V4_SPEECH_CONFIG],
+  ["Gemini policy 3", LEGACY_GEMINI_V3_SPEECH_CONFIG],
+  ["ElevenLabs policy 1", ELEVENLABS_SPEECH_CONFIG],
+] as const)(
+  "a %s segment speaks its chunk alone despite a previous chunk",
+  async (_, speechConfig) => {
+    const { ai, synthesisTexts, recognitionCalls } = createRecordingSpeechAi();
+
+    await produceAudioSegment({
+      ...createOverlapOptions(),
+      ai,
+      speechConfig,
+      previousNarrationChunk: { text: "The first part ends here.", isSameNarrationBlock: false },
+      narrationChunk: { text: "Then the chunk begins." },
+    });
+
+    expect(synthesisTexts()).toEqual(["Then the chunk begins."]);
+    expect(recognitionCalls).toHaveLength(0);
+  },
+);
+
+test("a later policy 7 segment without its previous chunk is a programmer error", async () => {
+  await expect(
+    produceAudioSegment({
+      ...createOverlapOptions(),
+      narrationChunk: { text: "Then the chunk begins." },
+    }),
+  ).rejects.toThrow("Speech policy 7 needs the previous narration chunk of audio segment 1");
+});
+
+const SYNTHESIS_REQUEST_TEXT_SCHEMA = z.union([
+  z.object({ query: z.object({ text: z.string() }) }).transform(({ query }) => query.text),
+  z
+    .object({
+      query: z.object({
+        input: z.string().transform((input) => input.split("TRANSCRIPT:\n").at(-1) ?? input),
+      }),
+    })
+    .transform(({ query }) => query.input),
+  z
+    .object({
+      query: z.object({
+        input: z.tuple([z.object({ content: z.tuple([z.object({ text: z.string() })]) })]),
+      }),
+    })
+    .transform(({ query }) => query.input[0].content[0].text),
+]);
+
+/** Wraps a fake speech AI to record the text of each synthesis and every recognition call. */
+function createRecordingSpeechAi({
+  fake = createFakeSpeechSynthesisAi(),
+  recognize,
+}: {
+  fake?: SpeechSynthesisAi;
+  recognize?: SpeechSynthesisAi["run"];
+} = {}) {
+  const gateway = fake.gateway("default");
+  const run = vi.fn<SpeechSynthesisRun>(gateway.run.bind(gateway));
+  const recognitionCalls: { inputs: unknown; options: unknown }[] = [];
+  const ai: SpeechSynthesisAi = {
+    gateway: () => ({ run }),
+    run: async (model, inputs, options) => {
+      recognitionCalls.push({ inputs, options });
+      return (recognize ?? fake.run)(model, inputs, options);
+    },
+  };
+  const synthesisTexts = () =>
+    run.mock.calls.map(([request]: Parameters<SpeechSynthesisRun>) =>
+      SYNTHESIS_REQUEST_TEXT_SCHEMA.parse(request),
+    );
+
+  return { ai, synthesisTexts, recognitionCalls };
+}
+
+function decodeBase64(value: string): Uint8Array {
+  return Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
+}
+
+/** Options for a later policy 7 segment, each call with its own bucket. */
+function createOverlapOptions() {
+  return {
+    speechConfig: GEMINI_V7_SPEECH_CONFIG,
+    narrationLanguage: "en-US",
+    ai: createFakeSpeechSynthesisAi(),
+    bucket: createAudioSegmentBucket(),
+    conversionId: CONVERSION_ID,
+    sequence: 1,
+  } satisfies Partial<ProduceOptions>;
+}
+
 function createSpeechSynthesisAi(run: SpeechSynthesisRun): SpeechSynthesisAi {
   return {
     gateway: () => ({ run }),
+    run: createFakeSpeechSynthesisAi().run,
   };
 }
 

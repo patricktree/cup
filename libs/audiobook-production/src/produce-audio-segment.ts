@@ -11,7 +11,12 @@ import {
   type StoredAudioSegment,
 } from "#src/audio-segment-storage.ts";
 import { calculateCrc32 } from "#src/crc32.ts";
-import { getSpeedFactor, SPEECH_CONFIG, type SpeechConfig } from "#src/speech-synthesis-config.ts";
+import {
+  getSpeedFactor,
+  isOverlapAndCutSpeechConfig,
+  SPEECH_CONFIG,
+  type SpeechConfig,
+} from "#src/speech-synthesis-config.ts";
 import type {
   SpeechSynthesizer,
   SpeechSynthesisAi,
@@ -20,6 +25,11 @@ import type {
 } from "#src/speech-synthesis.ts";
 import { synthesizeElevenLabsAudio } from "#src/synthesize-elevenlabs-audio.ts";
 import { synthesizeGeminiAudio } from "#src/synthesize-gemini-audio.ts";
+import {
+  synthesizeWithOverlapAndCut,
+  type PreviousNarrationChunk,
+} from "#src/synthesize-with-overlap-and-cut.ts";
+export type { PreviousNarrationChunk } from "#src/synthesize-with-overlap-and-cut.ts";
 export {
   PermanentNarrationSynthesisError,
   RateLimitedNarrationSynthesisError,
@@ -60,6 +70,11 @@ export type ProduceOptions = {
   conversionId: string;
   sequence: number;
   narrationChunk: NarrationChunk;
+  /**
+   * The narration chunk before this one, which speech policy 7 overlaps; absent for the first audio
+   * segment, and required for every later one under speech policy 7.
+   */
+  previousNarrationChunk?: PreviousNarrationChunk | undefined;
   synthesisAttempt?: number;
   synthesisResponseMode?: NarrationSynthesisResponseMode;
 };
@@ -74,6 +89,7 @@ export async function produceAudioSegment({
   conversionId,
   sequence,
   narrationChunk,
+  previousNarrationChunk,
   synthesisAttempt = 1,
   synthesisResponseMode = "streaming",
 }: ProduceOptions): Promise<AudioSegmentReference> {
@@ -82,6 +98,10 @@ export async function produceAudioSegment({
 
   if (narrationChunk.text.trim().length === 0) {
     throw new Error("Cannot produce an audio segment from an empty narration chunk");
+  }
+
+  if (sequence === 0 && previousNarrationChunk !== undefined) {
+    throw new Error("The first audio segment has no previous narration chunk");
   }
 
   const key = createAudioSegmentKey(conversionId, sequence, artifactPrefix);
@@ -99,7 +119,7 @@ export async function produceAudioSegment({
   }
 
   const synthesize = speechProviderToSynthesizeMap[speechConfig.provider];
-  const providerAudio = await synthesize({
+  const synthesisOptions = {
     speechConfig,
     narrationLanguage,
     ai,
@@ -108,7 +128,16 @@ export async function produceAudioSegment({
     sequence,
     synthesisAttempt,
     synthesisResponseMode,
-  });
+  };
+  // The first audio segment has nothing to overlap, so it starts as policy 6 does.
+  const providerAudio =
+    isOverlapAndCutSpeechConfig(speechConfig) && sequence > 0
+      ? await synthesizeWithOverlapAndCut({
+          ...synthesisOptions,
+          synthesize,
+          previousNarrationChunk: requirePreviousNarrationChunk(previousNarrationChunk, sequence),
+        })
+      : await synthesize(synthesisOptions);
   const speedFactor = getSpeedFactor(speechConfig);
   // The stretch runs before encoding, so the stored audio and every duration measured from it,
   // such as generated audio duration and synchronization unit offsets, carry the speech policy's narration pace.
@@ -168,6 +197,19 @@ function assertAudioSegmentIdentity(conversionId: string, sequence: number): voi
   if (!Number.isSafeInteger(sequence) || sequence < 0) {
     throw new Error(`Audio segment sequence must be a non-negative safe integer: ${sequence}`);
   }
+}
+
+function requirePreviousNarrationChunk(
+  previousNarrationChunk: PreviousNarrationChunk | undefined,
+  sequence: number,
+): PreviousNarrationChunk {
+  if (previousNarrationChunk === undefined) {
+    throw new Error(
+      `Speech policy 7 needs the previous narration chunk of audio segment ${sequence}`,
+    );
+  }
+
+  return previousNarrationChunk;
 }
 
 function assertSynthesisAttempt(synthesisAttempt: number): void {
