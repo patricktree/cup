@@ -28,7 +28,18 @@ export type AndroidToolchainKey = {
   macos: MacosVersion | Unreadable;
 };
 
-const PLATFORM_PACKAGE = "platforms;android-36";
+/** Sets the SDK platform the app compiles against, as `compileSdkVersion`. */
+const VARIABLES_GRADLE = path.resolve(
+  import.meta.dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "apps",
+  "mobile-app",
+  "android",
+  "variables.gradle",
+);
 
 export async function readAndroidToolchainKey(): Promise<AndroidToolchainKey> {
   const sdkRoot = resolveAndroidSdkRoot();
@@ -37,7 +48,7 @@ export async function readAndroidToolchainKey(): Promise<AndroidToolchainKey> {
     readVersion(sourcePropertiesPath(sdkRoot, "platform-tools"), async () =>
       requireProperty(await readSourceProperties(sdkRoot, "platform-tools"), "Pkg.Revision"),
     ),
-    readPackageRevision(sdkRoot, PLATFORM_PACKAGE),
+    readPlatformRevision(sdkRoot, VARIABLES_GRADLE),
     readVersion(sourcePropertiesPath(sdkRoot, "emulator"), async () => {
       const properties = await readSourceProperties(sdkRoot, "emulator");
       return {
@@ -50,6 +61,30 @@ export async function readAndroidToolchainKey(): Promise<AndroidToolchainKey> {
     readMacosVersion(),
   ]);
   return { platformTools, platform, emulator, systemImage, java, macos };
+}
+
+/**
+ * Reads the revision of the SDK platform that `compileSdkVersion` in `variablesGradlePath` names,
+ * so that a new compile SDK keys its own platform. A missing setting makes the platform
+ * unreadable.
+ */
+export async function readPlatformRevision(
+  sdkRoot: string,
+  variablesGradlePath: string,
+): Promise<SdkPackageRevision | Unreadable> {
+  const sdkPackage = await readVersion(`compileSdkVersion in ${variablesGradlePath}`, async () => {
+    const text = await fs.readFile(variablesGradlePath, "utf8");
+    const compileSdkVersion = /^\s*compileSdkVersion\s*=\s*(?<version>\d+)\s*$/m.exec(text)
+      ?.groups?.["version"];
+    if (compileSdkVersion === undefined) {
+      throw new Error("compileSdkVersion = <number> is missing.");
+    }
+    return `platforms;android-${compileSdkVersion}`;
+  });
+  if (typeof sdkPackage !== "string") {
+    return sdkPackage;
+  }
+  return readPackageRevision(sdkRoot, sdkPackage);
 }
 
 async function readPackageRevision(

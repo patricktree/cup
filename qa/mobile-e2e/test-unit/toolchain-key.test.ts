@@ -6,7 +6,12 @@ import url from "node:url";
 import util from "node:util";
 import { afterEach, expect, test } from "vitest";
 
+import { readPlatformRevision } from "#src/android/toolchain-key.ts";
+
 const CLI = url.fileURLToPath(new URL("../src/toolchain-key.ts", import.meta.url));
+const VARIABLES_GRADLE = url.fileURLToPath(
+  new URL("../../../apps/mobile-app/android/variables.gradle", import.meta.url),
+);
 const execFile = util.promisify(childProcess.execFile);
 const directories: string[] = [];
 
@@ -19,8 +24,9 @@ afterEach(async () => {
 test("writes the same Android key on every run while the toolchain stays the same", async () => {
   const directory = await makeTemporaryDirectory();
   const sdkRoot = path.join(directory, "sdk");
+  const compileSdkVersion = await readCompileSdkVersion();
   await writeSourceProperties(sdkRoot, "platform-tools", "Pkg.Revision=37.0.0");
-  await writeSourceProperties(sdkRoot, "platforms/android-36", "Pkg.Revision=2");
+  await writeSourceProperties(sdkRoot, `platforms/android-${compileSdkVersion}`, "Pkg.Revision=2");
   await writeSourceProperties(sdkRoot, "emulator", "Pkg.Revision=36.4.10\nPkg.BuildId=15004761");
   await writeSourceProperties(
     sdkRoot,
@@ -36,7 +42,7 @@ test("writes the same Android key on every run while the toolchain stays the sam
   expect(secondKey.android).toBe(firstKey.android);
   expect(JSON.parse(firstKey.android)).toMatchObject({
     platformTools: "37.0.0",
-    platform: { package: "platforms;android-36", revision: "2" },
+    platform: { package: `platforms;android-${compileSdkVersion}`, revision: "2" },
     emulator: { revision: "36.4.10", buildId: "15004761" },
     systemImage: {
       package: "system-images;android-36;google_apis;arm64-v8a",
@@ -73,6 +79,45 @@ test("writes a different key on every run when a platform's toolchain cannot be 
   });
 });
 
+test("keys the SDK platform that compileSdkVersion names", async () => {
+  const directory = await makeTemporaryDirectory();
+  const sdkRoot = path.join(directory, "sdk");
+  await writeSourceProperties(sdkRoot, "platforms/android-37", "Pkg.Revision=3");
+  const variablesGradle = path.join(directory, "variables.gradle");
+  await fs.writeFile(
+    variablesGradle,
+    "ext {\n    minSdkVersion = 24\n    compileSdkVersion = 37\n    targetSdkVersion = 36\n}\n",
+  );
+
+  await expect(readPlatformRevision(sdkRoot, variablesGradle)).resolves.toEqual({
+    package: "platforms;android-37",
+    revision: "3",
+  });
+});
+
+test("keys the SDK platform as unreadable, differently on every read, without a compileSdkVersion", async () => {
+  const directory = await makeTemporaryDirectory();
+  const sdkRoot = path.join(directory, "sdk");
+  await writeSourceProperties(sdkRoot, "platforms/android-36", "Pkg.Revision=2");
+  const variablesGradle = path.join(directory, "variables.gradle");
+  await fs.writeFile(variablesGradle, "ext {\n    compileSdkVersion = rootProject.ext.sdk\n}\n");
+  const missingVariablesGradle = path.join(directory, "missing.gradle");
+
+  const firstPlatform = await readPlatformRevision(sdkRoot, variablesGradle);
+  const secondPlatform = await readPlatformRevision(sdkRoot, variablesGradle);
+  const missingFilePlatform = await readPlatformRevision(sdkRoot, missingVariablesGradle);
+
+  expect(firstPlatform).toEqual({
+    unreadable: expect.stringContaining(`compileSdkVersion in ${variablesGradle}`),
+    nonce: expect.any(String),
+  });
+  expect(secondPlatform).not.toEqual(firstPlatform);
+  expect(missingFilePlatform).toEqual({
+    unreadable: expect.stringContaining(`compileSdkVersion in ${missingVariablesGradle}`),
+    nonce: expect.any(String),
+  });
+});
+
 async function makeTemporaryDirectory(): Promise<string> {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "mobile-toolchain-key-"));
   directories.push(directory);
@@ -88,6 +133,18 @@ async function runCli(
     android: await fs.readFile(path.join(outputDirectory, "android.json"), "utf8"),
     ios: await fs.readFile(path.join(outputDirectory, "ios.json"), "utf8"),
   };
+}
+
+/** The compile SDK of the mobile app, so the fake SDK holds the platform the key reads. */
+async function readCompileSdkVersion(): Promise<string> {
+  const text = await fs.readFile(VARIABLES_GRADLE, "utf8");
+  const compileSdkVersion = /compileSdkVersion\s*=\s*(?<version>\d+)/.exec(text)?.groups?.[
+    "version"
+  ];
+  if (compileSdkVersion === undefined) {
+    throw new Error(`${VARIABLES_GRADLE} sets no numeric compileSdkVersion.`);
+  }
+  return compileSdkVersion;
 }
 
 async function writeSourceProperties(

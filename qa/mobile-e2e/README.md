@@ -46,7 +46,7 @@ Each platform's task is cached ([ADR 0026](../../docs/adr/0026-replay-mobile-e2e
 The toolchain key holds the host versions the platform runs on, which no file in the repository records. Before the platform tasks, the uncached task `turbo:e2e:toolchain` runs [`src/toolchain-key.ts`](src/toolchain-key.ts), which writes them to the Git-ignored `.toolchain/android.json` and `.toolchain/ios.json` in about 0.2 seconds, and each platform task hashes its own file just before it runs:
 
 - iOS: the Xcode version and build, the simulator runtime the preflight check picks (identifier, version and build), and the macOS version and build
-- Android: the revisions of Platform-Tools, SDK platform 36, the emulator (with its build ID) and the system image, the runtime version and vendor of the JDK Gradle uses, and the macOS version and build
+- Android: the revisions of Platform-Tools, the SDK platform that the mobile app's `compileSdkVersion` in `variables.gradle` names (36), the emulator (with its build ID) and the system image, the runtime version and vendor of the JDK Gradle uses, and the macOS version and build
 
 The key finds the toolchain as the preflight check does, through `ANDROID_HOME`, `ANDROID_SDK_ROOT`, `JAVA_HOME` and `DEVELOPER_DIR`. A version it cannot read is written as the reason plus a random value, so that platform misses the cache and its preflight check reports what is missing.
 
