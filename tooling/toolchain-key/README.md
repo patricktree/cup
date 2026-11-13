@@ -8,7 +8,7 @@ This CLI writes the versions of the host toolchain an E2E suite runs on to a key
 toolchain-key playwright --output .toolchain/playwright.json
 ```
 
-`playwright` writes the base image tag and the ID of the Playwright Server image that [`@patricktree-stack/config-playwright`](../../.patricktree-stack/tooling/config-playwright/README.md) runs the browsers in. It derives the image tag as that package's global setup does.
+`playwright` writes the base image tag and the ID of the Playwright Server image that [`@patricktree-stack/config-playwright`](../../.patricktree-stack/tooling/config-playwright/README.md) runs the browsers in. It derives the image tag as that package's global setup does and, when the image is missing, builds it the same way first, so the key of a machine's first run matches the key of its later runs and the suite's global setup finds the image built.
 
 A version that cannot be read is written as the reason plus a random value, so the task hashing it misses the cache and the suite runs and reports the problem itself. The CLI fails only when it cannot write the file.
 
@@ -18,4 +18,4 @@ An E2E package adds a `turbo:e2e:toolchain` script that runs this CLI, and confi
 
 ## Validation
 
-Run `pnpm --filter @cup/toolchain-key test` and `lint`. The test points Docker at a socket that does not exist and checks that the key differs on every run.
+Run `pnpm --filter @cup/toolchain-key test` and `lint`. One test points Docker at a socket that does not exist and checks that the key differs on every run; another puts a fake `docker` without the image first on the `PATH` and checks that the first run builds it and writes the same key as the second.
