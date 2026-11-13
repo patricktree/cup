@@ -381,24 +381,24 @@ test("a conversion without a narration language sends no language, overlaps its 
   expect(await storedSynthesisLanguages(artifactPrefix)).toEqual([undefined, undefined]);
 });
 
-test("a valid but unspeakable narration language is stored, left out of requests, logged as unspeakable and gets no overlap", async () => {
+test("a valid but unspeakable narration language is stored, left out of requests, logged as unspeakable and, unrecognized, gets no overlap", async () => {
   const { owner, grantId, accountId, conversionId, artifactPrefix, segmentOwner } =
     await createOwnedConversion("account");
   const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
   try {
     await runConversion(grantId, conversionId, accountId, false, undefined, undefined, {
-      declaredLanguage: { htmlLang: "sv-SE" },
-      detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: "sv" }),
+      declaredLanguage: { htmlLang: "zu-ZA" },
+      detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: "zu" }),
     });
 
     expect(await loadReadyAudiobook(owner, conversionId)).toMatchObject({
-      narrationLanguage: "sv-SE",
+      narrationLanguage: "zu-ZA",
     });
     expect(loggedWarnings(warn, "narration-language-unspeakable")).toEqual([
       {
         event: "narration-language-unspeakable",
         conversionId,
-        narrationLanguage: "sv-SE",
+        narrationLanguage: "zu-ZA",
         provider: "google-ai-studio",
         model: "gemini-3.8-flash-lite-tts",
       },
@@ -414,7 +414,7 @@ test("a valid but unspeakable narration language is stored, left out of requests
   try {
     await runAllSegments(owner, conversionId, segmentOwner, ai);
 
-    // Speech recognition does not list Swedish either, so no segment gets overlap.
+    // Speech recognition does not list Zulu either, so no segment gets overlap.
     expect(loggedWarnings(segmentWarn, "overlap-and-cut-fallback")).toMatchObject([
       { conversionId, sequence: 1, reason: "language-unrecognized" },
     ]);
@@ -425,6 +425,30 @@ test("a valid but unspeakable narration language is stored, left out of requests
   expect(speechRequests()).toEqual([REQUEST_WITHOUT_LANGUAGE, REQUEST_WITHOUT_LANGUAGE]);
   expect(synthesisTexts()).toEqual([FIRST_CHUNK_TEXT, SECOND_CHUNK_TEXT]);
   expect(recognitionCount()).toBe(0);
+  expect(await storedSynthesisLanguages(artifactPrefix)).toEqual(["zu-ZA", "zu-ZA"]);
+});
+
+test("an unspeakable narration language that speech recognition hears still gets overlap", async () => {
+  const { owner, grantId, accountId, conversionId, artifactPrefix, segmentOwner } =
+    await createOwnedConversion("account");
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    await runConversion(grantId, conversionId, accountId, false, undefined, undefined, {
+      declaredLanguage: { htmlLang: "sv-SE" },
+      detectNarrationLanguage: createFakeNarrationLanguageDetector({ answer: "sv" }),
+    });
+  } finally {
+    warn.mockRestore();
+  }
+  const { ai, speechRequests, synthesisTexts, recognitionLanguages } =
+    createRecordingSpeechSynthesisAi();
+
+  await runAllSegments(owner, conversionId, segmentOwner, ai);
+
+  // Gemini gets no language tag for Swedish, but Whisper hears it and the cut holds.
+  expect(speechRequests()).toEqual([REQUEST_WITHOUT_LANGUAGE, REQUEST_WITHOUT_LANGUAGE]);
+  expect(synthesisTexts()).toEqual([FIRST_CHUNK_TEXT, SECOND_CHUNK_OVERLAP_TAKE]);
+  expect(recognitionLanguages()).toEqual(["sv"]);
   expect(await storedSynthesisLanguages(artifactPrefix)).toEqual(["sv-SE", "sv-SE"]);
 });
 
@@ -1142,8 +1166,12 @@ function createRecordingSpeechSynthesisAi(recognitionFailureStatuses: readonly n
       ({ content }) => z.tuple([z.object({ text: z.string() })]).parse(content)[0].text,
     );
   const recognitionCount = () => recognize.mock.calls.length;
+  const recognitionLanguages = () =>
+    recognize.mock.calls.map(
+      ([, input]) => z.object({ language: z.string().optional() }).parse(input).language,
+    );
 
-  return { ai, speechRequests, synthesisTexts, recognitionCount };
+  return { ai, speechRequests, synthesisTexts, recognitionCount, recognitionLanguages };
 }
 
 /**

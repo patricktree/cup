@@ -29,7 +29,7 @@ Each audio segment was synthesized from its narration chunk's text alone, so at 
 
 - Each segment after the first costs one Whisper run and more synthesized audio, and its step attempt may run two syntheses and one recognition, so the segment step's timeout grows from 2 to 5 minutes.
 - Generated audio duration, and so the charge, is the cut segment's; the overlap that is cut away is never charged. The duration reservation ([ADR 0022](0022-reserve-70-milliseconds-of-audio-per-narration-text-character.md)) and the narration pace ([ADR 0023](0023-time-stretch-narration-audio-after-synthesis-with-sonic.md)) are unchanged.
-- Narration languages Whisper does not list, 31 of Cup's 99, sound as they did under policy 6.
+- Narration languages off Whisper's own list of 100 languages, such as Kinyarwanda, Santali and Central Kurdish, sound as they did under policy 6. Whether Gemini gets a language tag for a narration language does not matter here, so Swedish, Finnish and Ukrainian, narrated without one, still get overlap.
 - Whether a stored segment was produced with overlap is not recorded; production logs show each fallback with its reason.
 - The one jump the blind test still heard, step title into paragraph, gets no special case; production listening shows whether it matters.
 
