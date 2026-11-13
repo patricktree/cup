@@ -20,12 +20,18 @@ test("a conversion started from the Add dialog reaches the Worker through native
   const requestCount = app.worker.requests().length;
   await webView.$('nav[aria-label="Tabs"]').$("a*=Add").click();
   const addDialog = webView.$('[role="dialog"]');
-  // The sheet slides in, and WebKit refuses to type into its URL field until it is in place.
+  // The sheet slides in, and WebKit refuses to type into its URL field until it is in place. Its
+  // slide-in animation holds its end state, so it stays listed after it finishes.
   await webView.waitUntil(
     () =>
       webView.execute(() => {
         const dialog = document.querySelector('[role="dialog"]');
-        return dialog !== null && dialog.getAnimations({ subtree: true }).length === 0;
+        return (
+          dialog !== null &&
+          dialog
+            .getAnimations({ subtree: true })
+            .every((animation) => animation.playState === "finished")
+        );
       }),
     { timeout: 10_000, timeoutMsg: "The Add sheet did not finish sliding in." },
   );
