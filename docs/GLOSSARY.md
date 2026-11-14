@@ -252,6 +252,12 @@ An audiobook's single audio file: its audio segments, unchanged and joined in do
 
 _Avoid_: audio file, full track, playback track
 
+## segment boundary
+
+The point in the narration track where one audio segment ends and the next begins. Speech that restarts there in a different intonation, energy or voice, instead of carrying on as one reading, is a fresh start.
+
+_Avoid_: seam, join (as a noun)
+
 ## generated audio duration
 
 The duration of successfully produced narration audio made available to the user, which is the basis for consuming their trial or paid allowance regardless of whether they play it. It excludes failed synthesis attempts and measures audio duration rather than listening time.
@@ -262,7 +268,7 @@ _Avoid_: listening time, playback time
 
 The exact wording that a narration provider reports it spoke when producing narration audio. It exists only when supplied directly by the provider and is never inferred from the audio.
 
-_Avoid_: transcript, transcription
+_Avoid_: transcript, transcription, recognized text
 
 ## synchronization unit
 
