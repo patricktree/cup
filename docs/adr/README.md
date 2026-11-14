@@ -32,5 +32,6 @@ ADRs preserve decisions, alternatives, rationale, and consequences. Read them al
 | [0026](0026-replay-mobile-e2e-passes-per-platform-and-run-both-platforms-in-parallel.md)                            | Replay mobile E2E passes per platform and run both platforms in parallel                                |
 | [0027](0027-flow-narration-across-segment-boundaries-with-overlap-and-cut.md)                                       | Flow narration across segment boundaries with overlap and cut (superseded by 0028)                      |
 | [0028](0028-withdraw-overlap-and-cut.md)                                                                            | Withdraw overlap and cut                                                                                |
+| [0029](0029-derive-mobile-build-versions-from-the-utc-build-time.md)                                                | Derive mobile build versions from the UTC build time                                                    |
 
 Each decision's frontmatter records its status. For a substantive reversal, add a superseding ADR and link it from the previous decision while retaining the old rationale. The [wiki schema](../agents/domain.md#record-decisions-and-evidence) describes how decisions, implementation gaps, and research relate.
