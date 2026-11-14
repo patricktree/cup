@@ -93,7 +93,7 @@ function canSeek(element: Pick<NarrationAudioElement, "readyState" | "duration">
  *
  * The element is the only playback state: the snapshot is read from it whenever it fires a media
  * event. The player adds what the element cannot hold: a position to apply once the track's
- * duration is known, the save cadence, and failures of `play()` and saves.
+ * duration is known, the save cadence, and failures of `play()`; the session reports failed saves.
  */
 export class NarrationTrackPlayer implements Player {
   private readonly session: PlaybackSession;
@@ -102,6 +102,7 @@ export class NarrationTrackPlayer implements Player {
   /** Where to seek once the element knows the track's duration; it cannot seek before. */
   private pendingPositionMilliseconds: number | null;
   private failure: string | null = null;
+  private readonly unsubscribeSaveFailure: () => void;
   private isClosed = false;
   private snapshot: PlayerSnapshot;
 
@@ -115,6 +116,7 @@ export class NarrationTrackPlayer implements Player {
     }
     // Setting the source starts loading its metadata and resets the element to the start.
     element.src = session.audiobook.narrationTrack.url;
+    this.unsubscribeSaveFailure = session.subscribeSaveFailure(() => this.publish());
     this.snapshot = this.readSnapshot();
   }
 
@@ -197,6 +199,9 @@ export class NarrationTrackPlayer implements Player {
       this.save("now", this.readPosition());
     }
     this.isClosed = true;
+    this.unsubscribeSaveFailure();
+    // The player owns the session the host created for it; closing stops its save retries.
+    this.session.close();
     for (const type of MEDIA_EVENT_TYPES) {
       this.element.removeEventListener(type, this.handleMediaEvent);
     }
@@ -253,19 +258,13 @@ export class NarrationTrackPlayer implements Player {
     return this.pendingPositionMilliseconds ?? Math.round(this.element.currentTime * 1_000);
   }
 
+  /** The session reports failed saves through `getSaveFailure` and retries them itself. */
   private save(when: "now" | "if-due", positionMilliseconds: number) {
-    const save =
-      when === "now"
-        ? this.session.save(positionMilliseconds)
-        : this.session.saveIfDue(positionMilliseconds);
-    save.catch((error: unknown) => {
-      if (this.isClosed) {
-        return;
-      }
-      this.failure =
-        error instanceof Error ? error.message : "Listening position could not be saved.";
-      this.publish();
-    });
+    if (when === "now") {
+      void this.session.save(positionMilliseconds);
+    } else {
+      void this.session.saveIfDue(positionMilliseconds);
+    }
   }
 
   private readSnapshot(): PlayerSnapshot {
@@ -283,7 +282,10 @@ export class NarrationTrackPlayer implements Player {
           : this.session.timeline.durationMilliseconds,
       isPlaying,
       isBuffering: isPlaying && element.readyState < HAVE_FUTURE_DATA,
-      error: this.failure ?? (element.error ? MEDIA_ERROR_MESSAGE : null),
+      error:
+        this.failure ??
+        (element.error ? MEDIA_ERROR_MESSAGE : null) ??
+        this.session.getSaveFailure(),
     };
   }
 
