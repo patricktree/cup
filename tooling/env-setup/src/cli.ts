@@ -5,11 +5,7 @@ import util from "node:util";
 
 const ROOT = path.resolve(import.meta.dirname, "../../..");
 const EVALS_FILE = "libs/narration-source-analysis/.env.evals";
-const FILES = [
-  "apps/cloudflare-worker/.env.local",
-  EVALS_FILE,
-  "libs/audiobook-production/.env.evals",
-];
+const FILES = ["apps/cloudflare-worker/.env.local", EVALS_FILE];
 /**
  * Moves of environment files whose library was renamed, so existing checkouts keep working after a
  * pull. Remove an entry once checkouts have had time to run setup.
@@ -46,7 +42,7 @@ export async function runCli(
 
   program
     .command("check")
-    .description("Check that every environment file is configured and that they match")
+    .description("Check that both environment files are configured and match")
     .action(async () => run("check"));
 
   try {

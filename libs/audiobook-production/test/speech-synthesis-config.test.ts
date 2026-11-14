@@ -2,23 +2,17 @@ import { expect, test } from "vitest";
 
 import {
   ELEVENLABS_SPEECH_CONFIG,
-  getSpeechPolicyTraits,
+  getSpeedFactor,
   KNOWN_SPEECH_CONFIGS,
   LEGACY_GEMINI_V3_SPEECH_CONFIG,
   LEGACY_GEMINI_V4_SPEECH_CONFIG,
   LEGACY_GEMINI_V5_SPEECH_CONFIG,
+  LEGACY_GEMINI_V7_SPEECH_CONFIG,
   SPEECH_CONFIG,
 } from "#src/speech-synthesis-config.ts";
 
-// Both spelled out rather than taken from the module, whose names move on to the next policy when it
-// becomes the deployment configuration, while stored manifests must keep their policy and pace.
-const GEMINI_POLICY_7_SPEECH_CONFIG = {
-  provider: "google-ai-studio",
-  model: "gemini-3.8-flash-lite-tts",
-  voice: "Charon",
-  policyVersion: "7",
-} as const;
-
+// Spelled out rather than taken from GEMINI_SPEECH_CONFIG, which a later policy replaces while
+// policy 6 manifests must keep their pace.
 const GEMINI_POLICY_6_SPEECH_CONFIG = {
   provider: "google-ai-studio",
   model: "gemini-3.8-flash-lite-tts",
@@ -26,24 +20,8 @@ const GEMINI_POLICY_6_SPEECH_CONFIG = {
   policyVersion: "6",
 } as const;
 
-test("the deployment speech configuration is Gemini policy 7", () => {
-  expect(SPEECH_CONFIG).toEqual(GEMINI_POLICY_7_SPEECH_CONFIG);
-});
-
-test("Gemini policy 7 is a known speech configuration that speeds up by 1.05 and overlaps and cuts", () => {
-  expect(KNOWN_SPEECH_CONFIGS).toContainEqual(GEMINI_POLICY_7_SPEECH_CONFIG);
-  expect(getSpeechPolicyTraits(GEMINI_POLICY_7_SPEECH_CONFIG)).toEqual({
-    narrationPace: 1.05,
-    isOverlapAndCut: true,
-  });
-});
-
-test("Gemini policy 6 is a known speech configuration that speeds up by 1.05 without overlap and cut", () => {
-  expect(KNOWN_SPEECH_CONFIGS).toContainEqual(GEMINI_POLICY_6_SPEECH_CONFIG);
-  expect(getSpeechPolicyTraits(GEMINI_POLICY_6_SPEECH_CONFIG)).toEqual({
-    narrationPace: 1.05,
-    isOverlapAndCut: false,
-  });
+test("a Gemini policy 6 configuration speeds up by 1.05", () => {
+  expect(getSpeedFactor(GEMINI_POLICY_6_SPEECH_CONFIG)).toBe(1.05);
 });
 
 test.each([
@@ -51,12 +29,15 @@ test.each([
   ["Gemini policy 4", LEGACY_GEMINI_V4_SPEECH_CONFIG],
   ["Gemini policy 3", LEGACY_GEMINI_V3_SPEECH_CONFIG],
   ["ElevenLabs policy 1", ELEVENLABS_SPEECH_CONFIG],
-] as const)(
-  "a %s configuration keeps the provider audio unstretched, without overlap and cut",
-  (_, speechConfig) => {
-    expect(getSpeechPolicyTraits(speechConfig)).toEqual({
-      narrationPace: 1,
-      isOverlapAndCut: false,
-    });
-  },
-);
+] as const)("a %s configuration keeps the provider audio unstretched", (_, speechConfig) => {
+  expect(getSpeedFactor(speechConfig)).toBe(1);
+});
+
+test("new conversions are prepared under Gemini policy 6", () => {
+  expect(SPEECH_CONFIG).toStrictEqual(GEMINI_POLICY_6_SPEECH_CONFIG);
+});
+
+test("the withdrawn Gemini policy 7 stays known and keeps policy 6's narration pace", () => {
+  expect(KNOWN_SPEECH_CONFIGS).toContainEqual(LEGACY_GEMINI_V7_SPEECH_CONFIG);
+  expect(getSpeedFactor(LEGACY_GEMINI_V7_SPEECH_CONFIG)).toBe(1.05);
+});

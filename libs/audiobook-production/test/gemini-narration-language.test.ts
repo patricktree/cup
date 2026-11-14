@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { z } from "zod";
 
 import {
-  LEGACY_GEMINI_V6_SPEECH_CONFIG,
+  GEMINI_SPEECH_CONFIG,
   LEGACY_GEMINI_V3_SPEECH_CONFIG,
   LEGACY_GEMINI_V4_SPEECH_CONFIG,
   LEGACY_GEMINI_V5_SPEECH_CONFIG,
@@ -36,18 +36,10 @@ test.each([
     narrationLanguage: "en-GB",
     englishName: "English",
   },
-  {
-    speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG,
-    narrationLanguage: "de-AT",
-    englishName: "German",
-  },
-  { speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG, narrationLanguage: "de", englishName: "German" },
-  { speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG, narrationLanguage: "fr", englishName: "French" },
-  {
-    speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG,
-    narrationLanguage: "en-GB",
-    englishName: "English",
-  },
+  { speechConfig: GEMINI_SPEECH_CONFIG, narrationLanguage: "de-AT", englishName: "German" },
+  { speechConfig: GEMINI_SPEECH_CONFIG, narrationLanguage: "de", englishName: "German" },
+  { speechConfig: GEMINI_SPEECH_CONFIG, narrationLanguage: "fr", englishName: "French" },
+  { speechConfig: GEMINI_SPEECH_CONFIG, narrationLanguage: "en-GB", englishName: "English" },
 ] as const)(
   "a policy $speechConfig.policyVersion request in the speakable narration language $narrationLanguage carries the language and a $englishName style",
   async ({ speechConfig, narrationLanguage, englishName }) => {
@@ -80,9 +72,9 @@ test.each([
   { speechConfig: LEGACY_GEMINI_V5_SPEECH_CONFIG, narrationLanguage: "sv" },
   { speechConfig: LEGACY_GEMINI_V5_SPEECH_CONFIG, narrationLanguage: "fi-FI" },
   { speechConfig: LEGACY_GEMINI_V5_SPEECH_CONFIG, narrationLanguage: "th" },
-  { speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG, narrationLanguage: "sv" },
-  { speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG, narrationLanguage: "fi-FI" },
-  { speechConfig: LEGACY_GEMINI_V6_SPEECH_CONFIG, narrationLanguage: "th" },
+  { speechConfig: GEMINI_SPEECH_CONFIG, narrationLanguage: "sv" },
+  { speechConfig: GEMINI_SPEECH_CONFIG, narrationLanguage: "fi-FI" },
+  { speechConfig: GEMINI_SPEECH_CONFIG, narrationLanguage: "th" },
 ] as const)(
   "a policy $speechConfig.policyVersion request in the unspeakable narration language $narrationLanguage carries neither language nor style",
   async ({ speechConfig, narrationLanguage }) => {
@@ -94,7 +86,7 @@ test.each([
   },
 );
 
-test.each([LEGACY_GEMINI_V5_SPEECH_CONFIG, LEGACY_GEMINI_V6_SPEECH_CONFIG])(
+test.each([LEGACY_GEMINI_V5_SPEECH_CONFIG, GEMINI_SPEECH_CONFIG])(
   "a policy $policyVersion request without a narration language is today's request",
   async (speechConfig) => {
     const request = await captureRequest(speechConfig, undefined);
@@ -107,7 +99,7 @@ test.each([LEGACY_GEMINI_V5_SPEECH_CONFIG, LEGACY_GEMINI_V6_SPEECH_CONFIG])(
 
 test("a policy v6 request is exactly the policy v5 request", async () => {
   const policy5Request = await captureWholeRequest(LEGACY_GEMINI_V5_SPEECH_CONFIG, "de-AT");
-  const policy6Request = await captureWholeRequest(LEGACY_GEMINI_V6_SPEECH_CONFIG, "de-AT");
+  const policy6Request = await captureWholeRequest(GEMINI_SPEECH_CONFIG, "de-AT");
 
   expect(policy6Request).toEqual(policy5Request);
 });
