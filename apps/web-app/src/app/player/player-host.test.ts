@@ -7,6 +7,7 @@ import {
   type PreparedAudiobook,
 } from "#src/app/player/playback-session.ts";
 import { PlayerHost, type PlayerHostAccount } from "#src/app/player/player-host.ts";
+import { UserFacingError } from "#src/errors.ts";
 import { expect, test } from "#src/test-utils/component-test.ts";
 
 const HAVE_METADATA = 1;
@@ -144,6 +145,8 @@ function createHost({
   const saved: Array<{ position: PlaybackPosition; subject: string | null }> = [];
   const fetchedConversionIds: string[] = [];
   const clock = { now: 0 };
+  /** The loaded session's armed save retry, which tests fire in place of the timer. */
+  const saveRetry: { fire: (() => void) | null } = { fire: null };
   let account: PlayerHostAccount = { status: "known", subject };
 
   const host = new PlayerHost({
@@ -163,6 +166,13 @@ function createHost({
           return savePosition();
         },
         now: () => clock.now,
+        setRetryTimer: (callback) => {
+          saveRetry.fire = callback;
+          return () => {
+            saveRetry.fire = null;
+          };
+        },
+        onReconnect: () => () => undefined,
       }),
     publishMediaMetadata: ({ title, artworkUrl }) => {
       mediaMetadata.push(artworkUrl ? `${title} (${artworkUrl})` : title);
@@ -201,6 +211,7 @@ function createHost({
     fetchedConversionIds,
     clock,
     setAccount,
+    saveRetry,
   };
 }
 
@@ -645,7 +656,7 @@ test("a seek after the metadata is read but before its event replaces an earlier
 test("a refused save is shown as the player's error", async () => {
   const { host, element, player } = createHost({
     subject: "user-1",
-    savePosition: () => Promise.reject(new Error("Sign in again to continue playback.")),
+    savePosition: () => Promise.reject(new UserFacingError({ title: "Sign in to continue." })),
   });
   host.showConversion("first", FIRST);
   host.loadShown();
@@ -654,7 +665,87 @@ test("a refused save is shown as the player's error", async () => {
   player().seekTo(2_000);
   await settle();
 
-  expect(player().getSnapshot().error).toBe("Sign in again to continue playback.");
+  expect(player().getSnapshot().error).toBe("Sign in to continue.");
+});
+
+test("a save that fails for a lost connection shows no error, and its retry keeps the position", async () => {
+  let isConnected = false;
+  const { host, element, player, saved, saveRetry } = createHost({
+    subject: "user-1",
+    savePosition: () =>
+      isConnected
+        ? Promise.resolve()
+        : Promise.reject(
+            new TypeError(
+              'Unable to resolve host "cup.audio": No address associated with hostname',
+            ),
+          ),
+  });
+  host.showConversion("first", FIRST);
+  host.loadShown();
+  element.loadMetadata(15);
+  host.play();
+  element.advanceTo(5);
+  host.pause();
+  await settle();
+  expect(player().getSnapshot().error).toBeNull();
+
+  isConnected = true;
+  saveRetry.fire?.();
+  await settle();
+
+  expect(player().getSnapshot().error).toBeNull();
+  expect(saved.at(-1)?.position).toEqual({
+    synchronizationUnitId: "unit-2",
+    offsetMilliseconds: 1_000,
+  });
+  expect(saveRetry.fire).toBeNull();
+});
+
+test("a save whose retry fails too is shown in plain words until a save succeeds", async () => {
+  let isConnected = false;
+  const { host, element, player, saveRetry } = createHost({
+    subject: "user-1",
+    savePosition: () =>
+      isConnected
+        ? Promise.resolve()
+        : Promise.reject(
+            new TypeError(
+              'Unable to resolve host "cup.audio": No address associated with hostname',
+            ),
+          ),
+  });
+  host.showConversion("first", FIRST);
+  host.loadShown();
+  element.loadMetadata(15);
+
+  player().seekTo(2_000);
+  await settle();
+  saveRetry.fire?.();
+  await settle();
+  expect(player().getSnapshot().error).toBe(
+    "Your listening position could not be saved yet. Cup keeps trying.",
+  );
+
+  isConnected = true;
+  saveRetry.fire?.();
+  await settle();
+  expect(player().getSnapshot().error).toBeNull();
+});
+
+test("unloading stops retrying a failed save", async () => {
+  const { host, element, saveRetry } = createHost({
+    subject: "user-1",
+    savePosition: () => Promise.reject(new TypeError("Failed to fetch")),
+  });
+  host.showConversion("first", FIRST);
+  host.loadShown();
+  element.loadMetadata(15);
+
+  host.unload();
+  await settle();
+
+  expect(saveRetry.fire).toBeNull();
 });
 
 test("reaching the end returns to the start and saves it", async () => {
