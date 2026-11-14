@@ -37,8 +37,8 @@ Each audio segment was synthesized from its narration chunk's text alone, so at 
 
 ## Evidence
 
-- Boundary diagnosis: the unmerged branch `prototype/segment-boundaries` at [`9d9d3372`](https://github.com/patricktree/cup/tree/9d9d3372b9692dffb3f541697c958ffa4809116f/libs/audiobook-production/prototype-segment-boundaries), with its measurements in `summary.json` and the operator's answers in `answers.md`.
-- Blind A/B of the approaches: the unmerged branch `prototype/segment-boundary-approaches` at [`50de4acb`](https://github.com/patricktree/cup/tree/50de4acb0023b6baec3e6d3448bd7cd9d12ee7ad/libs/audiobook-production/prototype-segment-boundary-approaches), with its measurements and transcripts in `summary.json` and the operator's answers in `answers.md`.
-- Gemini capability research: [`gemini-tts-unspoken-context.md`](https://github.com/patricktree/cup/blob/0bef27b2733379987bd0af64722a2031ab7ada27/docs/research/gemini-tts-unspoken-context.md) on the unmerged branch `research/gemini-tts-unspoken-context`.
-- Speech recognition research: [`overlap-cut-aligner.md`](https://github.com/patricktree/cup/blob/b3672e77bfc92bce2451a13423eb3199543ffd27/docs/research/overlap-cut-aligner.md) on the unmerged branch `research/overlap-cut-aligner`.
-- Long-form Gemini narration research: [`gemini-long-form-segment-boundaries.md`](https://github.com/patricktree/cup/blob/01cf19d87291687133ee3c1a64c2b65e15d88ddb/docs/research/gemini-long-form-segment-boundaries.md) on the unmerged branch `research/gemini-long-form-narration-seams`.
+- Boundary diagnosis: [Segment boundary diagnosis](../research/segment-boundary-diagnosis.md), with its measurements in `summary.json` and the operator’s answers in `answers.md` in its [prototype archive](../research/segment-boundary-diagnosis.tar.xz).
+- Blind A/B of the approaches: [Segment boundary approaches](../research/segment-boundary-approaches.md), with its measurements and transcripts in `summary.json` and the operator’s answers in `answers.md` in its [prototype archive](../research/segment-boundary-approaches.tar.xz).
+- Gemini capability research: [Gemini TTS unspoken context](../research/gemini-tts-unspoken-context.md).
+- Speech recognition research: [Overlap-and-cut aligner](../research/overlap-cut-aligner.md).
+- Long-form Gemini narration research: [Long-form Gemini narration across segment boundaries](../research/gemini-long-form-segment-boundaries.md).
